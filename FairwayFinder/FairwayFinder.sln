@@ -5,6 +5,8 @@ VisualStudioVersion = 17.8.34330.188
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairwayFinder.Web", "FairwayFinder.Web\FairwayFinder.Web.csproj", "{78618C2F-371A-4F02-A95A-86A8563A4E79}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairwayFinder.Core", "FairwayFinder.Core\FairwayFinder.Core.csproj", "{75BDD069-03FB-4189-BFCB-0FD28A9BC2D6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{78618C2F-371A-4F02-A95A-86A8563A4E79}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{78618C2F-371A-4F02-A95A-86A8563A4E79}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{78618C2F-371A-4F02-A95A-86A8563A4E79}.Release|Any CPU.Build.0 = Release|Any CPU
+		{75BDD069-03FB-4189-BFCB-0FD28A9BC2D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{75BDD069-03FB-4189-BFCB-0FD28A9BC2D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{75BDD069-03FB-4189-BFCB-0FD28A9BC2D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{75BDD069-03FB-4189-BFCB-0FD28A9BC2D6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
