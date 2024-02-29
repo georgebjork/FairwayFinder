@@ -2,7 +2,9 @@
 
 # Comments are provided throughout this file to help you get started.
 # If you need more help, visit the Dockerfile reference guide at
-# https://docs.docker.com/engine/reference/builder/
+# https://docs.docker.com/go/dockerfile-reference/
+
+# Want to help us make this template better? Share your feedback here: https://forms.gle/ybq9Krt8jtBL3iCk7
 
 ################################################################################
 
@@ -11,11 +13,14 @@
 
 # Create a stage for building the application.
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
-ARG TARGETARCH
 
 COPY . /source
 
 WORKDIR /source/FairwayFinder/FairwayFinder.Web
+
+# This is the architecture you’re building for, which is passed in by the builder.
+# Placing it here allows the previous steps to be cached across architectures.
+ARG TARGETARCH
 
 # Build the application.
 # Leverage a cache mount to /root/.nuget/packages so that subsequent builds don't have to re-download packages.
@@ -43,17 +48,9 @@ WORKDIR /app
 # Copy everything needed to run the app from the "build" stage.
 COPY --from=build /app .
 
-# Create a non-privileged user that the app will run under.
-# See https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#user
-ARG UID=10001
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "/nonexistent" \
-    --shell "/sbin/nologin" \
-    --no-create-home \
-    --uid "${UID}" \
-    appuser
-USER appuser
+# Switch to a non-privileged user (defined in the base image) that the app will run under.
+# See https://docs.docker.com/go/dockerfile-user-best-practices/
+# and https://github.com/dotnet/dotnet-docker/discussions/4764
+USER $APP_UID
 
 ENTRYPOINT ["dotnet", "FairwayFinder.Web.dll"]
