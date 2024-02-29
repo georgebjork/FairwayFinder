@@ -17,7 +17,8 @@ namespace FairwayFinder.Web.Controllers
         {
             return View();
         }
-
+        
+        [Route("/hello")]
         public IActionResult Privacy()
         {
             return View();
