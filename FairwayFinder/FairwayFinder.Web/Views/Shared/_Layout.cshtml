@@ -10,17 +10,20 @@
     <link rel="stylesheet" href="~/FairwayFinder.Web.styles.css" asp-append-version="true" />
 </head>
 <body>
-    <header class="navbar sticky-top bg-dark flex-md-nowrap p-0 border-bottom">
-      <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">FairwayFinder <i class="fa-solid fa-golf-ball-tee ps-2"></i> </a>
+    <header class="container-fluid navbar sticky-top bg-dark flex-md-nowrap p-0 border-bottom">
+      <div class="navbar-brand col-md-3 col-lg-2 px-3 text-white" style="display: flex; align-items: center;">
+        <a href="#" class="text-white text-decoration-none ps-2"> <i class="fa-solid fa-golf-ball-tee pe-2"></i> FairwayFinder </a>
+      </div>
     
-      <ul class="navbar-nav flex-row d-md-none">
-        <li class="nav-item text-nowrap">
+      <ul class="navbar-nav flex-row">
+        <li class="nav-item text-nowrap d-md-none">
           <button class="nav-link px-3 text-white" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
             <i class="fa-solid fa-bars"></i>
           </button>
         </li>
       </ul>
     </header>
+
 
 <div class="container-fluid">
   <div class="row">
