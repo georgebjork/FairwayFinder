@@ -1,6 +1,6 @@
-using FairwayFinder.Web.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using FairwayFinder.Web.Data.Models;
 
 namespace FairwayFinder.Web.Controllers
 {

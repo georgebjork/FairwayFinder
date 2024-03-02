@@ -1,4 +1,4 @@
-namespace FairwayFinder.Web.Models
+namespace FairwayFinder.Web.Data.Models
 {
     public class ErrorViewModel
     {
