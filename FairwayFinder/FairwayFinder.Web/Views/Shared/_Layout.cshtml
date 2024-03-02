@@ -4,49 +4,69 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - FairwayFinder.Web</title>
+    <link rel="icon" type="image/svg" href="/golf-ball-tee-solid.svg">
     <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/lib/font-awesome/css/all.css" />
     <link rel="stylesheet" href="~/FairwayFinder.Web.styles.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">FairwayFinder.Web</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-                        </li>
-                    </ul>
-                    <partial name="_LoginPartial" />
-                </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
 
-    @*<footer class="border-top footer text-muted">
+@* Top Menu *@
+<header class="container-fluid navbar sticky-top bg-dark flex-md-nowrap p-0 border-bottom">
+  <div class="navbar-brand col-md-3 col-lg-2 px-3 text-white" style="display: flex; align-items: center;">
+    <a href="#" class="text-white text-decoration-none ps-2"> <i class="fa-solid fa-golf-ball-tee pe-2"></i> FairwayFinder </a>
+  </div>
+  
+  @* The button that will appear once the screen is small enough *@
+  <ul class="navbar-nav flex-row">
+    <li class="nav-item text-nowrap d-md-none">
+      <button class="nav-link px-3 text-white" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </li>
+  </ul>
+</header>
+
+@* Main Content *@
+<div class="container-fluid">
+  <div class="row">
+    
+    @* Sidebar *@
+    <div class="sidebar fixed-sidebar border-end col-md-3 col-lg-2">
+      <div class="offcanvas-md offcanvas-end" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
+        <div class="offcanvas-header">
+          <h5 class="offcanvas-title" id="sidebarMenuLabel">FairwayFinder <i class="fa-solid fa-golf-ball-tee ps-2"></i></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sidebarMenu" aria-label="Close"></button>
+        </div>
+      
+        @* Sidebar Menu Items *@
+        @await Html.PartialAsync("_SidebarMenu")
+      </div>
+    </div>
+    
+    @* Main Content *@
+    <div class="col-md-9 ms-sm-auto col-lg-10 px-md-4" style="overflow-y: scroll; height: 95vh">
+      <main role="main" class="pb-3">
+        @RenderBody()
+      </main>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+@*<footer class="border-top footer text-muted">
         <div class="container">
             &copy; 2024 - FairwayFinder.Web - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
         </div>
     </footer>*@
-    <script src="~/lib/htmx/htmx.js" asp-append-version="true"></script>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+<script src="~/lib/htmx/htmx.js" asp-append-version="true"></script>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
