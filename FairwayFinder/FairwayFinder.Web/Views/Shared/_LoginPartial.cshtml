@@ -3,6 +3,7 @@
 @using Humanizer
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 @using FairwayFinder.Core.Models
+@using FairwayFinder.Core.Settings
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 
@@ -13,8 +14,18 @@
             <div class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fa-solid fa-id-badge pe-2"></i> @User.Identity?.Name.Truncate(15)
             </div>
+
             <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
                 <li><a class="dropdown-item" href="#"> <i class="fa-solid fa-user pe-2"></i> Profile</a></li>
+                 
+                @if (User.IsInRole(Roles.Admin))
+                {
+                    <li>
+                        <a class="dropdown-item" asp-area="Admin" asp-controller="ManageUsers" asp-action="ManageUsers" ><i class="fa-solid fa-users pe-2"></i> Manage Users</a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                }
+                
                 <li><a class="dropdown-item" href="/logout"><i class="fa-solid fa-arrow-right-from-bracket pe-2"></i> Logout</a></li>
             </ul>
         </div>
