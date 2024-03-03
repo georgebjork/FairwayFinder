@@ -1,0 +1,18 @@
+@model FairwayFinder.Core.Features.UserMangement.Models.user_invitation
+
+<tr id="invite-@Model.id">
+    <td>@Model.sent_to_email</td>
+    <td>@Model.InviteUrl</td>
+    <td>
+        <div class="d-flex justify-content-evenly">
+            <button class="btn btn-outline-danger btn-sm" type="button" onclick="this.innerText='Revoking invite...'; this.disabled=true;"
+                    hx-trigger="click"
+                    hx-post="/revoke-invite/@Model.invitation_identifier"
+                    hx-swap="outerHTML"
+                    hx-target="#invite-@Model.id">
+                                        
+                <i class="fa-solid fa-trash pe2 "></i> Revoke Invite
+            </button>
+        </div>
+    </td>
+</tr>

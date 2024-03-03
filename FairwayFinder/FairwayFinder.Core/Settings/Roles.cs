@@ -2,6 +2,6 @@ namespace FairwayFinder.Core.Settings;
 
 public static class Roles
 {
-    public static string Admin = "ADMIN";
-    public static string User = "User";
+    public const string Admin = "ADMIN";
+    public const string User = "User";
 }

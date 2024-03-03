@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 using FairwayFinder.Web.Data.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FairwayFinder.Web.Controllers
 {
@@ -12,7 +13,8 @@ namespace FairwayFinder.Web.Controllers
         {
             _logger = logger;
         }
-
+        
+        [Authorize]
         public IActionResult Index()
         {
             return View();

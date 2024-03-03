@@ -1,3 +1,5 @@
+using FairwayFinder.Core;
+using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Settings;
 using FairwayFinder.Web.Data;
 using Microsoft.AspNetCore.Identity;
@@ -18,19 +20,6 @@ builder.Services.AddAuthorization();
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
 
-// Cookie settings
-builder.Services.ConfigureApplicationCookie(o => {
-    o.Cookie.Name = ".fairway.finder";
-    o.LoginPath = "/login";
-    o.LogoutPath = "/logout";
-    o.AccessDeniedPath = "/401";
-    o.Events.OnSigningOut = ctx => {
-        ctx.HttpContext.Session.Clear();
-        return Task.CompletedTask;
-    };
-});
-
-
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
         options.SignIn.RequireConfirmedAccount = false;
         options.Password.RequireDigit = false;
@@ -46,8 +35,23 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
     .AddDefaultTokenProviders();
 
 
+// Cookie settings
+builder.Services.ConfigureApplicationCookie(o => {
+    o.Cookie.Name = ".fairway.finder";
+    o.LoginPath = "/login";
+    o.LogoutPath = "/logout";
+    o.AccessDeniedPath = "/401";
+    o.Events.OnSigningOut = ctx => {
+        ctx.HttpContext.Session.Clear();
+        return Task.CompletedTask;
+    };
+});
+
+builder.Services.AddSession();
 builder.Services.AddMvc();
 builder.Services.AddControllersWithViews();
+
+ConfigureCoreServices.ConfigureServices(services: builder.Services);
 
 var app = builder.Build();
 
@@ -74,11 +78,20 @@ app.MapGet("/login", context => Task.Factory.StartNew(() => context.Response.Red
 app.MapGet("/register", context => Task.Factory.StartNew(() => context.Response.Redirect("/Identity/Account/Register", true, true)));
 app.MapGet("/logout", context => Task.Factory.StartNew(() => context.Response.Redirect("/Identity/Account/Logout", true, true)));
 app.MapControllers();
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+app.MapControllerRoute(
+    name : "Admin",
+    pattern : "{area:exists}/{controller=Home}/{action=Index}/{id?}"
+);
+
 app.MapRazorPages();
 
+
+app.UseSession();
 
 using (var scope = app.Services.CreateScope()) {
     await CreateRoles(scope.ServiceProvider);
