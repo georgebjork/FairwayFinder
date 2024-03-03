@@ -7,12 +7,12 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject UserManager<ApplicationUser> UserManager
 
-<ul class="navbar-nav">
+<ul class="p-0 m-0">
     @if (SignInManager.IsSignedIn(User))
     {
-        <div class="dropdown px-2">
+        <div class="nav-item dropdown px-2">
             <div class="d-flex align-items-center text-white text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="fa-solid fa-id-badge pe-2"></i> @User.Identity?.Name.Truncate(15)
+                <i class="fa-solid fa-id-badge pe-2"></i> @User.Identity?.Name
             </div>
 
             <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
@@ -23,7 +23,9 @@
                     <li>
                         <a class="dropdown-item" asp-area="Admin" asp-controller="ManageUsers" asp-action="ManageUsers" ><i class="fa-solid fa-users pe-2"></i> Manage Users</a>
                     </li>
-                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
                 }
                 
                 <li><a class="dropdown-item" href="/logout"><i class="fa-solid fa-arrow-right-from-bracket pe-2"></i> Logout</a></li>
