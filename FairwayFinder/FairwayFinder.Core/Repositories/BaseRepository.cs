@@ -1,5 +1,6 @@
 using System.Data;
 using Dapper.Contrib.Extensions;
+using FairwayFinder.Core.Settings;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Npgsql;
