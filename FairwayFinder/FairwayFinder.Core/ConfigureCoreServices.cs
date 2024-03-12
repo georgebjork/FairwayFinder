@@ -14,5 +14,6 @@ public static class ConfigureCoreServices
         // Services
         services.AddTransient<IUsernameRetriever, UsernameRetriever>();
         services.AddTransient<IManageUsersService, ManageUsersService>();
+        services.AddTransient<IEmailSenderService, SendGridEmailService>();
     }
 }
