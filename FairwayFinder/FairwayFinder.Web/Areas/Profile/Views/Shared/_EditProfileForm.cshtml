@@ -1,0 +1,51 @@
+@model FairwayFinder.Core.Features.Profile.Models.FormModels.ProfileFormModel
+
+
+
+ <div class="row">
+        <form hx-post="/profile" hx-target="#profile-form" hx-swap="innerHTML" enctype="multipart/form-data">
+            <div class="row">
+                <div class="col-6">
+                    <div class="mb-5">
+                        <label asp-for="FirstName" class="form-label"></label>
+                        <input asp-for="FirstName" class="form-control" type="text">
+                        <span asp-validation-for="FirstName" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="mb-5">
+                        <label asp-for="LastName" class="form-label"></label>
+                        <input asp-for="LastName" class="form-control" type="text">
+                        <span asp-validation-for="LastName" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-6">
+                    <div class="mb-5">
+                        <label asp-for="Email" class="form-label"></label>
+                        <input asp-for="Email" class="form-control" type="text" disabled>
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+                </div>
+                
+                <div class="col-6">
+                    <div class="mb-5">
+                        <label asp-for="Handle" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text" id="basic-addon3">@($"{Model.BaseUrl}/profile/")</span>
+                            <input type="text" class="form-control" asp-for="Handle">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row d-flex justify-content-end">
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary"> Update Profile </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    

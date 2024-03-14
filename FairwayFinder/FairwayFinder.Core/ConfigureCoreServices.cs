@@ -1,3 +1,4 @@
+using FairwayFinder.Core.Features.Profile;
 using FairwayFinder.Core.Features.UserMangement;
 using FairwayFinder.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,9 +11,11 @@ public static class ConfigureCoreServices
         
         // Repositories
         services.AddTransient<IUserRepository, UserRepository>();
+        services.AddTransient<IProfileRepository, ProfileRepository>();
         
         // Services
         services.AddTransient<IUsernameRetriever, UsernameRetriever>();
         services.AddTransient<IManageUsersService, ManageUsersService>();
+        services.AddTransient<IProfileService, ProfileService>();
     }
 }

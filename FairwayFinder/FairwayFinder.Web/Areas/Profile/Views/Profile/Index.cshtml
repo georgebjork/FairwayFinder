@@ -1,0 +1,31 @@
+@model FairwayFinder.Core.Features.Profile.Models.ViewModels.ProfileViewModel
+
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<div class="container">
+    
+    <div class="row py-4">
+        <div class="col-12">
+            <h1> My Profile </h1>
+        </div>
+        
+        <div class="col-12">
+             <hr/>
+        </div>
+    </div>
+    
+    <div id="profile-form">
+        @await Html.PartialAsync("_EditProfileForm", Model.Form)
+    </div>
+    
+</div>
+
+
+@section Scripts
+{
+    @await Html.PartialAsync("_ValidationScriptsPartial")
+}
+
+

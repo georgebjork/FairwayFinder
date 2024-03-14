@@ -16,6 +16,7 @@ namespace FairwayFinder.Web.Data
             
             modelBuilder.Entity<ApplicationUser>().Property(e => e.FirstName).HasMaxLength(250);
             modelBuilder.Entity<ApplicationUser>().Property(e => e.LastName).HasMaxLength(250);
+            modelBuilder.Entity<ApplicationUser>().Property(e => e.Handle).HasMaxLength(250);
         }
     }
 }

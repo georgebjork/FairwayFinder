@@ -1,6 +1,4 @@
 ﻿@using Microsoft.AspNetCore.Identity
-@using FairwayFinder.Web.Data
-@using Humanizer
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 @using FairwayFinder.Core.Models
 @using FairwayFinder.Core.Settings
@@ -16,7 +14,9 @@
             </div>
 
             <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
-                <li><a class="dropdown-item" href="#"> <i class="fa-solid fa-user pe-2"></i> Profile</a></li>
+                <li>
+                    <a class="dropdown-item" asp-area="Profile" asp-controller="Profile" asp-action="Index"> <i class="fa-solid fa-user pe-2"></i> Profile</a>
+                </li>
                  
                 @if (User.IsInRole(Roles.Admin))
                 {

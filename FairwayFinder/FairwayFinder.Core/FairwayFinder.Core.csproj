@@ -7,21 +7,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Dapper" Version="2.1.28" />
-      <PackageReference Include="Dapper.Contrib" Version="2.0.78" />
-      <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.2" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Reference Include="Microsoft.AspNetCore.Http.Abstractions">
-        <HintPath>..\..\..\..\..\..\..\usr\share\dotnet\shared\Microsoft.AspNetCore.App\8.0.2\Microsoft.AspNetCore.Http.Abstractions.dll</HintPath>
-      </Reference>
-      <Reference Include="Microsoft.Extensions.Identity.Core">
-        <HintPath>..\..\..\..\..\..\..\usr\share\dotnet\shared\Microsoft.AspNetCore.App\8.0.2\Microsoft.Extensions.Identity.Core.dll</HintPath>
-      </Reference>
-      <Reference Include="Microsoft.Extensions.Identity.Stores">
-        <HintPath>..\..\..\..\..\..\..\usr\share\dotnet\shared\Microsoft.AspNetCore.App\8.0.2\Microsoft.Extensions.Identity.Stores.dll</HintPath>
-      </Reference>
+        <PackageReference Include="Dapper" Version="2.1.28" />
+        <PackageReference Include="Dapper.Contrib" Version="2.0.78" />
+        <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.2.2" />
+        <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.2" />
+        <PackageReference Include="SendGrid" Version="9.29.2" />
     </ItemGroup>
 
 </Project>
