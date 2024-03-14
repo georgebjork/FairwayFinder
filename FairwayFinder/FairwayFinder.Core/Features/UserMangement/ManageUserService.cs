@@ -13,7 +13,7 @@ public interface IManageUsersService {
     Task<List<user_invitation>> GetInvites();
     Task<user_invitation?> GetValidInvite(string inviteId);
 
-    Task<user_invitation> CreateInvite(string email);
+    Task<user_invitation> CreateAndSendInvite(string email, string registerBaseUrl);
 
     Task<ApplicationUser> PromoteAdmin(string userId);
     Task<ApplicationUser> RevokeAdmin(string userId);
@@ -27,11 +27,13 @@ public class ManageUsersService : IManageUsersService {
     private readonly IUserRepository _userRepository;
     private readonly IUsernameRetriever _usernameRetriever;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IEmailSenderService _emailSenderService;
     
-    public ManageUsersService(IUserRepository userRepository, UserManager<ApplicationUser> userManager, IUsernameRetriever usernameRetriever) {
+    public ManageUsersService(IUserRepository userRepository, UserManager<ApplicationUser> userManager, IUsernameRetriever usernameRetriever, IEmailSenderService email_sender_service) {
         _userRepository = userRepository;
         _userManager = userManager;
         _usernameRetriever = usernameRetriever;
+        _emailSenderService = email_sender_service;
     }
     
     public async Task<List<ApplicationUser>> GetUsers() {
@@ -46,7 +48,7 @@ public class ManageUsersService : IManageUsersService {
         return await _userRepository.GetInvite(inviteId);
     }
 
-    public async Task<user_invitation> CreateInvite(string email)
+    public async Task<user_invitation> CreateAndSendInvite(string email, string registerBaseUrl)
     {
         var date = DateTime.UtcNow;
         var username = _usernameRetriever.Username;
@@ -64,6 +66,10 @@ public class ManageUsersService : IManageUsersService {
         };
         
         await _userRepository.Insert(invite);
+        
+        // Send email with invite link
+        await _emailSenderService.SendRegisterEmailAsync(email, $"{registerBaseUrl}/register/{invite.invitation_identifier}");
+        
         return invite;
     }
 

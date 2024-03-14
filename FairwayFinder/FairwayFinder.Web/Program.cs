@@ -53,6 +53,8 @@ builder.Services.AddControllersWithViews();
 
 ConfigureCoreServices.ConfigureServices(services: builder.Services);
 
+ConfigureSettings(builder.Services, builder.Configuration);
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -105,6 +107,9 @@ using (var scope = app.Services.CreateScope()) {
 app.Run();
 
 
+void ConfigureSettings(IServiceCollection services, IConfiguration config) {
+    services.Configure<SendGridSettings>(config.GetSection("SendGrid"));
+}
 
 async Task CreateRoles(IServiceProvider serviceProvider) {
     //initializing custom roles 

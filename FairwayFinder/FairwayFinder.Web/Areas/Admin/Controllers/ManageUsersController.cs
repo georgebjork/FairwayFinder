@@ -58,7 +58,7 @@ public class ManageUsersController : BaseAuthorizedController {
     [Route("invite-user")]
     public async Task<IActionResult> InviteUser([FromForm(Name = "InviteFormModel")] UserInviteFormModel form)
     {
-        var invite = await manageUsersService.CreateInvite(form.Email);
+        var invite = await manageUsersService.CreateAndSendInvite(form.Email, $"{Request.Scheme}://{Request.Host.Value}");
         return RedirectToAction(nameof(ManageUsers));
     }
     
