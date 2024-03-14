@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace FairwayFinder.Web.Controllers.BaseControllers;
 
 public class BaseController : Controller {
+    
+    public string RequestUrlBase => $"{Request.Scheme}://{Request.Host.Value}";
+
     public void SetInfoMessage(string message) {
         TempData["info_message"] = message;
     }

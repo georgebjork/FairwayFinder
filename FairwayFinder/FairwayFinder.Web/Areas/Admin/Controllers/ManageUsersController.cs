@@ -5,7 +5,6 @@ using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Services;
 using FairwayFinder.Core.Settings;
 using FairwayFinder.Web.Controllers.BaseControllers;
-using FairwayFinder.Web.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -42,10 +41,9 @@ public class ManageUsersController : BaseAuthorizedController {
         }
 
         var invites = await manageUsersService.GetInvites();
-        var baseUrl = $"{Request.Scheme}://{Request.Host.Value}";
         foreach (var invite in invites)
         {
-            invite.InviteUrl = $"{baseUrl}/register/{invite.invitation_identifier}";
+            invite.InviteUrl = $"{RequestUrlBase}/register/{invite.invitation_identifier}";
         }
 
         var vm = new ManageUserViewModel {
