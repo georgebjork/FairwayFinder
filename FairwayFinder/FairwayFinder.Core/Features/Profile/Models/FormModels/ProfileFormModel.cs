@@ -24,7 +24,7 @@ public class ProfileFormModel
     [MaxLength(30, ErrorMessage = "Maximum length is 30 characters.")]
     [Display(Name = "Handle")]
     public string Handle { get; set; } = "";
-    
+    public bool IsValidHandle { get; set; } = true;
     
     public string BaseUrl { get; set; } = "";
 

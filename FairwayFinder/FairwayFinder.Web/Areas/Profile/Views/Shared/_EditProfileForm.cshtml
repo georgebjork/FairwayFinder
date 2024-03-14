@@ -31,11 +31,15 @@
                 </div>
                 
                 <div class="col-6">
-                    <div class="mb-5">
+                    <div class="mb-5" id="handle-input">
                         <label asp-for="Handle" class="form-label"></label>
                         <div class="input-group">
-                            <span class="input-group-text" id="basic-addon3">@($"{Model.BaseUrl}/profile/")</span>
-                            <input type="text" class="form-control" asp-for="Handle">
+                            <span class="input-group-text">@($"{Model.BaseUrl}/profile/")</span>
+                            <input type="text" class="form-control" asp-for="Handle"
+                                   hx-get="profile/check-handle"
+                                   hx-swap="innerHTML"
+                                   hx-target="#handle-input"
+                                   hx-trigger="input delay:1000ms">
                         </div>
                     </div>
                 </div>

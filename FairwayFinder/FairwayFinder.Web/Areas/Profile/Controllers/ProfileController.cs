@@ -29,6 +29,31 @@ public class ProfileController(IUsernameRetriever usernameRetriever, IProfileSer
         return View(vm);
     }
 
+    [HttpGet]
+    [Route("/profile/check-handle")]
+    public async Task<IActionResult> CheckProfileHandle([FromQuery] string handle)
+    {
+        var form = new ProfileFormModel();
+        form.Handle = handle;
+        form.BaseUrl = RequestUrlBase;
+        
+        var username = usernameRetriever.Username;
+        var profile = await profileService.GetProfileByEmail(username);
+        
+        // It matches our profile! That is good and valid.
+        if (profile!.Handle == handle)
+        {
+            form.IsValidHandle = true;
+            return PartialView("_HandleValidationPartial", form);
+        }
+        
+        // Check if it matches anyone else's
+        var rv = await profileService.IsHandleAvailable(handle);
+        
+        form.IsValidHandle = rv;
+        return PartialView("_HandleValidationPartial", form);
+    }
+
     [HttpPost]
     [Route("/profile")]
     public async Task<IActionResult> UpdateProfile([FromForm] ProfileFormModel form)
