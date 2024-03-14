@@ -6,6 +6,8 @@ namespace FairwayFinder.Core.Features.Profile.Models.FormModels;
 
 public class ProfileFormModel
 {
+    public string UserId { get; set; } = "";
+    
     [Required]
     [Display(Name = "Email")]
     public string Email { get; set; } = "";

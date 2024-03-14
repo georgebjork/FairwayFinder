@@ -1,0 +1,134 @@
+@{
+	var info = (string?)TempData["info_message"];
+	var warning = (string?)TempData["warning_message"];
+	var success = (string?)TempData["success_message"];
+	var error = (string?)TempData["error_message"];
+
+	var infoPersistent = (string?)TempData["info_message_persistent"];
+	var warningPersistent = (string?)TempData["warning_message_persistent"];
+	var errorPersistent = (string?)TempData["error_message_persistent"];
+	
+	var successHtmx = (string?)TempData["success_message_htmx"];
+	var errorHtmx = (string?)TempData["error_message_htmx"];
+}
+<div class="my-2">
+	@if (!string.IsNullOrWhiteSpace(info)) {
+		<div id='info-message' class="alert alert-info alert-dismissible d-flex align-items-center" role="alert">
+			<i class="bx bx-xs bx-detail me-2"></i>
+			@info
+			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+			</button>
+		</div>
+		<script type='text/javascript'>
+		document.addEventListener('DOMContentLoaded', function() {
+			$("#info-message").fadeTo(4000, 500).slideUp(500, function(){
+				$("#info-message").alert('close');
+			});
+		}, false);
+	</script>
+	}
+	@if (!string.IsNullOrWhiteSpace(success)) {
+		<div id='success-message' class="alert alert-success alert-dismissible d-flex align-items-center" role="alert">
+			<i class="bx bx-xs bx-detail me-2"></i>
+			@success
+			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+			</button>
+		</div>
+		<script type='text/javascript'>
+		document.addEventListener('DOMContentLoaded',function() {
+			$("#success-message").fadeTo(4000, 500).slideUp(500, function(){
+				$("#success-message").alert('close');
+			});
+		},false);
+	</script>
+	}
+	@if (!string.IsNullOrWhiteSpace(warning)) {
+		<div id='warning-message' class="alert alert-warning alert-dismissible d-flex align-items-center" role="alert">
+			<i class="bx bx-xs bx-detail me-2"></i>
+			@warning
+			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+			</button>
+		</div>
+		<script type='text/javascript'>
+		document.addEventListener('DOMContentLoaded',function() {
+			$("#warning-message").fadeTo(4000, 500).slideUp(500, function(){
+				$("#warning-message").alert('close');
+			});
+		},false);
+	</script>
+	}
+	@if (!string.IsNullOrWhiteSpace(error)) {
+		<div id='error-message' class="alert alert-danger alert-dismissible d-flex align-items-center" role="alert">
+			<i class="bx bx-xs bx-detail me-2"></i>
+			@error
+			<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+			</button>
+		</div>
+		<script type='text/javascript'>
+		document.addEventListener('DOMContentLoaded',function() {
+			$("#error-message").fadeTo(4000, 500).slideUp(500, function(){
+				$("#error-message").alert('close');
+			});
+		},false);
+	</script>
+	}
+
+
+	@if (!string.IsNullOrWhiteSpace(infoPersistent))
+	{
+		<div id='info-message-persistent' class="alert alert-info d-flex align-items-center" role="alert">
+			<i class="bx bx-xs bx-detail me-2"></i>
+			@infoPersistent
+		</div>
+	}
+	@if (!string.IsNullOrWhiteSpace(warningPersistent))
+	{
+		<div id='warning-message-persistent' class="alert alert-warning d-flex align-items-center" role="alert">
+			<i class="bx bx-xs bx-detail me-2"></i>
+			@warningPersistent
+		</div>
+	}
+
+	@if (!string.IsNullOrWhiteSpace(errorPersistent))
+	{
+		<div id='error-message-persistent' class="alert alert-danger d-flex align-items-center" role="alert">
+			<i class="bx bx-xs bx-detail me-2"></i>
+			@errorPersistent
+		</div>
+	}
+	
+	
+	@* HTMX specific so returning a partial can show a message also. *@
+	@if (!string.IsNullOrWhiteSpace(successHtmx)) {
+    	<div id='success-message-htmx' class="alert alert-success alert-dismissible d-flex align-items-center" role="alert">
+    		<i class="bx bx-xs bx-detail me-2"></i>
+    		@successHtmx
+    		<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+    		</button>
+    	</div>
+    	<script type='text/javascript'>
+    		$(function() {
+    			$("#success-message-htmx").fadeTo(4000, 500).slideUp(500, function(){
+    				$(this).alert('close');
+    			});
+    		});
+    	</script>
+    }
+    
+    
+    @if (!string.IsNullOrWhiteSpace(errorHtmx)) {
+    	<div id='error-message-htmx' class="alert alert-danger alert-dismissible d-flex align-items-center" role="alert">
+    		<i class="bx bx-xs bx-detail me-2"></i>
+    		@errorHtmx
+    		<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+    		</button>
+    	</div>
+    	<script type='text/javascript'>
+    		$(function() {
+    			$("#error-message-htmx").fadeTo(4000, 500).slideUp(500, function(){
+    				$(this).alert('close');
+    			});
+    		});
+    	</script>
+    }
+</div>

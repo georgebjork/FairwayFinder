@@ -1,5 +1,6 @@
 using Dapper;
 using FairwayFinder.Core.Features.Profile.Models.QueryModel;
+using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -10,6 +11,7 @@ public interface IProfileRepository : IBaseRepository
 {
     Task<ProfileQueryModel?> GetProfileByEmail(string email);
     Task<bool> IsHandleAvailable(string handle);
+    Task<int> UpdateProfile(ProfileQueryModel model);
 }
 
 public class ProfileRepository(IConfiguration configuration, ILogger<ProfileRepository> logger) : BasePgRepository(configuration, logger), IProfileRepository
@@ -30,5 +32,16 @@ public class ProfileRepository(IConfiguration configuration, ILogger<ProfileRepo
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryFirstOrDefaultAsync<string>(sql, new { handle });
         return string.IsNullOrEmpty(rv); // Return true if empty/null (available) or false (is not available)
+    }
+
+    public async Task<int> UpdateProfile(ProfileQueryModel model)
+    {
+        var sql = @"UPDATE public.""AspNetUsers""
+	                SET ""FirstName""=@firstName, ""LastName""=@lastName, ""Handle""=@handle
+                    WHERE ""Id"" = @id";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.ExecuteAsync(sql,
+            new { firstName = model.FirstName, lastName = model.LastName, handle = model.Handle, id = model.Id });
+        return rv;
     }
 }

@@ -37,4 +37,13 @@ public class BaseController : Controller {
     {
         TempData["error_message_persistent"] = message;
     }
+    
+    
+    public void SetSuccessMessageHtmx(string message) {
+        TempData["success_message_htmx"] = message;
+    }
+    
+    public void SetErrorMessageHtmx(string message) {
+        TempData["error_message_htmx"] = message;
+    }
 }

@@ -25,7 +25,6 @@ public class ProfileController(IUsernameRetriever usernameRetriever, IProfileSer
             Form = new ProfileFormModel().ToForm(profile),
         };
         vm.Form.BaseUrl = RequestUrlBase;
-        
         return View(vm);
     }
 
@@ -36,6 +35,12 @@ public class ProfileController(IUsernameRetriever usernameRetriever, IProfileSer
         var form = new ProfileFormModel();
         form.Handle = handle;
         form.BaseUrl = RequestUrlBase;
+
+        if (string.IsNullOrEmpty(handle))
+        {
+            form.IsValidHandle = false;
+            return PartialView("_HandleValidationPartial", form);
+        }
         
         var username = usernameRetriever.Username;
         var profile = await profileService.GetProfileByEmail(username);
@@ -62,9 +67,21 @@ public class ProfileController(IUsernameRetriever usernameRetriever, IProfileSer
         {
             form.BaseUrl = RequestUrlBase;
             return PartialView("_EditProfileForm", form);
-           
+
+        }
+
+        form.UserId = usernameRetriever.UserId;
+        form.BaseUrl = RequestUrlBase;
+        
+        var rv = await profileService.UpdateProfile(form);
+
+        if (!rv)
+        {
+            SetErrorMessageHtmx("Something went wrong. Unable to update profile.");
+            return PartialView("_EditProfileForm", form);
         }
         
-        return RedirectToAction(nameof(Index));
+        SetSuccessMessageHtmx("Profile successfully updated.");
+        return PartialView("_EditProfileForm", form);
     }
 }

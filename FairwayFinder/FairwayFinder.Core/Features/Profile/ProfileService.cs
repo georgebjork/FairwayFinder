@@ -1,5 +1,6 @@
 using FairwayFinder.Core.Features.Profile.Models.FormModels;
 using FairwayFinder.Core.Features.Profile.Models.QueryModel;
+using FairwayFinder.Core.Services;
 
 namespace FairwayFinder.Core.Features.Profile;
 
@@ -10,7 +11,7 @@ public interface IProfileService
     Task<bool> UpdateProfile(ProfileFormModel form);
 }
 
-public class ProfileService(IProfileRepository profileRepository) : IProfileService
+public class ProfileService(IProfileRepository profileRepository, IUsernameRetriever usernameRetriever) : IProfileService
 {
     public async Task<ProfileQueryModel?> GetProfileByEmail(string email)
     {
@@ -22,8 +23,20 @@ public class ProfileService(IProfileRepository profileRepository) : IProfileServ
         return await profileRepository.IsHandleAvailable(handle);
     }
 
-    public Task<bool> UpdateProfile(ProfileFormModel form)
+    public async Task<bool> UpdateProfile(ProfileFormModel form)
     {
-        throw new NotImplementedException();
+        var profile = await GetProfileByEmail(usernameRetriever.Username);
+        if (!await IsHandleAvailable(form.Handle) && profile?.Handle != form.Handle) return false;
+        
+        var model = new ProfileQueryModel
+        {
+            Email = form.Email,
+            FirstName = form.FirstName,
+            LastName = form.LastName,
+            Handle = form.Handle,
+            Id = form.UserId
+        };
+        var rv = await profileRepository.UpdateProfile(model);
+        return rv >= 1;
     }
 }

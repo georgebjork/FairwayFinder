@@ -9,6 +9,8 @@
            hx-target="#handle-input"
            hx-trigger="input delay:1000ms">
     
+    <span asp-validation-for="Handle" class="text-danger"></span>
+    
     @if (Model.IsValidHandle)
     {
         <div id="validationServerUsernameFeedback" class="valid-feedback">
