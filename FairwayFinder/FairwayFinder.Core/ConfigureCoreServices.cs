@@ -1,3 +1,4 @@
+using FairwayFinder.Core.Features.Course;
 using FairwayFinder.Core.Features.Profile;
 using FairwayFinder.Core.Features.Profile.Services;
 using FairwayFinder.Core.Features.UserMangement;
@@ -13,6 +14,7 @@ public static class ConfigureCoreServices
         // Repositories
         services.AddTransient<IUserRepository, UserRepository>();
         services.AddTransient<IProfileRepository, ProfileRepository>();
+        services.AddTransient<ICourseRepository, CourseRepository>();
         
         // Services
         services.AddTransient<IUsernameRetriever, UsernameRetriever>();

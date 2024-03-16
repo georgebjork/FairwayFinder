@@ -1,3 +1,4 @@
+using Dapper;
 using FairwayFinder.Core;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Settings;
@@ -109,6 +110,7 @@ app.Run();
 
 
 void ConfigureSettings(IServiceCollection services, IConfiguration config) {
+    DefaultTypeMap.MatchNamesWithUnderscores = true; // Tells dapper to map columns like first_name -> FirstName
     services.Configure<SendGridSettings>(config.GetSection("SendGrid"));
 }
 
