@@ -10,6 +10,7 @@ public interface IProfileService
     Task<ProfileQueryModel?> GetProfileByEmail(string email);
     Task<bool> IsHandleAvailable(string handle);
     Task<bool> UpdateProfile(ProfileFormModel form);
+    Task<string> GenerateUserName(string firstName, string lastName);
 }
 
 public class ProfileService(IProfileRepository profileRepository, IUsernameRetriever usernameRetriever, ILogger<ProfileService> logger) : IProfileService
@@ -22,6 +23,26 @@ public class ProfileService(IProfileRepository profileRepository, IUsernameRetri
     public async Task<bool> IsHandleAvailable(string handle)
     {
         return await profileRepository.IsHandleAvailable(handle);
+    }
+
+    public async Task<string> GenerateUserName(string firstName, string lastName)
+    {
+        var baseHandle = $"{firstName.ToLower()}{lastName.ToLower()}";
+        var existingHandles = await profileRepository.FindSimilarHandles(baseHandle); 
+        
+        // If it doesnt exist. Then we are good to use it.
+        if (!existingHandles.Contains(baseHandle)) return baseHandle;
+        
+        string generatedHandle;
+        var counter = 1;
+        do // Keep checking with a number appended to see if it is good to use.
+        {
+            generatedHandle = $"{baseHandle}{counter++}";
+            
+        } while (existingHandles.Contains(generatedHandle));
+        
+        // Return
+        return generatedHandle;
     }
 
     public async Task<bool> UpdateProfile(ProfileFormModel form)

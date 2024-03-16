@@ -12,6 +12,7 @@ public interface IProfileRepository : IBaseRepository
     Task<ProfileQueryModel?> GetProfileByEmail(string email);
     Task<bool> IsHandleAvailable(string handle);
     Task<int> UpdateProfile(ProfileQueryModel model);
+    Task<List<string>> FindSimilarHandles(string handle);
 }
 
 public class ProfileRepository(IConfiguration configuration, ILogger<ProfileRepository> logger) : BasePgRepository(configuration, logger), IProfileRepository
@@ -43,5 +44,13 @@ public class ProfileRepository(IConfiguration configuration, ILogger<ProfileRepo
         var rv = await conn.ExecuteAsync(sql,
             new { firstName = model.FirstName, lastName = model.LastName, handle = model.Handle, id = model.Id });
         return rv;
+    }
+
+    public async Task<List<string>> FindSimilarHandles(string handle)
+    {
+        var sql = "SELECT \"Handle\"FROM public.\"AspNetUsers\"WHERE \"Handle\" LIKE @handle || '%';";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryAsync<string>(sql, new { handle });
+        return rv.ToList();
     }
 }

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using FairwayFinder.Core.Features.Profile;
 using FairwayFinder.Core.Features.UserMangement;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Settings;
@@ -16,13 +17,14 @@ public class RegisterModel : PageModel
     private readonly IUserEmailStore<ApplicationUser> _emailStore;
     private readonly ILogger<RegisterModel> _logger;
     private readonly IManageUsersService _userManagementService;
+    private readonly IProfileService _profileService;
 
     public RegisterModel(
         UserManager<ApplicationUser> userManager,
         IUserStore<ApplicationUser> userStore,
         SignInManager<ApplicationUser> signInManager,
         ILogger<RegisterModel> logger,
-        IManageUsersService userManagementService)
+        IManageUsersService userManagementService, IProfileService profileService)
     {
         _userManager = userManager;
         _userStore = userStore;
@@ -30,6 +32,7 @@ public class RegisterModel : PageModel
         _signInManager = signInManager;
         _logger = logger;
         _userManagementService = userManagementService;
+        _profileService = profileService;
     }
     
     [BindProperty]
@@ -58,6 +61,19 @@ public class RegisterModel : PageModel
         [Display(Name = "Confirm password")]
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; }
+        
+        [Required]
+        [MaxLength(250, ErrorMessage = "Maximum length is 250 characters.")]
+        [RegularExpression(@"^[a-zA-Z\s'-]+$", ErrorMessage = "First Name can only contain letters, spaces, apostrophes, and hyphens.")]
+        [Display(Name = "First Name")]
+        public string FirstName { get; set; }
+    
+        [Required]
+        [MaxLength(250, ErrorMessage = "Maximum length is 250 characters.")]
+        [RegularExpression(@"^[a-zA-Z\s'-]+$", ErrorMessage = "Last Name can only contain letters, spaces, apostrophes, and hyphens.")]
+        [Display(Name = "Last Name")]
+        public string LastName { get; set; }
+        
         
     }
 
@@ -91,6 +107,9 @@ public class RegisterModel : PageModel
         {
             var user = CreateUser();
             user.EmailConfirmed = true;
+            user.FirstName = Input.FirstName;
+            user.LastName = Input.LastName;
+            user.Handle = await _profileService.GenerateUserName(user.FirstName, user.LastName);
 
             await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
             await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
