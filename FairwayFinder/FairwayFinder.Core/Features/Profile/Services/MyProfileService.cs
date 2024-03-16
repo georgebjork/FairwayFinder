@@ -5,17 +5,17 @@ using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Core.Features.Profile;
 
-public interface IProfileService
+public interface IMyProfileService
 {
-    Task<ProfileQueryModel?> GetProfileByEmail(string email);
+    Task<ProfileQueryModel?> GetProfile(string email);
     Task<bool> IsHandleAvailable(string handle);
     Task<bool> UpdateProfile(ProfileFormModel form);
     Task<string> GenerateUserName(string firstName, string lastName);
 }
 
-public class ProfileService(IProfileRepository profileRepository, IUsernameRetriever usernameRetriever, ILogger<ProfileService> logger) : IProfileService
+public class MyProfileService(IProfileRepository profileRepository, IUsernameRetriever usernameRetriever, ILogger<MyProfileService> logger) : IMyProfileService
 {
-    public async Task<ProfileQueryModel?> GetProfileByEmail(string email)
+    public async Task<ProfileQueryModel?> GetProfile(string email)
     {
         return await profileRepository.GetProfileByEmail(email);
     }
@@ -47,7 +47,7 @@ public class ProfileService(IProfileRepository profileRepository, IUsernameRetri
 
     public async Task<bool> UpdateProfile(ProfileFormModel form)
     {
-        var profile = await GetProfileByEmail(usernameRetriever.Username);
+        var profile = await GetProfile(usernameRetriever.Username);
         if (!await IsHandleAvailable(form.Handle) && profile?.Handle != form.Handle) return false;
 
         try

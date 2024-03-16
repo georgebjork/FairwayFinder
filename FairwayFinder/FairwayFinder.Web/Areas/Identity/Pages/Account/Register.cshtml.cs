@@ -17,14 +17,14 @@ public class RegisterModel : PageModel
     private readonly IUserEmailStore<ApplicationUser> _emailStore;
     private readonly ILogger<RegisterModel> _logger;
     private readonly IManageUsersService _userManagementService;
-    private readonly IProfileService _profileService;
+    private readonly IMyProfileService _myProfileService;
 
     public RegisterModel(
         UserManager<ApplicationUser> userManager,
         IUserStore<ApplicationUser> userStore,
         SignInManager<ApplicationUser> signInManager,
         ILogger<RegisterModel> logger,
-        IManageUsersService userManagementService, IProfileService profileService)
+        IManageUsersService userManagementService, IMyProfileService myProfileService)
     {
         _userManager = userManager;
         _userStore = userStore;
@@ -32,7 +32,7 @@ public class RegisterModel : PageModel
         _signInManager = signInManager;
         _logger = logger;
         _userManagementService = userManagementService;
-        _profileService = profileService;
+        _myProfileService = myProfileService;
     }
     
     [BindProperty]
@@ -109,7 +109,7 @@ public class RegisterModel : PageModel
             user.EmailConfirmed = true;
             user.FirstName = Input.FirstName;
             user.LastName = Input.LastName;
-            user.Handle = await _profileService.GenerateUserName(user.FirstName, user.LastName);
+            user.Handle = await _myProfileService.GenerateUserName(user.FirstName, user.LastName);
 
             await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
             await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);

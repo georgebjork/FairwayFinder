@@ -15,7 +15,7 @@
 
             <ul class="dropdown-menu dropdown-menu-dark text-small shadow">
                 <li>
-                    <a class="dropdown-item" asp-area="Profile" asp-controller="Profile" asp-action="Index"> <i class="fa-solid fa-user pe-2"></i> Profile</a>
+                    <a class="dropdown-item" asp-area="Profile" asp-controller="MyProfile" asp-action="EditProfile"> <i class="fa-solid fa-user pe-2"></i> Profile</a>
                 </li>
                  
                 @if (User.IsInRole(Roles.Admin))

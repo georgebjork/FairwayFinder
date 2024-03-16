@@ -26,4 +26,8 @@
     <Folder Include="Areas\Admin\Views\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <AdditionalFiles Include="Areas\Profile\Views\MyProfile\EditProfile.cshtml" />
+  </ItemGroup>
+
 </Project>

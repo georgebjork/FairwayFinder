@@ -10,6 +10,7 @@ namespace FairwayFinder.Core.Features.Profile;
 public interface IProfileRepository : IBaseRepository
 {
     Task<ProfileQueryModel?> GetProfileByEmail(string email);
+    Task<ProfileQueryModel?> GetProfileByHandle(string handle);
     Task<bool> IsHandleAvailable(string handle);
     Task<int> UpdateProfile(ProfileQueryModel model);
     Task<List<string>> FindSimilarHandles(string handle);
@@ -23,6 +24,15 @@ public class ProfileRepository(IConfiguration configuration, ILogger<ProfileRepo
             "SELECT \"Id\", \"Email\", \"FirstName\", \"LastName\", \"Handle\"\n\t FROM public.\"AspNetUsers\" WHERE \"Email\" = @email";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryFirstOrDefaultAsync<ProfileQueryModel>(sql, new { email });
+        return rv;
+    }
+
+    public async Task<ProfileQueryModel?> GetProfileByHandle(string handle)
+    {
+        var sql =
+            "SELECT \"Id\", \"Email\", \"FirstName\", \"LastName\", \"Handle\"\n\t FROM public.\"AspNetUsers\" WHERE \"Handle\" = @handle";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryFirstOrDefaultAsync<ProfileQueryModel>(sql, new { handle });
         return rv;
     }
 
