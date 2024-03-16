@@ -101,6 +101,7 @@ app.MapRazorPages();
 app.UseSession();
 
 using (var scope = app.Services.CreateScope()) {
+    await RunMigrations(scope.ServiceProvider);
     await CreateRoles(scope.ServiceProvider);
 }
 
@@ -109,6 +110,17 @@ app.Run();
 
 void ConfigureSettings(IServiceCollection services, IConfiguration config) {
     services.Configure<SendGridSettings>(config.GetSection("SendGrid"));
+}
+
+Task RunMigrations(IServiceProvider serviceProvider)
+{
+    var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
+    if (context.Database.GetPendingMigrations().Any())
+    {
+        context.Database.Migrate();
+    }
+
+    return Task.CompletedTask;
 }
 
 async Task CreateRoles(IServiceProvider serviceProvider) {

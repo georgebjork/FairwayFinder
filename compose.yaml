@@ -16,12 +16,11 @@ services:
     ports:
       - "8080:8080"
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DbConnection: "User ID=postgres;Password=password;Host=db;Port=5432;Database=FairwayFinder;Pooling=true;Connection Lifetime=0"
-
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DbConnection=User ID=postgres;Password=password;Host=db;Port=5432;Database=FairwayFinder;Pooling=true;Connection Lifetime=0
     depends_on:
       - db
-
+  
   db:
     image: postgres:latest
     environment:
