@@ -8,14 +8,14 @@
 
         <input type="hidden" asp-for="Email"/>
         <div class="row">
-            <div class="col-6">
+            <div class="col-lg-6 col-md-12">
                 <div class="mb-5">
                     <label asp-for="FirstName" class="form-label"></label>
                     <input asp-for="FirstName" class="form-control" type="text">
                     <span asp-validation-for="FirstName" class="text-danger"></span>
                 </div>
             </div>
-            <div class="col-6">
+            <div class="col-lg-6 col-md-12">
                 <div class="mb-5">
                     <label asp-for="LastName" class="form-label"></label>
                     <input asp-for="LastName" class="form-control" type="text">
@@ -25,7 +25,7 @@
         </div>
 
         <div class="row">
-            <div class="col-6">
+            <div class="col-lg-6 col-md-12">
                 <div class="mb-5">
                     <label asp-for="Email" class="form-label"></label>
                     <input asp-for="Email" class="form-control" type="text" disabled>
@@ -33,7 +33,7 @@
                 </div>
             </div>
 
-            <div class="col-6">
+            <div class="col-lg-6 col-md-12">
                 <div class="mb-5" id="handle-input">
                     <label asp-for="Handle" class="form-label"></label>
                     <div class="input-group">
@@ -42,9 +42,9 @@
                                hx-get="profile/check-handle"
                                hx-swap="innerHTML"
                                hx-target="#handle-input"
-                               hx-trigger="input delay:1000ms">
-                        <span asp-validation-for="Handle" class="text-danger"></span>
+                               hx-trigger="input delay:500ms">
                     </div>
+                    <span asp-validation-for="Handle" class="text-danger"></span>
 
                 </div>
             </div>

@@ -7,21 +7,19 @@
            hx-get="profile/check-handle"
            hx-swap="innerHTML"
            hx-target="#handle-input"
-           hx-trigger="input delay:1000ms">
-    
-    <span asp-validation-for="Handle" class="text-danger"></span>
-    
-    @if (Model.IsValidHandle)
-    {
-        <div id="validationServerUsernameFeedback" class="valid-feedback">
-            This username is available!
-        </div>
-    }
-    else
+           hx-trigger="input delay:500ms">
+
+    @if (!Model.IsValidHandle && !string.IsNullOrEmpty(Model.Handle))
     {
         <div id="validationServerUsernameFeedback" class="invalid-feedback">
             This username is not available.
         </div>
     }
+    else
+    {
+        <div id="validationServerUsernameFeedback" class="valid-feedback">
+            This username is available!
+        </div>   
+    }
 </div>
-
+<span asp-validation-for="Handle" class="text-danger"></span>

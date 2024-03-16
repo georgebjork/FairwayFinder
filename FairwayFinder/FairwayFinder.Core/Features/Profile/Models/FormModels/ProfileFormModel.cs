@@ -14,11 +14,13 @@ public class ProfileFormModel
     
     [Required]
     [MaxLength(250, ErrorMessage = "Maximum length is 250 characters.")]
+    [RegularExpression(@"^[a-zA-Z\s'-]+$", ErrorMessage = "First Name can only contain letters, spaces, apostrophes, and hyphens.")]
     [Display(Name = "First Name")]
     public string FirstName { get; set; } = "";
     
     [Required]
     [MaxLength(250, ErrorMessage = "Maximum length is 250 characters.")]
+    [RegularExpression(@"^[a-zA-Z\s'-]+$", ErrorMessage = "Last Name can only contain letters, spaces, apostrophes, and hyphens.")]
     [Display(Name = "Last Name")]
     public string LastName { get; set; } = "";
     

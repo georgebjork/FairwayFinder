@@ -1,6 +1,7 @@
 using FairwayFinder.Core.Features.Profile.Models.FormModels;
 using FairwayFinder.Core.Features.Profile.Models.QueryModel;
 using FairwayFinder.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Core.Features.Profile;
 
@@ -11,7 +12,7 @@ public interface IProfileService
     Task<bool> UpdateProfile(ProfileFormModel form);
 }
 
-public class ProfileService(IProfileRepository profileRepository, IUsernameRetriever usernameRetriever) : IProfileService
+public class ProfileService(IProfileRepository profileRepository, IUsernameRetriever usernameRetriever, ILogger<ProfileService> logger) : IProfileService
 {
     public async Task<ProfileQueryModel?> GetProfileByEmail(string email)
     {
@@ -27,16 +28,25 @@ public class ProfileService(IProfileRepository profileRepository, IUsernameRetri
     {
         var profile = await GetProfileByEmail(usernameRetriever.Username);
         if (!await IsHandleAvailable(form.Handle) && profile?.Handle != form.Handle) return false;
-        
-        var model = new ProfileQueryModel
+
+        try
         {
-            Email = form.Email,
-            FirstName = form.FirstName,
-            LastName = form.LastName,
-            Handle = form.Handle,
-            Id = form.UserId
-        };
-        var rv = await profileRepository.UpdateProfile(model);
-        return rv >= 1;
+            var model = new ProfileQueryModel
+            {
+                Email = form.Email,
+                FirstName = form.FirstName,
+                LastName = form.LastName,
+                Handle = form.Handle,
+                Id = form.UserId
+            };
+            var rv = await profileRepository.UpdateProfile(model);
+            return rv >= 1;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Profile id {id} could not be updated.", form.UserId);
+            return false;
+        }
+        
     }
 }
