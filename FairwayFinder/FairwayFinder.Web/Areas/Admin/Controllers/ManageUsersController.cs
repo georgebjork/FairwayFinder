@@ -11,9 +11,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FairwayFinder.Web.Areas.Admin.Controllers;
 
-[Area("Admin")]
-[Authorize(Roles = Roles.Admin)]
-public class ManageUsersController : BaseAuthorizedController {
+
+public class ManageUsersController : BaseAdminController {
     
     private readonly IManageUsersService manageUsersService;
     private readonly IUsernameRetriever usernameRetriever;

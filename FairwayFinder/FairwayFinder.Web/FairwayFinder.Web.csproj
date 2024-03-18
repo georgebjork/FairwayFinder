@@ -8,6 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="8.0.0" />
+    <PackageReference Include="AspNetCore.HealthChecks.SendGrid" Version="8.0.0" />
+    <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.0" />
@@ -22,12 +25,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Areas\Admin\Controllers\" />
-    <Folder Include="Areas\Admin\Views\" />
+    <AdditionalFiles Include="Areas\Profile\Views\MyProfile\EditProfile.cshtml" />
   </ItemGroup>
 
   <ItemGroup>
-    <AdditionalFiles Include="Areas\Profile\Views\MyProfile\EditProfile.cshtml" />
+    <Reference Include="System.Private.Xml">
+      <HintPath>C:\Program Files\dotnet\shared\Microsoft.NETCore.App\8.0.0\System.Private.Xml.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

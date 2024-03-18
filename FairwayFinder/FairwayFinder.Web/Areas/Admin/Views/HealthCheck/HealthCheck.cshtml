@@ -1,0 +1,21 @@
+﻿@using FairwayFinder.Core.Features.Admin.HealthCheck.Models.ViewModels
+
+
+@{
+    ViewData["Title"] = "System Health";
+}
+
+<div class="container">
+    
+    
+    
+    <div id="health-check-data"
+         hx-get="/get-health"
+         hx-target="#health-check-data"
+         hx-swap="innerHTML"
+         hx-trigger="load">
+        
+        @await Html.PartialAsync("_HealthCheckDisplay", new HealthViewModel())
+    </div>
+    
+</div>

@@ -3,6 +3,8 @@ using FairwayFinder.Core;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Settings;
 using FairwayFinder.Web.Data;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,10 +18,17 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 // Authorization config
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(Policies.HealthCheck, policy => policy.RequireRole(Roles.Admin));
+});
+
 
 builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddHealthChecks()
+    .AddNpgSql(connectionString)
+    .AddSendGrid(builder.Configuration.GetSection("SendGrid").Get<SendGridSettings>()!.ApiKey);
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
         options.SignIn.RequireConfirmedAccount = false;
@@ -97,9 +106,12 @@ app.MapControllerRoute(
 
 
 app.MapRazorPages();
-
-
 app.UseSession();
+
+app.MapHealthChecks("/_health", new HealthCheckOptions
+{
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
 
 using (var scope = app.Services.CreateScope()) {
     await RunMigrations(scope.ServiceProvider);

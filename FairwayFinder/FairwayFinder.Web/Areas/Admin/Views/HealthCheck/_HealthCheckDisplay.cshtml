@@ -1,0 +1,80 @@
+﻿@using Newtonsoft.Json
+@model FairwayFinder.Core.Features.Admin.HealthCheck.Models.ViewModels.HealthViewModel
+
+
+<div>
+  
+  <div class="row py-4 d-flex justify-content-start align-items-center">
+    <div class="col-auto">
+      <h1>
+        System Health
+      </h1>
+    </div>
+    <div class="col-auto">
+      @switch (Model.Status)
+      {
+        case null:
+          <small class="mb-3 px-2 py-1 fw-semibold text-secondary-emphasis bg-secondary-subtle border border-secondary-subtle rounded-2">
+          Fetching...
+        </small>
+          break;
+        case "Unhealthy":
+          <small class="mb-3 px-2 py-1 fw-semibold text-danger-emphasis bg-danger-subtle border border-danger-subtle rounded-2">
+          Unhealthy
+        </small>
+          break;
+        default:
+          <small class="mb-3 px-2 py-1 fw-semibold text-success-emphasis bg-success-subtle border border-success-subtle rounded-2">
+          Healthy
+        </small>
+          break;
+      }
+    </div>
+  </div>
+
+  <div class="accordion" id="items">
+    @foreach (var check in Model.Entries)
+    {
+      <div class="accordion-item">
+
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#@check.Name" aria-expanded="true" aria-controls="@check.Name">
+            <div class="row d-flex justify-content-center align-items-center py-2">
+              <div class="col-auto">
+                @check.Name
+              </div>
+              <div class="col-auto"> <!-- Adjust the min-height as needed -->
+                @if (check.Status == "Unhealthy")
+                {
+                  <small class="mb-3 px-2 py-1 fw-semibold text-danger-emphasis bg-danger-subtle border border-danger-subtle rounded-2">
+                    Unhealthy
+                  </small>
+                }
+                else
+                {
+                  <small class="mb-3 px-2 py-1 fw-semibold text-success-emphasis bg-success-subtle border border-success-subtle rounded-2">
+                    Healthy
+                  </small>
+                }
+              </div>
+
+
+            </div>
+          </button>
+        </h2>
+
+        <div id="@check.Name" class="accordion-collapse collapse" data-bs-parent="#items">
+
+          <div class="accordion-body">
+            <pre>
+                @Html.Raw(check.JsonData)
+            </pre>
+          </div>
+
+        </div>
+      </div>
+    }
+  </div>
+
+
+</div>
