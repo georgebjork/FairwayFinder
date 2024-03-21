@@ -3,9 +3,17 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34330.188
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairwayFinder.Web", "FairwayFinder.Web\FairwayFinder.Web.csproj", "{78618C2F-371A-4F02-A95A-86A8563A4E79}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{EE03D08C-9D86-4FC3-9E31-8FF2459CA574}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairwayFinder.Core", "FairwayFinder.Core\FairwayFinder.Core.csproj", "{75BDD069-03FB-4189-BFCB-0FD28A9BC2D6}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{E7723329-3D6E-4296-9F3B-0F09395DED9D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairwayFinder.Core", "src\FairwayFinder.Core\FairwayFinder.Core.csproj", "{261893A8-2100-491A-AF7F-963AEB324297}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairwayFinder.Web", "src\FairwayFinder.Web\FairwayFinder.Web.csproj", "{32345117-F991-45B0-A7EC-EECA846B3074}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairwayFinder.Tests.Integration", "tests\FairwayFinder.Tests.Integration\FairwayFinder.Tests.Integration.csproj", "{276A4C1C-E584-4C92-83A1-A2DFC9D5782A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairwayFinder.Core.Tests", "tests\FairwayFinder.Core.Tests\FairwayFinder.Core.Tests.csproj", "{38D16094-B6ED-4673-8893-C23A57599D93}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,19 +21,33 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{78618C2F-371A-4F02-A95A-86A8563A4E79}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{78618C2F-371A-4F02-A95A-86A8563A4E79}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{78618C2F-371A-4F02-A95A-86A8563A4E79}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{78618C2F-371A-4F02-A95A-86A8563A4E79}.Release|Any CPU.Build.0 = Release|Any CPU
-		{75BDD069-03FB-4189-BFCB-0FD28A9BC2D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{75BDD069-03FB-4189-BFCB-0FD28A9BC2D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{75BDD069-03FB-4189-BFCB-0FD28A9BC2D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{75BDD069-03FB-4189-BFCB-0FD28A9BC2D6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{261893A8-2100-491A-AF7F-963AEB324297}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{261893A8-2100-491A-AF7F-963AEB324297}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{261893A8-2100-491A-AF7F-963AEB324297}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{261893A8-2100-491A-AF7F-963AEB324297}.Release|Any CPU.Build.0 = Release|Any CPU
+		{32345117-F991-45B0-A7EC-EECA846B3074}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{32345117-F991-45B0-A7EC-EECA846B3074}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{32345117-F991-45B0-A7EC-EECA846B3074}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{32345117-F991-45B0-A7EC-EECA846B3074}.Release|Any CPU.Build.0 = Release|Any CPU
+		{276A4C1C-E584-4C92-83A1-A2DFC9D5782A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{276A4C1C-E584-4C92-83A1-A2DFC9D5782A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{276A4C1C-E584-4C92-83A1-A2DFC9D5782A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{276A4C1C-E584-4C92-83A1-A2DFC9D5782A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{38D16094-B6ED-4673-8893-C23A57599D93}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{38D16094-B6ED-4673-8893-C23A57599D93}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{38D16094-B6ED-4673-8893-C23A57599D93}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{38D16094-B6ED-4673-8893-C23A57599D93}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7B264892-7276-4F0F-A81F-2259CE2F0A04}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{261893A8-2100-491A-AF7F-963AEB324297} = {EE03D08C-9D86-4FC3-9E31-8FF2459CA574}
+		{32345117-F991-45B0-A7EC-EECA846B3074} = {EE03D08C-9D86-4FC3-9E31-8FF2459CA574}
+		{276A4C1C-E584-4C92-83A1-A2DFC9D5782A} = {E7723329-3D6E-4296-9F3B-0F09395DED9D}
+		{38D16094-B6ED-4673-8893-C23A57599D93} = {E7723329-3D6E-4296-9F3B-0F09395DED9D}
 	EndGlobalSection
 EndGlobal
