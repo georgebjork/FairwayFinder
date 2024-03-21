@@ -21,4 +21,8 @@
         <Using Include="Xunit"/>
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\..\src\FairwayFinder.Core\FairwayFinder.Core.csproj" />
+    </ItemGroup>
+
 </Project>
