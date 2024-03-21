@@ -12,7 +12,7 @@ public class ErrorController : BaseController
     }
 
     [Route("/404")]
-    public IActionResult NotFound()
+    public IActionResult NotFoundResponse()
     {
         return View();
     }

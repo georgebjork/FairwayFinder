@@ -1,6 +1,4 @@
-using FairwayFinder.Core.Features.Profile;
-using FairwayFinder.Core.Features.Profile.Models.FormModels;
-using FairwayFinder.Core.Features.Profile.Models.ViewModels;
+using System.Net;
 using FairwayFinder.Core.Features.Profile.Services;
 using FairwayFinder.Core.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +17,6 @@ public class ProfileController(IUsernameRetriever usernameRetriever, IProfileSer
         if (vm is not null) return View(vm);
         
         SetErrorMessage("Profile does not exist");
-        return RedirectToAction(nameof(Index), "Home");
+        return NotFound();
     }
 }

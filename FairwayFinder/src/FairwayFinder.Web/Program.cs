@@ -104,6 +104,14 @@ app.MapControllerRoute(
     pattern : "{area:exists}/{controller=Home}/{action=Index}/{id?}"
 );
 
+// 404 mapping 
+app.Use(async (ctx, next) => {
+    await next();
+    if (ctx.Response.StatusCode == StatusCodes.Status404NotFound && ctx.Request.Path != "/404") {
+        ctx.Response.Redirect("/404");
+    }
+});
+
 
 app.MapRazorPages();
 app.UseSession();
