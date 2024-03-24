@@ -1,5 +1,6 @@
 using Dapper;
 using FairwayFinder.Core;
+using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Settings;
 using FairwayFinder.Web.Data;
@@ -7,6 +8,12 @@ using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using NpgsqlTypes;
+using Serilog;
+using Serilog.Core.Enrichers;
+using Serilog.Sinks.PostgreSQL;
+using Serilog.Sinks.PostgreSQL.ColumnWriters;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,6 +68,9 @@ builder.Services.AddSession();
 builder.Services.AddMvc();
 builder.Services.AddControllersWithViews();
 
+builder.Host.UseSerilog((context, configuration) =>
+    configuration.ReadFrom.Configuration(context.Configuration));
+
 ConfigureCoreServices.ConfigureServices(services: builder.Services);
 
 ConfigureSettings(builder.Services, builder.Configuration);
@@ -81,6 +91,17 @@ else
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+//Add support to logging request with SERILOG
+app.UseSerilogRequestLogging(options =>
+{
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        var currentUserName = httpContext.CurrentUserName(); 
+        // Now add the current user's name to the diagnostic context
+        diagnosticContext.Set("User", currentUserName);
+    };
+});
 
 app.UseRouting();
 
