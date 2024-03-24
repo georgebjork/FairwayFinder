@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using FairwayFinder.Core.Features.Admin.UserManagement;
 using FairwayFinder.Core.Features.Profile;
+using FairwayFinder.Core.Features.Profile.Services;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Settings;
 using Microsoft.AspNetCore.Identity;

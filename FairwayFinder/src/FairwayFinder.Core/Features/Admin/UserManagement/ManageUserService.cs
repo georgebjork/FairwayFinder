@@ -3,6 +3,7 @@ using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Services;
 using FairwayFinder.Core.Settings;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Core.Features.Admin.UserManagement;
 
@@ -28,12 +29,14 @@ public class ManageUsersService : IManageUsersService {
     private readonly IUsernameRetriever _usernameRetriever;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IEmailSenderService _emailSenderService;
+    private readonly ILogger<ManageUsersService> _logger;
     
-    public ManageUsersService(IUserRepository userRepository, UserManager<ApplicationUser> userManager, IUsernameRetriever usernameRetriever, IEmailSenderService emailSenderService) {
+    public ManageUsersService(IUserRepository userRepository, UserManager<ApplicationUser> userManager, IUsernameRetriever usernameRetriever, IEmailSenderService emailSenderService, ILogger<ManageUsersService> logger) {
         _userRepository = userRepository;
         _userManager = userManager;
         _usernameRetriever = usernameRetriever;
         _emailSenderService = emailSenderService;
+        _logger = logger;
     }
     
     public async Task<List<ApplicationUser>> GetUsers() {
@@ -85,6 +88,7 @@ public class ManageUsersService : IManageUsersService {
         await _userManager.AddToRoleAsync(user, Roles.Admin);
         user.IsAdmin = true;
         
+        _logger.LogInformation($"{_usernameRetriever.Username} promoted {user.Email} to admin.");
         return user;
     }
 
@@ -101,8 +105,9 @@ public class ManageUsersService : IManageUsersService {
         {
             await _userManager.AddToRoleAsync(user, Roles.User);
         }
-
         user.IsAdmin = false;
+        
+        _logger.LogInformation($"{_usernameRetriever.Username} revoked admin for {user.Email}");
         return user;
     }
 

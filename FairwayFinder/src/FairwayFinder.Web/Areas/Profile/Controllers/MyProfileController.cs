@@ -1,6 +1,7 @@
 using FairwayFinder.Core.Features.Profile;
 using FairwayFinder.Core.Features.Profile.Models.FormModels;
 using FairwayFinder.Core.Features.Profile.Models.ViewModels;
+using FairwayFinder.Core.Features.Profile.Services;
 using FairwayFinder.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 

@@ -18,7 +18,7 @@ public class HealthCheckController : BaseAdminController
     [Route("/get-health")]
     public async Task<IActionResult> GetHealth()
     {
-        var healthUrl = $"{RequestUrlBase}/_health"; // Update this with your actual URL
+        var healthUrl = $"{RequestUrlBase}/_health"; 
         using var client = new HttpClient();
 
         var response = await client.GetStringAsync(healthUrl);

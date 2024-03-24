@@ -18,9 +18,6 @@ public interface IUserRepository : IBaseRepository
 
 public class UserRepository(IConfiguration configuration, ILogger<UserRepository> logger) : BasePgRepository(configuration, logger), IUserRepository
 {
-    private readonly ILogger<UserRepository> logger = logger;
-
-
     public async Task<List<ApplicationUser>> GetUsers()
     {
         var sql = @"SELECT * FROM public.""AspNetUsers""";

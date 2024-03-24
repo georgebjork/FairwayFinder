@@ -3,7 +3,7 @@ using FairwayFinder.Core.Features.Profile.Models.QueryModel;
 using FairwayFinder.Core.Services;
 using Microsoft.Extensions.Logging;
 
-namespace FairwayFinder.Core.Features.Profile;
+namespace FairwayFinder.Core.Features.Profile.Services;
 
 public interface IMyProfileService
 {
