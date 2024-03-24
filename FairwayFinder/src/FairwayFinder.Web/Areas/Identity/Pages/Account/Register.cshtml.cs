@@ -24,7 +24,7 @@ public class RegisterModel : PageModel
         IUserStore<ApplicationUser> userStore,
         SignInManager<ApplicationUser> signInManager,
         ILogger<RegisterModel> logger,
-        IManageUsersService userManagementService, IMyProfileService myProfileService)
+        IManageUsersService userManagementService, IMyProfileService myProfileService, InputModel input)
     {
         _userManager = userManager;
         _userStore = userStore;
@@ -33,6 +33,7 @@ public class RegisterModel : PageModel
         _logger = logger;
         _userManagementService = userManagementService;
         _myProfileService = myProfileService;
+        Input = input;
     }
     
     [BindProperty]

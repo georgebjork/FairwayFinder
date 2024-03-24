@@ -1,11 +1,9 @@
-using System.Net;
 using FairwayFinder.Core.Features.Profile.Services;
-using FairwayFinder.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FairwayFinder.Web.Areas.Profile.Controllers;
 
-public class ProfileController(IUsernameRetriever usernameRetriever, IProfileService profileService) : BaseProfileController
+public class ProfileController(IProfileService profileService) : BaseProfileController
 {
     
 

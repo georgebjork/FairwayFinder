@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq;
 
 namespace FairwayFinder.Web.Areas.Admin.Controllers;
 
-public class HealthCheckController(ILogger<HealthCheckController> logger) : BaseAdminController
+public class HealthCheckController : BaseAdminController
 {
     [Route("/health-check")]
     public IActionResult HealthCheck()
@@ -25,22 +25,13 @@ public class HealthCheckController(ILogger<HealthCheckController> logger) : Base
         var healthData = JObject.Parse(response);
 
         // Extract the 'status' and 'totalDuration'
-        var status = healthData["status"].ToString();
-        var totalDuration = healthData["totalDuration"].ToString();
+        var status = healthData["status"]?.ToString() ?? "unknown";
+        var totalDuration = healthData["totalDuration"]?.ToString()  ?? "unknown";
 
         // Process entries
-        var entries = new List<Entry>();
-        var healthEntries = healthData["entries"].ToObject<Dictionary<string, JObject>>();
-        foreach (var entry in healthEntries)
-        {
-            var entryData = new Entry
-            {
-                Name = entry.Key,
-                Status = entry.Value["status"].ToString(),
-                JsonData = JsonConvert.SerializeObject(entry.Value, Formatting.Indented)
-            };
-            entries.Add(entryData);
-        }
+        var healthEntries = healthData["entries"]!.ToObject<Dictionary<string, JObject>>();
+        
+        var entries = healthEntries!.Select(entry => new Entry { Name = entry.Key, Status = entry.Value["status"]!.ToString(), JsonData = JsonConvert.SerializeObject(entry.Value, Formatting.Indented) }).ToList();
 
         // Assuming you have a ViewModel to pass to your View
         var vm = new HealthViewModel

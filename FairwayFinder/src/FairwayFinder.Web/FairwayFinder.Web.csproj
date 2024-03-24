@@ -26,14 +26,4 @@
     <ProjectReference Include="..\FairwayFinder.Core\FairwayFinder.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <AdditionalFiles Include="Areas\Profile\Views\MyProfile\EditProfile.cshtml" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="System.Private.Xml">
-      <HintPath>C:\Program Files\dotnet\shared\Microsoft.NETCore.App\8.0.0\System.Private.Xml.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
 </Project>
