@@ -1,11 +1,9 @@
-using FairwayFinder.Core.Features.UserMangement;
-using FairwayFinder.Core.Features.UserMangement.Models.FormModels;
-using FairwayFinder.Core.Features.UserMangement.Models.ViewModels;
+using FairwayFinder.Core.Features.Admin.UserManagement;
+using FairwayFinder.Core.Features.Admin.UserManagement.Models.FormModels;
+using FairwayFinder.Core.Features.Admin.UserManagement.Models.ViewModels;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Services;
 using FairwayFinder.Core.Settings;
-using FairwayFinder.Web.Controllers.BaseControllers;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 

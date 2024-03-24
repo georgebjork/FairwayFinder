@@ -1,7 +1,7 @@
+using FairwayFinder.Core.Features.Admin.UserManagement;
 using FairwayFinder.Core.Features.Course;
 using FairwayFinder.Core.Features.Profile;
 using FairwayFinder.Core.Features.Profile.Services;
-using FairwayFinder.Core.Features.UserMangement;
 using FairwayFinder.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 

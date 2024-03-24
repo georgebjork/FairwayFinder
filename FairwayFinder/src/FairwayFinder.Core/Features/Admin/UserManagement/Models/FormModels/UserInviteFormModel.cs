@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace FairwayFinder.Core.Features.UserMangement.Models.FormModels;
+namespace FairwayFinder.Core.Features.Admin.UserManagement.Models.FormModels;
 
 public class UserInviteFormModel
 {

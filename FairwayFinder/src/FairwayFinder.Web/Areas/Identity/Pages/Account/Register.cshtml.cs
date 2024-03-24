@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using FairwayFinder.Core.Features.Admin.UserManagement;
 using FairwayFinder.Core.Features.Profile;
-using FairwayFinder.Core.Features.UserMangement;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Settings;
 using Microsoft.AspNetCore.Identity;
@@ -38,47 +38,47 @@ public class RegisterModel : PageModel
     [BindProperty]
     public InputModel Input { get; set; }
     
-    public string ReturnUrl { get; set; }
+    public string? ReturnUrl { get; set; }
     
     
     public class InputModel
     {
-        public string InvitationCode{ get; set; }
-       
+        public string? InvitationCode{ get; set; } 
+
         [Required]
         [EmailAddress]
         [Display(Name = "Email")]
-        public string Email { get; set; }
+        public string Email { get; set; } = "";
 
        
         [Required]
         [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
         [DataType(DataType.Password)]
         [Display(Name = "Password")]
-        public string Password { get; set; }
+        public string Password { get; set; } = "";
         
         [DataType(DataType.Password)]
         [Display(Name = "Confirm password")]
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
-        public string ConfirmPassword { get; set; }
+        public string ConfirmPassword { get; set; } = "";
         
         [Required]
         [MaxLength(250, ErrorMessage = "Maximum length is 250 characters.")]
         [RegularExpression(@"^[a-zA-Z\s'-]+$", ErrorMessage = "First Name can only contain letters, spaces, apostrophes, and hyphens.")]
         [Display(Name = "First Name")]
-        public string FirstName { get; set; }
+        public string FirstName { get; set; }  = "";
     
         [Required]
         [MaxLength(250, ErrorMessage = "Maximum length is 250 characters.")]
         [RegularExpression(@"^[a-zA-Z\s'-]+$", ErrorMessage = "Last Name can only contain letters, spaces, apostrophes, and hyphens.")]
         [Display(Name = "Last Name")]
-        public string LastName { get; set; }
+        public string LastName { get; set; }  = "";
         
         
     }
 
 
-    public async Task<IActionResult> OnGetAsync(string invitation, string returnUrl = null)
+    public async Task<IActionResult> OnGetAsync(string invitation, string? returnUrl = null)
     {
         var invite = await _userManagementService.GetValidInvite(invitation);
         if (string.IsNullOrWhiteSpace(invite?.invitation_identifier)) {
@@ -90,7 +90,7 @@ public class RegisterModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostAsync(string returnUrl = null)
+    public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
         
         returnUrl ??= Url.Content("~/");

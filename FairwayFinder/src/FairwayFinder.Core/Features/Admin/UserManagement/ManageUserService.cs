@@ -1,19 +1,19 @@
-using FairwayFinder.Core.Features.UserMangement.Models;
+using FairwayFinder.Core.Features.Admin.UserManagement.Models;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Services;
 using FairwayFinder.Core.Settings;
 using Microsoft.AspNetCore.Identity;
 
-namespace FairwayFinder.Core.Features.UserMangement;
+namespace FairwayFinder.Core.Features.Admin.UserManagement;
 
 public interface IManageUsersService {
     Task<List<ApplicationUser>> GetUsers();
     
     // User Invites
-    Task<List<user_invitation>> GetInvites();
-    Task<user_invitation?> GetValidInvite(string inviteId);
+    Task<List<UserInvitation>> GetInvites();
+    Task<UserInvitation?> GetValidInvite(string inviteId);
 
-    Task<user_invitation> CreateAndSendInvite(string email, string registerBaseUrl);
+    Task<UserInvitation> CreateAndSendInvite(string email, string registerBaseUrl);
 
     Task<ApplicationUser> PromoteAdmin(string userId);
     Task<ApplicationUser> RevokeAdmin(string userId);
@@ -29,31 +29,31 @@ public class ManageUsersService : IManageUsersService {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IEmailSenderService _emailSenderService;
     
-    public ManageUsersService(IUserRepository userRepository, UserManager<ApplicationUser> userManager, IUsernameRetriever usernameRetriever, IEmailSenderService email_sender_service) {
+    public ManageUsersService(IUserRepository userRepository, UserManager<ApplicationUser> userManager, IUsernameRetriever usernameRetriever, IEmailSenderService emailSenderService) {
         _userRepository = userRepository;
         _userManager = userManager;
         _usernameRetriever = usernameRetriever;
-        _emailSenderService = email_sender_service;
+        _emailSenderService = emailSenderService;
     }
     
     public async Task<List<ApplicationUser>> GetUsers() {
         return await _userRepository.GetUsers();
     }
     
-    public async Task<List<user_invitation>> GetInvites() {
+    public async Task<List<UserInvitation>> GetInvites() {
         return await _userRepository.GetInvites();
     }
     
-    public async Task<user_invitation?> GetValidInvite(string inviteId) {
+    public async Task<UserInvitation?> GetValidInvite(string inviteId) {
         return await _userRepository.GetInvite(inviteId);
     }
 
-    public async Task<user_invitation> CreateAndSendInvite(string email, string registerBaseUrl)
+    public async Task<UserInvitation> CreateAndSendInvite(string email, string registerBaseUrl)
     {
         var date = DateTime.UtcNow;
         var username = _usernameRetriever.Username;
         
-        var invite = new user_invitation
+        var invite = new UserInvitation
         {
             invitation_identifier = Guid.NewGuid().ToString(),
             sent_to_email = email,

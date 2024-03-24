@@ -37,7 +37,7 @@ public class ConfigureFactory : WebApplicationFactory<IWebMarker>, IAsyncLifetim
                 { $"ConnectionStrings:{ApplicationSettings.SQL_CONNECTION_NAME}", connectionString }
             };
 
-            config.AddInMemoryCollection(testConfig);
+            config.AddInMemoryCollection(testConfig!);
         });
     }
     
