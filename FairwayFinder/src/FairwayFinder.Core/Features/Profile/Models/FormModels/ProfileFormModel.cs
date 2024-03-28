@@ -26,8 +26,8 @@ public class ProfileFormModel
     
     [Required]
     [MaxLength(30, ErrorMessage = "Maximum length is 30 characters.")]
-    [Display(Name = "Handle")]
-    public string Handle { get; set; } = "";
+    [Display(Name = "UserName")]
+    public string UserName { get; set; } = "";
     public bool IsValidHandle { get; set; } = true;
     
     public string BaseUrl { get; set; } = "";
@@ -39,7 +39,7 @@ public class ProfileFormModel
         {
             FirstName = profile.FirstName,
             LastName = profile.LastName,
-            Handle = profile.Handle,
+            UserName = profile.UserName,
             Email = profile.Email
         };
         return form;

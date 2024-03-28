@@ -16,4 +16,11 @@ public static class HttpContextHelpers
     public static string CurrentUserId(this HttpContext context) {
         return context.User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? "unknown";
     }
+    
+    public static string CurrentEmail(this IHttpContextAccessor context) =>  
+        context.HttpContext?.User?.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Email)?.Value ?? "unknown";
+    
+    public static string CurrentEmail(this HttpContext context) {
+        return context.User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Email)?.Value ?? "unknown";
+    }
 }

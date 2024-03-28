@@ -25,7 +25,7 @@ public class RegisterModel : PageModel
         IUserStore<ApplicationUser> userStore,
         SignInManager<ApplicationUser> signInManager,
         ILogger<RegisterModel> logger,
-        IManageUsersService userManagementService, IMyProfileService myProfileService, InputModel input)
+        IManageUsersService userManagementService, IMyProfileService myProfileService)
     {
         _userManager = userManager;
         _userStore = userStore;
@@ -34,7 +34,6 @@ public class RegisterModel : PageModel
         _logger = logger;
         _userManagementService = userManagementService;
         _myProfileService = myProfileService;
-        Input = input;
     }
     
     [BindProperty]
@@ -111,9 +110,9 @@ public class RegisterModel : PageModel
             user.EmailConfirmed = true;
             user.FirstName = Input.FirstName;
             user.LastName = Input.LastName;
-            user.Handle = await _myProfileService.GenerateUserName(user.FirstName, user.LastName);
+            user.UserName = await _myProfileService.GenerateUserName(user.FirstName, user.LastName);
 
-            await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+            await _userStore.SetUserNameAsync(user, user.UserName, CancellationToken.None);
             await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
             var result = await _userManager.CreateAsync(user, Input.Password);
 

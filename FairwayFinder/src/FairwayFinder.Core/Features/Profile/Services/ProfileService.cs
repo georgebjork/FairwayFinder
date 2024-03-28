@@ -13,7 +13,7 @@ public class ProfileService(ILogger<ProfileService> logger, IProfileRepository r
     
     public async Task<ProfileViewModel?> GetProfile(string handle)
     {
-        var profileDetails = await repository.GetProfileByHandle(handle);
+        var profileDetails = await repository.GetProfileByUserName(handle);
 
         if (profileDetails is not null) return new ProfileViewModel { ProfileDetails = profileDetails };
         

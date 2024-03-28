@@ -12,7 +12,7 @@ public class MyProfileController(IUsernameRetriever usernameRetriever, IMyProfil
     [Route("/profile")]
     public async Task<IActionResult> EditProfile()
     {
-        var username = usernameRetriever.Username;
+        var username = usernameRetriever.Email;
         var profile = await myProfileService.GetProfile(username);
 
         if (profile is null)
@@ -30,14 +30,16 @@ public class MyProfileController(IUsernameRetriever usernameRetriever, IMyProfil
     }
 
     [HttpGet]
-    [Route("/profile/check-handle")]
-    public async Task<IActionResult> CheckProfileHandle([FromQuery] string handle)
+    [Route("/profile/check-username")]
+    public async Task<IActionResult> CheckProfileHandle([FromQuery] string userName)
     {
-        var form = new ProfileFormModel();
-        form.Handle = handle;
-        form.BaseUrl = RequestUrlBase;
+        var form = new ProfileFormModel
+        {
+            UserName = userName,
+            BaseUrl = RequestUrlBase
+        };
 
-        if (string.IsNullOrEmpty(handle))
+        if (string.IsNullOrEmpty(userName))
         {
             form.IsValidHandle = false;
             return PartialView("_HandleValidationPartial", form);
@@ -47,14 +49,14 @@ public class MyProfileController(IUsernameRetriever usernameRetriever, IMyProfil
         var profile = await myProfileService.GetProfile(username);
         
         // It matches our profile! That is good and valid.
-        if (profile!.Handle == handle)
+        if (profile!.UserName == userName)
         {
             form.IsValidHandle = true;
             return PartialView("_HandleValidationPartial", form);
         }
         
         // Check if it matches anyone else's
-        var rv = await myProfileService.IsHandleAvailable(handle);
+        var rv = await myProfileService.IsHandleAvailable(userName);
         
         form.IsValidHandle = rv;
         return PartialView("_HandleValidationPartial", form);

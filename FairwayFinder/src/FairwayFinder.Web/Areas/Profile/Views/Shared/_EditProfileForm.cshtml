@@ -35,16 +35,16 @@
 
             <div class="col-lg-6 col-md-12">
                 <div class="mb-5" id="handle-input">
-                    <label asp-for="Handle" class="form-label"></label>
+                    <label asp-for="UserName" class="form-label"></label>
                     <div class="input-group">
                         <span class="input-group-text">@($"{Model.BaseUrl}/profile/")</span>
-                        <input type="text" class="form-control" asp-for="Handle"
-                               hx-get="profile/check-handle"
+                        <input type="text" class="form-control" asp-for="UserName"
+                               hx-get="profile/check-username"
                                hx-swap="innerHTML"
                                hx-target="#handle-input"
                                hx-trigger="input delay:500ms">
                     </div>
-                    <span asp-validation-for="Handle" class="text-danger"></span>
+                    <span asp-validation-for="UserName" class="text-danger"></span>
 
                 </div>
             </div>

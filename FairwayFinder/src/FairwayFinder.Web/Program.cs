@@ -194,7 +194,9 @@ async Task AddAdminUser(UserManager<ApplicationUser> userManager, string usernam
         var seedUser = new ApplicationUser {
             UserName = username,
             Email = username,
-            EmailConfirmed = true
+            EmailConfirmed = true,
+            FirstName = "George",
+            LastName = "Bjork"
         };
         var createPowerUser = await userManager.CreateAsync(seedUser, password);
         if (createPowerUser.Succeeded) {

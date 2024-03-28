@@ -22,7 +22,7 @@ public class MyProfileService(IProfileRepository profileRepository, IUsernameRet
 
     public async Task<bool> IsHandleAvailable(string handle)
     {
-        return await profileRepository.IsHandleAvailable(handle);
+        return await profileRepository.IsUserNameAvailable(handle);
     }
 
     public async Task<string> GenerateUserName(string firstName, string lastName)
@@ -48,7 +48,7 @@ public class MyProfileService(IProfileRepository profileRepository, IUsernameRet
     public async Task<bool> UpdateProfile(ProfileFormModel form)
     {
         var profile = await GetProfile(usernameRetriever.Username);
-        if (!await IsHandleAvailable(form.Handle) && profile?.Handle != form.Handle) return false;
+        if (!await IsHandleAvailable(form.UserName) && profile?.UserName != form.UserName) return false;
 
         try
         {
@@ -57,7 +57,7 @@ public class MyProfileService(IProfileRepository profileRepository, IUsernameRet
                 Email = form.Email,
                 FirstName = form.FirstName,
                 LastName = form.LastName,
-                Handle = form.Handle,
+                UserName = form.UserName,
                 Id = form.UserId
             };
             var rv = await profileRepository.UpdateProfile(model);
