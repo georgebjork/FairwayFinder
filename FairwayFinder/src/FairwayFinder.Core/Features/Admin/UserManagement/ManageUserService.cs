@@ -13,13 +13,10 @@ public interface IManageUsersService {
     // User Invites
     Task<List<UserInvitation>> GetInvites();
     Task<UserInvitation?> GetValidInvite(string inviteId);
-
     Task<UserInvitation> CreateAndSendInvite(string email, string registerBaseUrl);
-
     Task<ApplicationUser> PromoteAdmin(string userId);
     Task<ApplicationUser> RevokeAdmin(string userId);
     Task<bool> RevokeInvite(string inviteId);
-    
     Task<IdentityResult> RemoveUser(string userId);
 }
 
@@ -118,8 +115,9 @@ public class ManageUsersService : IManageUsersService {
         if (invite is null) return true;
         
         invite.is_deleted = true;
-        invite.updated_by = _usernameRetriever.Username;
+        invite.updated_by = _usernameRetriever.Email;
         invite.updated_on = DateTime.UtcNow;
+        invite.claimed_on = DateTime.UtcNow;
 
         return await _userRepository.Update(invite);
     }

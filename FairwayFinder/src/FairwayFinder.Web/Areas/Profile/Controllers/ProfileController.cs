@@ -7,10 +7,10 @@ public class ProfileController(IProfileService profileService) : BaseProfileCont
 {
     
 
-    [Route("/profile/{handle}")]
-    public async Task<IActionResult> ViewProfile([FromRoute] string handle)
+    [Route("/profile/{userName}")]
+    public async Task<IActionResult> ViewProfile([FromRoute] string userName)
     {
-        var vm = await profileService.GetProfile(handle);
+        var vm = await profileService.GetProfile(userName);
 
         if (vm is not null) return View(vm);
         

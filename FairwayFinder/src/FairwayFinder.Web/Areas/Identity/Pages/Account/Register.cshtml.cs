@@ -1,8 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using FairwayFinder.Core.Features.Admin.UserManagement;
-using FairwayFinder.Core.Features.Profile;
 using FairwayFinder.Core.Features.Profile.Services;
 using FairwayFinder.Core.Models;
+using FairwayFinder.Core.Services;
 using FairwayFinder.Core.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +18,8 @@ public class RegisterModel : PageModel
     private readonly IUserEmailStore<ApplicationUser> _emailStore;
     private readonly ILogger<RegisterModel> _logger;
     private readonly IManageUsersService _userManagementService;
+    private readonly IUserRepository _userRepository;
+    private readonly IUsernameRetriever _usernameRetriever;
     private readonly IMyProfileService _myProfileService;
 
     public RegisterModel(
@@ -25,7 +27,7 @@ public class RegisterModel : PageModel
         IUserStore<ApplicationUser> userStore,
         SignInManager<ApplicationUser> signInManager,
         ILogger<RegisterModel> logger,
-        IManageUsersService userManagementService, IMyProfileService myProfileService)
+        IManageUsersService userManagementService, IMyProfileService myProfileService, IUsernameRetriever usernameRetriever, IUserRepository userRepository)
     {
         _userManager = userManager;
         _userStore = userStore;
@@ -34,6 +36,8 @@ public class RegisterModel : PageModel
         _logger = logger;
         _userManagementService = userManagementService;
         _myProfileService = myProfileService;
+        _usernameRetriever = usernameRetriever;
+        _userRepository = userRepository;
     }
     
     [BindProperty]
@@ -79,8 +83,15 @@ public class RegisterModel : PageModel
     }
 
 
-    public async Task<IActionResult> OnGetAsync(string invitation, string? returnUrl = null)
+    public async Task<IActionResult> OnGetAsync(string? invitation, string? returnUrl = null)
     {
+        // If no invitation, then return a blank sign in page
+        if (invitation is null) {
+            Input = new InputModel();
+            return Page();
+        }
+        
+        // Else, handle the invite 
         var invite = await _userManagementService.GetValidInvite(invitation);
         if (string.IsNullOrWhiteSpace(invite?.invitation_identifier)) {
             return RedirectToPage("./Login");
@@ -96,47 +107,42 @@ public class RegisterModel : PageModel
         
         returnUrl ??= Url.Content("~/");
         
+        if (!ModelState.IsValid) return Page();
+
+        // Get invite code 
         var invitation = Request.Cookies["AccountInvitationCode"]??"";
-        var invite = await _userManagementService.GetValidInvite(invitation);
         
-        if (string.IsNullOrWhiteSpace(invite?.invitation_identifier)) {
-            _logger.LogWarning($"Invalid invitation passed and attempted to create user with: {invitation}");
-            TempData["error_message"] = "Account could not be created";
-            return RedirectToPage("./Login");
-        }
-        if (ModelState.IsValid) 
+        // Create our new user
+        var user = CreateUser();
+        user.EmailConfirmed = true;
+        user.FirstName = Input.FirstName;
+        user.LastName = Input.LastName;
+        user.UserName = await _myProfileService.GenerateUserName(user.FirstName, user.LastName);
+
+        await _userStore.SetUserNameAsync(user, user.UserName, CancellationToken.None);
+        await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+        var result = await _userManager.CreateAsync(user, Input.Password);
+
+        if (result.Succeeded)
         {
-            var user = CreateUser();
-            user.EmailConfirmed = true;
-            user.FirstName = Input.FirstName;
-            user.LastName = Input.LastName;
-            user.UserName = await _myProfileService.GenerateUserName(user.FirstName, user.LastName);
-
-            await _userStore.SetUserNameAsync(user, user.UserName, CancellationToken.None);
-            await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
-            var result = await _userManager.CreateAsync(user, Input.Password);
-
-            if (result.Succeeded)
-            {
                 
-                _logger.LogInformation($"User {Input.Email} created a new account with password.");
+            _logger.LogInformation($"User {Input.Email} created a new account with password.");
                 
                 
-                // Add them to the user role and any claims that were passed in the invitation
-                await _userManager.AddToRoleAsync(user, Roles.User);
-
-                await _signInManager.SignInAsync(user, isPersistent: false);
-                TempData["success_message"] = "Account successfully created";
-
-                await _userManagementService.RevokeInvite(invitation);
+            // Add new user to default role of user
+            await _userManager.AddToRoleAsync(user, Roles.User);
                 
-                return LocalRedirect(returnUrl);
+            await _signInManager.SignInAsync(user, isPersistent: false);
+            TempData["success_message"] = "Account successfully created";
                 
-            }
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
+            await _userManagementService.RevokeInvite(invitation);
+                
+            return LocalRedirect(returnUrl);
+                
+        }
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
         }
 
         // If we got this far, something failed, redisplay form

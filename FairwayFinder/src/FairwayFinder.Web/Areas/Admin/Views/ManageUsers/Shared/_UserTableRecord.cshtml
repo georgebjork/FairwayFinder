@@ -1,6 +1,5 @@
+@model ApplicationUser
 @using Microsoft.AspNetCore.Identity
-@using FairwayFinder.Web.Data
-@using FairwayFinder.Core.Settings
 @using FairwayFinder.Core.Models
 
 @inject UserManager<ApplicationUser> UserManager
@@ -8,6 +7,10 @@
 <tr id="user-@Model.Id">
     <td>@Model.Id</td>
     <td>@Model.Email</td>
+    <td>
+        <a asp-area="Profile" asp-controller="Profile" asp-action="ViewProfile" asp-route-userName="@Model.UserName" class="p-0">@Model.UserName</a>
+    </td>
+    <td>@(Model.FirstName + " " + Model.LastName)</td>
     <td>
         <div class="d-flex justify-content-evenly">
             @if (Model.IsAdmin)

@@ -8,12 +8,7 @@ using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using NpgsqlTypes;
 using Serilog;
-using Serilog.Core.Enrichers;
-using Serilog.Sinks.PostgreSQL;
-using Serilog.Sinks.PostgreSQL.ColumnWriters;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -105,10 +100,11 @@ app.UseSerilogRequestLogging(options =>
 
 app.UseRouting();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
+
 app.MapGet("/login", context => Task.Factory.StartNew(() => context.Response.Redirect("/Identity/Account/Login", true, true)));
-app.MapGet("/register", context => Task.Factory.StartNew(() => context.Response.Redirect("/Identity/Account/Register", true, true)));
 app.MapGet("/logout", context => Task.Factory.StartNew(() => context.Response.Redirect("/Identity/Account/Logout", true, true)));
 app.MapControllers();
 
@@ -181,10 +177,11 @@ async Task CreateRoles(IServiceProvider serviceProvider) {
         }
     }
 
-    // Here you create the super admin who will maintain the web app
+    // Here you create the super admin who will maintain the web app. This password will obviously be changed. 
     await AddAdminUser(userManager, "georgebjork@outlook.com", "password");
 }
 
+// This is used on an initial launch of the application.
 async Task AddAdminUser(UserManager<ApplicationUser> userManager, string username, string password) {
     var user = await userManager.FindByEmailAsync(username);
 
