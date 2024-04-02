@@ -11,8 +11,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairwayFinder.Core", "src\F
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairwayFinder.Web", "src\FairwayFinder.Web\FairwayFinder.Web.csproj", "{32345117-F991-45B0-A7EC-EECA846B3074}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairwayFinder.Tests.Integration", "tests\FairwayFinder.Tests.Integration\FairwayFinder.Tests.Integration.csproj", "{276A4C1C-E584-4C92-83A1-A2DFC9D5782A}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairwayFinder.Core.Tests", "tests\FairwayFinder.Core.Tests\FairwayFinder.Core.Tests.csproj", "{38D16094-B6ED-4673-8893-C23A57599D93}"
 EndProject
 Global
@@ -29,10 +27,6 @@ Global
 		{32345117-F991-45B0-A7EC-EECA846B3074}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{32345117-F991-45B0-A7EC-EECA846B3074}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{32345117-F991-45B0-A7EC-EECA846B3074}.Release|Any CPU.Build.0 = Release|Any CPU
-		{276A4C1C-E584-4C92-83A1-A2DFC9D5782A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{276A4C1C-E584-4C92-83A1-A2DFC9D5782A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{276A4C1C-E584-4C92-83A1-A2DFC9D5782A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{276A4C1C-E584-4C92-83A1-A2DFC9D5782A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{38D16094-B6ED-4673-8893-C23A57599D93}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{38D16094-B6ED-4673-8893-C23A57599D93}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{38D16094-B6ED-4673-8893-C23A57599D93}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -47,7 +41,6 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{261893A8-2100-491A-AF7F-963AEB324297} = {EE03D08C-9D86-4FC3-9E31-8FF2459CA574}
 		{32345117-F991-45B0-A7EC-EECA846B3074} = {EE03D08C-9D86-4FC3-9E31-8FF2459CA574}
-		{276A4C1C-E584-4C92-83A1-A2DFC9D5782A} = {E7723329-3D6E-4296-9F3B-0F09395DED9D}
 		{38D16094-B6ED-4673-8893-C23A57599D93} = {E7723329-3D6E-4296-9F3B-0F09395DED9D}
 	EndGlobalSection
 EndGlobal
