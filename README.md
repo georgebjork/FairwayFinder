@@ -5,17 +5,20 @@
 - Dotnet EF (https://learn.microsoft.com/en-us/ef/core/cli/dotnet)
 - Postgres 16 + pgadmin
 - Docker
-- Visual Studio/JetBrains Rider 
+- Visual Studio/JetBrains Rider
+
+## Quick Setup 
+Execute this command `docker compose up --build` in the root of the project (where the compose.yml resides) and this will get a version running in docker setup. (NOTE: You will need SendGrid credentials provided by the SendGrid admin for certain features such as health checks and user invites to work properly on your machine.)
 
 ## Local development 
-To start devoloping locally, please make sure you have the above prerequisites installed and ready to go. 
+To start developing locally, please make sure you have the above prerequisites installed and ready to go. 
 
 ### Getting Started
 NOTE: You will need SendGrid credentials provided by the SendGrid admin for certain features such as health checks and user invites to work properly on your machine.
 
 In pgadmin, create a database called FairwayFinder
 
-Open the solution in your editor of choice. You should see this project strucure:
+Open the solution in your editor of choice. You should see this project structure:
 
 - src
   - FairwayFinder.Core
@@ -25,7 +28,7 @@ Open the solution in your editor of choice. You should see this project strucure
  
 Enter into the FairwayFinder.Web project and go to `Program.cs`
 
-At the bottom you should see this code block. Replace the email, firstname, and lastname in this code block to be your own information. This will set up a local dev admin account.
+At the bottom, you should see this code block. Replace the email, first name, and last name in this code block to be your own information. This will set up a local dev admin account.
 ```
 async Task CreateRoles(IServiceProvider serviceProvider) {
     //initializing custom roles 
