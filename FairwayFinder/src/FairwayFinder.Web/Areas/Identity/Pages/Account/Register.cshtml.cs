@@ -114,7 +114,7 @@ public class RegisterModel : PageModel
         
         // Create our new user
         var user = CreateUser();
-        user.EmailConfirmed = true;
+        user.EmailConfirmed = false;
         user.FirstName = Input.FirstName;
         user.LastName = Input.LastName;
         user.UserName = await _myProfileService.GenerateUserName(user.FirstName, user.LastName);
@@ -136,6 +136,9 @@ public class RegisterModel : PageModel
             TempData["success_message"] = "Account successfully created";
                 
             await _userManagementService.RevokeInvite(invitation);
+            
+            // Send a confirmation email. 
+            await _userManagementService.CreateAndSendEmailConfirmation(Input.Email, $"{Request.Scheme}://{Request.Host.Value}");
                 
             return LocalRedirect(returnUrl);
                 
