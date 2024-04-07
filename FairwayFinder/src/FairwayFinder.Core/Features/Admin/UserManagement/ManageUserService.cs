@@ -99,6 +99,8 @@ public class ManageUsersService : IManageUsersService {
         pendingConfirmation.is_confirmed = true;
         await _userRepository.Update(pendingConfirmation);
         
+        _logger.LogInformation($"User: {user.UserName} has confirmed their account.");
+        
         return true;
     }
 
