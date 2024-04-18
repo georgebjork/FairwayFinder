@@ -18,11 +18,10 @@
   <main class="drawer-content">
       <div class="grid grid-cols-12 grid-rows-[min-content] gap-y-12 p-4 lg:gap-x-12 lg:p-10">
           <partial name="_Header"/>
+          <section class="container mx-auto">
+              @RenderBody()
+          </section>
       </div>
-      
-      <section class="container mx-auto">
-          @RenderBody()
-      </section>
   </main>
   
   <partial name="_SidebarMenu"/>
