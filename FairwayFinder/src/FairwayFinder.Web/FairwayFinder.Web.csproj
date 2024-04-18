@@ -26,4 +26,13 @@
     <ProjectReference Include="..\FairwayFinder.Core\FairwayFinder.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <UpToDateCheckBuilt Include="wwwroot/css/site.css" Set="Css" />
+    <UpToDateCheckBuilt Include="tailwind.config.js" Set="Css" />
+  </ItemGroup>
+
+  <Target Name="Tailwind" AfterTargets="Build">
+    <Exec Command="npm run css:build"/>
+  </Target>
+
 </Project>
