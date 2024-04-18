@@ -6,71 +6,80 @@
     ViewData["Title"] = "Manage Users";
 }
 
-<div>
-    <div class="mt-4">
-        <div class="mb-2 d-flex justify-content-between">
-            <div class="title"> <h3> Current Users </h3> </div>
-            <div class="add-user"> <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#add-user-modal"> <i class="fa-solid fa-plus pe-2"></i> Add User </button> </div>
-        </div>
+<div class="col-span-12">
     
-        <div class="mb-2"> <hr /> </div>
-
-        <div class="row">
-            <div class="col">
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered">
-                        <thead>
-                        <tr>
-                            <th scope="col">User Id</th>
-                            <th scope="col">Email</th>
-                            <th scope="col">UserName</th>
-                            <th scope="col">Name</th>
-                            <th scope="col" style="width: 20%;">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @foreach (var user in Model.Users)
-                        {
-                            @(await Html.PartialAsync("Shared/_UserTableRecord", user))
-                        }
-                        </tbody>
-                    </table>
+    <section class="bg-base-100 shadow-sm card overflow-hidden">
+        
+        <div class="card-body grow-0">
+            <div class="flex justify-between items-center">
+                <div class="card-title">
+                    <h3> Current Users </h3>
+                </div>
+                <div class="add-user">
+                    <button class="btn btn-primary" type="button" onclick="invite_modal.showModal()">
+                        <i class="fa-solid fa-plus"></i> Add User
+                    </button>
                 </div>
             </div>
+            
         </div>
-    
-    
-        <div class="mb-2 d-flex justify-content-between pt-5">
-            <div class="title"> <h3> Invited Users </h3> </div>
+        
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead>
+                <tr>
+                    <th>User Id</th>
+                    <th>Email</th>
+                    <th>UserName</th>
+                    <th>Name</th>
+                    <th style="width: 20%;">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var user in Model.Users)
+                {
+                    @(await Html.PartialAsync("Shared/_UserTableRecord", user))
+                }
+                </tbody>
+            </table>
         </div>
-        <div class="mb-2"> <hr /> </div>
+    </section>
     
-        <div class="row">
-            <div class="col">
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered">
-                        <thead>
-                        <tr>
-                            <th scope="col">Email</th>
-                            <th scope="col">Invite Link</th>
-                            <th scope="col" style="width: 20%;">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @foreach (var invite in Model.Invites)
-                        {
-                            @(await Html.PartialAsync("Shared/_UserInviteTableRecord", invite))
-                            ;
-                        }
-                        </tbody>
-                    </table>
+    
+    <section>
+        <div class="flex justify-between items-center gap-2 lg:gap-4 pt-5">
+                <div class="title"> 
+                    <h3> Invited Users </h3> 
                 </div>
             </div>
+        
+            
+        
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead>
+                <tr class="border-b border-base-100">
+                    <th>Email</th>
+                    <th>Invite Link</th>
+                    <th style="width: 20%;">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var invite in Model.Invites)
+                {
+                    @(await Html.PartialAsync("Shared/_UserInviteTableRecord", invite))
+                }
+                </tbody>
+            </table>
         </div>
-    </div>
+    </section>
 </div>
 
-<div class="modal fade" id="add-user-modal" tabindex="-1" aria-labelledby="add-user-modal-label" aria-hidden="true">
+
+
+
+
+@*<div class="modal fade" id="add-user-modal" tabindex="-1" aria-labelledby="add-user-modal-label" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
@@ -93,5 +102,27 @@
       </div>
     </div>
   </div>
-</div>
+</div>*@
 
+
+<dialog id="invite_modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg">Invite User</h3>
+    <form method="post" asp-action="InviteUser" asp-controller="ManageUsers" enctype="multipart/form-data">
+    
+        <div class="col-span-12">
+            <input type="email" class="input input-bordered w-full max-w-xs" id="title" asp-for="InviteFormModel.Email" placeholder="Email" />
+            <span asp-validation-for="InviteFormModel.Email" class="text-danger"></span>
+        </div>
+        <div class="flex justify-end">
+            <button type="submit" class="btn btn-primary" data-bs-dismiss="modal">Add User</button>
+        </div>
+    </form>
+    <div class="modal-action">
+      <form method="dialog">
+        <!-- if there is a button in form, it will close the modal -->
+        <button class="btn">Close</button>
+      </form>
+    </div>
+  </div>
+</dialog>
