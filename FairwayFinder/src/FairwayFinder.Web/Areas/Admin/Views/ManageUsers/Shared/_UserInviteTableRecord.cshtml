@@ -5,7 +5,7 @@
     <td>@Model.InviteUrl</td>
     <td>
         <div class="d-flex justify-content-evenly">
-            <button class="btn btn-outline-danger btn-sm" type="button" onclick="this.innerText='Revoking invite...'; this.disabled=true;"
+            <button class="btn btn-error btn-sm" type="button" onclick="this.innerText='Revoking invite...'; this.disabled=true;"
                     hx-trigger="click"
                     hx-post="/revoke-invite/@Model.invitation_identifier"
                     hx-swap="outerHTML"

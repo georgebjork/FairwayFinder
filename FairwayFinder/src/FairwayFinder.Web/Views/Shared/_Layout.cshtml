@@ -1,6 +1,6 @@
 ﻿@using FairwayFinder.Core.Settings
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dim">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -15,7 +15,7 @@
 <body class="drawer min-h-screen bg-base-200 lg:drawer-open">
   <input id="my-drawer" type="checkbox" class="drawer-toggle" />
 
-  <main class="drawer-content">
+  <main class="drawer-content bg-base-100">
       <div class="grid grid-cols-12 grid-rows-[min-content] gap-y-12 p-4 lg:gap-x-12 lg:p-10">
           <partial name="_Header"/>
           @RenderBody()
