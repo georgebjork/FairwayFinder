@@ -4,13 +4,7 @@
     ViewData["Title"] = "My Profile";
 }
 
-<div class="container">
-    
-    <div class="row py-4">
-        <div class="col-12">
-            <h1> My Profile </h1>
-        </div>
-    </div>
+<div class="col-span-12">
     
     <div id="profile-form">
         @await Html.PartialAsync("_EditProfileForm", Model.Form)
