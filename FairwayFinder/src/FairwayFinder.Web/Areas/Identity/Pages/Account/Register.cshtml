@@ -4,9 +4,61 @@
     ViewData["Title"] = "Register";
 }
 
+<div class="sm:mx-auto w-full sm:max-w-sm">
+    <h2 class="text-center text-2xl font-bold">Sign up</h2>
+</div>
+
+<div class="mt-10 sm:mx-auto w-full sm:max-w-sm">
+    <form class="space-y-6" id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+        <div class="grid grid-cols-12 gap-2 lg:gap-4">
+            <div class="col-span-6">
+                <label asp-for="Input.FirstName" class="input input-bordered flex items-center gap-2 w-full">
+                    <input asp-for="Input.FirstName" type="text" class="grow" placeholder="First Name"/>
+                </label>
+                <span asp-validation-for="Input.FirstName" class="text-error"></span>
+            </div>
+            
+            <div class="col-span-6">
+                <label asp-for="Input.LastName" class="input input-bordered flex items-center gap-2 w-full">
+                    <input asp-for="Input.LastName" type="text" class="grow" placeholder="Last Name"/>
+                </label>
+                <span asp-validation-for="Input.LastName" class="text-error"></span>
+            </div>
+        </div>
+        
+        <div>
+            <label asp-for="Input.Email" class="input input-bordered flex items-center gap-2 w-full">
+                <input asp-for="Input.Email" type="email" class="grow" placeholder="Email"/>
+            </label>
+            <span asp-validation-for="Input.Email" class="text-error"></span>
+        </div>
+        
+        <div class="grid grid-cols-12 gap-2 lg:gap-4">
+            <div class="col-span-6">
+                <label asp-for="Input.Password" class="input input-bordered flex items-center gap-2 w-full">
+                    <input asp-for="Input.Password" type="password" class="grow" placeholder="Password"/>
+                </label>
+                <span asp-validation-for="Input.Password" class="text-error"></span>
+            </div>
+                    
+            <div class="col-span-6">
+                <label asp-for="Input.ConfirmPassword" class="input input-bordered flex items-center gap-2 w-full">
+                    <input asp-for="Input.ConfirmPassword" type="password" class="grow" placeholder="Confirm Password"/>
+                </label>
+                <span asp-validation-for="Input.ConfirmPassword" class="text-error"></span>
+            </div>
+        </div>
+        
+        <div>
+            <button id="register-submit" type="submit" class="w-full btn btn-primary">Register <i class="fa-solid fa-right-to-bracket ps-2"></i></button>
+        </div>
+    </form>
+</div>
+
+
 <div class="row d-flex justify-content-center align-items-center pt-5">
     <div class="col-xl-9 col-12">
-        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
+        <form >
             
             <input type="hidden" asp-for="Input.InvitationCode" value="@Model.Input.InvitationCode"/>
             
