@@ -8,7 +8,7 @@
     <td>@Model.Id</td>
     <td>@Model.Email</td>
     <td>
-        <a asp-area="Profile" asp-controller="Profile" asp-action="ViewProfile" asp-route-userName="@Model.UserName" class="p-0">@Model.UserName</a>
+        <a class="link" asp-area="Profile" asp-controller="Profile" asp-action="ViewProfile" asp-route-userName="@Model.UserName" class="p-0">@Model.UserName</a>
     </td>
     <td>@(Model.FirstName + " " + Model.LastName)</td>
     <td>

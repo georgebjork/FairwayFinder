@@ -10,7 +10,7 @@
     <h2 class="text-center text-2xl font-bold">Sign in to your account</h2>
 </div>
 
-<div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+<div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm md:max-w-md lg:max-w-lg">
     <form class="space-y-6" id="account" method="post">
         
         <div asp-validation-summary="ModelOnly" class="text-error" role="alert"></div>
@@ -37,46 +37,7 @@
     
     <div class="mt-10 text-center text-sm">
         Don't have an account? 
-        <a href="/register">Sign up!</a>
+        <a class="link" href="/register">Sign up!</a>
     </div>
 </div>
 
-
-@*
-<section class="xl:col-span-6">
-    <form id="account" method="post">
-        <h2>Login</h2>
-        <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-        <div class="col-span-6">
-            <label asp-for="Input.Email" class="input input-bordered flex items-center gap-2 w-full">
-                <input asp-for="Input.Email" type="text" class="grow" placeholder="Email" />
-                <span asp-validation-for="Input.Email" class="text-error"></span>
-            </label>
-        </div>
-        <div class="col-span-6">
-            <label asp-for="Input.Password" class="input input-bordered flex items-center gap-2 w-full">
-                <input asp-for="Input.Password" type="text" class="grow" placeholder="Password" />
-                <span asp-validation-for="Input.Password" class="text-error"></span>
-            </label>
-        </div>
-        $1$<div class="checkbox mb-3">
-                    <label asp-for="Input.RememberMe" class="form-label">
-                        <input class="form-check-input" asp-for="Input.RememberMe" />
-                        @Html.DisplayNameFor(m => m.Input.RememberMe)
-                    </label>
-                </div>#1#
-        <div>
-            <button id="login-submit" type="submit" class="w-100 btn btn-lg btn-outline-primary">Log in <i class="fa-solid fa-right-to-bracket ps-2"></i></button>
-        </div>
-    </form>
-</section>
-*@
-
-        
-
-
-
-
-@*@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-}*@
