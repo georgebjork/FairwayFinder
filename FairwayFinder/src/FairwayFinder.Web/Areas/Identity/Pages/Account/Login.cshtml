@@ -5,42 +5,77 @@
     ViewData["Title"] = "Log in";
 }
 
-<div class="row d-flex justify-content-center align-items-center pt-5">
-    <div class="col-12 col-xl-9">
-        <section>
-            <form id="account" method="post">
-                <h2>Login</h2>
-                <hr />
-                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-                <div class="form-floating mb-3">
-                    <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                    <label asp-for="Input.Email" class="form-label">Email</label>
-                    <span asp-validation-for="Input.Email" class="text-danger"></span>
-                </div>
-                <div class="form-floating mb-3">
-                    <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                    <label asp-for="Input.Password" class="form-label">Password</label>
-                    <span asp-validation-for="Input.Password" class="text-danger"></span>
-                </div>
-                @*<div class="checkbox mb-3">
+
+<div class="sm:mx-auto sm:w-full sm:max-w-sm">
+    <h2 class="text-center text-2xl font-bold">Sign in to your account</h2>
+</div>
+
+<div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+    <form class="space-y-6" id="account" method="post">
+        
+        <div asp-validation-summary="ModelOnly" class="text-error" role="alert"></div>
+        <div>
+            <label asp-for="Input.Email" class="input input-bordered flex items-center gap-2 w-full">
+                <input asp-for="Input.Email" type="text" class="grow" placeholder="Email" />
+            </label>
+            <span asp-validation-for="Input.Email" class="text-error"></span>
+            
+        </div>
+
+        <div>
+            <label asp-for="Input.Password" class="input input-bordered flex items-center gap-2 w-full">
+                <input asp-for="Input.Password" type="password" class="grow" placeholder="Password" />
+            </label>
+            <span asp-validation-for="Input.Password" class="text-error"></span>
+            
+        </div>
+
+        <div>
+            <button id="login-submit" type="submit" class="w-full btn btn-primary">Log in <i class="fa-solid fa-right-to-bracket ps-2"></i></button>
+        </div>
+    </form>
+
+    <p class="mt-10 text-center text-sm text-gray-500">
+        Don't have an account? 
+        <a href="/register">Sign up!</a>
+    </p>
+</div>
+
+
+@*
+<section class="xl:col-span-6">
+    <form id="account" method="post">
+        <h2>Login</h2>
+        <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+        <div class="col-span-6">
+            <label asp-for="Input.Email" class="input input-bordered flex items-center gap-2 w-full">
+                <input asp-for="Input.Email" type="text" class="grow" placeholder="Email" />
+                <span asp-validation-for="Input.Email" class="text-error"></span>
+            </label>
+        </div>
+        <div class="col-span-6">
+            <label asp-for="Input.Password" class="input input-bordered flex items-center gap-2 w-full">
+                <input asp-for="Input.Password" type="text" class="grow" placeholder="Password" />
+                <span asp-validation-for="Input.Password" class="text-error"></span>
+            </label>
+        </div>
+        $1$<div class="checkbox mb-3">
                     <label asp-for="Input.RememberMe" class="form-label">
                         <input class="form-check-input" asp-for="Input.RememberMe" />
                         @Html.DisplayNameFor(m => m.Input.RememberMe)
                     </label>
-                </div>*@
-                <div>
-                    <button id="login-submit" type="submit" class="w-100 btn btn-lg btn-outline-primary">Log in <i class="fa-solid fa-right-to-bracket ps-2"></i></button>
-                </div>
-            </form>
-        </section>
-        <div class="row pt-3">
-            <div class="col-12 d-flex justify-content-center">
-                <a class="text-center" href="/register">Create an Account</a>
-            </div>
+                </div>#1#
+        <div>
+            <button id="login-submit" type="submit" class="w-100 btn btn-lg btn-outline-primary">Log in <i class="fa-solid fa-right-to-bracket ps-2"></i></button>
         </div>
+    </form>
+</section>
+*@
 
-    </div>
-</div>
+        
+
+
+
 
 @*@section Scripts {
     <partial name="_ValidationScriptsPartial" />
