@@ -13,7 +13,7 @@ public class MyProfileController(IUsernameRetriever usernameRetriever, IMyProfil
     public async Task<IActionResult> EditProfile()
     {
         var username = usernameRetriever.Email;
-        var profile = await myProfileService.GetProfile(username);
+        var profile = await myProfileService.GetProfileByEmail(username);
 
         if (profile is null)
         {
@@ -45,8 +45,8 @@ public class MyProfileController(IUsernameRetriever usernameRetriever, IMyProfil
             return PartialView("_HandleValidationPartial", form);
         }
         
-        var username = usernameRetriever.Username;
-        var profile = await myProfileService.GetProfile(username);
+        var email = usernameRetriever.Email;
+        var profile = await myProfileService.GetProfileByEmail(email);
         
         // It matches our profile! That is good and valid.
         if (profile!.UserName == userName)
@@ -59,6 +59,10 @@ public class MyProfileController(IUsernameRetriever usernameRetriever, IMyProfil
         var rv = await myProfileService.IsHandleAvailable(userName);
         
         form.IsValidHandle = rv;
+
+        if (form.IsValidHandle) form.UsernameValidationMessage = "Username is available.";
+        else form.UsernameValidationMessage = "Username is not available.";
+        
         return PartialView("_HandleValidationPartial", form);
     }
 

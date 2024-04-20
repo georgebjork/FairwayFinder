@@ -1,46 +1,69 @@
-@using FairwayFinder.Core.Features.Admin.HealthCheck.Models.ViewModels
+
 @model FairwayFinder.Core.Features.Profile.Models.FormModels.ProfileFormModel
 
 
-<form class="space-y-6" hx-post="/profile" hx-target="#profile-form" hx-swap="innerHTML" enctype="multipart/form-data" autocomplete="off">
-    
-    <div class="grid grid-cols-12 gap-2 lg:gap-4">
-        <input type="hidden" asp-for="Email"/>
-        <div class="sm:col-span-6 col-span-12">
-            <label asp-for="FirstName" class="input input-bordered flex items-center gap-2 w-full">
-                <input asp-for="FirstName" type="text" class="grow" placeholder="First Name"/>
-            </label>
-            <span asp-validation-for="FirstName" class="text-error"></span>
-        </div>
+
+<form class="space-y-6 pt-5" hx-post="/profile" hx-target="#profile-form" hx-swap="innerHTML" enctype="multipart/form-data" autocomplete="off">
+    <div class="container mx-auto">
+        <div class="flex flex-wrap justify-center xl:justify-start">
+            <div class="w-full xl:w-8/12 xl:mx-auto pb-5">
                 
-        <div class="sm:col-span-6 col-span-12">
-            <label asp-for="LastName" class="input input-bordered flex items-center gap-2 w-full">
-                <input asp-for="LastName" type="text" class="grow" placeholder="Last Name"/>
-            </label>
-            <span asp-validation-for="LastName" class="text-error"></span>
+                <div class="grid grid-cols-12 gap-4 mt-3">
+                    <div class="col-span-12">
+                        @await Html.PartialAsync("_MessageHtmxPartial")
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-12 gap-4 mt-3">
+                    <input type="hidden" asp-for="Email"/>
+                    <div class="col-span-6">
+                        <label asp-for="FirstName" class="input input-bordered flex items-center gap-2 w-full">
+                            <input asp-for="FirstName" type="text" class="grow" placeholder="First Name"/>
+                        </label>
+                        <span asp-validation-for="FirstName" class="text-error"></span>
+                    </div>
+                    <div class="col-span-6">
+                        <label asp-for="LastName" class="input input-bordered flex items-center gap-2 w-full">
+                            <input asp-for="LastName" type="text" class="grow" placeholder="Last Name"/>
+                        </label>
+                        <span asp-validation-for="LastName" class="text-error"></span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-12 gap-4 mt-3">
+                    <div class="col-span-6">
+                        <label asp-for="Email" class="input input-bordered flex items-center gap-2 w-full">
+                            <input asp-for="Email" type="text" class="grow" placeholder="Email"/>
+                        </label>
+                        <span asp-validation-for="Email" class="text-error"></span>
+                    </div>
+                    <div class="col-span-6" id="username-input">
+                        <label asp-for="UserName" class="input input-bordered flex items-center gap-2 w-full">
+                            <input asp-for="UserName" type="text" class="grow" placeholder="Username"
+                                   hx-get="profile/check-username"
+                                   hx-swap="innerHTML"
+                                   hx-target="#username-input"
+                                   hx-trigger="load"/>
+                        </label>
+                        <span asp-validation-for="UserName" class="text-error"></span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-12 gap-4 mt-3">
+                    <div class="col-span-12">
+                        <button id="register-submit" type="submit" class="col-span-12 sm:col-span-6 xl:col-span-4 w-full btn btn-primary">Update Profile</button>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
-    <div class="grid grid-cols-12 gap-2 lg:gap-4">
-        <input type="hidden" asp-for="Email"/>
-        <div class="sm:col-span-6 col-span-12">
-            <label asp-for="Email" class="input input-bordered flex items-center gap-2 w-full">
-                <input asp-for="Email" type="text" class="grow" placeholder="Email"/>
-            </label>
-            <span asp-validation-for="Email" class="text-error"></span>
-        </div>
-                    
-        <div class="sm:col-span-6 col-span-12">
-            <label asp-for="UserName" class="input input-bordered flex items-center gap-2 w-full">
-                <input asp-for="UserName" type="text" class="grow" placeholder="Username"/>
-            </label>
-            <span asp-validation-for="UserName" class="text-error"></span>
-        </div>
-    </div>
-    
-    <div>
-        <button id="register-submit" type="submit" class="w-full btn btn-primary">Update Profile</button>
     </div>
 </form>
-    
-    
+
+
+
+
+
+
+
+
     

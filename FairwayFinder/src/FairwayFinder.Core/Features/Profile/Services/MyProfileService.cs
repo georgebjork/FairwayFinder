@@ -7,7 +7,8 @@ namespace FairwayFinder.Core.Features.Profile.Services;
 
 public interface IMyProfileService
 {
-    Task<ProfileQueryModel?> GetProfile(string email);
+    Task<ProfileQueryModel?> GetProfileByEmail(string email);
+    Task<ProfileQueryModel?> GetProfileByUsername(string username);
     Task<bool> IsHandleAvailable(string handle);
     Task<bool> UpdateProfile(ProfileFormModel form);
     Task<string> GenerateUserName(string firstName, string lastName);
@@ -15,9 +16,14 @@ public interface IMyProfileService
 
 public class MyProfileService(IProfileRepository profileRepository, IUsernameRetriever usernameRetriever, ILogger<MyProfileService> logger) : IMyProfileService
 {
-    public async Task<ProfileQueryModel?> GetProfile(string email)
+    public async Task<ProfileQueryModel?> GetProfileByEmail(string email)
     {
         return await profileRepository.GetProfileByEmail(email);
+    }
+    
+    public async Task<ProfileQueryModel?> GetProfileByUsername(string username)
+    {
+        return await profileRepository.GetProfileByEmail(username);
     }
 
     public async Task<bool> IsHandleAvailable(string handle)
@@ -47,8 +53,7 @@ public class MyProfileService(IProfileRepository profileRepository, IUsernameRet
 
     public async Task<bool> UpdateProfile(ProfileFormModel form)
     {
-        var profile = await GetProfile(usernameRetriever.Username);
-        if (!await IsHandleAvailable(form.UserName) && profile?.UserName != form.UserName) return false;
+        if (!await IsHandleAvailable(form.UserName) && usernameRetriever.Username != form.UserName) return false;
 
         try
         {

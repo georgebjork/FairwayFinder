@@ -29,6 +29,8 @@ public class ProfileFormModel
     [Display(Name = "UserName")]
     public string UserName { get; set; } = "";
     public bool IsValidHandle { get; set; } = true;
+
+    public string UsernameValidationMessage { get; set; } = "";
     
     public string BaseUrl { get; set; } = "";
 
