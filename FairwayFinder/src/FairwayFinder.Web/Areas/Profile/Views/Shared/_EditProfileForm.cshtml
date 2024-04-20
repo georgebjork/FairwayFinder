@@ -16,13 +16,13 @@
                 
                 <div class="grid grid-cols-12 gap-4 mt-3">
                     <input type="hidden" asp-for="Email"/>
-                    <div class="col-span-6">
+                    <div class="md:col-span-6 col-span-12">
                         <label asp-for="FirstName" class="input input-bordered flex items-center gap-2 w-full">
                             <input asp-for="FirstName" type="text" class="grow" placeholder="First Name"/>
                         </label>
                         <span asp-validation-for="FirstName" class="text-error"></span>
                     </div>
-                    <div class="col-span-6">
+                    <div class="md:col-span-6 col-span-12">
                         <label asp-for="LastName" class="input input-bordered flex items-center gap-2 w-full">
                             <input asp-for="LastName" type="text" class="grow" placeholder="Last Name"/>
                         </label>
@@ -31,13 +31,13 @@
                 </div>
                 
                 <div class="grid grid-cols-12 gap-4 mt-3">
-                    <div class="col-span-6">
+                    <div class="md:col-span-6 col-span-12">
                         <label asp-for="Email" class="input input-bordered flex items-center gap-2 w-full">
                             <input asp-for="Email" type="text" class="grow" placeholder="Email"/>
                         </label>
                         <span asp-validation-for="Email" class="text-error"></span>
                     </div>
-                    <div class="col-span-6" id="username-input">
+                    <div class="md:col-span-6 col-span-12" id="username-input">
                         <label asp-for="UserName" class="input input-bordered flex items-center gap-2 w-full">
                             <input asp-for="UserName" type="text" class="grow" placeholder="Username"
                                    hx-get="profile/check-username"
