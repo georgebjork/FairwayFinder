@@ -31,7 +31,7 @@
     <UpToDateCheckBuilt Include="tailwind.config.js" Set="Css" />
   </ItemGroup>
   
-  <Target Name="Tailwind" AfterTargets="Build">
+  <Target Name="Tailwind" BeforeTargets="Build">
     <Exec Command="npm run css:build"/>
   </Target>
 
