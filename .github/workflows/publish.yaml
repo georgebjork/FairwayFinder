@@ -12,7 +12,7 @@ jobs:
       - name: Checkout the repo 
         uses: actions/checkout@v2
       - name: Build image 
-        run: docker build -t leviathanrip/fairwayfinder .
+        run: docker build -t skywalker/fairwayfinder .
       - name: Install doctl 
         uses: digitalocean/action-doctl@v2
         with:
@@ -20,6 +20,6 @@ jobs:
       - name: Log in to DO Container Registry 
         run: doctl registry login --expiry-seconds 600
       - name: Tag image 
-        run:  docker tag leviathanrip/fairwayfinder registry.digitalocean.com/leviathanrip/fairwayfinder:latest
+        run:  docker tag skywalker/fairwayfinder registry.digitalocean.com/skywalker/fairwayfinder:latest
       - name: Push image to DO Container Registry 
-        run: docker push registry.digitalocean.com/leviathanrip/fairwayfinder:latest
+        run: docker push registry.digitalocean.com/skywalker/fairwayfinder:latest
