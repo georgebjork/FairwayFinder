@@ -1,8 +1,11 @@
+using System.Buffers.Text;
+using System.Text;
 using FairwayFinder.Core.Features.Admin.UserManagement.Models;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Services;
 using FairwayFinder.Core.Settings;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Core.Features.Admin.UserManagement;
@@ -14,6 +17,8 @@ public interface IManageUsersService {
     Task<List<UserInvitation>> GetInvites();
     Task<UserInvitation?> GetValidInvite(string inviteId);
     Task<UserInvitation> CreateAndSendInvite(string email, string registerBaseUrl);
+    Task<bool> ConfirmEmail(ApplicationUser user, string code);
+    Task<EmailConfirmation?> CreateAndSendEmailConfirmation(string email, string baseUrl);
     Task<ApplicationUser> PromoteAdmin(string userId);
     Task<ApplicationUser> RevokeAdmin(string userId);
     Task<bool> RevokeInvite(string inviteId);
@@ -71,6 +76,80 @@ public class ManageUsersService : IManageUsersService {
         await _emailSenderService.SendRegisterEmailAsync(email, $"{registerBaseUrl}/register/{invite.invitation_identifier}");
         
         return invite;
+    }
+
+    public async Task<bool> ConfirmEmail(ApplicationUser user, string code)
+    {
+        var pendingConfirmation = await _userRepository.GetPendingEmailConfirmationByUserId(user.Id);
+
+        if (pendingConfirmation is null || pendingConfirmation.confirmation_id != code) return false;
+        if (pendingConfirmation.is_confirmed) return true;
+        
+        // Update the user email.
+        user.EmailConfirmed = true;
+        await _userManager.UpdateAsync(user);
+
+        var now = DateTime.UtcNow;
+        
+        // Update the confirmation 
+        pendingConfirmation.confirmed_on = now;
+        pendingConfirmation.updated_on = now;
+        pendingConfirmation.updated_by = user.Email!;
+        pendingConfirmation.is_deleted = true;
+        pendingConfirmation.is_confirmed = true;
+        await _userRepository.Update(pendingConfirmation);
+        
+        _logger.LogInformation($"User: {user.UserName} has confirmed their account.");
+        
+        return true;
+    }
+
+    public async Task<EmailConfirmation?> CreateAndSendEmailConfirmation(string email, string baseUrl)
+    {
+        var date = DateTime.UtcNow;
+        var username = _usernameRetriever.Username;
+
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user is null)
+        {
+            _logger.LogError("Tried to send confirmation email, but user did not exist.");
+            return null;
+        }
+        
+        // If there already is one, then we want to delete so we can create a new one.
+        var pendingConfirmation = await _userRepository.GetPendingEmailConfirmationByUserId(email);
+        if (pendingConfirmation is not null)
+        {
+            pendingConfirmation.is_deleted = true;
+            pendingConfirmation.updated_by = username;
+            pendingConfirmation.updated_on = date;
+
+            await _userRepository.Update(pendingConfirmation);
+        }
+        
+        
+        var confirmation = new EmailConfirmation
+        {
+            user_id = user.Id,
+            confirmation_id = Guid.NewGuid().ToString(),
+            sent_to_email = email,
+            expires_on = date.AddDays(30),
+            created_on = date,
+            created_by = username,
+            updated_on = date,
+            updated_by = username
+        };
+
+        await _userRepository.Insert(confirmation);
+
+        // Encode the confirmation code
+        var bytes = Encoding.UTF8.GetBytes(confirmation.confirmation_id);
+        var encodedCode = WebEncoders.Base64UrlEncode(bytes);
+        
+        // Send the confirmation email.
+        await _emailSenderService.SendConfirmationEmailAsync(email, $"{baseUrl}/Identity/Account/ConfirmEmail?userId={user.Id}&code={encodedCode}");
+
+        return confirmation;
     }
 
     public async Task<ApplicationUser> PromoteAdmin(string userId)

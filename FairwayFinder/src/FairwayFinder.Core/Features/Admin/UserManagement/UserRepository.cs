@@ -14,6 +14,9 @@ public interface IUserRepository : IBaseRepository
     // User Invites
     Task<List<UserInvitation>> GetInvites();
     Task<UserInvitation?> GetInvite(string inviteId);
+    
+    // User Confirmation
+    Task<EmailConfirmation?> GetPendingEmailConfirmationByUserId(string userId);
 }
 
 public class UserRepository(IConfiguration configuration, ILogger<UserRepository> logger) : BasePgRepository(configuration, logger), IUserRepository
@@ -41,4 +44,13 @@ public class UserRepository(IConfiguration configuration, ILogger<UserRepository
         var rv = await conn.QueryFirstOrDefaultAsync<UserInvitation>(sql, new {id = inviteId});
         return rv;
     }
+
+    public async Task<EmailConfirmation?> GetPendingEmailConfirmationByUserId(string userId)
+    {
+        var sql = "SELECT * FROM email_confirmation WHERE is_deleted = false AND user_id = @id AND is_confirmed = false";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryFirstOrDefaultAsync<EmailConfirmation>(sql, new { id = userId });
+        return rv; 
+    }
+    
 }

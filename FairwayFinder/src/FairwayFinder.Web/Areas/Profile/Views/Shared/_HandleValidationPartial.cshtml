@@ -1,25 +1,24 @@
 @model FairwayFinder.Core.Features.Profile.Models.FormModels.ProfileFormModel
 
-<label asp-for="UserName" class="form-label"></label>
-<div class="input-group">
-    <span class="input-group-text">@($"{Model.BaseUrl}/profile/")</span>
-    <input type="text" class="form-control @(Model.IsValidHandle ? "is-valid" : "is-invalid") " asp-for="UserName"
-           hx-get="profile/check-handle"
-           hx-swap="innerHTML"
-           hx-target="#handle-input"
-           hx-trigger="input delay:500ms">
-
-    @if (!Model.IsValidHandle && !string.IsNullOrEmpty(Model.UserName))
-    {
-        <div id="validationServerUsernameFeedback" class="invalid-feedback">
-            This username is not available.
-        </div>
-    }
-    else
-    {
-        <div id="validationServerUsernameFeedback" class="valid-feedback">
-            This username is available!
-        </div>   
-    }
-</div>
-<span asp-validation-for="UserName" class="text-danger"></span>
+@if (Model.IsValidHandle)
+{
+    <label asp-for="UserName" class="input input-bordered flex items-center input-success gap-2 w-full">
+        <input asp-for="UserName" type="text" class="grow" placeholder="Username"
+               hx-get="profile/check-username"
+               hx-swap="innerHTML"
+               hx-target="#username-input"
+               hx-trigger="input delay:500ms" />
+    </label>
+    <span asp-validation-for="UserName" class="text-success">@Model.UsernameValidationMessage</span>
+}
+else
+{
+    <label asp-for="UserName" class="input input-bordered flex items-center input-error gap-2 w-full">
+        <input asp-for="UserName" type="text" class="grow" placeholder="Username"
+               hx-get="profile/check-username"
+               hx-swap="innerHTML"
+               hx-target="#username-input"
+               hx-trigger="input delay:500ms" />
+    </label>
+    <span asp-validation-for="UserName" class="text-error">@Model.UsernameValidationMessage</span>
+}

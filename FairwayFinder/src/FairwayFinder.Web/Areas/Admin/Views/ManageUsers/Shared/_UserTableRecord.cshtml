@@ -8,14 +8,14 @@
     <td>@Model.Id</td>
     <td>@Model.Email</td>
     <td>
-        <a asp-area="Profile" asp-controller="Profile" asp-action="ViewProfile" asp-route-userName="@Model.UserName" class="p-0">@Model.UserName</a>
+        <a class="link" asp-area="Profile" asp-controller="Profile" asp-action="ViewProfile" asp-route-userName="@Model.UserName" class="p-0">@Model.UserName</a>
     </td>
     <td>@(Model.FirstName + " " + Model.LastName)</td>
     <td>
-        <div class="d-flex justify-content-evenly">
+        <div class="flex justify-evenly">
             @if (Model.IsAdmin)
             {
-                <button class="btn btn-outline-success btn-sm" type="button" onclick="this.innerText='Applying role...'; this.disabled=true;"
+                <button class="btn btn-success btn-xs pe-2" type="button" onclick="this.innerText='Applying role...'; this.disabled=true;"
                         hx-trigger="click"
                         hx-post="/update-user-role/@Model.Id"
                         hx-swap="outerHTML"
@@ -25,7 +25,7 @@
             }
             else
             {
-                <button class="btn btn-outline-success btn-sm" type="button" onclick="this.innerText='Applying role...'; this.disabled=true;"
+                <button class="btn btn-success btn-xs pe-2" type="button" onclick="this.innerText='Applying role...'; this.disabled=true;"
                         hx-trigger="click"
                         hx-post="/update-user-role/@Model.Id"
                         hx-swap="outerHTML"
@@ -34,7 +34,7 @@
                 </button>
             }
 
-            <button class="btn btn-outline-danger btn-sm" type="button" onclick="this.innerText='Removing...'; this.disabled=true;"
+            <button class="btn btn-error btn-xs" type="button" onclick="this.innerText='Removing...'; this.disabled=true;"
                     hx-trigger="click"
                     hx-post="/remove-user/@Model.Id"
                     hx-swap="outerHTML"
