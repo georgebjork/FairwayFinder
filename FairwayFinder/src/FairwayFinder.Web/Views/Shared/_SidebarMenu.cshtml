@@ -1,41 +1,48 @@
-<div class="offcanvas-body d-md-flex flex-column p-0 pt-md-3 overflow-y-auto">
-    <ul class="nav nav-pills flex-column mb-auto px-2">
-        <li class="nav-item">
-            <a href="/" class="nav-link active" aria-current="page">
-                <i class="fa-solid fa-table-columns pe-2"></i> Dashboard
-            </a>
-        </li>
-        
-        <hr>
+@using FairwayFinder.Core.Models
+@using FairwayFinder.Core.Settings
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
 
-
-        <li>
-            <a href="#" class="nav-link text-white">
-                <i class="fa-solid fa-square-plus pe-2"></i> New Round
-            </a>
-        </li>
-        
-        <hr>
-        
-        <li>
-            <a href="#" class="nav-link text-white">
-                <i class="fa-solid fa-golf-ball-tee pe-2"></i> My Rounds
-            </a>
-        </li>
-        <li>
-            <a href="#" class="nav-link text-white">
-                <i class="fa-solid fa-chart-line pe-2"></i> Stats
-            </a>
-        </li>
-    </ul>
-    <hr>
-    
-    
-    <div class="d-md-none">
-        <partial name="_LoginPartial" />
-    </div>
-
-
-</div>
-
+<aside class="drawer-side z-10">
+	<label for="my-drawer" class="drawer-overlay"></label>
+	<!-- sidebar menu -->
+	<nav class="flex min-h-screen w-72 flex-col gap-2 overflow-y-auto bg-base-200 px-6 py-10">
+		<div class="mx-4 flex items-center gap-2 font-black">
+			<i class="fa-solid fa-golf-ball-tee"></i>
+			FairwayFinder
+		</div>
+		<ul class="menu">
+			<li>
+				<a asp-controller="Home" asp-action="Index">
+					<i class="fa-solid fa-table-columns"></i>
+					Dashboard
+				</a>
+			</li>
+			<li></li>
+			
+			@if (SignInManager.IsSignedIn(User) && User.IsInRole(Roles.Admin))
+			{
+				<li>
+					<details>
+						<summary>
+							<i class="fa-solid fa-id-badge"></i>
+							Admin
+						</summary>
+						<ul>
+							<li>
+								<a class="dropdown-item" asp-area="Admin" asp-controller="ManageUsers" asp-action="ManageUsers" ><i class="fa-solid fa-users pe-2"></i> Manage Users</a>
+							</li>
+							<li>
+								<a class="dropdown-item" asp-area="Admin" asp-controller="HealthCheck" asp-action="HealthCheck" ><i class="fa-solid fa-heart pe-2"></i> System Health</a>
+							</li>
+						</ul>
+					</details>
+				</li>
+			}
+			
+		</ul>
+	</nav>
+	<!-- /sidebar menu -->
+</aside>
 

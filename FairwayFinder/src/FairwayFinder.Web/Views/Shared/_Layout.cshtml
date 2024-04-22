@@ -1,71 +1,36 @@
 ﻿@using FairwayFinder.Core.Settings
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en" data-theme="dim">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - @ApplicationSettings.APPLICATION_NAME</title>
     <link rel="icon" type="image/svg" href="/golf-ball-tee-solid.svg">
-    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/styles.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/lib/font-awesome/css/all.css" />
-    <link rel="stylesheet" href="~/FairwayFinder.Web.styles.css" asp-append-version="true" />
 </head>
-<body>
 
-@* Top Menu *@
-<header class="container-fluid navbar sticky-top bg-dark flex-md-nowrap p-0 border-bottom">
-  
-  <div class="navbar-brand col-md-3 col-lg-2 px-3 text-white">
-    <a href="/" class="text-white text-decoration-none ps-2"> <i class="fa-solid fa-golf-ball-tee pe-2"></i> FairwayFinder </a>
-  </div>
-    
-  @* Drop down for signed in user. d-md-block will hide once its smaller than md *@
-  <div class="flex-row">
-    <div class="pe-5 d-none d-md-block">
-      <partial name="_LoginPartial"/>
-    </div>
-    
-    @* Toggle for side nav. d-md-block will show once its smaller than md *@
-    <ul class="navbar-nav">
-      <li class="nav-item text-nowrap d-md-none">
-        <button class="nav-link px-3 text-white" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
-          <i class="fa-solid fa-bars"></i>
-        </button>
-      </li>
-    </ul>
-  </div>
-</header>
+<!-- drawer -->
+<body class="drawer min-h-screen bg-base-200 lg:drawer-open">
+  <input id="my-drawer" type="checkbox" class="drawer-toggle" />
 
-@* Main Content *@
-<div class="container-fluid">
-  <div class="row">
-    
-    @* Sidebar *@
-    <div class="sidebar fixed-sidebar border-end col-md-3 col-lg-2">
-      <div class="offcanvas-md offcanvas-end" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
-        <div class="offcanvas-header">
-          <h5 class="offcanvas-title" id="sidebarMenuLabel">FairwayFinder <i class="fa-solid fa-golf-ball-tee ps-2"></i></h5>
-          <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sidebarMenu" aria-label="Close"></button>
-        </div>
-      
-        @* Sidebar Menu Items *@
-        @await Html.PartialAsync("_SidebarMenu")
+  <main class="drawer-content bg-base-100">
+      <div class="grid grid-cols-12 grid-rows-[min-content] gap-y-12 p-4 lg:gap-x-12 lg:p-10">
+          <partial name="_Header"/>
+          @RenderBody()
       </div>
-    </div>
-    
-    @* Main Content *@
-    <div class="col-md-9 ms-sm-auto col-lg-10 px-md-4 container-fluid" style="overflow-y: scroll; height: 95vh">
-      @await Html.PartialAsync("_MessagePartial")
-      <main role="main" class="pb-3">
+  </main>
+  
+  <partial name="_SidebarMenu"/>
+  
+  
+
+@*
+<main role="main" class="pb-3">
         @RenderBody()
       </main>
-    </div>
-  </div>
-</div>
-
-
-
+      *@
 
 
 @*<footer class="border-top footer text-muted">
@@ -75,7 +40,6 @@
     </footer>*@
 <script src="~/lib/htmx/htmx.js" asp-append-version="true"></script>
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
-<script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts", required: false)
 </body>

@@ -1,0 +1,28 @@
+
+<!DOCTYPE html>
+<html lang="en" data-theme="dim">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - FairwayFinder.Web</title>
+    <link rel="icon" type="image/svg" href="/golf-ball-tee-solid.svg">
+    <link rel="stylesheet" href="~/css/styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/font-awesome/css/all.css" />
+</head>
+<body>
+<div>
+    <main class="bg-base-100">
+        <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
+            @RenderBody()
+        </div>
+    </main>
+</div>
+</body>
+</html>
+
+
+<script src="~/lib/htmx/htmx.js" asp-append-version="true"></script>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
