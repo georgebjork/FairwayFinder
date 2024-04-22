@@ -9,8 +9,8 @@ namespace FairwayFinder.Web.Areas.Profile.Controllers;
 
 public class MyProfileController(IUsernameRetriever usernameRetriever, IMyProfileService myProfileService) : BaseProfileController
 {
-    [Route("/profile/edit")]
-    public async Task<IActionResult> EditProfile()
+    [Route("profile")]
+    public async Task<IActionResult> Index()
     {
         var username = usernameRetriever.Email;
         var profile = await myProfileService.GetProfileByEmail(username);
@@ -20,13 +20,33 @@ public class MyProfileController(IUsernameRetriever usernameRetriever, IMyProfil
             return RedirectToAction(nameof(Index), "Home");
         }
         
+        var vm = new EditProfileViewModel { Profile = profile, };
+
+        return View();
+    }
+    
+    
+    [Route("/profile/edit")]
+    public async Task<IActionResult> EditProfile()
+    {
+        var username = usernameRetriever.Email;
+        var profile = await myProfileService.GetProfileByEmail(username);
+
+        if (profile is null)
+        {
+            // Set the HX-Redirect header to the URL where you want to redirect
+            Response.Headers["HX-Redirect"] = Url.Action(nameof(Index), "Home");
+            return new EmptyResult();  // Return an empty result with the header set
+        }
+        
         var vm = new EditProfileViewModel
         {
             Profile = profile,
             Form = new ProfileFormModel().ToForm(profile),
         };
+        
         vm.Form.BaseUrl = RequestUrlBase;
-        return View(vm);
+        return PartialView("_EditProfileForm", vm.Form);
     }
 
     [HttpPost]
@@ -53,6 +73,12 @@ public class MyProfileController(IUsernameRetriever usernameRetriever, IMyProfil
         
         SetSuccessMessageHtmx("Profile successfully updated.");
         return PartialView("_EditProfileForm", form);
+    }
+    
+    [Route("/profile/change-password")]
+    public async Task<IActionResult> EditPassword()
+    {
+        return PartialView("_EditPasswordForm");
     }
     
     
