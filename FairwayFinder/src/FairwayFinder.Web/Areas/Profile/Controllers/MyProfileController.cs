@@ -9,7 +9,7 @@ namespace FairwayFinder.Web.Areas.Profile.Controllers;
 
 public class MyProfileController(IUsernameRetriever usernameRetriever, IMyProfileService myProfileService) : BaseProfileController
 {
-    [Route("/profile")]
+    [Route("/profile/edit")]
     public async Task<IActionResult> EditProfile()
     {
         var username = usernameRetriever.Email;
@@ -29,6 +29,33 @@ public class MyProfileController(IUsernameRetriever usernameRetriever, IMyProfil
         return View(vm);
     }
 
+    [HttpPost]
+    [Route("/profile/update")]
+    public async Task<IActionResult> UpdateProfile([FromForm] ProfileFormModel form)
+    {
+        if (!ModelState.IsValid)
+        {
+            form.BaseUrl = RequestUrlBase;
+            return PartialView("_EditProfileForm", form);
+
+        }
+
+        form.UserId = usernameRetriever.UserId;
+        form.BaseUrl = RequestUrlBase;
+        
+        var rv = await myProfileService.UpdateProfile(form);
+
+        if (!rv)
+        {
+            SetErrorMessageHtmx("Something went wrong. Unable to update profile.");
+            return PartialView("_EditProfileForm", form);
+        }
+        
+        SetSuccessMessageHtmx("Profile successfully updated.");
+        return PartialView("_EditProfileForm", form);
+    }
+    
+    
     [HttpGet]
     [Route("/profile/check-username")]
     public async Task<IActionResult> CheckProfileHandle([FromQuery] string userName)
@@ -64,31 +91,5 @@ public class MyProfileController(IUsernameRetriever usernameRetriever, IMyProfil
         else form.UsernameValidationMessage = "Username is not available.";
         
         return PartialView("_HandleValidationPartial", form);
-    }
-
-    [HttpPost]
-    [Route("/profile")]
-    public async Task<IActionResult> UpdateProfile([FromForm] ProfileFormModel form)
-    {
-        if (!ModelState.IsValid)
-        {
-            form.BaseUrl = RequestUrlBase;
-            return PartialView("_EditProfileForm", form);
-
-        }
-
-        form.UserId = usernameRetriever.UserId;
-        form.BaseUrl = RequestUrlBase;
-        
-        var rv = await myProfileService.UpdateProfile(form);
-
-        if (!rv)
-        {
-            SetErrorMessageHtmx("Something went wrong. Unable to update profile.");
-            return PartialView("_EditProfileForm", form);
-        }
-        
-        SetSuccessMessageHtmx("Profile successfully updated.");
-        return PartialView("_EditProfileForm", form);
     }
 }

@@ -3,7 +3,7 @@
 
 
 
-<form class="space-y-6 pt-5" hx-post="/profile" hx-target="#profile-form" hx-swap="innerHTML" enctype="multipart/form-data" autocomplete="off">
+<form class="space-y-6 pt-5" hx-post="/profile/update" hx-target="#profile-form" hx-swap="innerHTML" enctype="multipart/form-data" autocomplete="off">
     <div class="container mx-auto">
         <div class="flex flex-wrap justify-center xl:justify-start">
             <div class="w-full xl:w-8/12 xl:mx-auto pb-5">
@@ -33,14 +33,14 @@
                 <div class="grid grid-cols-12 gap-4 mt-3">
                     <div class="md:col-span-6 col-span-12">
                         <label asp-for="Email" class="input input-bordered flex items-center gap-2 w-full">
-                            <input asp-for="Email" type="text" class="grow" placeholder="Email"/>
+                            <input asp-for="Email" type="text" class="grow" placeholder="Email" disabled="disabled"/>
                         </label>
                         <span asp-validation-for="Email" class="text-error"></span>
                     </div>
                     <div class="md:col-span-6 col-span-12" id="username-input">
                         <label asp-for="UserName" class="input input-bordered flex items-center gap-2 w-full">
                             <input asp-for="UserName" type="text" class="grow" placeholder="Username"
-                                   hx-get="profile/check-username"
+                                   hx-get="/profile/check-username"
                                    hx-swap="innerHTML"
                                    hx-target="#username-input"
                                    hx-trigger="load"/>

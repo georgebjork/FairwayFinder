@@ -182,15 +182,15 @@ async Task CreateRoles(IServiceProvider serviceProvider) {
 }
 
 // This is used on an initial launch of the application.
-async Task AddAdminUser(UserManager<ApplicationUser> userManager, string username, string password) {
-    var user = await userManager.FindByEmailAsync(username);
+async Task AddAdminUser(UserManager<ApplicationUser> userManager, string email, string password) {
+    var user = await userManager.FindByEmailAsync(email);
 
     // check if the user exists
     if (user == null) {
         //Here you could create the super admin who will maintain the web app
         var seedUser = new ApplicationUser {
-            UserName = username,
-            Email = username,
+            UserName = "georgebjork",
+            Email = email,
             EmailConfirmed = true,
             FirstName = "George",
             LastName = "Bjork"
@@ -202,3 +202,5 @@ async Task AddAdminUser(UserManager<ApplicationUser> userManager, string usernam
         }
     }
 }
+
+// npm run css:build
