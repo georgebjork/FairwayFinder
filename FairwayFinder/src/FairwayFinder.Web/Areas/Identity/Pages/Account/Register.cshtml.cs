@@ -1,9 +1,11 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using FairwayFinder.Core.Features.Admin.UserManagement;
 using FairwayFinder.Core.Features.Profile.Services;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Services;
 using FairwayFinder.Core.Settings;
+using FairwayFinder.Core.Settings.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -131,8 +133,16 @@ public class RegisterModel : PageModel
                 
             // Add new user to default role of user
             await _userManager.AddToRoleAsync(user, Roles.User);
+            
+            // Add our claims for http context
+            var claims = new List<Claim>
+            {
+                new (CustomClaims.FirstName, user!.FirstName ?? "unknown"),
+                new (CustomClaims.LastName, user!.LastName ?? "unknown")
+            };
+            await _userManager.AddClaimsAsync(user, claims);
                 
-            await _signInManager.SignInAsync(user, isPersistent: false);
+            //await _signInManager.SignInAsync(user, isPersistent: false);
             TempData["success_message"] = "Account successfully created";
                 
             await _userManagementService.RevokeInvite(invitation);

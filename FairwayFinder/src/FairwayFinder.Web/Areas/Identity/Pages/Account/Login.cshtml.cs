@@ -1,7 +1,10 @@
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using FairwayFinder.Core.Models;
+using FairwayFinder.Core.Settings.Authorization;
 using FairwayFinder.Web.Data;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -10,12 +13,14 @@ namespace FairwayFinder.Web.Areas.Identity.Pages.Account;
 public class LoginModel : PageModel
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<LoginModel> _logger;
 
-    public LoginModel(SignInManager<ApplicationUser> signInManager, ILogger<LoginModel> logger)
+    public LoginModel(SignInManager<ApplicationUser> signInManager, ILogger<LoginModel> logger, UserManager<ApplicationUser> userManager)
     {
         _signInManager = signInManager;
         _logger = logger;
+        _userManager = userManager;
     }
 
     /// <summary>
@@ -101,9 +106,28 @@ public class LoginModel : PageModel
         {
             // This doesn't count login failures towards account lockout
             // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-            var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+            
+            var user = await _userManager.FindByEmailAsync(Input.Email);
+
+            if (user is null)
+            {
+                ModelState.AddModelError(string.Empty, "Invalid login attempt.");
+                return Page();
+            }
+            
+            if (!user.EmailConfirmed)
+            {
+                ModelState.AddModelError(string.Empty, "You're email is not yet confirmed.");
+                return Page();
+            }
+            
+            var result = await _signInManager.PasswordSignInAsync(user.UserName!, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+            
             if (result.Succeeded)
             {
+                await AddOrUpdateNameClaims(user);
+                await _signInManager.RefreshSignInAsync(user);
+                
                 _logger.LogInformation("User logged in.");
                 TempData["success_message"] = "Successfully logged in.";
                 return LocalRedirect(returnUrl);
@@ -126,5 +150,34 @@ public class LoginModel : PageModel
 
         // If we got this far, something failed, redisplay form
         return Page();
+    }
+
+    private async Task AddOrUpdateNameClaims(ApplicationUser user)
+    {
+        var currentClaims = await _userManager.GetClaimsAsync(user);
+        
+        var updatedClaims = new List<Claim>
+        {
+            new (CustomClaims.FirstName, user!.FirstName ?? "unknown"),
+            new (CustomClaims.LastName, user!.LastName ?? "unknown")
+        };
+        
+        foreach (var claim in updatedClaims)
+        {
+            var existingClaim = currentClaims.FirstOrDefault(c => c.Type == claim.Type);
+            if (existingClaim != null)
+            {
+                // Check if the existing claim needs an update
+                if (existingClaim.Value != claim.Value)
+                {
+                    await _userManager.ReplaceClaimAsync(user, existingClaim, claim);
+                }
+            }
+            else
+            {
+                // Add the claim if it doesn't exist
+                await _userManager.AddClaimAsync(user, claim);
+            }
+        }
     }
 }
