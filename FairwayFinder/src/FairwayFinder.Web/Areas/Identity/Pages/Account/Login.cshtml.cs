@@ -115,6 +115,12 @@ public class LoginModel : PageModel
                 return Page();
             }
             
+            if (!user.EmailConfirmed)
+            {
+                ModelState.AddModelError(string.Empty, "You're email is not yet confirmed.");
+                return Page();
+            }
+            
             var result = await _signInManager.PasswordSignInAsync(user.UserName!, Input.Password, Input.RememberMe, lockoutOnFailure: false);
             
             if (result.Succeeded)

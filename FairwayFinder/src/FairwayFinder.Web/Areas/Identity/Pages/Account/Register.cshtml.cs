@@ -142,7 +142,7 @@ public class RegisterModel : PageModel
             };
             await _userManager.AddClaimsAsync(user, claims);
                 
-            await _signInManager.SignInAsync(user, isPersistent: false);
+            //await _signInManager.SignInAsync(user, isPersistent: false);
             TempData["success_message"] = "Account successfully created";
                 
             await _userManagementService.RevokeInvite(invitation);
