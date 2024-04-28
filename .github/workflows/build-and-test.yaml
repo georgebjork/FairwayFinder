@@ -1,10 +1,8 @@
-name: "Main Build Process"
+name: "build-and-test"
 
 # Runs on main branch commits, 
 # every commit in a pull request, any published release.
 on:
-  push:
-    branches: ["main"]
   pull_request:
     branches: ["main"]
   release:
@@ -15,7 +13,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 jobs:
   build:
-    name: "Build & Test"
+    name: "build-and-test"
 
     # Permissions this GitHub Action needs for other things in GitHub
     permissions: write-all
