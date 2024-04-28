@@ -8,7 +8,7 @@ on:
       - 'FairwayFinder/**'
 
 jobs:
-  build_and_push:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the repo 
