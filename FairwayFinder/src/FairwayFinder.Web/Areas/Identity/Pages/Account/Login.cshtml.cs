@@ -129,7 +129,6 @@ public class LoginModel : PageModel
                 await _signInManager.RefreshSignInAsync(user);
                 
                 _logger.LogInformation("User logged in.");
-                TempData["success_message"] = "Successfully logged in.";
                 return LocalRedirect(returnUrl);
             }
             if (result.RequiresTwoFactor)

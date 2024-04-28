@@ -14,6 +14,9 @@
 <div>
     <main class="bg-base-100">
         <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
+            <div class="col-span-12 flex items-center">
+                @await Html.PartialAsync("_MessagePartial")
+            </div>
             @RenderBody()
         </div>
     </main>

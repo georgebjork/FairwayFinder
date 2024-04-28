@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using FairwayFinder.Web.Controllers.BaseControllers;
 using FairwayFinder.Web.Data.Models;
 using Microsoft.AspNetCore.Authorization;
 
 namespace FairwayFinder.Web.Controllers
 {
-    public class HomeController : Controller
+    public class HomeController : BaseController
     {
         private readonly ILogger<HomeController> _logger;
 
@@ -23,6 +24,7 @@ namespace FairwayFinder.Web.Controllers
         [Route("/hello")]
         public IActionResult Privacy()
         {
+            SetSuccessMessage("Hello world");
             return View();
         }
 
