@@ -14,7 +14,9 @@ namespace FairwayFinder.Web.Areas.Identity.Pages.Account
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IManageUsersService _manageUsersService;
-
+        
+        public bool IsConfirmed { get; set; }
+        
         public ConfirmEmailModel(UserManager<ApplicationUser> userManager, IManageUsersService manageUsersService)
         {
             _userManager = userManager;
@@ -38,7 +40,7 @@ namespace FairwayFinder.Web.Areas.Identity.Pages.Account
             // Decode
             code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(code));
             
-            var result = await _manageUsersService.ConfirmEmail(user, code);
+            IsConfirmed = await _manageUsersService.ConfirmEmail(user, code);
             
             return Page();
         }

@@ -2,8 +2,46 @@
 @model ConfirmEmailModel
 @{
     ViewData["Title"] = "Confirm email";
+
+    var result = Model.IsConfirmed;
 }
 
-<h1>@ViewData["Title"]</h1>
+<div class="col-span-12">
+    <div class="container mx-auto">
+        <div class="flex flex-wrap justify-center xl:justify-start">
+            <div class="w-full xl:w-6/12 xl:mx-auto pb-5">
+                
+                @if (result)
+                {
+                    <div class="card w-100 bg-base-300 shadow-xl">
+                        <div class="card-body flex flex-col items-center">
+                            <i class="fa-regular fa-circle-check text-success text-3xl"></i> <!-- Adjust size and center icon -->
+                            <h2 class="card-title">You're email has been confirmed!</h2>
+                            <p class="py-10">You can now go and login!</p>
+                            <div class="card-actions justify-end w-full"> <!-- Ensure actions are full width -->
+                                <a class="btn btn-primary w-full" href="/login">Login</a>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card w-100 bg-base-300 shadow-xl">
+                        <div class="card-body flex flex-col items-center">
+                            <i class="fa-regular fa-circle-xmark text-error text-3xl"></i> <!-- Adjust size and center icon -->
+                            <h2 class="card-title">You're email is already confirmed.</h2>
+                            <p class="py-10">You can now go and login.</p>
+                            <div class="card-actions justify-end w-full"> <!-- Ensure actions are full width -->
+                                <a class="btn btn-primary w-full" href="/login">Login</a>
+                            </div>
+                        </div>
+                    </div>
+                }
+                
+
+            </div>
+        </div>
+    </div>
+</div>
 
 
