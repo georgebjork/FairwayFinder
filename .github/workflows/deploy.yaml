@@ -1,9 +1,11 @@
-name: Build and publish
+name: deploy
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'FairwayFinder/**'
 
 jobs:
   build_and_push:
