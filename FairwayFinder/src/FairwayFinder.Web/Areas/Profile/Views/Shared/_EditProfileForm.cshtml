@@ -43,8 +43,8 @@
                 
     <div class="grid grid-cols-12 gap-4 mt-3">
         <div class="md:col-span-6 col-span-12">
-            <label asp-for="Email" class="input input-bordered flex items-center gap-2 w-full">
-                <input asp-for="Email" type="text" class="grow" placeholder="Email" disabled="disabled"/>
+            <label asp-for="Email" class="input input-bordered flex items-center gap-2 w-full" disabled>
+                <input asp-for="Email" type="text" class="grow" placeholder="Email"/>
             </label>
             <span asp-validation-for="Email" class="text-error"></span>
         </div>
