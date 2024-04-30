@@ -30,7 +30,19 @@ public class CheckSignInRefreshMiddleware(
                 {
                     // They are locked out. Sign them out.
                     await signInManager.SignOutAsync();
-                    context.Response.Redirect("/login");
+                    
+                    if (context.Request.Headers.ContainsKey("HX-Request")) // Check if it's an HTMX request
+                    {
+                        context.Response.Headers["HX-Redirect"] = "/login"; // Direct HTMX to handle the redirect
+                    }
+                    else
+                    {
+                        context.Response.Redirect("/login"); // Standard redirect for non-HTMX requests
+                    }
+                    
+                    context.Response.StatusCode = 302; // Explicitly set the status code for clarity
+                    await context.Response.CompleteAsync();
+                    return; // Short-circuit the pipeline here
                 }
                 else
                 {
