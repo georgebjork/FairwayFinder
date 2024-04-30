@@ -39,6 +39,10 @@ public class CheckSignInRefreshMiddleware(
                     {
                         context.Response.Redirect("/login"); // Standard redirect for non-HTMX requests
                     }
+                    
+                    context.Response.StatusCode = 302; // Explicitly set the status code for clarity
+                    await context.Response.CompleteAsync();
+                    return; // Short-circuit the pipeline here
                 }
                 else
                 {
