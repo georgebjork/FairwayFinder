@@ -138,7 +138,9 @@ public class LoginModel : PageModel
             if (result.IsLockedOut)
             {
                 _logger.LogWarning("User account locked out.");
-                return RedirectToPage("./Lockout");
+                
+                ModelState.AddModelError(string.Empty, "You're account has been locked.");
+                return Page();
             }
             else
             {

@@ -16,12 +16,31 @@ public class CheckSignInRefreshMiddleware(
         if (await roleRefreshService.CheckRefreshFlag(userId))
         {
             var user = await userManager.FindByIdAsync(userId);
-
-            if (user is not null)
+            
+            // Check if user was found
+            if (user == null)
             {
-                await signInManager.RefreshSignInAsync(user);
-                await roleRefreshService.RemoveRefreshFlag(userId);
+                // No user was returned. It is possible the user was deleted, so let's sign them out just in case.
+                await signInManager.SignOutAsync();
             }
+            else
+            {
+                // Check if the user is currently locked out
+                if (user.LockoutEnd.HasValue && user.LockoutEnd.Value > DateTimeOffset.UtcNow)
+                {
+                    // They are locked out. Sign them out.
+                    await signInManager.SignOutAsync();
+                    context.Response.Redirect("/login");
+                }
+                else
+                {
+                    // User is not locked out, refresh their signin
+                    await signInManager.RefreshSignInAsync(user);
+                }
+            }
+
+            // Regardless of the user's state, remove the refresh flag
+            await roleRefreshService.RemoveRefreshFlag(userId);
         }
         await next(context);
     }

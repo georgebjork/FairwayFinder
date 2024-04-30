@@ -88,8 +88,23 @@ public class ManageUsersController : BaseAdminController {
     [HttpPost]
     public async Task<IActionResult> RemoveUser(string userId)
     {
-        var rv = await _manageUsersService.RemoveUser(userId);
-        return Content("");
+        var user = await _userManager.FindByIdAsync(userId);
+        
+        var utcDate = new DateTime(2099, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var rv = await _userManager.SetLockoutEndDateAsync(user!, new DateTimeOffset(utcDate));
+        
+        await _roleRefreshService.SetRefreshFlag(userId);
+        return PartialView("Shared/_UserTableRecord", user);
+    }
+    
+    [Route("/enable-user/{userId}")]
+    [HttpPost]
+    public async Task<IActionResult> ReEnableUser(string userId)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        
+        var rv = await _userManager.SetLockoutEndDateAsync(user!, null);
+        return PartialView("Shared/_UserTableRecord", user);
     }
     
     [Route("/revoke-invite/{inviteId}")]

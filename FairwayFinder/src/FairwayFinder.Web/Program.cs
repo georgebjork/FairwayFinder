@@ -55,8 +55,15 @@ builder.Services.ConfigureApplicationCookie(o => {
     o.LogoutPath = "/logout";
     o.AccessDeniedPath = "/401";
     o.Events.OnSigningOut = ctx => {
-        ctx.HttpContext.Session.Clear();
-        return Task.CompletedTask;
+        try
+        {
+            ctx.HttpContext.Session.Clear();
+            return Task.CompletedTask;
+        }
+        catch(Exception ex)
+        {
+            return Task.CompletedTask;
+        }
     };
 });
 
