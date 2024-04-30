@@ -103,7 +103,10 @@ app.UseSerilogRequestLogging(options =>
 
 app.UseRouting();
 
+
 app.UseAuthentication();
+
+app.UseMiddleware<CheckSignInRefreshMiddleware>();
 app.UseAuthorization();
 
 
@@ -132,7 +135,6 @@ app.Use(async (ctx, next) => {
     }
 });
 
-app.UseMiddleware<CheckSignInRefreshMiddleware>();
 
 app.MapRazorPages();
 app.UseSession();
