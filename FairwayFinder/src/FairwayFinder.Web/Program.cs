@@ -4,6 +4,7 @@ using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Settings;
 using FairwayFinder.Web.Data;
+using FairwayFinder.Web.Middleware;
 using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
@@ -62,6 +63,8 @@ builder.Services.ConfigureApplicationCookie(o => {
 builder.Services.AddSession();
 builder.Services.AddMvc();
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddDistributedMemoryCache();
 
 builder.Host.UseSerilog((context, configuration) =>
     configuration.ReadFrom.Configuration(context.Configuration));
@@ -129,6 +132,7 @@ app.Use(async (ctx, next) => {
     }
 });
 
+app.UseMiddleware<CheckSignInRefreshMiddleware>();
 
 app.MapRazorPages();
 app.UseSession();
