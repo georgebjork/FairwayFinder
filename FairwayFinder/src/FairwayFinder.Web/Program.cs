@@ -4,6 +4,7 @@ using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Settings;
 using FairwayFinder.Web.Data;
+using FairwayFinder.Web.Middleware;
 using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
@@ -54,14 +55,23 @@ builder.Services.ConfigureApplicationCookie(o => {
     o.LogoutPath = "/logout";
     o.AccessDeniedPath = "/401";
     o.Events.OnSigningOut = ctx => {
-        ctx.HttpContext.Session.Clear();
-        return Task.CompletedTask;
+        try
+        {
+            ctx.HttpContext.Session.Clear();
+            return Task.CompletedTask;
+        }
+        catch(Exception ex)
+        {
+            return Task.CompletedTask;
+        }
     };
 });
 
 builder.Services.AddSession();
 builder.Services.AddMvc();
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddDistributedMemoryCache();
 
 builder.Host.UseSerilog((context, configuration) =>
     configuration.ReadFrom.Configuration(context.Configuration));
@@ -100,7 +110,10 @@ app.UseSerilogRequestLogging(options =>
 
 app.UseRouting();
 
+
 app.UseAuthentication();
+
+app.UseMiddleware<CheckSignInRefreshMiddleware>();
 app.UseAuthorization();
 
 

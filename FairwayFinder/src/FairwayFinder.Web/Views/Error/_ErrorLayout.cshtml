@@ -1,22 +1,29 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en" data-theme="business">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"]</title>
     <link rel="icon" type="image/svg" href="/golf-ball-tee-solid.svg">
-    <link rel="stylesheet" href="~/lib/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/styles.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/lib/font-awesome/css/all.css" />
 </head>
 <body>
 <div class="container">
-    @await Html.PartialAsync("_MessagePartial")
-    <main role="main" class="pb-3">
-        @RenderBody()
+    <main class="bg-base-100">
+        <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
+            <div class="col-span-12">
+                <div class="container mx-auto">
+                    <div class="flex flex-wrap justify-center xl:justify-start">
+                        <div class="w-full xl:w-6/12 xl:mx-auto pb-5">
+                            @RenderBody()
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 </div>
 </body>
 </html>
-
-
-<script src="~/lib/bootstrap/js/bootstrap.bundle.min.js"></script>

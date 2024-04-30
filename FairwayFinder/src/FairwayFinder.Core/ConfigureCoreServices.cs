@@ -3,6 +3,7 @@ using FairwayFinder.Core.Features.Course;
 using FairwayFinder.Core.Features.Profile;
 using FairwayFinder.Core.Features.Profile.Services;
 using FairwayFinder.Core.Services;
+using FairwayFinder.Core.Services.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace FairwayFinder.Core;
@@ -22,5 +23,6 @@ public static class ConfigureCoreServices
         services.AddTransient<IEmailSenderService, SendGridEmailService>();
         services.AddTransient<IMyProfileService, MyProfileService>();
         services.AddTransient<IProfileService, ProfileService>();
+        services.AddTransient<IRoleRefreshService, RoleRefreshService>();
     }
 }
