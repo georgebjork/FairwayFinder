@@ -3,6 +3,7 @@ using FairwayFinder.Core;
 using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Settings;
+using FairwayFinder.Identity;
 using FairwayFinder.Web.Data;
 using FairwayFinder.Web.Middleware;
 using HealthChecks.UI.Client;
@@ -77,6 +78,8 @@ builder.Host.UseSerilog((context, configuration) =>
     configuration.ReadFrom.Configuration(context.Configuration));
 
 ConfigureCoreServices.ConfigureServices(services: builder.Services);
+ConfigureIdentityServices.ConfigureServices(services: builder.Services);
+
 
 ConfigureSettings(builder.Services, builder.Configuration);
 
@@ -113,7 +116,7 @@ app.UseRouting();
 
 app.UseAuthentication();
 
-app.UseMiddleware<CheckSignInRefreshMiddleware>();
+app.UseMiddleware<RefreshUserMiddleware>();
 app.UseAuthorization();
 
 

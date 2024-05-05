@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FairwayFinder.Core\FairwayFinder.Core.csproj" />
+    <ProjectReference Include="..\FairwayFinder.Identity\FairwayFinder.Identity.csproj" />
   </ItemGroup>
 
   <ItemGroup>
