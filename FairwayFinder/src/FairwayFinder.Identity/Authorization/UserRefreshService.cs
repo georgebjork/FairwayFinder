@@ -1,23 +1,23 @@
 ﻿using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 
-namespace FairwayFinder.Core.Services.Authorization;
+namespace FairwayFinder.Identity.Authorization;
 
-public interface IRoleRefreshService
+public interface IUserRefreshService
 {
     Task<bool> CheckRefreshFlag(string userId);
     Task SetRefreshFlag(string userId);   
     Task RemoveRefreshFlag(string userId);
 }
 
-public class RoleRefreshService(IDistributedCache cache, ILogger<RoleRefreshService> logger) : IRoleRefreshService
+public class UserRefreshService(IDistributedCache cache, ILogger<UserRefreshService> logger) : IUserRefreshService
 {
     
-    private const string RoleRefreshKey = "Refresh_Role_";
+    private const string RefreshKey = "Refresh_User_";
 
     public async Task<bool> CheckRefreshFlag(string userId)
     {
-        var result = await cache.GetStringAsync($"{RoleRefreshKey}{userId}");
+        var result = await cache.GetStringAsync($"{RefreshKey}{userId}");
         bool.TryParse(result, out var val);
         {
             return val;
@@ -28,7 +28,7 @@ public class RoleRefreshService(IDistributedCache cache, ILogger<RoleRefreshServ
     {
         try
         {
-            await cache.SetStringAsync($"{RoleRefreshKey}{userId}", "true");
+            await cache.SetStringAsync($"{RefreshKey}{userId}", "true");
         }
         catch (Exception ex)
         {
@@ -41,7 +41,7 @@ public class RoleRefreshService(IDistributedCache cache, ILogger<RoleRefreshServ
     {
         try
         {
-            await cache.RemoveAsync($"{RoleRefreshKey}{userId}");
+            await cache.RemoveAsync($"{RefreshKey}{userId}");
         }
         catch (Exception ex)
         {

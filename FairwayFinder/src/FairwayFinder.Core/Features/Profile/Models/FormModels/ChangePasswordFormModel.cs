@@ -3,8 +3,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FairwayFinder.Core.Features.Profile.Models.FormModels;
 
-public class ChangePasswordFormModel
-{
+public class ChangePasswordFormModel {
+    
+    [Required]
+    public string UserId { get; set; } = "";
+    
     [Required]
     [DisplayName("Old Password")]
     [DataType(DataType.Password)]
