@@ -1,19 +1,21 @@
-using FairwayFinder.Core.Features.Profile;
 using FairwayFinder.Core.Features.Profile.Models.FormModels;
 using FairwayFinder.Core.Features.Profile.Models.ViewModels;
 using FairwayFinder.Core.Features.Profile.Services;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Services;
+using FairwayFinder.Identity.Policy;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FairwayFinder.Web.Areas.Profile.Controllers;
 
-public class MyProfileController(
+public class EditProfileController(
     IUsernameRetriever usernameRetriever, 
     IMyProfileService myProfileService, 
     UserManager<ApplicationUser> userManager, 
-    SignInManager<ApplicationUser> signInManager) : BaseProfileController
+    SignInManager<ApplicationUser> signInManager,
+    IAuthorizationService _authorizationService) : BaseProfileController
 {
     [Route("profile")]
     public async Task<IActionResult> Index()
@@ -26,7 +28,7 @@ public class MyProfileController(
             return RedirectToAction(nameof(Index), "Home");
         }
         
-        var vm = new EditProfileViewModel { Profile = profile, };
+        var vm = new EditProfileViewModel { Profile = profile };
 
         return View();
     }
@@ -65,9 +67,14 @@ public class MyProfileController(
             return PartialView("_EditProfileForm", form);
 
         }
-
-        form.UserId = usernameRetriever.UserId;
         form.BaseUrl = RequestUrlBase;
+        
+        // Check if the authorized user doing this is 
+        var result = await _authorizationService.AuthorizeAsync(User, form.UserId, Policies.CanEditProfile);
+        if (!result.Succeeded)
+        {
+            return new ForbidResult();
+        }
         
         var rv = await myProfileService.UpdateProfile(form);
 
@@ -97,6 +104,13 @@ public class MyProfileController(
         if (user == null)
         {
             return NotFound($"Unable to load user with ID '{userManager.GetUserId(User)}'.");
+        }
+        
+        // Check if the authorized user doing this is 
+        var result = await _authorizationService.AuthorizeAsync(User, form.UserId, Policies.CanEditProfile);
+        if (!result.Succeeded)
+        {
+            return new ForbidResult();
         }
 
         var changePasswordResult = await userManager.ChangePasswordAsync(user, form.OldPassword, form.NewPassword);

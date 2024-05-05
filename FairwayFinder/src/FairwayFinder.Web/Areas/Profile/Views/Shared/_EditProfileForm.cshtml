@@ -1,6 +1,7 @@
 
+@using FairwayFinder.Core.Services
 @model FairwayFinder.Core.Features.Profile.Models.FormModels.ProfileFormModel
-
+@inject IUsernameRetriever UsernameRetriever
 
 <div class="grid grid-cols-12 gap-4 mt-3">
     <div class="col-span-12">
@@ -18,6 +19,7 @@
 
 <form class="space-y-6 pt-5" hx-post="/profile/update" hx-target="#profile-form" hx-swap="innerHTML" enctype="multipart/form-data" autocomplete="off">
      <input type="hidden" asp-for="Email"/>
+     <input type="hidden" asp-for="UserId" value="@UsernameRetriever.UserId"/>
     
     <div class="grid grid-cols-12 gap-4 mt-3">
         <div class="col-span-12">

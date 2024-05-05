@@ -4,6 +4,8 @@ using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Settings;
 using FairwayFinder.Identity;
+using FairwayFinder.Identity.Authorization.Profile;
+using FairwayFinder.Identity.Policy;
 using FairwayFinder.Web.Data;
 using FairwayFinder.Web.Middleware;
 using HealthChecks.UI.Client;
@@ -25,6 +27,7 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy(Policies.HealthCheck, policy => policy.RequireRole(Roles.Admin));
+    options.AddPolicy(Policies.CanEditProfile, policy => policy.Requirements.Add(new CanEditProfileRequirement()));
 });
 
 

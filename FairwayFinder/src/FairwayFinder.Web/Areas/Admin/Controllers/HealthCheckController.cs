@@ -1,11 +1,14 @@
 ﻿using FairwayFinder.Core.Features.Admin.HealthCheck.Models;
 using FairwayFinder.Core.Features.Admin.HealthCheck.Models.ViewModels;
+using FairwayFinder.Identity.Policy;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace FairwayFinder.Web.Areas.Admin.Controllers;
 
+[Authorize(Policy = Policies.HealthCheck)]
 public class HealthCheckController : BaseAdminController
 {
     [Route("/health-check")]
