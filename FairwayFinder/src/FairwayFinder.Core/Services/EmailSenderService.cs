@@ -11,6 +11,7 @@ public interface IEmailSenderService
 {
     Task SendRegisterEmailAsync(string email, string inviteLink);
     Task SendConfirmationEmailAsync(string email, string confirmationLink);
+    Task SendResetPasswordEmailAsync(string email, string resetLink);
 }
 
 public class SendGridEmailService(ILogger<SendGridEmailService> logger, IOptions<SendGridSettings> settings) : IEmailSenderService
@@ -60,6 +61,29 @@ public class SendGridEmailService(ILogger<SendGridEmailService> logger, IOptions
 
         // Create the email message with both plain text and HTML content
         var msg = MailHelper.CreateSingleEmail(from, to, "Confirm your email", plainTextContent, htmlContent);
+        
+        // Send the email
+        await SendMessage(msg);
+    }
+    public async Task SendResetPasswordEmailAsync(string email, string resetLink)
+    {
+        var from = new EmailAddress(_settings.FromEmail, _settings.FromName);
+        var to = new EmailAddress(email);
+        
+        var htmlContent = $@"
+        <html>
+            <body>
+                <p>You requested a password reset.</p>
+                <p>Click <a href='{resetLink}' target='_blank'>{resetLink}</a> to reset your password.</p>
+                <p>If you did not request this, ignore this email.</p>
+            </body>
+        </html>";
+    
+        // Create plain text content (for email clients that don't support HTML)
+        var plainTextContent = $"You requested a password reset, click here to reset: {resetLink}. If you did not request this, ignore this email.";
+
+        // Create the email message with both plain text and HTML content
+        var msg = MailHelper.CreateSingleEmail(from, to, "Password Reset", plainTextContent, htmlContent);
         
         // Send the email
         await SendMessage(msg);
