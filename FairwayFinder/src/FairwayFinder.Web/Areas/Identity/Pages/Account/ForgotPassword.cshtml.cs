@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages;
 
 namespace FairwayFinder.Web.Areas.Identity.Pages.Account
 {
@@ -22,11 +23,13 @@ namespace FairwayFinder.Web.Areas.Identity.Pages.Account
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IEmailSenderService _emailSender;
+        private readonly ILogger<ForgotPassword> _logger;
 
-        public ForgotPasswordModel(UserManager<ApplicationUser> userManager, IEmailSenderService emailSender)
+        public ForgotPasswordModel(UserManager<ApplicationUser> userManager, IEmailSenderService emailSender, ILogger<ForgotPassword> logger)
         {
             _userManager = userManager;
             _emailSender = emailSender;
+            _logger = logger;
         }
 
         /// <summary>
@@ -56,9 +59,10 @@ namespace FairwayFinder.Web.Areas.Identity.Pages.Account
             if (!ModelState.IsValid) return Page();
 
             var user = await _userManager.FindByEmailAsync(Input.Email);
-            if (user == null || !(await _userManager.IsEmailConfirmedAsync(user)))
+            if (user == null || !await _userManager.IsEmailConfirmedAsync(user))
             {
                 // Don't reveal that the user does not exist or is not confirmed
+                _logger.LogWarning("A user tried to reset the password of a user that does not exist, or it not confirmed. Email was {email}", Input.Email);
                 return RedirectToPage("./ForgotPasswordConfirmation");
             }
 
@@ -72,6 +76,7 @@ namespace FairwayFinder.Web.Areas.Identity.Pages.Account
             protocol: Request.Scheme);
 
             await _emailSender.SendResetPasswordEmailAsync(Input.Email, callbackUrl!);
+            _logger.LogInformation("{email} just requested a password reset.", Input.Email);
 
             TempData["success_message"] = "A password reset link has been sent to your email.";
             return RedirectToPage("./Login");

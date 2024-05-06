@@ -16,10 +16,12 @@ namespace FairwayFinder.Web.Areas.Identity.Pages.Account
     public class ResetPasswordModel : PageModel
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ILogger<ResetPasswordModel> _logger;
 
-        public ResetPasswordModel(UserManager<ApplicationUser> userManager)
+        public ResetPasswordModel(UserManager<ApplicationUser> userManager, ILogger<ResetPasswordModel> logger)
         {
             _userManager = userManager;
+            _logger = logger;
         }
 
         /// <summary>
@@ -74,6 +76,7 @@ namespace FairwayFinder.Web.Areas.Identity.Pages.Account
         {
             if (code == null)
             {
+                _logger.LogWarning("A code was not supplied for a password reset.");
                 return BadRequest("A code must be supplied for password reset.");
             }
             
@@ -95,12 +98,14 @@ namespace FairwayFinder.Web.Areas.Identity.Pages.Account
             if (user == null)
             {
                 // Don't reveal that the user does not exist
+                _logger.LogWarning("A user tried to reset the password of a user that does not exist. Email was {email}", Input.Email);
                 return RedirectToPage("./ResetPasswordConfirmation");
             }
 
             var result = await _userManager.ResetPasswordAsync(user, Input.Code, Input.Password);
             if (result.Succeeded)
             {
+                _logger.LogInformation("{email} just reset their password.", Input.Email);
                 return RedirectToPage("./ResetPasswordConfirmation");
             }
 
