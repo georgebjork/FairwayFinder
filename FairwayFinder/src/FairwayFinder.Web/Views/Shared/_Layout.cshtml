@@ -22,14 +22,26 @@
               @await Html.PartialAsync("_MessagePartial")
           </div>
           @RenderBody() 
+          
       </div>
+      
+      <footer class="footer flex items-center justify-between p-4 bg-base-200 text-neutral-content w-full" style="position: fixed; left: 0; bottom: 0; width: 100%; z-index: 1000;">
+          <aside class="flex items-center ps-5">
+              <p>© 2024 <i class="fa-solid fa-golf-ball-tee fa-lg px-2"></i> FairwayFinder</p>
+          </aside> 
+          <nav class="flex gap-4 pe-5">
+              <a href="https://github.com/georgebjork/FairwayFinder"><i class="fa-brands fa-github fa-lg"></i></a>
+          </nav>
+      </footer>
+
+
   </main>
   
   <partial name="_SidebarMenu"/>
   
-  
+ 
 
-@*
+  @*
 <main role="main" class="pb-3">
         @RenderBody()
       </main>
