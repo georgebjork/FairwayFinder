@@ -37,6 +37,12 @@
     <_ContentIncludedByDefault Remove="Areas\Identity\Pages\Account\Manage\_ManageNav.cshtml" />
     <_ContentIncludedByDefault Remove="Areas\Identity\Pages\Account\Manage\_ViewImports.cshtml" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Areas\CourseManagement\Data\" />
+    <Folder Include="Areas\CourseManagement\Models\" />
+    <Folder Include="Areas\CourseManagement\Views\" />
+  </ItemGroup>
   
   <Target Name="Tailwind" BeforeTargets="Build">
     <Exec Command="npm run css:build"/>

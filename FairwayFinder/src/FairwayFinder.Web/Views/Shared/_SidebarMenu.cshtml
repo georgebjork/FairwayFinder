@@ -13,11 +13,29 @@
 			FairwayFinder
 		</div>
 		<ul class="menu">
-			<li>
+			<li class="py-2">
 				<a asp-controller="Home" asp-action="Index">
 					<i class="fa-solid fa-table-columns"></i>
 					Dashboard
 				</a>
+			</li>
+			<li></li>
+
+			<li>
+				<details>
+					<summary>
+						<i class="fa-solid fa-list-check"></i>
+						Course Management
+					</summary>
+					<ul>
+						<li>
+							<a asp-area="CourseManagement" asp-controller="Course" asp-action="Index"><i class="fa-solid fa-list"></i> View Courses </a>
+						</li>
+						<li>
+							<a><i class="fa-solid fa-plus"></i> Add Course</a>
+						</li>
+					</ul>
+				</details>
 			</li>
 			<li></li>
 			

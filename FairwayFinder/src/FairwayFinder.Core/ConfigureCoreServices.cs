@@ -1,5 +1,6 @@
 using FairwayFinder.Core.Features.Admin.UserManagement;
-using FairwayFinder.Core.Features.Course;
+using FairwayFinder.Core.Features.CourseManagement.Repository;
+using FairwayFinder.Core.Features.CourseManagement.Services;
 using FairwayFinder.Core.Features.Profile;
 using FairwayFinder.Core.Features.Profile.Services;
 using FairwayFinder.Core.Services;
@@ -22,5 +23,7 @@ public static class ConfigureCoreServices
         services.AddTransient<IEmailSenderService, SendGridEmailService>();
         services.AddTransient<IMyProfileService, MyProfileService>();
         services.AddTransient<IProfileService, ProfileService>();
+        services.AddTransient<ICourseManagementService, CourseManagementService>();
+
     }
 }
