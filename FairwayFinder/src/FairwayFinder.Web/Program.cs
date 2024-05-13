@@ -83,7 +83,6 @@ builder.Host.UseSerilog((context, configuration) =>
 ConfigureCoreServices.ConfigureServices(services: builder.Services);
 ConfigureIdentityServices.ConfigureServices(services: builder.Services);
 
-
 ConfigureSettings(builder.Services, builder.Configuration);
 
 var app = builder.Build();

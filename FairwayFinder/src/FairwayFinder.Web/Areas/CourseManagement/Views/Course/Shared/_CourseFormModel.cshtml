@@ -1,0 +1,46 @@
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@model FairwayFinder.Core.Features.CourseManagement.Models.FormModels.EditCourseFormModel
+
+
+
+<form hx-post="/course/add" hx-target="#course-form" hx-swap="innerHTML">
+
+    <div class="grid grid-cols-12 gap-4 mt-3">
+        <div class="col-span-12">
+            @await Html.PartialAsync("_MessageHtmxPartial")
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-12 gap-4 mt-3">
+        <div class="md:col-span-12 col-span-12">
+            <label asp-for="Name" class="input input-bordered flex items-center gap-2 w-full">
+                <input asp-for="Name" type="text" class="grow" placeholder="Course Name"/>
+            </label>
+            <span asp-validation-for="Name" class="text-error"></span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-12 gap-4 mt-3">
+        <div class="md:col-span-12 col-span-12">
+            <label asp-for="Address" class="input input-bordered flex items-center gap-2 w-full">
+                <input asp-for="Address" type="text" class="grow" placeholder="Address"/>
+            </label>
+            <span asp-validation-for="Address" class="text-error"></span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-12 gap-4 mt-3">
+        <div class="md:col-span-12 col-span-12">
+            <label asp-for="PhoneNumber" class="input input-bordered flex items-center gap-2 w-full">
+                <input asp-for="PhoneNumber" type="text" class="grow" placeholder="Phone Number"/>
+            </label>
+            <span asp-validation-for="PhoneNumber" class="text-error"></span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-12 gap-4 mt-3">
+        <div class="col-span-12">
+            <button type="submit" class="col-span-12 sm:col-span-6 xl:col-span-4 btn btn-primary btn-block">Create Course</button>
+        </div>
+    </div>
+</form>

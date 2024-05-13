@@ -1,0 +1,19 @@
+@model FairwayFinder.Core.Features.CourseManagement.Models.FormModels.EditCourseFormModel
+
+
+@{
+    ViewData["Title"] = "Add Course";
+}
+
+
+<div class="col-span-12">
+    <div class="container mx-auto">
+        <div class="flex flex-wrap justify-center xl:justify-start">
+            <div class="w-full xl:w-8/12 xl:mx-auto pb-5">
+                <div id="course-form">
+                    @await Html.PartialAsync("Shared/_CourseFormModel", Model)
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
