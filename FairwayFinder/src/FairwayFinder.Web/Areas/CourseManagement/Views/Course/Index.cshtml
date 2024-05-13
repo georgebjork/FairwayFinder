@@ -5,19 +5,31 @@
 }
 
 <div class="col-span-12">
-    <div class="overflow-x-auto">
-        <table class="table bg-base-200">
-            <!-- head -->
-            <thead>
-            <tr class="border-b border-base-100">
-                <th>Course Id</th>
-                <th>Name</th>
-                <th>Actions</th>
-            </tr>
-            </thead>
-            <tbody>
-            @foreach (var course in Model.Courses)
-            {
+    
+    <div class="card-body grow-0 bg-base-200">
+        <div class="flex justify-between items-center">
+            <div class="card-title">
+                <h3> Golf Courses </h3>
+            </div>
+            <div class="add-user">
+                <a class="btn btn-primary" type="button" asp-action="AddCourse">
+                    <i class="fa-solid fa-plus"></i> Add Golf Course
+                </a>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto pt-4">
+            <table class="table bg-base-200">
+                <thead>
+                <tr class="border-b-2 border-neutral">
+                    <th>Course Id</th>
+                    <th>Name</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var course in Model.Courses)
+                {
                 <tr>
                     <td>@course.CourseId</td>
                     <td>
@@ -27,9 +39,10 @@
                     </td>
                     <td><button class="btn btn-xs btn-error">Remove</button></td>
                 </tr>
-            }
-            
-            </tbody>
-        </table>
+                }
+
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>

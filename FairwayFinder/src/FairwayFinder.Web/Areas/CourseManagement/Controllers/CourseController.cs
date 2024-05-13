@@ -1,3 +1,4 @@
+using FairwayFinder.Core.Features.CourseManagement.Models.FormModels;
 using FairwayFinder.Core.Features.CourseManagement.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,10 +29,32 @@ public class CourseController(ILogger<CourseController> logger, ICourseManagemen
     }
     
     
-    /*[HttpPost]
+    [HttpGet]
     [Route("course/add")]
-    public IActionResult AddCourse()
+    public async Task<IActionResult> AddCourse()
     {
-        return View();
-    } */
+        return View(new EditCourseFormModel());
+    }
+    
+    [HttpPost]
+    [Route("course/add")]
+    public async Task<IActionResult> AddCoursePost([FromForm] EditCourseFormModel form)
+    {
+        if (!ModelState.IsValid)
+        {
+            return PartialView("Shared/_CourseFormModel", form);
+        }
+
+        var courseId = await courseManagementService.AddCourse(form);
+
+        if (courseId <= 0)
+        {
+            SetErrorMessageHtmx("An error ocurred creating golf course.");
+            return PartialView("Shared/_CourseFormModel", form);
+        }
+        
+        SetSuccessMessage($"{form.Name} golf course has been added.");
+        Response.Headers["HX-Redirect"] = Url.Action(nameof(ViewCourse), new { courseId });
+        return Ok();
+    }
 }
