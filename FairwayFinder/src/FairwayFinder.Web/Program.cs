@@ -139,6 +139,10 @@ app.MapControllerRoute(
     name : "Profile",
     pattern : "{area:exists}/{controller=Home}/{action=Index}/{id?}"
 );
+app.MapControllerRoute(
+    name : "Course Management",
+    pattern : "{area:exists}/{controller=Home}/{action=Index}/{id?}"
+);
 
 // 404 mapping 
 app.Use(async (ctx, next) => {
