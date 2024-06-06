@@ -26,11 +26,7 @@ public class ManageUsersController(
         
         foreach (var user in users)
         {
-            var rv = await userManager.IsInRoleAsync(user, Roles.Admin);
-            if (rv)
-            {
-                user.IsAdmin = true;
-            }
+            user.IsAdmin = await userManager.IsInRoleAsync(user, Roles.Admin);
         }
 
         var invites = await manageUsersService.GetInvites();
@@ -82,9 +78,10 @@ public class ManageUsersController(
     public async Task<IActionResult> RemoveUser(string userId)
     {
         var user = await userManager.FindByIdAsync(userId);
+        user!.IsAdmin = await userManager.IsInRoleAsync(user, Roles.Admin);
         
         var utcDate = new DateTime(2099, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var rv = await userManager.SetLockoutEndDateAsync(user!, new DateTimeOffset(utcDate));
+        await userManager.SetLockoutEndDateAsync(user!, new DateTimeOffset(utcDate));
         
         await userRefreshService.SetRefreshFlag(userId);
         return PartialView("Shared/_UserTableRecord", user);
@@ -95,8 +92,9 @@ public class ManageUsersController(
     public async Task<IActionResult> ReEnableUser(string userId)
     {
         var user = await userManager.FindByIdAsync(userId);
-        
-        var rv = await userManager.SetLockoutEndDateAsync(user!, null);
+        user!.IsAdmin = await userManager.IsInRoleAsync(user, Roles.Admin);
+
+        await userManager.SetLockoutEndDateAsync(user!, null);
         return PartialView("Shared/_UserTableRecord", user);
     }
     
