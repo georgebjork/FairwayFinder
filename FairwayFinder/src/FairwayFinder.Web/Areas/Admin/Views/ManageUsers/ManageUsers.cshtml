@@ -16,7 +16,7 @@
                     <h3> Current Users </h3>
                 </div>
                 <div class="add-user">
-                    <button class="btn btn-primary" type="button" onclick="invite_modal.showModal()">
+                    <button class="btn btn-primary btn-sm" type="button" onclick="invite_modal.showModal()">
                         <i class="fa-solid fa-plus"></i> Add User
                     </button>
                 </div>
@@ -27,16 +27,20 @@
             <table class="table">
                 <thead>
                 <tr class="border-b border-base-100">
+                    <th>Role</th>
                     <th>
-                        <div class="flex justify-between align-middle">
-                            <div>User Id</div>
-                            <div>Verified</div>
+                        <div class="flex justify-end">
+                            Verified
                         </div>
                     </th>
                     <th>Email</th>
                     <th>UserName</th>
                     <th>Name</th>
-                    <th style="width: 20%;">Actions</th>
+                    <th>
+                        <div class="flex justify-end">
+                            Actions
+                        </div>
+                    </th>
                 </tr>
                 </thead>
                 <tbody>
@@ -67,7 +71,11 @@
                 <tr class="border-b border-base-100">
                     <th>Email</th>
                     <th>Invite Link</th>
-                    <th style="width: 20%;">Actions</th>
+                    <th>
+                        <div class="flex justify-end">
+                            Revoke Invite
+                        </div>
+                    </th>
                 </tr>
                 </thead>
                 <tbody>

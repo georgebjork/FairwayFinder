@@ -6,16 +6,33 @@
 
 <tr id="user-@Model.Id">
     <td>
-        <div class="flex justify-between align-middle">
-            <div>
-                @Model.Id
-            </div>
-            @if (Model.EmailConfirmed)
-            {
+        <div class="flex justify-start">
+            @if (Model.IsAdmin){
+            <button class="btn btn-secondary btn-xs pe-2" type="button" onclick="this.disabled=true;"
+                    hx-trigger="click"
+                    hx-post="/update-user-role/@Model.Id"
+                    hx-swap="outerHTML"
+                    hx-target="#user-@Model.Id">
+                <i class="fa-solid fa-user pe-1"></i> User
+            </button>
+            }
+            else{
+            <button class="btn btn-success btn-xs pe-2" type="button" onclick="this.disabled=true;"
+                    hx-trigger="click"
+                    hx-post="/update-user-role/@Model.Id"
+                    hx-swap="outerHTML"
+                    hx-target="#user-@Model.Id">
+                <i class="fa-solid fa-id-badge pe-1"></i> Admin
+            </button>
+            }
+        </div>
+    </td>
+    <td>
+        <div class="flex justify-end">
+            @if (Model.EmailConfirmed){
                 <div class="text-success"><i class="fa-regular fa-circle-check"></i></div>
             }
-            else
-            {
+            else{
                 <div class="text-error"><i class="fa-regular fa-circle-xmark"></i></div>
             }
         </div>
@@ -26,51 +43,37 @@
     </td>
     <td>@(Model.FirstName + " " + Model.LastName)</td>
     <td>
-        <div class="flex justify-evenly">
-            @if (Model.IsAdmin)
-            {
-                <button class="btn btn-success btn-xs pe-2" type="button" onclick="this.innerText='Applying role...'; this.disabled=true;"
-                        hx-trigger="click"
-                        hx-post="/update-user-role/@Model.Id"
-                        hx-swap="outerHTML"
-                        hx-target="#user-@Model.Id">
-                    Revoke Admin
-                </button>
-            }
-            else
-            {
-                <button class="btn btn-success btn-xs pe-2" type="button" onclick="this.innerText='Applying role...'; this.disabled=true;"
-                        hx-trigger="click"
-                        hx-post="/update-user-role/@Model.Id"
-                        hx-swap="outerHTML"
-                        hx-target="#user-@Model.Id">
-                    Promote Admin
-                </button>
-            }
-        
-            @if (Model.LockoutEnd is not null && Model.LockoutEnd > DateTime.UtcNow)
-            {
-                <button class="btn btn-secondary btn-xs" type="button" onclick="this.innerText='Enabling...'; this.disabled=true;"
-                        hx-trigger="click"
-                        hx-post="/enable-user/@Model.Id"
-                        hx-swap="outerHTML"
-                        hx-target="#user-@Model.Id">
-                
-                    <i class="fa-solid fa-user-check pe2 "></i> Re-enable User
-                </button>
-            }
-            else
-            {
-                <button class="btn btn-error btn-xs" type="button" onclick="this.innerText='Removing...'; this.disabled=true;"
-                        hx-trigger="click"
-                        hx-post="/remove-user/@Model.Id"
-                        hx-swap="outerHTML"
-                        hx-target="#user-@Model.Id">
-                
-                    <i class="fa-solid fa-trash pe2 "></i> Remove User
-                </button>
-            }
+        <div class="flex justify-end">
             
+            <div class="pe-4">
+                <a>
+                    <i class="fa-solid fa-pen"></i>
+                </a>
+            </div>
+            
+            <div class="pe-2">
+                @if (Model.LockoutEnd is not null && Model.LockoutEnd > DateTime.UtcNow){
+                    <button type="button" onclick="this.disabled=true;"
+                            hx-trigger="click"
+                            hx-post="/enable-user/@Model.Id"
+                            hx-swap="outerHTML"
+                            hx-target="#user-@Model.Id">
+
+                        <i class="fa-solid fa-user-check"></i>
+                    </button>
+                }
+                else{
+                    <button type="button" onclick="this.disabled=true;"
+                            hx-trigger="click"
+                            hx-post="/remove-user/@Model.Id"
+                            hx-swap="outerHTML"
+                            hx-target="#user-@Model.Id">
+
+                        <i class="fa-solid fa-trash text-error"></i>
+                    </button>
+                }
+
+            </div>
         </div>
     </td>
 </tr>
