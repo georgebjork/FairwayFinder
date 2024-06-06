@@ -8,22 +8,23 @@
     <td>
         <div class="flex justify-start">
             @if (Model.IsAdmin){
-            <button class="btn btn-secondary btn-xs pe-2" type="button" onclick="this.disabled=true;"
-                    hx-trigger="click"
-                    hx-post="/update-user-role/@Model.Id"
-                    hx-swap="outerHTML"
-                    hx-target="#user-@Model.Id">
-                <i class="fa-solid fa-user pe-1"></i> User
-            </button>
+                <button class="btn btn-success btn-xs pe-2" type="button" onclick="this.disabled=true;"
+                        hx-trigger="click"
+                        hx-post="/update-user-role/@Model.Id"
+                        hx-swap="outerHTML"
+                        hx-target="#user-@Model.Id">
+                    <i class="fa-solid fa-id-badge pe-1"></i> Admin
+                </button>
             }
             else{
-            <button class="btn btn-success btn-xs pe-2" type="button" onclick="this.disabled=true;"
-                    hx-trigger="click"
-                    hx-post="/update-user-role/@Model.Id"
-                    hx-swap="outerHTML"
-                    hx-target="#user-@Model.Id">
-                <i class="fa-solid fa-id-badge pe-1"></i> Admin
-            </button>
+                
+                <button class="btn btn-secondary btn-xs pe-2" type="button" onclick="this.disabled=true;"
+                        hx-trigger="click"
+                        hx-post="/update-user-role/@Model.Id"
+                        hx-swap="outerHTML"
+                        hx-target="#user-@Model.Id">
+                    <i class="fa-solid fa-user pe-1"></i> User
+                </button>
             }
         </div>
     </td>
