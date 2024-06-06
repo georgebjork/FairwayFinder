@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - @ApplicationSettings.APPLICATION_NAME</title>
-    <link rel="icon" type="image/svg" href="/golf-ball-tee-solid.svg">
+    @await Html.PartialAsync("_Favicons")
     <link rel="stylesheet" href="~/css/styles.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/lib/font-awesome/css/all.css" />
