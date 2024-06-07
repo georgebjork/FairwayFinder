@@ -24,6 +24,14 @@ public static class ConfigureCoreServices
         services.AddTransient<IMyProfileService, MyProfileService>();
         services.AddTransient<IProfileService, ProfileService>();
         services.AddTransient<ICourseManagementService, CourseManagementService>();
+        
+        
+        services.AddMediatR(x=> x.RegisterServicesFromAssemblyContaining<ICoreAssemblyMarker>());
 
     }
+}
+
+public interface ICoreAssemblyMarker
+{
+    
 }
