@@ -7,6 +7,8 @@ public class ApplicationUser : IdentityUser
 {
     public string? FirstName;
     public string? LastName;
+    public DateTime CreatedOn;
+    public DateTime UpdatedOn;
 
     [NotMapped]
     public bool IsAdmin { get; set; }

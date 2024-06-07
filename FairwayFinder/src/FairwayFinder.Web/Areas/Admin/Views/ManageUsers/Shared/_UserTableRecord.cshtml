@@ -1,6 +1,7 @@
 @model ApplicationUser
 @using Microsoft.AspNetCore.Identity
 @using FairwayFinder.Core.Models
+@using FairwayFinder.Core.Helpers
 
 @inject UserManager<ApplicationUser> UserManager
 
@@ -43,6 +44,7 @@
         <a class="link" asp-area="Profile" asp-controller="Profile" asp-action="ViewProfile" asp-route-userName="@Model.UserName" class="p-0">@Model.UserName</a>
     </td>
     <td>@(Model.FirstName + " " + Model.LastName)</td>
+    <td>@Model.CreatedOn.FormatDate()</td>
     <td>
         <div class="flex justify-end">
             
