@@ -6,4 +6,5 @@ public static class DateTimeHelpers
     {
         return date.Year <= 1970 ? "" : date.ToString("M/d/yy");
     }
+    
 }
