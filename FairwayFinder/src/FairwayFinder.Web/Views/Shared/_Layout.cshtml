@@ -16,14 +16,18 @@
   <input id="my-drawer" type="checkbox" class="drawer-toggle" />
 
   <main class="drawer-content bg-base-100">
-      <div class="grid grid-cols-12 grid-rows-[min-content] gap-y-12 p-4 lg:gap-x-12 lg:p-10">
-          <partial name="_Header"/>
-          <div class="col-span-12 flex items-center" id="global-message">
+          
+          <div class="grid grid-cols-12 grid-rows-[min-content] gap-y-12 px-4 pt-4 lg:gap-x-12 lg:px-10">
+              <partial name="_Header"/>
+          </div>
+      
+          <div class="col-span-12 flex items-center px-4 lg:px-10" id="global-message">
               @await Html.PartialAsync("_MessagePartial")
           </div>
-          @RenderBody() 
-          
-      </div>
+
+          <div class="grid grid-cols-12 grid-rows-[min-content] gap-y-12 px-4 lg:gap-x-12 lg:px-10">
+              @RenderBody()
+          </div>
       
       <footer class="footer flex items-center justify-between p-4 bg-base-200 text-neutral-content w-full" style="position: fixed; left: 0; bottom: 0; width: 100%; z-index: 1000;">
           <aside class="flex items-center ps-5">
