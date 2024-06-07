@@ -1,20 +1,23 @@
+using FairwayFinder.Core.Features.Profile;
 using FairwayFinder.Core.Features.Profile.Services;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FairwayFinder.Web.Areas.Profile.Controllers;
 
-public class ProfileController(IProfileService profileService) : BaseProfileController
+public class ProfileController(IMediator mediator) : BaseProfileController
 {
-    
-
     [Route("/profile/{userName}")]
     public async Task<IActionResult> ViewProfile([FromRoute] string userName)
     {
-        var vm = await profileService.GetProfile(userName);
+        var result = await mediator.Send(new GetProfileRequest { Username = userName });
 
-        if (vm is not null) return View(vm);
-        
-        SetErrorMessage("Profile does not exist");
-        return NotFound();
+        return result.Match<IActionResult>(
+            View,
+            err => {
+                SetErrorMessage($"{err.Message}");
+                return RedirectToAction("Index", "Home");
+            }
+        );
     }
 }

@@ -48,11 +48,11 @@ public class ProfileRepository(IConfiguration configuration, ILogger<ProfileRepo
     public async Task<int> UpdateProfile(ProfileQueryModel model)
     {
         var sql = @"UPDATE public.""AspNetUsers""
-	                SET ""FirstName""=@firstName, ""LastName""=@lastName, ""UserName""=@userName
+	                SET ""FirstName""=@firstName, ""LastName""=@lastName, ""UserName""=@userName, ""UpdatedOn""=@date
                     WHERE ""Id"" = @id";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.ExecuteAsync(sql,
-            new { firstName = model.FirstName, lastName = model.LastName, userName = model.UserName, id = model.Id });
+            new { firstName = model.FirstName, lastName = model.LastName, userName = model.UserName, id = model.Id, date = DateTime.UtcNow });
         return rv;
     }
 
