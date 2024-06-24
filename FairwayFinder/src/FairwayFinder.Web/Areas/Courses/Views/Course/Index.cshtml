@@ -1,4 +1,4 @@
-@model FairwayFinder.Core.Features.CourseManagement.Models.ViewModels.GetAllCoursesViewModel
+@model FairwayFinder.Core.Features.Courses.Models.ViewModels.GetAllCoursesViewModel
 
 @{
     ViewData["Title"] = "Course Management";
@@ -31,10 +31,10 @@
                 @foreach (var course in Model.Courses)
                 {
                 <tr>
-                    <td>@course.CourseId</td>
+                    <td>@course.course_id</td>
                     <td>
-                        <a class="link" asp-action="ViewCourse" asp-route-courseId="@course.CourseId">
-                            @course.CourseName
+                        <a class="link" asp-action="ViewCourse" asp-route-courseId="@course.course_id">
+                            @course.course_name
                         </a>
                     </td>
                     <td><button class="btn btn-xs btn-error">Remove</button></td>

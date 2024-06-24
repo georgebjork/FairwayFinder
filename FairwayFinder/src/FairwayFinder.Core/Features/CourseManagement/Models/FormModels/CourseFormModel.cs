@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FairwayFinder.Core.Features.CourseManagement.Models.FormModels;
 
-public class EditCourseFormModel
+public class CourseFormModel
 {
     [Required(ErrorMessage = "Name is required.")]
     [StringLength(100, ErrorMessage = "Name cannot be longer than 100 characters.")]

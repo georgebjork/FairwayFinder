@@ -1,5 +1,4 @@
 using FairwayFinder.Core.Features.Profile;
-using FairwayFinder.Core.Features.Profile.Services;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 

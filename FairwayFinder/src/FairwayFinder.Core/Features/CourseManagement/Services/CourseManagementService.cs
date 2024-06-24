@@ -1,7 +1,7 @@
 using FairwayFinder.Core.Features.CourseManagement.Models.FormModels;
-using FairwayFinder.Core.Features.CourseManagement.Models.ViewModels;
-using FairwayFinder.Core.Features.CourseManagement.Repository;
+using FairwayFinder.Core.Features.Courses.Models.ViewModels;
 using FairwayFinder.Core.Models;
+using FairwayFinder.Core.Repositories;
 using FairwayFinder.Core.Services;
 using Microsoft.Extensions.Logging;
 
@@ -9,34 +9,13 @@ namespace FairwayFinder.Core.Features.CourseManagement.Services;
 
 public interface ICourseManagementService
 {
-    Task<GetAllCoursesViewModel> GetAllCourses();
-    Task<CourseViewModel> GetCourseById(int courseId);
-
-    Task<int> AddCourse(EditCourseFormModel form);
+    Task<int> AddCourse(CourseFormModel form);
 }
 
 public class CourseManagementService(ILogger<CourseManagementService> _logger, ICourseRepository courseRepository, IUsernameRetriever usernameRetriever) : ICourseManagementService
 {
-    
-    public async Task<GetAllCoursesViewModel> GetAllCourses()
-    {
-        var courses = await courseRepository.GetAllCourses();
-        return new GetAllCoursesViewModel
-        {
-            Courses = courses
-        };
-    }
 
-    public async Task<CourseViewModel> GetCourseById(int courseId)
-    {
-        var course = await courseRepository.GetCourseById(courseId);
-        return new CourseViewModel
-        {
-            Course = course
-        }; 
-    }
-
-    public async Task<int> AddCourse(EditCourseFormModel form)
+    public async Task<int> AddCourse(CourseFormModel form)
     {
         try
         {

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace FairwayFinder.Web.Areas.CourseManagement.Controllers;
 
 [Area("CourseManagement")]
-public class CourseBaseController : BaseAuthorizedController
+public class CourseManagementBaseController : BaseAuthorizedController
 {
     
 }
