@@ -27,7 +27,11 @@
 			<li>
 				<a class="dropdown-item" asp-area="Profile" asp-controller="EditProfile" asp-action="Index"> <i class="fa-solid fa-user pe-2"></i> Profile</a>
 			</li>
-			<li><a class="dropdown-item" href="/logout"><i class="fa-solid fa-arrow-right-from-bracket pe-2"></i> Logout</a></li>
+			<li>
+				<a class="dropdown-item" href="/logout" hx-swap="none" hx-boost="false">
+					<i class="fa-solid fa-arrow-right-from-bracket pe-2"></i> Logout
+				</a>
+			</li>
 		</ul>
 	</div>
 	<!-- /dropdown -->

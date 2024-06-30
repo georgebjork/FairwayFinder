@@ -3,6 +3,7 @@ using FairwayFinder.Web.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.VisualStudio.Web.CodeGenerators.Mvc.Templates.BlazorIdentity.Pages;
 
 namespace FairwayFinder.Web.Areas.Identity.Pages.Account;
 
@@ -21,6 +22,7 @@ public class LogoutModel : PageModel
     {
         _logger.LogInformation($"User logged out.");
         await _signInManager.SignOutAsync();
+        Response.Headers["HX-Redirect"] = "/Identity/Account/Login";
         return Redirect("/");
     }
 }
