@@ -1,3 +1,5 @@
+@using FairwayFinder.Core.Settings
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @model FairwayFinder.Core.Features.Courses.Models.ViewModels.CourseViewModel
 
 @{
@@ -5,6 +7,43 @@
 }
 
 
-<div>
-    
+<div class="col-span-12">
+
+    <div class="card-body grow-0 bg-base-200">
+        <div class="flex justify-between items-center">
+            <div class="card-title">
+                <h3> Teeboxes </h3>
+            </div>
+            
+            @if (User.IsInRole(Roles.Admin))
+            {
+                <div class="add-user">
+                    <a class="btn btn-sm btn-primary" type="button" asp-area="CourseManagement" asp-controller="TeeboxManagement" asp-action="AddTeebox" asp-route-courseId="@Model.Course.course_id">
+                        <i class="fa-solid fa-plus"></i> Add Teebox
+                    </a>
+                </div>
+            }
+        </div>
+
+        <div class="overflow-x-auto pt-4">
+            <table class="table bg-base-200">
+                <thead>
+                <tr class="border-b-2 border-neutral">
+                    <th>Teebox Name</th>
+                    <th>Gender</th>
+                    <th>Par</th>
+                    <th>Course Rating</th>
+                    <th>Slope</th>
+                    <th>Front 9 Yardage</th>
+                    <th>Back 9 Yardage</th>
+                    <th>Total</th>
+                </tr>
+                </thead>
+                <tbody>
+                
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+

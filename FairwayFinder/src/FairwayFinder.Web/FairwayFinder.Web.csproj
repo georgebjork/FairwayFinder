@@ -41,7 +41,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Areas\CourseManagement\Views\" />
+    <AdditionalFiles Include="Areas\CourseManagement\Views\Shared\_CourseForm.cshtml" />
   </ItemGroup>
   
   <Target Name="Tailwind" BeforeTargets="Build">

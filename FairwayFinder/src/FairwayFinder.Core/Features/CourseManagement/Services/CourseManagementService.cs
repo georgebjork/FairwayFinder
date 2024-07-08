@@ -10,6 +10,7 @@ namespace FairwayFinder.Core.Features.CourseManagement.Services;
 public interface ICourseManagementService
 {
     Task<int> AddCourse(CourseFormModel form);
+    Task<bool> DeleteCourse(int courseId);
 }
 
 public class CourseManagementService(ILogger<CourseManagementService> _logger, ICourseRepository courseRepository, IUsernameRetriever usernameRetriever) : ICourseManagementService
@@ -41,5 +42,17 @@ public class CourseManagementService(ILogger<CourseManagementService> _logger, I
             _logger.LogError(ex, "An error occurred creating golf course.");
             return -1;
         }
+    }
+    public async Task<bool> DeleteCourse(int courseId)
+    {
+        var course = await courseRepository.GetCourseById(courseId);
+        
+        if (course is null) return false; // Course was not found.
+
+        course.is_deleted = true;
+        course.updated_by = usernameRetriever.Email;
+        course.updated_on = DateTime.UtcNow;
+
+        return await courseRepository.Update(course);
     }
 }

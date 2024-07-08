@@ -1,0 +1,81 @@
+@model FairwayFinder.Core.Features.CourseManagement.Models.FormModels.TeeboxFormModel
+
+<form hx-post="@Url.Action("AddTeeboxPost", "TeeboxManagement", new { courseId = Model.CourseId })" hx-target="#teebox-form" hx-swap="innerHTML">
+
+    <input type="hidden" value="@Model.CourseId"/>
+    
+    <div class="grid grid-cols-12 gap-4 mt-3">
+        <div class="col-span-12">
+            @await Html.PartialAsync("_MessageHtmxPartial")
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-12 gap-4 mt-3">
+        <div class="md:col-span-12 col-span-12">
+            <div class="label">
+                <label asp-for="Name" class="label-text"></label>
+            </div>
+            <input asp-for="Name" type="text" class="input input-bordered w-full gap-2" />
+            <span asp-validation-for="Name" class="text-error"></span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-12 gap-4 mt-3">
+        <div class="md:col-span-4 col-span-12">
+            <div class="label">
+                <label asp-for="Par" class="label-text"></label>
+            </div>
+            <input asp-for="Par" type="text" class="input input-bordered w-full gap-2" />
+            <span asp-validation-for="Par" class="text-error"></span>
+        </div>
+
+        <div class="md:col-span-4 col-span-12">
+            <div class="label">
+                <label asp-for="Slope" class="label-text"></label>
+            </div>
+            <input asp-for="Slope" type="text" class="input input-bordered w-full gap-2" />
+            <span asp-validation-for="Slope" class="text-error"></span>
+        </div>
+
+        <div class="md:col-span-4 col-span-12">
+            <div class="label">
+                <label asp-for="Rating" class="label-text"></label>
+            </div>
+            <input asp-for="Rating" type="text" class="input input-bordered w-full gap-2" />
+            <span asp-validation-for="Rating" class="text-error"></span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-12 gap-4 mt-3">
+        <div class="md:col-span-4 col-span-12">
+            <div class="label">
+                <label asp-for="YardageOut" class="label-text"></label>
+            </div>
+            <input asp-for="YardageOut" type="text" class="input input-bordered w-full gap-2" />
+                <span asp-validation-for="YardageOut" class="text-error"></span>
+            </div>
+
+        <div class="md:col-span-4 col-span-12">
+            <div class="label">
+                <label asp-for="YardageIn" class="label-text"></label>
+            </div>
+            <input asp-for="YardageIn" type="text" class="input input-bordered w-full gap-2" />
+            <span asp-validation-for="YardageIn" class="text-error"></span>
+        </div>
+
+        <div class="md:col-span-4 col-span-12">
+            <div class="label">
+                <label asp-for="Yardage" class="label-text"></label>
+            </div>
+            <input asp-for="Yardage" type="text" class="input input-bordered w-full gap-2"  disabled="disabled"/>
+            <span asp-validation-for="Yardage" class="text-error"></span>
+        </div>
+    </div>
+    
+
+    <div class="grid grid-cols-12 gap-4 mt-3">
+        <div class="col-span-12">
+            <button type="submit" class="col-span-12 sm:col-span-6 xl:col-span-4 btn btn-primary btn-block">Add Teebox</button>
+        </div>
+    </div>
+</form>

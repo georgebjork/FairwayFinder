@@ -1,8 +1,8 @@
-@model FairwayFinder.Core.Features.CourseManagement.Models.FormModels.CourseFormModel
+@model FairwayFinder.Core.Features.CourseManagement.Models.FormModels.TeeboxFormModel
 
 
 @{
-    ViewData["Title"] = "Add Course";
+    ViewData["Title"] = "Add Teebox";
 }
 
 
@@ -10,8 +10,8 @@
     <div class="container mx-auto">
         <div class="flex flex-wrap justify-center xl:justify-start">
             <div class="w-full xl:w-8/12 xl:mx-auto pb-5">
-                <div id="course-form">
-                    @await Html.PartialAsync("_CourseForm", Model)
+                <div id="teebox-form">
+                    @await Html.PartialAsync("_TeeboxForm", Model)
                 </div>
             </div>
         </div>
