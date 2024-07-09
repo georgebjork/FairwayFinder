@@ -46,4 +46,9 @@ public class BaseController : Controller {
     public void SetErrorMessageHtmx(string message) {
         TempData["error_message_htmx"] = message;
     }
+
+    public bool CheckHtmxTrigger(string id)
+    {
+        return Request.Headers["HX-Trigger"] == id;
+    }
 }

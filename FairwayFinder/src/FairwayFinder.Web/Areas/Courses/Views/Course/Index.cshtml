@@ -5,16 +5,28 @@
     ViewData["Title"] = "Course Management";
 }
 
+<style>
+    tr.htmx-swapping {
+        opacity: 0;
+        transition: opacity 250ms ease-out;
+    }
+</style>
+
 <div class="col-span-12">
-    
+
+    <div class="gap-4 mt-3">
+        <div class="col-span-12">
+            @await Html.PartialAsync("_MessageHtmxPartial")
+        </div>
+    </div>
+
     <div class="card-body grow-0 bg-base-200">
         <div class="flex justify-between items-center">
             <div class="card-title">
                 <h3> Golf Courses </h3>
             </div>
 
-            @if (User.IsInRole(Roles.Admin))
-            {
+            @if (User.IsInRole(Roles.Admin)){
                 <div class="add-user">
                     <a class="btn btn-sm btn-primary" type="button" asp-area="CourseManagement" asp-controller="CourseManagement" asp-action="AddCourse">
                         <i class="fa-solid fa-plus"></i> Add Golf Course
@@ -39,29 +51,29 @@
                 </tr>
                 </thead>
                 <tbody>
-                @foreach (var course in Model.Courses)
-                {
-                <tr>
-                    <td>@course.course_id</td>
-                    <td>
-                        <a class="link" asp-action="ViewCourse" asp-route-courseId="@course.course_id">
-                            @course.course_name
-                        </a>
-                    </td>
-                    
-                    @if (User.IsInRole(Roles.Admin))
-                    {
+                @foreach (var course in Model.Courses){
+                    <tr>
+                        <td>@course.course_id</td>
                         <td>
-                            <div class="flex justify-end">
-                                <button class="btn btn-xs btn-error"
-                                        hx-delete="@Url.Action("DeleteCourse", "CourseManagement", new { Area = "CourseManagement", courseId = course.course_id })"
-                                        hx-trigger="click">
-                                    Remove
-                                </button>
-                            </div>
+                            <a class="link" asp-action="ViewCourse" asp-route-courseId="@course.course_id">
+                                @course.course_name
+                            </a>
                         </td>
-                    }
-                </tr>
+
+                        @if (User.IsInRole(Roles.Admin)){
+                            <td>
+                                <div class="flex justify-end">
+                                    <button class="btn btn-xs btn-error" id="delete-btn"
+                                            hx-delete="@Url.Action("DeleteCourse", "CourseManagement", new { Area = "CourseManagement", courseId = course.course_id })"
+                                            hx-trigger="click"
+                                            hx-swap="outerHTML swap:250ms"
+                                            hx-target="closest tr">
+                                        Remove
+                                    </button>
+                                </div>
+                            </td>
+                        }
+                    </tr>
                 }
 
                 </tbody>
