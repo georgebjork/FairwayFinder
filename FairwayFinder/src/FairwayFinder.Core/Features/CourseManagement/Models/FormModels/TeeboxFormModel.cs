@@ -4,10 +4,10 @@ namespace FairwayFinder.Core.Features.CourseManagement.Models.FormModels;
 
 public class TeeboxFormModel
 {
-    public int? TeeboxId { get; set; }
+    public long? TeeboxId { get; set; }
     
     [Required]
-    public int CourseId { get; set; }
+    public long CourseId { get; set; }
     
     [Display(Name = "Teebox Name")]
     public string Name { get; set; } = "";
