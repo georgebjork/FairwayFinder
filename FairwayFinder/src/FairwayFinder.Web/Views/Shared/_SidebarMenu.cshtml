@@ -19,28 +19,32 @@
 					Dashboard
 				</a>
 			</li>
-			<li></li>
 
 			<li>
-				<details>
-					<summary>
-						<i class="fa-solid fa-list-check"></i>
-						Course Management
-					</summary>
-					<ul>
-						<li>
-							<a asp-area="Courses" asp-controller="Course" asp-action="ViewAllCourses"><i class="fa-solid fa-list"></i> View Courses </a>
-						</li>
-						<li>
-							<a asp-area="CourseManagement" asp-controller="CourseManagement" asp-action="AddCourse"><i class="fa-solid fa-plus"></i> Add Course</a>
-						</li>
-					</ul>
-				</details>
+				<a asp-area="Courses" asp-controller="Course" asp-action="ViewAllCourses"><i class="fa-solid fa-list"></i> View Courses </a>
 			</li>
+			
 			<li></li>
 			
 			@if (SignInManager.IsSignedIn(User) && User.IsInRole(Roles.Admin))
 			{
+				<li>
+					<details>
+						<summary>
+							<i class="fa-solid fa-list-check"></i>
+							Course Management
+						</summary>
+						<ul>
+							<li>
+								<a asp-area="Courses" asp-controller="Course" asp-action="ViewAllCourses"><i class="fa-solid fa-list"></i> View Courses </a>
+							</li>
+							<li>
+								<a asp-area="CourseManagement" asp-controller="CourseManagement" asp-action="AddCourse"><i class="fa-solid fa-plus"></i> Add Course</a>
+							</li>
+						</ul>
+					</details>
+				</li>
+				
 				<li>
 					<details>
 						<summary>

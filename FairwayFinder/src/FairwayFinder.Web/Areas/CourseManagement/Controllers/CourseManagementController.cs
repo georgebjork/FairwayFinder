@@ -103,11 +103,11 @@ public class CourseManagementController(IMediator mediator) : CourseManagementBa
                 if (rv)
                 {
                     SetSuccessMessage("Course successfully updated");
-                    return Redirect(Url.Action("ViewAllCourses", "Course", new { Area = "Courses", courseId }));
+                    return Redirect(Url.Action("EditCourse", new { courseId }));
                 }
                 
                 SetErrorMessage("Course was unable to be updated");
-                return Redirect(Url.Action("ViewAllCourses", "Course", new { Area = "Courses" }));
+                return Redirect(Url.Action("EditCourse", new { courseId }));
             },
             err =>
             {
