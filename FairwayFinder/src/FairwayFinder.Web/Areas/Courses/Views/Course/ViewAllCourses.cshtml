@@ -1,8 +1,15 @@
 @using FairwayFinder.Core.Settings
+@using FairwayFinder.Identity.Policy
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @model FairwayFinder.Core.Features.Courses.Models.ViewModels.GetAllCoursesViewModel
+
+@inject IAuthorizationService AuthorizationService
 
 @{
     ViewData["Title"] = "Course Management";
+    
+    var isAuthorized = (await AuthorizationService.AuthorizeAsync(User, Policies.CourseManagement)).Succeeded;
 }
 
 <style>
@@ -39,7 +46,7 @@
             <table class="table bg-base-200">
                 <thead>
                 <tr class="border-b-2 border-neutral">
-                    @if (User.IsInRole(Roles.Admin))
+                    @if (isAuthorized)
                     { 
                         <th>Course Id</th>
                     }
@@ -48,7 +55,7 @@
                     <th>Address</th>
                     <th>Phone Number</th>
                     
-                    @if (User.IsInRole(Roles.Admin))
+                    @if (isAuthorized)
                     {
                         <th>
                             <div class="flex justify-end">
@@ -61,7 +68,7 @@
                 <tbody>
                 @foreach (var course in Model.Courses){
                     <tr>
-                        @if (User.IsInRole(Roles.Admin))
+                        @if (isAuthorized)
                         {
                             <td>@course.course_id</td>
                         }
@@ -75,7 +82,7 @@
                         <td>@course.address</td>
                         <td>@course.phone_number</td>
 
-                        @if (User.IsInRole(Roles.Admin)){
+                        @if (isAuthorized){
                             <td>
                                 <div class="flex justify-end">
 
