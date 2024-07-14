@@ -39,9 +39,17 @@
             <table class="table bg-base-200">
                 <thead>
                 <tr class="border-b-2 border-neutral">
-                    <th>Course Id</th>
+                    @if (User.IsInRole(Roles.Admin))
+                    { 
+                        <th>Course Id</th>
+                    }
+                   
                     <th>Name</th>
-                    @if (User.IsInRole(Roles.Admin)){
+                    <th>Address</th>
+                    <th>Phone Number</th>
+                    
+                    @if (User.IsInRole(Roles.Admin))
+                    {
                         <th>
                             <div class="flex justify-end">
                                 Actions
@@ -53,22 +61,36 @@
                 <tbody>
                 @foreach (var course in Model.Courses){
                     <tr>
-                        <td>@course.course_id</td>
+                        @if (User.IsInRole(Roles.Admin))
+                        {
+                            <td>@course.course_id</td>
+                        }
+
                         <td>
                             <a class="link" asp-action="ViewCourse" asp-route-courseId="@course.course_id">
                                 @course.course_name
                             </a>
                         </td>
+                        
+                        <td>@course.address</td>
+                        <td>@course.phone_number</td>
 
                         @if (User.IsInRole(Roles.Admin)){
                             <td>
                                 <div class="flex justify-end">
+
+                                    <a class="btn btn-xs btn-secondary me-2"
+                                       asp-action="EditCourse" asp-area="CourseManagement" asp-controller="CourseManagement" asp-route-courseId=@course.course_id>
+                                        <i class="fa-solid fa-pen-to-square pe-2"></i> Edit
+                                    </a>
+                                    
                                     <button class="btn btn-xs btn-error" id="delete-btn"
                                             hx-delete="@Url.Action("DeleteCourse", "CourseManagement", new { Area = "CourseManagement", courseId = course.course_id })"
                                             hx-trigger="click"
                                             hx-swap="outerHTML swap:250ms"
-                                            hx-target="closest tr">
-                                        Remove
+                                            hx-target="closest tr"
+                                            hx-confirm="Are you sure you want to delete this course?">
+                                        <i class="fa-solid fa-trash-can pe-2"></i> Delete
                                     </button>
                                 </div>
                             </td>

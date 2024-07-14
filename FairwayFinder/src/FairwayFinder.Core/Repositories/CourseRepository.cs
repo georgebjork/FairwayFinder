@@ -15,7 +15,7 @@ public class CourseRepository(IConfiguration configuration, ILogger<CourseReposi
 {
     public async Task<List<Course>> GetAllCourses()
     {
-        var sql = "SELECT course_id, course_name FROM public.course WHERE is_deleted = false";
+        var sql = "SELECT * FROM public.course WHERE is_deleted = false";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryAsync<Course>(sql);
         return rv.ToList();

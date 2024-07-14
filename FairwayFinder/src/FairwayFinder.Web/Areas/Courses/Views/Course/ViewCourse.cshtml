@@ -8,13 +8,26 @@
 
 
 <div class="col-span-12">
+    
+    <div>
+        @if (User.IsInRole(Roles.Admin))
+        {
+            <div class="flex justify-end mb-5">
+                <a class="btn btn-sm btn-secondary"
+                   asp-action="EditCourse" asp-area="CourseManagement" asp-controller="CourseManagement" asp-route-courseId="@Model.Course.course_id">
+                    <i class="fa-solid fa-pen-to-square pe-2"></i> Edit Course
+                </a>
+            </div>
+        }
+    </div>
+    
 
     <div class="card-body grow-0 bg-base-200">
         <div class="flex justify-between items-center">
             <div class="card-title">
                 <h3> Teeboxes </h3>
             </div>
-            
+
             @if (User.IsInRole(Roles.Admin))
             {
                 <div class="add-user">
@@ -40,7 +53,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                
+
                 </tbody>
             </table>
         </div>
