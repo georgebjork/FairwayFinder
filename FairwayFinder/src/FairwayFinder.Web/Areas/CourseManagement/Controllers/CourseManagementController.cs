@@ -47,6 +47,13 @@ public class CourseManagementController(IMediator mediator) : CourseManagementBa
 
         return result.Match<IActionResult>(
             _ => {
+                
+                // This is from htmx so only the row needs to be removed
+                if (CheckHtmxTrigger("delete-btn"))
+                {
+                    return Ok("");
+                }
+                
                 SetSuccessMessage("Golf course has been successfully been deleted.");
                 Response.Headers["HX-Redirect"] = Url.Action("Index", "Course", new { Area = "Courses" });
                 return Ok();
