@@ -64,4 +64,25 @@ public class TeeboxManagementController(IMediator mediator) : CourseManagementBa
             }
         );
     }
+    
+    
+    [HttpPost]
+    [Route("course/{courseId}/teebox/{teeboxId}/edit")]
+    public async Task<IActionResult> UpdateTeebox([FromRoute] int courseId, [FromRoute] int teeboxId, [FromForm] TeeboxFormModel form)
+    {
+        var result = await mediator.Send(new UpdateTeeboxRequest { TeeboxId = teeboxId, Form = form });
+
+        return result.Match<IActionResult>(
+        rv => {
+            SetSuccessMessageHtmx("Teebox has been successfully updated.");
+            return PartialView("_TeeboxForm", form);
+        },
+        err => {
+            SetErrorMessageHtmx($"{err.Message}");
+                
+            var url = Url.Action("EditTeebox", new { courseId, teeboxId });
+            return Redirect(url);
+        }
+        );
+    }
 }

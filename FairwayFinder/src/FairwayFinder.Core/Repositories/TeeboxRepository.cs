@@ -8,8 +8,8 @@ namespace FairwayFinder.Core.Repositories;
 public interface ITeeboxRepository : IBaseRepository
 {
     Task<List<Teebox>> GetAllTeeboxes();
-    Task<List<Teebox>> GetTeeboxesByCourseId(int courseId);
-    Task<Teebox?> GetTeeboxById(int teeboxId);
+    Task<List<Teebox>> GetTeeboxesByCourseId(long courseId);
+    Task<Teebox?> GetTeeboxById(long teeboxId);
 }
 
 public class TeeboxRepository(IConfiguration configuration, ILogger<TeeboxRepository> logger) : BasePgRepository(configuration, logger), ITeeboxRepository
@@ -22,7 +22,7 @@ public class TeeboxRepository(IConfiguration configuration, ILogger<TeeboxReposi
         return rv.ToList();
     }
 
-    public async Task<List<Teebox>> GetTeeboxesByCourseId(int courseId)
+    public async Task<List<Teebox>> GetTeeboxesByCourseId(long courseId)
     {
         var sql = "SELECT * FROM public.teebox WHERE course_id = @courseId";
         await using var conn = await GetNewOpenConnection();
@@ -30,7 +30,7 @@ public class TeeboxRepository(IConfiguration configuration, ILogger<TeeboxReposi
         return rv.ToList();
     }
 
-    public async Task<Teebox?> GetTeeboxById(int teeboxId)
+    public async Task<Teebox?> GetTeeboxById(long teeboxId)
     {
         var sql = "SELECT * FROM public.teebox WHERE teebox_id = @teeboxId";
         await using var conn = await GetNewOpenConnection();

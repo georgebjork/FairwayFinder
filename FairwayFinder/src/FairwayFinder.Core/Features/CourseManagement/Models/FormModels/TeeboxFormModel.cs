@@ -14,24 +14,24 @@ public class TeeboxFormModel
     
     [Required]
     [Display(Name = "Par")]
-    public int? Par { get; set; }
+    public long Par { get; set; }
     
     [Required]
     [Display(Name = "Rating")]
-    public decimal? Rating { get; set; }
+    public decimal Rating { get; set; }
     
     [Required]
     [Display(Name = "Slope")]
-    public int? Slope { get; set; }
+    public long Slope { get; set; }
     
     [Required]
     [Display(Name = "Yardage Out")]
-    public int? YardageOut { get; set; }
+    public long YardageOut { get; set; }
     
     [Display(Name = "Yardage In")]
-    public int? YardageIn { get; set; }
+    public long? YardageIn { get; set; }
     
-    public int Yardage => YardageIn ?? 0 + YardageOut ?? 0;
+    public long Yardage => (YardageIn ?? 0) + YardageOut;
     
     [Display(Name = "Nine Holes")]
     public bool IsNineHoles { get; set; }

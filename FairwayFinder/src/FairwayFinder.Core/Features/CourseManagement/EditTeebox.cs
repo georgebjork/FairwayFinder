@@ -36,11 +36,11 @@ public class EditTeeboxHandler : IRequestHandler<EditTeeboxRequest, Result<Teebo
                 CourseId = teebox.course_id,
                 TeeboxId = teebox.teebox_id,
                 Name = teebox.teebox_name,
-                Par = (int)teebox.par,
-                Slope = (int)teebox.slope,
+                Par = teebox.par,
+                Slope = teebox.slope,
                 Rating = teebox.rating,
-                YardageOut = (int)teebox.yardage_out,
-                YardageIn = (int)teebox.yardage_in,
+                YardageOut = teebox.yardage_out,
+                YardageIn = teebox.yardage_in,
                 IsNineHoles = teebox.is_nine_hole,
                 IsWomenTees = teebox.is_womens
             };

@@ -9,7 +9,7 @@
     <div class="container mx-auto">
         <div class="flex flex-wrap justify-center xl:justify-start">
             <div class="w-full xl:w-8/12 xl:mx-auto pb-5">
-                <form hx-post="@Url.Action("AddTeebox", "TeeboxManagement", new { courseId = Model.CourseId })" hx-target="#teebox-form" hx-swap="innerHTML">
+                <form hx-post="@Url.Action("UpdateTeebox", "TeeboxManagement", new { courseId = Model.CourseId, teeboxId = Model.TeeboxId })" hx-target="#teebox-form" hx-swap="innerHTML">
                     @await Html.PartialAsync("_TeeboxForm", Model)
 
                     <div class="grid grid-cols-12 gap-4 mt-3">
