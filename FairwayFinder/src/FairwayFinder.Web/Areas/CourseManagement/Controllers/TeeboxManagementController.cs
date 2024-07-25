@@ -18,7 +18,7 @@ public class TeeboxManagementController(IMediator mediator) : CourseManagementBa
 
     [HttpPost]
     [Route("course/{courseId}/teebox/add")]
-    public async Task<IActionResult> AddTeebox([FromQuery] int courseId, [FromForm] TeeboxFormModel form)
+    public async Task<IActionResult> AddTeebox([FromRoute] int courseId, [FromForm] TeeboxFormModel form)
     {
         if (!ModelState.IsValid){
             return PartialView("_TeeboxForm", form);
@@ -82,7 +82,32 @@ public class TeeboxManagementController(IMediator mediator) : CourseManagementBa
                 
             var url = Url.Action("EditTeebox", new { courseId, teeboxId });
             return Redirect(url);
-        }
-        );
+        });
+    }
+    
+    
+    [HttpDelete]
+    [Route("course/{courseId}/teebox/{teeboxId}/delete")]
+    public async Task<IActionResult> DeleteTeebox([FromRoute] int courseId, [FromRoute]  int teeboxId)
+    {
+        var result = await mediator.Send(new DeleteTeeboxRequest { TeeboxId = teeboxId });
+
+        var url = Url.Action("ViewCourse", "Course", new { Area = "Courses", courseId });
+        return result.Match<IActionResult>(
+        rv => {
+
+            if (rv){
+                SetSuccessMessage("Teebox has been successfully been deleted.");
+                return Redirect(url);
+            }
+            
+            SetErrorMessage("An error occurred, unable to delete teebox");
+            return Redirect(url);
+        },
+        err =>
+        {
+            SetErrorMessage($"{err.Message}");
+            return Redirect(url);
+        });
     }
 }

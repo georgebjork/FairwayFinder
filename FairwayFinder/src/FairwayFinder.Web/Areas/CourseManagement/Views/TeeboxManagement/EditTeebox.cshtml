@@ -9,6 +9,17 @@
     <div class="container mx-auto">
         <div class="flex flex-wrap justify-center xl:justify-start">
             <div class="w-full xl:w-8/12 xl:mx-auto pb-5">
+
+                <div class="mb-3 flex justify-end">
+                    <button class="btn btn-sm btn-error"
+                            hx-delete="@Url.Action("DeleteTeebox", new { courseId = Model.CourseId, teeboxId = Model.TeeboxId })"
+                            hx-trigger="click"
+                            hx-confirm="Are you sure you want to delete this teebox?">
+
+                        <i class="fa-solid fa-trash-can pe-2"></i> Delete
+                    </button>
+                </div>
+                
                 <form hx-post="@Url.Action("UpdateTeebox", "TeeboxManagement", new { courseId = Model.CourseId, teeboxId = Model.TeeboxId })" hx-target="#teebox-form" hx-swap="innerHTML">
                     @await Html.PartialAsync("_TeeboxForm", Model)
 
@@ -22,3 +33,7 @@
         </div>
     </div>
 </div>
+
+@section Scripts{
+    <script src="~/js/teeboxFormYardageSum.js"></script>
+}

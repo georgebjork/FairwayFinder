@@ -12,6 +12,7 @@ public interface ITeeboxManagementService
     public Task<int> CreateTeebox(TeeboxFormModel form);
     public Task<List<Teebox>> GetTeeboxesByCourseId(long courseId);
     public Task<bool> UpdateTeebox(long teeboxId, TeeboxFormModel form);
+    public Task<bool> DeleteTeebox(long teeboxId);
 }
 
 public class TeeboxManagementService(ILogger<TeeboxManagementService> logger, IUsernameRetriever usernameRetriever, ITeeboxRepository teeboxRepository) : ITeeboxManagementService
@@ -67,6 +68,18 @@ public class TeeboxManagementService(ILogger<TeeboxManagementService> logger, IU
         teebox.yardage_total = form.Yardage;
         teebox.is_nine_hole = form.IsNineHoles;
         teebox.is_womens = form.IsWomenTees;
+        teebox.updated_by = usernameRetriever.Email;
+        teebox.updated_on = DateTime.UtcNow;
+
+        return await teeboxRepository.Update(teebox);
+    }
+    public async Task<bool> DeleteTeebox(long teeboxId)
+    {
+        var teebox = await teeboxRepository.GetTeeboxById(teeboxId);
+
+        if (teebox is null) throw new NullTeeboxException($"Teebox with id {teeboxId} came back null");
+
+        teebox.is_deleted = true;
         teebox.updated_by = usernameRetriever.Email;
         teebox.updated_on = DateTime.UtcNow;
 

@@ -52,23 +52,37 @@
             <div class="label">
                 <label asp-for="YardageOut" class="label-text"></label>
             </div>
-            <input asp-for="YardageOut" type="text" class="input input-bordered w-full gap-2"/>
+            <input id="yardage-out" asp-for="YardageOut" type="text" class="input input-bordered w-full gap-2"/>
             <span asp-validation-for="YardageOut" class="text-error"></span>
         </div>
-
-        <div class="md:col-span-4 col-span-12">
-            <div class="label">
-                <label asp-for="YardageIn" class="label-text"></label>
+        
+        @if (Model.IsNineHoles)
+        {
+            <div class="md:col-span-4 col-span-12">
+                <div class="label">
+                    <label asp-for="YardageIn" class="label-text"></label>
+                </div>
+                <input id="yardage-in" asp-for="YardageIn" type="text" class="input input-bordered w-full gap-2" disabled="disabled" value="0"/>
+                <span asp-validation-for="YardageIn" class="text-error"></span>
             </div>
-            <input asp-for="YardageIn" type="text" class="input input-bordered w-full gap-2"/>
-            <span asp-validation-for="YardageIn" class="text-error"></span>
-        </div>
+        }
+        else
+        {
+            <div class="md:col-span-4 col-span-12">
+                <div class="label">
+                    <label asp-for="YardageIn" class="label-text"></label>
+                </div>
+                <input id="yardage-in" asp-for="YardageIn" type="text" class="input input-bordered w-full gap-2" />
+                <span asp-validation-for="YardageIn" class="text-error"></span>
+            </div>
+        }
+        
 
         <div class="md:col-span-4 col-span-12">
             <div class="label">
                 <label asp-for="Yardage" class="label-text"></label>
             </div>
-            <input asp-for="Yardage" type="text" class="input input-bordered w-full gap-2" disabled="disabled"/>
+            <input id="yardage" asp-for="Yardage" type="text" class="input input-bordered w-full gap-2" disabled="disabled"/>
             <span asp-validation-for="Yardage" class="text-error"></span>
         </div>
         

@@ -24,7 +24,7 @@ public class TeeboxRepository(IConfiguration configuration, ILogger<TeeboxReposi
 
     public async Task<List<Teebox>> GetTeeboxesByCourseId(long courseId)
     {
-        var sql = "SELECT * FROM public.teebox WHERE course_id = @courseId";
+        var sql = "SELECT * FROM public.teebox WHERE course_id = @courseId AND is_deleted = false";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryAsync<Teebox>(sql, new { courseId });
         return rv.ToList();
@@ -32,7 +32,7 @@ public class TeeboxRepository(IConfiguration configuration, ILogger<TeeboxReposi
 
     public async Task<Teebox?> GetTeeboxById(long teeboxId)
     {
-        var sql = "SELECT * FROM public.teebox WHERE teebox_id = @teeboxId";
+        var sql = "SELECT * FROM public.teebox WHERE teebox_id = @teeboxId AND is_deleted = false";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryFirstOrDefaultAsync<Teebox>(sql, new { teeboxId });
         return rv;
