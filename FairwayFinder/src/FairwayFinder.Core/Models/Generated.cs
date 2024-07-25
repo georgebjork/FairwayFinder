@@ -5,6 +5,7 @@ namespace FairwayFinder.Core.Models;
 [Table("teebox")]
 public class Teebox
 {
+    [Key]
     public long teebox_id { get; set; }
     public long course_id { get; set; }
     public string teebox_name { get; set; } = "";

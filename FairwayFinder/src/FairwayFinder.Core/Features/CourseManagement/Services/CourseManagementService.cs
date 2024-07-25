@@ -10,6 +10,7 @@ namespace FairwayFinder.Core.Features.CourseManagement.Services;
 public interface ICourseManagementService
 {
     Task<int> AddCourse(CourseFormModel form);
+    Task<bool> UpdateCourse(int courseId, CourseFormModel form);
     Task<bool> DeleteCourse(int courseId);
 }
 
@@ -43,6 +44,22 @@ public class CourseManagementService(ILogger<CourseManagementService> _logger, I
             return -1;
         }
     }
+
+    public async Task<bool> UpdateCourse(int courseId, CourseFormModel form)
+    {
+        var course = await courseRepository.GetCourseById(courseId);
+        
+        if (course is null) return false; // Course was not found.
+
+        course.course_name = form.Name;
+        course.address = form.Address;
+        course.phone_number = form.PhoneNumber;
+        course.updated_by = usernameRetriever.Email;
+        course.updated_on = DateTime.UtcNow;
+        
+        return await courseRepository.Update(course);
+    }
+    
     public async Task<bool> DeleteCourse(int courseId)
     {
         var course = await courseRepository.GetCourseById(courseId);

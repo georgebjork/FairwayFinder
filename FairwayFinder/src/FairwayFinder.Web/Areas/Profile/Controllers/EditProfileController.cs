@@ -80,11 +80,11 @@ public class EditProfileController(
 
         if (!rv)
         {
-            SetErrorMessageHtmx("Something went wrong. Unable to update profile.");
+            SetErrorMessage("Something went wrong. Unable to update profile.");
             return PartialView("_EditProfileForm", form);
         }
         
-        SetSuccessMessageHtmx("Profile successfully updated.");
+        SetSuccessMessage("Profile successfully updated.");
         return PartialView("_EditProfileForm", form);
     }
     
@@ -125,7 +125,7 @@ public class EditProfileController(
 
         await signInManager.RefreshSignInAsync(user);
         
-        SetSuccessMessageHtmx("Password successfully changed");
+        SetSuccessMessage("Password successfully changed");
         return PartialView("_ChangePasswordForm", new ChangePasswordFormModel());
     }
     

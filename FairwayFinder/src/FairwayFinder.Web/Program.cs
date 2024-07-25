@@ -27,6 +27,7 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy(Policies.HealthCheck, policy => policy.RequireRole(Roles.Admin));
+    options.AddPolicy(Policies.CourseManagement, policy => policy.RequireRole(Roles.Admin));
     options.AddPolicy(Policies.CanEditProfile, policy => policy.Requirements.Add(new CanEditProfileRequirement()));
 });
 

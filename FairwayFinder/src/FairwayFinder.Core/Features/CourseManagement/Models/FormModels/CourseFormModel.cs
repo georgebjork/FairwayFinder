@@ -4,6 +4,9 @@ namespace FairwayFinder.Core.Features.CourseManagement.Models.FormModels;
 
 public class CourseFormModel
 {
+    
+    public long? CourseId { get; set; }
+    
     [Required(ErrorMessage = "Name is required.")]
     [StringLength(100, ErrorMessage = "Name cannot be longer than 100 characters.")]
     public string Name { get; set; } = "";

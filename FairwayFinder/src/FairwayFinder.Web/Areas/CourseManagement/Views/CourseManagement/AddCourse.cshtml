@@ -10,9 +10,19 @@
     <div class="container mx-auto">
         <div class="flex flex-wrap justify-center xl:justify-start">
             <div class="w-full xl:w-8/12 xl:mx-auto pb-5">
-                <div id="course-form">
+                <form
+                    hx-post="@Url.Action("AddCourse")"
+                    hx-target="#course-form"
+                    hx-swap="innerHTML">
                     @await Html.PartialAsync("_CourseForm", Model)
-                </div>
+
+                    <div class="grid grid-cols-12 gap-4 mt-3">
+                        <div class="col-span-12">
+                            <button type="submit" class="col-span-12 sm:col-span-6 xl:col-span-4 btn btn-primary btn-block">Create Course</button>
+                        </div>
+                    </div>
+                </form>
+                
             </div>
         </div>
     </div>

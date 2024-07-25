@@ -1,6 +1,5 @@
 ﻿using FairwayFinder.Core.Features.CourseManagement.Services;
 using FairwayFinder.Core.Features.Courses;
-using FairwayFinder.Web.Areas.CourseManagement.Controllers;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,7 +9,7 @@ public class CourseController(ICourseManagementService courseManagementService, 
 {
     [HttpGet]
     [Route("courses")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> ViewAllCourses()
     {
         var result = await mediator.Send(new ViewCourseAllRequest());
 
@@ -35,7 +34,7 @@ public class CourseController(ICourseManagementService courseManagementService, 
             err =>
             {
                 SetErrorMessage($"{err.Message}");
-                return RedirectToAction("Index");
+                return RedirectToAction("ViewAllCourses");
             }
         );
     }
