@@ -1,0 +1,106 @@
+﻿@model FairwayFinder.Core.UserManagement.Models.ViewModels.ManageUsersViewModel
+
+@{
+    ViewData["Title"] = "Manage Users";
+}
+
+<div>
+    <div class="row d-flex justify-content-between">
+        <div class="col-auto">
+            <h2>User Management</h2>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#invite-user-modal"> 
+                <i class="fa-solid fa-plus pe-2"></i> Add User
+            </button>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <table class="table table-sm caption-top table-striped">
+                <caption>Application Users</caption>
+                <thead>
+                <tr>
+                    <th scope="col">
+                        <div class="d-flex justify-content-between me-3">
+                            <div> Name </div>
+                            <div> Verified Email </div>
+                        </div>
+                    </th>
+                    <th scope="col">Username</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Date Joined</th>
+                    <th scope="col">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var u in Model.Users)
+                {
+                    @await Html.PartialAsync("_ApplicationUserTableRow", u);
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+    <div class="row mt-5">
+        <div class="col-12">
+            <table class="table table-sm caption-top">
+                <caption>Invited Users</caption>
+                <thead>
+                <tr>
+                    <th scope="col">Email</th>
+                    <th scope="col">Invite Link</th>
+                    <th scope="col">Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var u in Model.Invites)
+                {
+                    <tr>
+                        <td>@u.sent_to_email</td>
+                        <td>@u.InviteUrl</td>
+                        <td>
+                            <button class="btn btn-outline-danger btn-sm"> Revoke </button>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" tabindex="-1" id="invite-user-modal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Invite User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" asp-action="InviteUser">
+                <div class="modal-body">
+                    <input type="text" id="invite-user-input" asp-for="InviteFormModel.Email" class="form-control" placeholder="Email Address">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Add Users</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+
+@section scripts {
+    <script type="application/javascript">
+        const modal = document.getElementById('invite-user-modal')
+        const input = document.getElementById('invite-user-input')
+
+        modal.addEventListener('shown.bs.modal', () => {
+            input.focus()
+        })
+    </script>
+}
