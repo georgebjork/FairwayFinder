@@ -29,16 +29,25 @@ public class BaseController : Controller {
     public bool IsHtmx() => Request.Headers["HX-Request"] == "true";
     public void SetHtmxRedirect(string? url) => Response.Headers["HX-Redirect"] = url;
     
-    public new IActionResult Redirect([StringSyntax(StringSyntaxAttribute.Uri)] string? url)
+    public IActionResult Redirect(string actionName, object? routeValues = null, string? controllerName = null)
     {
+        // Build the URL dynamically using Url.Action
+        var url = Url.Action(actionName, controllerName, routeValues);
+
         if (string.IsNullOrEmpty(url))
         {
-            throw new ArgumentException("Url cannot be empty", nameof(url));
+            throw new ArgumentException("The generated URL cannot be empty", nameof(url));
         }
 
-        if (!IsHtmx()) return new RedirectResult(url);
-        
+        if (!IsHtmx())
+        {
+            // Standard redirect for non-HTMX requests
+            return new RedirectResult(url);
+        }
+
+        // HTMX-specific redirect: Set the HX-Redirect header
         SetHtmxRedirect(url);
         return Ok();
     }
+
 }

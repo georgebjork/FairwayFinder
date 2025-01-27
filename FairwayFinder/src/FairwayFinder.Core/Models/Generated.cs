@@ -1,4 +1,5 @@
 ﻿using Dapper.Contrib.Extensions;
+using FairwayFinder.Core.Models.Interfaces;
 
 namespace FairwayFinder.Core.Models;
 
@@ -90,7 +91,7 @@ public class Stats
 
 
 [Table("course")]
-public class Course
+public class Course : IEntityMetadata
 {
     [Key]
     public long course_id { get; set; }

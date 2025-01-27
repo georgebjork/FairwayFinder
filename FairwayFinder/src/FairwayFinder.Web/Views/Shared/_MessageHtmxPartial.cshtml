@@ -1,0 +1,40 @@
+@{
+    var successHtmx = (string?)TempData["success_message_htmx"];
+    var errorHtmx = (string?)TempData["error_message_htmx"];
+}
+
+
+@* HTMX specific so returning a partial can show a message also. *@
+@if (!string.IsNullOrWhiteSpace(successHtmx)) {
+    <div id='success-message-htmx' class="alert alert-success alert-dismissible d-flex align-items-center" role="alert">
+        <i class="bx bx-xs bx-detail me-2"></i>
+        @successHtmx
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+        </button>
+    </div>
+    <script type='text/javascript'>
+        $(function() {
+            $("#success-message-htmx").fadeTo(4000, 500).slideUp(500, function(){
+                $(this).alert('close');
+            });
+        });
+    </script>
+}
+
+
+@if (!string.IsNullOrWhiteSpace(errorHtmx)) {
+    <div id='error-message-htmx' class="alert alert-danger alert-dismissible d-flex align-items-center" role="alert">
+        <i class="bx bx-xs bx-detail me-2"></i>
+        @errorHtmx
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+        </button>
+    </div>
+    <script type='text/javascript'>
+        $(function() {
+            $("#error-message-htmx").fadeTo(4000, 500).slideUp(500, function(){
+                $(this).alert('close');
+            });
+        });
+    </script>
+}
+

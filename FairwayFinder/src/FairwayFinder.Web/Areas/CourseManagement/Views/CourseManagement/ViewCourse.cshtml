@@ -1,0 +1,16 @@
+@model FairwayFinder.Core.Features.CourseManagement.Models.ViewModels.CourseViewModel
+
+@{
+    ViewData["Title"] = $"{Model.Course.course_name}";
+}
+
+<div class="row d-flex justify-content-between">
+    <div class="col-auto">
+        <h1>@Model.Course.course_name</h1>
+    </div>
+    <div class="col-auto">
+        <a class="btn btn-outline-primary" asp-action="EditCourse" asp-route-courseId="@Model.Course.course_id">
+            <i class="fa-solid fa-pen-to-square pe-2"></i> Edit Course
+        </a>
+    </div>
+</div>

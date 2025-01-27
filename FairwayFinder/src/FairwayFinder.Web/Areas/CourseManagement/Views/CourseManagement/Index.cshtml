@@ -1,3 +1,39 @@
-﻿
+﻿@model FairwayFinder.Core.Features.CourseManagement.Models.ViewModels.CourseManagementViewModel
 
-<h1>Course Management</h1>
+@{
+    ViewData["Title"] = "Courses Management";
+}
+
+<div class="row d-flex justify-content-between">
+    <div class="col-auto">
+        <h1>Course Management</h1>        
+    </div>
+    <div class="col-auto">
+        <a class="btn btn-primary" asp-action="AddCourse">
+            <i class="fa-solid fa-plus pe-2"></i> Add Course
+        </a>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col-auto">
+        <div class="card">
+            <div class="card-header">
+                Golf Courses
+            </div>
+            <div class="card-body">
+                <ul>
+                    @foreach (var c in Model.Courses)
+                    {
+                        <li>
+                            <a asp-action="ViewCourse" asp-route-courseId="@c.course_id">
+                                @c.course_name
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div> 
+    </div>
+</div>
