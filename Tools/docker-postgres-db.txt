@@ -1,0 +1,9 @@
+docker run -d \
+	--name db-fairwayfinder \
+	-e POSTGRES_PASSWORD=password \
+	-e POSTGRES_USER=postgres \
+	-e POSTGRES_DB=FairwayFinder \
+	-e PGDATA=/var/lib/postgresql/data/pgdata \
+	-v db-fairwayfinder:/var/lib/postgresql/data \
+	-p 5432:5432 \
+	postgres
