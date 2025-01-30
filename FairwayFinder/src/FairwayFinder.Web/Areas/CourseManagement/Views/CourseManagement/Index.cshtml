@@ -16,24 +16,12 @@
 </div>
 
 
-<div class="row">
-    <div class="col-auto">
-        <div class="card">
-            <div class="card-header">
-                Golf Courses
-            </div>
-            <div class="card-body">
-                <ul>
-                    @foreach (var c in Model.Courses)
-                    {
-                        <li>
-                            <a asp-action="ViewCourse" asp-route-courseId="@c.course_id">
-                                @c.course_name
-                            </a>
-                        </li>
-                    }
-                </ul>
-            </div>
-        </div> 
+<div class="row mt-3">
+    <div class="col-6">
+        @await Html.PartialAsync("_GolfCourseCard", Model.Courses)
+    </div>
+
+    <div class="col-6">
+        @await Html.PartialAsync("_CourseTeeboxCard", Model.Teeboxes)
     </div>
 </div>

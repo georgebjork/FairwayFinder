@@ -1,0 +1,26 @@
+﻿@model FairwayFinder.Core.Features.CourseManagement.Models.FormModels.TeeboxFormModel
+
+@{
+    ViewData["Title"] = "Add Tee";
+}
+
+
+<div class="row d-flex justify-content-center">
+    <div class="col-8">
+        <form
+            hx-post="@Url.Action("AddTeePost", new { courseId = Model.CourseId })"
+            hx-swap="innerHTML"
+            hx-target="#teebox-form">
+            
+            <input type="hidden" asp-for="CourseId" value="@Model.CourseId"/>
+
+            <div id="teebox-form">
+                @await Html.PartialAsync("_TeeboxForm", Model)
+            </div>
+
+            <div>
+                <button id="login-submit" type="submit" class="btn btn-lg btn-primary w-100">Add Tee Box</button>
+            </div>
+        </form>
+    </div>
+</div>

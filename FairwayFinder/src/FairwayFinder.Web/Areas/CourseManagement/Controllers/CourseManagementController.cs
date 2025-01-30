@@ -1,6 +1,7 @@
 ﻿using FairwayFinder.Core.Features.CourseManagement.Models.FormModels;
 using FairwayFinder.Core.Features.CourseManagement.Models.ViewModels;
 using FairwayFinder.Core.Features.CourseManagement.Services;
+using FairwayFinder.Core.Helpers;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FairwayFinder.Web.Areas.CourseManagement.Controllers;
@@ -32,7 +33,8 @@ public class CourseManagementController : BaseCourseManagementController
     public async Task<IActionResult> ViewCourse([FromRoute]long courseId)
     {
         var course = await _courseManagementService.GetCourseByIdAsync(courseId);
-
+        var tees = await _courseManagementService.GetTeeForCourseAsync(courseId);
+        
         if (course == null)
         {
             SetErrorMessage("Course not found.");
@@ -41,13 +43,14 @@ public class CourseManagementController : BaseCourseManagementController
         
         var vm = new CourseViewModel
         {
-            Course = course
+            Course = course,
+            Teeboxes = tees
         };
         
         return View(vm);
     }
     
-
+    [HttpGet]
     [Route("course-management/add")]
     public IActionResult AddCourse()
     {
@@ -63,7 +66,7 @@ public class CourseManagementController : BaseCourseManagementController
             return PartialView("_CourseForm", form);
         }
         
-        var rv = await _courseManagementService.AddCourse(form);
+        var rv = await _courseManagementService.AddCourseAsync(form);
 
         if (rv < 0)
         {
@@ -75,6 +78,7 @@ public class CourseManagementController : BaseCourseManagementController
         return Redirect(nameof(Index));
     }
     
+    [HttpGet]
     [Route("course-management/{courseId:long}/edit")]
     public async Task<IActionResult> EditCourse(long courseId)
     {
@@ -86,14 +90,7 @@ public class CourseManagementController : BaseCourseManagementController
             return Redirect(nameof(Index));
         }
 
-        var vm = new CourseFormModel
-        {
-            course_id = course.course_id,
-            name = course.course_name,
-            address = course.address,
-            phone_number = course.phone_number
-        };
-        
+        var vm = course.ToFormModel();
         return View(vm);
     }
     
@@ -106,7 +103,7 @@ public class CourseManagementController : BaseCourseManagementController
             return PartialView("_CourseForm", form);
         }
         
-        var rv = await _courseManagementService.UpdateCourse(courseId, form);
+        var rv = await _courseManagementService.UpdateCourseAsync(courseId, form);
 
         if (!rv)
         {
@@ -116,5 +113,39 @@ public class CourseManagementController : BaseCourseManagementController
         
         SetSuccessMessage("Course updated successfully.");
         return Redirect(nameof(ViewCourse), new { courseId });
+    }
+    
+    
+    [HttpGet]
+    [Route("course-management/{courseId:long}/teebox/add")]
+    public async Task<IActionResult> AddTee([FromRoute] long courseId)
+    {
+        var form = new TeeboxFormModel
+        {
+            CourseId = courseId
+        };
+        return View(form);
+    }
+    
+    
+    [HttpPost]
+    [Route("course-management/{courseId:long}/teebox/add")]
+    public async Task<IActionResult> AddTeePost([FromRoute] long courseId, [FromForm] TeeboxFormModel form)
+    {
+        if (!ModelState.IsValid)
+        {
+            return PartialView("_TeeboxForm", form);
+        }
+
+        var rv = await _courseManagementService.AddTeeAsync(courseId, form);
+
+        if (rv <= 0)
+        {
+            SetErrorMessageHtmx("An error occured adding Tee Box, please try again.");
+            return PartialView("_TeeboxForm");
+        }
+        
+        SetSuccessMessage("Tee Box successfully added.");
+        return Redirect(nameof(ViewCourse), new {courseId});
     }
 }

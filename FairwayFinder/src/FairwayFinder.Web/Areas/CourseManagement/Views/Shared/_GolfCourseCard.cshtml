@@ -1,0 +1,19 @@
+﻿@model List<FairwayFinder.Core.Models.Course>
+
+<div class="card">
+    <div class="card-header">
+        Golf Courses
+    </div>
+    <div class="card-body">
+        <ul>
+            @foreach (var c in Model)
+            {
+                <li>
+                    <a asp-action="ViewCourse" asp-route-courseId="@c.course_id">
+                        @c.course_name
+                    </a>
+                </li>
+            }
+        </ul>
+    </div>
+</div>

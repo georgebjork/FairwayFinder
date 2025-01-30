@@ -4,7 +4,7 @@ using FairwayFinder.Core.Models.Interfaces;
 namespace FairwayFinder.Core.Models;
 
 [Table("teebox")]
-public class Teebox
+public class Teebox : IEntityMetadata
 {
     [Key]
     public long teebox_id { get; set; }

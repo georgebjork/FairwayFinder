@@ -6,10 +6,12 @@ public class CourseFormModel
 {
     public long? course_id { get; set; }
     
-    [Required(ErrorMessage = "Name is required.")]
+    [Display(Name = "Course Name")]
+    [Required(ErrorMessage = "Course Name is required.")]
     [StringLength(100, ErrorMessage = "Name cannot be longer than 100 characters.")]
     public string name { get; set; } = "";
 
+    [Display(Name = "Address")]
     [Required(ErrorMessage = "Address is required.")]
     [StringLength(200, ErrorMessage = "Address cannot be longer than 200 characters.")]
     public string address { get; set; } = "";
