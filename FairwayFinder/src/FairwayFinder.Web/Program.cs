@@ -105,6 +105,7 @@ app.UseSession();
 
 
 using (var scope = app.Services.CreateScope()) {
+    await RunMigrations(scope.ServiceProvider);
     await CreateRoles(scope.ServiceProvider);
 }
 
@@ -151,4 +152,15 @@ async Task AddAdminUser(UserManager<ApplicationUser> userManager, string email, 
             await userManager.AddToRoleAsync(seedUser, Roles.Admin);
         }
     }
+}
+
+Task RunMigrations(IServiceProvider serviceProvider)
+{
+    var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
+    if (context.Database.GetPendingMigrations().Any())
+    {
+        context.Database.Migrate();
+    }
+
+    return Task.CompletedTask;
 }
