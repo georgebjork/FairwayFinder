@@ -28,6 +28,7 @@ public class Teebox : IEntityMetadata
 [Table("score")]
 public class Score
 {
+    [Key]
     public long score_id { get; set; }
     public long round_id { get; set; }
     public long hole_id { get; set; }
@@ -42,8 +43,9 @@ public class Score
 }
 
 [Table("hole")]
-public class Hole
+public class Hole : IEntityMetadata
 {
+    [Key]
     public long hole_id { get; set; }
     public long teebox_id { get; set; }
     public long course_id { get; set; }
@@ -61,6 +63,7 @@ public class Hole
 [Table("round")]
 public class Round
 {
+    [Key]
     public long round_id { get; set; }
     public long course_id { get; set; }
     public long teebox_id { get; set; }
@@ -75,6 +78,7 @@ public class Round
 [Table("stats")]
 public class Stats
 {
+    [Key]
     public long stat_id { get; set; }
     public long score_id { get; set; }
     public bool? hit_fairway { get; set; }

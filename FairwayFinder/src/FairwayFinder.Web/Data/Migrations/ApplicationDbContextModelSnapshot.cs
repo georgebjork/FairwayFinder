@@ -37,7 +37,7 @@ namespace FairwayFinder.Web.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasDefaultValue(new DateTime(2025, 1, 18, 4, 6, 30, 885, DateTimeKind.Utc).AddTicks(9463));
+                        .HasDefaultValue(new DateTime(2025, 1, 31, 19, 49, 34, 651, DateTimeKind.Utc).AddTicks(3440));
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -86,7 +86,7 @@ namespace FairwayFinder.Web.Migrations
                     b.Property<DateTime>("UpdatedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasDefaultValue(new DateTime(2025, 1, 18, 4, 6, 30, 885, DateTimeKind.Utc).AddTicks(9704));
+                        .HasDefaultValue(new DateTime(2025, 1, 31, 19, 49, 34, 651, DateTimeKind.Utc).AddTicks(3690));
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)

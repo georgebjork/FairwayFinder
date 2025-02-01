@@ -3,6 +3,7 @@ using FairwayFinder.Core.Features.CourseManagement.Repositories;
 using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Services;
+using LanguageExt.SomeHelp;
 using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Core.Features.CourseManagement.Services;
@@ -41,9 +42,14 @@ public class CourseManagementService
         return await _courseManagementRepository.GetTeeForCourseAsync(courseId);
     }
 
+    public async Task<List<Hole>> GetHolesForTeeAsync(long teeboxId)
+    {
+        return await _courseManagementRepository.GetHolesForTeeAsync(teeboxId);
+    }
+
     public async Task<int> AddCourseAsync(CourseFormModel form)
     {
-        var course = form.ToModel();
+        var course = form.ToModel(new Course());
         course = EntityMetadataHelper.NewRecord(course, _usernameRetriever.Username);
         return await _courseManagementRepository.Insert(course);
     }
@@ -72,42 +78,35 @@ public class CourseManagementService
             _logger.LogError("Invalid course id: {0} was used to create a Tee Box by user {1}", courseId, _usernameRetriever.Username);
         }
 
-        var tee = form.ToModel();
+        var tee = form.ToModel(new Teebox());
+        var holes = form.Holes.Select(hole => EntityMetadataHelper.NewRecord(hole.ToModel(new Hole()), _usernameRetriever.Username)).ToList();
         tee = EntityMetadataHelper.NewRecord(tee, _usernameRetriever.Username);
-        return await _courseManagementRepository.Insert(tee);
+        
+        return await _courseManagementRepository.InsertNewTeeAsync(tee, holes);
     }
     
     
-    public async Task<bool> UpdateTeeAsync(long courseId, TeeboxFormModel form)
+    public async Task<bool> UpdateTeeAsync(long teeboxId, TeeboxFormModel form)
     {
-        var course = await GetCourseByIdAsync(courseId);
-
-        if (course is null)
-        {
-            _logger.LogError("Invalid course id: {0} was used to update a Tee Box id: {1} by user {2}", courseId, form.TeeboxId,  _usernameRetriever.Username);
-            return false;
-        }
-        
-        var tee = await GetTeeByIdAsync(form.TeeboxId ?? 0);
+        var tee = await GetTeeByIdAsync(teeboxId);
 
         if (tee is null)
         {
-            _logger.LogError("Invalid tee box id: {0} was used to update a Tee Box by user {1}", form.TeeboxId, _usernameRetriever.Username);
+            _logger.LogError("Invalid tee box id: {0} was used to update a Tee Box by user {1}", teeboxId, _usernameRetriever.Username);
             return false;
         }
         
-        tee.teebox_name = form.Name;
-        tee.course_id = courseId;
-        tee.par = form.Par;
-        tee.slope = form.Slope;
-        tee.rating = form.Rating;
-        tee.yardage_out = form.Slope;
-        tee.yardage_in = form.Slope;
-        tee.yardage_total = form.Slope;
-        tee.is_nine_hole = form.IsNineHoles;
-        tee.is_womens = false;
+        var holes = await GetHolesForTeeAsync(teeboxId);
+
+        for (int i = 0; i < holes.Count; i++)
+        {
+            holes[i] = EntityMetadataHelper.UpdateRecord(form.Holes[i].ToModel(holes[i]), _usernameRetriever.Username);
+        }
         
+        tee = form.ToModel(tee);
+        //var holes = form.Holes.Select(hole => EntityMetadataHelper.UpdateRecord(hole.ToModel(), _usernameRetriever.Username)).ToList();
         tee = EntityMetadataHelper.UpdateRecord(tee, _usernameRetriever.Username);
-        return await _courseManagementRepository.Update(tee);
+        
+        return await _courseManagementRepository.UpdateTeeAsync(tee, holes);
     }
 }

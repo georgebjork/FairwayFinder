@@ -16,15 +16,14 @@ public static class MappingHelpers
         };
     }
     
-    public static Course ToModel(this CourseFormModel form)
+    public static Course ToModel(this CourseFormModel form, Course course)
     {
-        return new Course
-        {
-            course_id = form.course_id ?? 0,
-            course_name = form.name,
-            address = form.address,
-            phone_number = form.phone_number
-        };
+        course.course_id = form.course_id ?? 0;
+        course.course_name = form.name;
+        course.address = form.address;
+        course.phone_number = form.phone_number;
+
+        return course;
     }
     
     
@@ -46,21 +45,47 @@ public static class MappingHelpers
         };
     }
     
-    public static Teebox ToModel(this TeeboxFormModel form)
+    public static Teebox ToModel(this TeeboxFormModel form, Teebox tee)
     {
-        return new Teebox
+        tee.teebox_id = form.TeeboxId ?? 0;
+        tee.teebox_name = form.Name;
+        tee.course_id = form.CourseId;
+        tee.par = form.Par;
+        tee.slope = form.Slope;
+        tee.rating = form.Rating;
+        tee.yardage_out = form.YardageOut;
+        tee.yardage_in = form.YardageIn;
+        tee.yardage_total = form.Yardage;
+        tee.is_nine_hole = form.IsNineHoles;
+        tee.is_womens = false;
+
+        return tee;
+    }
+    
+    public static HoleFormModel ToFormModel(this Hole hole)
+    {
+        return new HoleFormModel
         {
-            teebox_id = form.TeeboxId ?? 0,
-            teebox_name = form.Name,
-            course_id = form.CourseId,
-            par = form.Par,
-            slope = form.Slope,
-            rating = form.Rating,
-            yardage_out = form.YardageOut,
-            yardage_in = form.YardageIn,
-            yardage_total = form.Yardage,
-            is_nine_hole = form.IsNineHoles,
-            is_womens = false
+            TeeboxId = hole.teebox_id,
+            CourseId = hole.course_id,
+            HoleId = hole.hole_id,
+            Par = hole.par,
+            Yardage = hole.yardage,
+            HoleNumber = hole.hole_number,
+            Handicap = hole.handicap,
         };
+    }
+    
+    public static Hole ToModel(this HoleFormModel form, Hole hole)
+    {
+        hole.teebox_id = form.TeeboxId ?? 0;
+        hole.course_id = form.CourseId ?? 0;
+        hole.hole_id = form.HoleId ?? 0;
+        hole.par = form.Par;
+        hole.yardage = form.Yardage;
+        hole.hole_number = form.HoleNumber;
+        hole.handicap = form.Handicap;
+
+        return hole;
     }
 }

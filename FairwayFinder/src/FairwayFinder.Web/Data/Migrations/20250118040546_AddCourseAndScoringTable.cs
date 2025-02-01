@@ -53,8 +53,8 @@ namespace FairwayFinder.Web.Migrations
                     par BIGINT NOT NULL,
                     created_by TEXT NOT NULL,
                     created_on DATE NOT NULL,
-                    updated_by DATE NOT NULL,
-                    updated_on TEXT NOT NULL
+                    updated_by TEXT NOT NULL,
+                    updated_on DATE NOT NULL
                 );
 
                 CREATE TABLE round(

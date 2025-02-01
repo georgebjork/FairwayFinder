@@ -17,14 +17,17 @@ public class TeeboxFormModel
     public long Par { get; set; }
     
     [Required]
+    [Range(1, int.MaxValue)]
     [Display(Name = "Rating")]
     public decimal Rating { get; set; }
     
     [Required]
+    [Range(1, int.MaxValue)]
     [Display(Name = "Slope")]
     public long Slope { get; set; }
     
     [Required]
+    [Range(1, int.MaxValue)]
     [Display(Name = "Yardage Out")]
     public long YardageOut { get; set; }
     
@@ -50,4 +53,6 @@ public class TeeboxFormModel
     
     [Display(Name = "Women's Tees")]
     public bool IsWomenTees { get; set; }
+    
+    public List<HoleFormModel> Holes { get; set; } = new();
 }

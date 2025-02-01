@@ -1,0 +1,64 @@
+@model FairwayFinder.Core.Features.CourseManagement.Models.ViewModels.TeeboxViewModel
+
+@{
+    var front_nine_max = 9;
+    var back_nine_max = 18;
+}
+
+<table class="table table-bordered table-responsive">
+    <thead>
+    @await Html.PartialAsync("_ScorecardHeader", true)
+    </thead>
+    <tbody>
+    @*Par*@
+    <tr>
+        <th colspan="2">Par</th>
+        @for (var i = 0; i < front_nine_max; i++)
+        {
+            <td class="text-center">@Model.Holes[i].par</td>
+        }
+        <td class="text-center" colspan="2">&nbsp;</td>
+        @for (var i = front_nine_max; i < back_nine_max; i++)
+        {
+            <td class="text-center">@Model.Holes[i].par</td>
+        }
+        <td class="text-center" colspan="2">&nbsp;</td>
+        <td class="text-center" colspan="2">&nbsp;</td>
+        <td class="text-center" colspan="2">&nbsp;</td>
+    </tr>
+
+    @*Handicap*@
+    <tr>
+        <th colspan="2">Handicap</th>
+        @for (var i = 0; i < front_nine_max; i++)
+        {
+            <td class="text-center">@Model.Holes[i].handicap</td>
+        }
+        <td class="text-center" colspan="2">&nbsp;</td>
+        @for (var i = front_nine_max; i < back_nine_max; i++)
+        {
+            <td class="text-center">@Model.Holes[i].handicap</td>
+        }
+        <td class="text-center" colspan="2">&nbsp;</td>
+        <td class="text-center" colspan="2">&nbsp;</td>
+        <td class="text-center" colspan="2">&nbsp;</td>
+    </tr>
+
+    @*Yardage*@
+    <tr>
+        <th colspan="2">@Model.Teebox.teebox_name</th>
+        @for (var i = 0; i < front_nine_max; i++)
+        {
+            <td class="text-center">@Model.Holes[i].yardage</td>
+        }
+        <td class="text-center" colspan="2">@Model.Teebox.yardage_out</td>
+        @for (var i = front_nine_max; i < back_nine_max; i++)
+        {
+            <td class="text-center">@Model.Holes[i].yardage</td>
+        }
+        <td class="text-center" colspan="2">@Model.Teebox.yardage_in</td>
+        <td class="text-center" colspan="2">@Model.Teebox.yardage_total</td>
+        <td class="text-center" colspan="2">@Model.Teebox.slope / @Model.Teebox.rating</td>
+    </tr>
+    </tbody>
+</table>
