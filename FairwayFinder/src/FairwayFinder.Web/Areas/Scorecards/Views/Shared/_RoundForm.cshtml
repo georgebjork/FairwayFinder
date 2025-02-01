@@ -1,0 +1,21 @@
+@model FairwayFinder.Core.Features.Scorecards.Models.FormModels.RoundFormModel
+
+@await Html.PartialAsync("_MessageHtmxPartial")
+
+
+<div class="mb-3">
+    <input id="course-search" type="text" class="form-control" placeholder="Search For Course" autocomplete="off"/>
+    <label for="course-search"></label>
+</div>
+
+<div class="row" id="course-info">
+    <input type="hidden" asp-for="CourseId"/>
+    <div class="col-6">
+        <div class="mb-3">
+            <label class="form-label" asp-for="CourseName"></label>
+            <input class="form-control" asp-for="CourseName" disabled/>
+        </div>
+    </div>
+</div>
+
+

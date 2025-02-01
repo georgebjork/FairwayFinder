@@ -7,7 +7,7 @@ namespace FairwayFinder.Web.Areas.CourseManagement.Controllers;
 
 [Area("CourseManagement")]
 [Authorize(Roles = Roles.Admin)]
-public class BaseCourseManagementController : BaseController
+public class BaseCourseManagementController : BaseAuthorizedController
 {
     
 }

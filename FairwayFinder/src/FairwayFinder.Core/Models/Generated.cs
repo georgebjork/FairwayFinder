@@ -26,7 +26,7 @@ public class Teebox : IEntityMetadata
 }
 
 [Table("score")]
-public class Score
+public class Score : IEntityMetadata
 {
     [Key]
     public long score_id { get; set; }
@@ -61,7 +61,7 @@ public class Hole : IEntityMetadata
 }
 
 [Table("round")]
-public class Round
+public class Round : IEntityMetadata
 {
     [Key]
     public long round_id { get; set; }
@@ -76,7 +76,7 @@ public class Round
 }
 
 [Table("stats")]
-public class Stats
+public class Stats : IEntityMetadata
 {
     [Key]
     public long stat_id { get; set; }
