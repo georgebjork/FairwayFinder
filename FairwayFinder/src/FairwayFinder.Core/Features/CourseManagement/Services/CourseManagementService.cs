@@ -2,44 +2,48 @@ using FairwayFinder.Core.Features.CourseManagement.Models.FormModels;
 using FairwayFinder.Core.Features.CourseManagement.Repositories;
 using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Models;
+using FairwayFinder.Core.Repositories;
 using FairwayFinder.Core.Services;
-using LanguageExt.SomeHelp;
 using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Core.Features.CourseManagement.Services;
 
 public class CourseManagementService
 {
-    private readonly ILogger<ICourseManagementRepository> _logger;
+    private readonly ILogger<CourseManagementService> _logger;
     private readonly ICourseManagementRepository _courseManagementRepository;
     private readonly IUsernameRetriever _usernameRetriever;
+    private readonly CourseLookupService _courseLookupService;
+    private readonly TeeboxLookupService _teeboxLookupService;
 
-    public CourseManagementService(ICourseManagementRepository courseManagementRepository, ILogger<ICourseManagementRepository> logger, IUsernameRetriever usernameRetriever)
+    public CourseManagementService(ICourseManagementRepository courseManagementRepository, ILogger<CourseManagementService> logger, IUsernameRetriever usernameRetriever, CourseLookupService courseLookupService, TeeboxLookupService teeboxLookupService)
     {
         _courseManagementRepository = courseManagementRepository;
         _logger = logger;
         _usernameRetriever = usernameRetriever;
+        _courseLookupService = courseLookupService;
+        _teeboxLookupService = teeboxLookupService;
     }
 
     public async Task<List<Course>> GetAllCoursesAsync()
     {
-        var courses = await _courseManagementRepository.GetAllAsync();
+        var courses = await _courseLookupService.GetAllCoursesAsync();
         return courses;
     }
     
     public async Task<Course?> GetCourseByIdAsync(long courseId)
     {
-        return await _courseManagementRepository.GetCourseByIdAsync(courseId);
+        return await _courseLookupService.GetCourseByIdAsync(courseId);
     }
     
     public async Task<Teebox?> GetTeeByIdAsync(long teeboxId)
     {
-        return await _courseManagementRepository.GetTeeByIdAsync(teeboxId);
+        return await _teeboxLookupService.GetTeeByIdAsync(teeboxId);
     }
     
     public async Task<List<Teebox>> GetTeeForCourseAsync(long courseId)
     {
-        return await _courseManagementRepository.GetTeeForCourseAsync(courseId);
+        return await _teeboxLookupService.GetTeesForCourseAsync(courseId);
     }
 
     public async Task<List<Hole>> GetHolesForTeeAsync(long teeboxId)

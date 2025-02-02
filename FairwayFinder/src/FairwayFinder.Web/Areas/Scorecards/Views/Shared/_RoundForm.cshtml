@@ -1,21 +1,30 @@
-@model FairwayFinder.Core.Features.Scorecards.Models.FormModels.RoundFormModel
+@using FairwayFinder.Core.Models
+@model FairwayFinder.Core.Features.Scorecards.Models.FormModels.ScorecardFormModel
 
 @await Html.PartialAsync("_MessageHtmxPartial")
 
 
-<div class="mb-3">
-    <input id="course-search" type="text" class="form-control" placeholder="Search For Course" autocomplete="off"/>
-    <label for="course-search"></label>
-</div>
+<div id="course-information">
+    <div class="mb-3">
 
-<div class="row" id="course-info">
-    <input type="hidden" asp-for="CourseId"/>
-    <div class="col-6">
-        <div class="mb-3">
-            <label class="form-label" asp-for="CourseName"></label>
-            <input class="form-control" asp-for="CourseName" disabled/>
+        <input id="course-search" type="text" class="form-control" placeholder="Search For Course" autocomplete="off"
+               name="course"
+               hx-get="@Url.Action("SearchForCourseHtmx")"
+               hx-trigger="keyup changed delay:500ms"
+               hx-target="#course-search-results"
+               hx-swap="innerHTML"/>
+
+        <div id="course-search-results">
+            @await Html.PartialAsync("_CourseSearchResults", new List<Course>())
         </div>
     </div>
+
+    <div class="row" id="course-data">
+        @await Html.PartialAsync("_CourseAndTeeboxFormData", Model)
+    </div>
+
 </div>
 
-
+@*
+hx-trigger="updateCourseData from:body"
+*@

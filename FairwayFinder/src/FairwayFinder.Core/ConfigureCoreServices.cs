@@ -1,5 +1,7 @@
 ﻿using FairwayFinder.Core.Features.CourseManagement.Repositories;
 using FairwayFinder.Core.Features.CourseManagement.Services;
+using FairwayFinder.Core.Repositories;
+using FairwayFinder.Core.Repositories.Interfaces;
 using FairwayFinder.Core.Services;
 using FairwayFinder.Core.UserManagement.Respositories;
 using FairwayFinder.Core.UserManagement.Services;
@@ -14,12 +16,15 @@ public static class ConfigureCoreServices
         // Repositories
         services.AddTransient<IUserManagementRepository, UserManagementRepository>();
         services.AddTransient<ICourseManagementRepository, CourseManagementRepository>();
-
+        services.AddTransient<ICourseLookupRepository, CourseLookupRepository>();
+        services.AddTransient<ITeeboxLookupRepository, TeeboxLookupRepository>();
         
         // Services
         services.AddTransient<IUsernameRetriever, UsernameRetriever>();
         services.AddTransient<IUserManagementService, UserManagementService>();
         services.AddTransient<CourseManagementService>();
+        services.AddTransient<CourseLookupService>();
+        services.AddTransient<TeeboxLookupService>();
         
         return services;
     } 

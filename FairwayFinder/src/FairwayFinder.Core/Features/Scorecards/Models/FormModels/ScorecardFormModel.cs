@@ -3,14 +3,19 @@ using FairwayFinder.Core.Models;
 
 namespace FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 
-public class RoundFormModel
+public class ScorecardFormModel
 {
     [Required]
     public long CourseId {get; set;}
 
     [Display(Name = "Course Name")]
     public string CourseName { get; set; } = "";
+
+    [Required] 
+    public string TeeboxId { get; set; } = ""; // This is intentional for the dropdown list
     
     
-    public Course Course {get; set;} = new Course();
+    // Non form fields
+    public Course Course { get; set; } = new();
+    public Dictionary<string, string> TeeboxeSelectList { get; set; } = new();
 }
