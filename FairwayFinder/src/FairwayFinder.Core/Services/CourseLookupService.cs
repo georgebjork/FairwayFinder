@@ -21,14 +21,18 @@ public class CourseLookupService
         var courses = await _courseLookupRepository.GetAllCoursesAsync();
         return courses;
     }
-    
     public async Task<Course?> GetCourseByIdAsync(long courseId)
     {
         return await _courseLookupRepository.GetCourseByIdAsync(courseId);
     }
+    
+    public async Task<Course?> GetCourseByNameAsync(string name)
+    {
+        return await _courseLookupRepository.GetCourseByNameAsync(name);
+    }
 
     public async Task<List<Course>> CourseSearchByName(string name)
     {
-        return await _courseLookupRepository.CourseSearchByName(name);
+        return await _courseLookupRepository.SearchForCourseByNameAsync(name);
     }
 }

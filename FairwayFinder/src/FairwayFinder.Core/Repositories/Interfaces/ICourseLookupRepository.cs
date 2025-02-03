@@ -6,5 +6,6 @@ public interface ICourseLookupRepository : IBaseRepository
 {
     public Task<List<Course>> GetAllCoursesAsync();
     public Task<Course?> GetCourseByIdAsync(long courseId);
-    public Task<List<Course>> CourseSearchByName(string name);
+    public Task<List<Course>> SearchForCourseByNameAsync(string name);
+    public Task<Course?> GetCourseByNameAsync(string name);
 }

@@ -3,7 +3,7 @@ using FairwayFinder.Core.Models;
 
 namespace FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 
-public class ScorecardFormModel
+public class CreateRoundFormModel
 {
     [Required]
     public long CourseId {get; set;}
@@ -17,5 +17,7 @@ public class ScorecardFormModel
     
     // Non form fields
     public Course Course { get; set; } = new();
+    public Teebox Teebox { get; set; } = new();
+    public List<Hole> Holes { get; set; } = new();
     public Dictionary<string, string> TeeboxeSelectList { get; set; } = new();
 }

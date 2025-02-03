@@ -1,4 +1,4 @@
-@model FairwayFinder.Core.Features.Scorecards.Models.FormModels.ScorecardFormModel
+@model FairwayFinder.Core.Features.Scorecards.Models.FormModels.CreateRoundFormModel
 @{
     ViewData["Title"] = "Add New Round";
 }
@@ -11,7 +11,7 @@
             </div>
 
             <div class="col-auto">
-                <a class="btn btn-link" asp-action="Index">
+                <a class="btn btn-link" asp-controller="Scorecard" asp-action="Index">
                     <i class="fa-solid fa-arrow-left"></i> Back
                 </a>
             </div>
@@ -25,7 +25,7 @@
             hx-target="#round-form">
             
             <div id="round-form">
-                @await Html.PartialAsync("_RoundForm", Model)
+                @await Html.PartialAsync("Shared/_RoundForm", Model)
             </div>
 
             <div>

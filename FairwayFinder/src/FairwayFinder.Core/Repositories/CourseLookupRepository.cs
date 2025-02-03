@@ -25,11 +25,19 @@ public class CourseLookupRepository(IConfiguration configuration, ILogger<Course
         return rv;
     }
     
-    public async Task<List<Course>> CourseSearchByName(string name)
+    public async Task<List<Course>> SearchForCourseByNameAsync(string name)
     {
         var sql = "SELECT * FROM course WHERE is_deleted = false AND course_name LIKE @name";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryAsync<Course>(sql, new { name = $"%{name}%" });        
         return rv.ToList();
+    }
+
+    public async Task<Course?> GetCourseByNameAsync(string name)
+    {
+        var sql = "SELECT * FROM course WHERE is_deleted = false AND course_name = @name";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryFirstOrDefaultAsync(sql, new { name });        
+        return rv;
     }
 }

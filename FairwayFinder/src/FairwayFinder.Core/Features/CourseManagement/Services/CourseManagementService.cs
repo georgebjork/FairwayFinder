@@ -15,44 +15,28 @@ public class CourseManagementService
     private readonly IUsernameRetriever _usernameRetriever;
     private readonly CourseLookupService _courseLookupService;
     private readonly TeeboxLookupService _teeboxLookupService;
+    private readonly HoleLookupService _holeLookupService;
 
-    public CourseManagementService(ICourseManagementRepository courseManagementRepository, ILogger<CourseManagementService> logger, IUsernameRetriever usernameRetriever, CourseLookupService courseLookupService, TeeboxLookupService teeboxLookupService)
+    public CourseManagementService(ICourseManagementRepository courseManagementRepository, ILogger<CourseManagementService> logger, IUsernameRetriever usernameRetriever, CourseLookupService courseLookupService, TeeboxLookupService teeboxLookupService, HoleLookupService holeLookupService)
     {
         _courseManagementRepository = courseManagementRepository;
         _logger = logger;
         _usernameRetriever = usernameRetriever;
         _courseLookupService = courseLookupService;
         _teeboxLookupService = teeboxLookupService;
-    }
-
-    public async Task<List<Course>> GetAllCoursesAsync()
-    {
-        var courses = await _courseLookupService.GetAllCoursesAsync();
-        return courses;
-    }
-    
-    public async Task<Course?> GetCourseByIdAsync(long courseId)
-    {
-        return await _courseLookupService.GetCourseByIdAsync(courseId);
-    }
-    
-    public async Task<Teebox?> GetTeeByIdAsync(long teeboxId)
-    {
-        return await _teeboxLookupService.GetTeeByIdAsync(teeboxId);
-    }
-    
-    public async Task<List<Teebox>> GetTeeForCourseAsync(long courseId)
-    {
-        return await _teeboxLookupService.GetTeesForCourseAsync(courseId);
-    }
-
-    public async Task<List<Hole>> GetHolesForTeeAsync(long teeboxId)
-    {
-        return await _courseManagementRepository.GetHolesForTeeAsync(teeboxId);
+        _holeLookupService = holeLookupService;
     }
 
     public async Task<int> AddCourseAsync(CourseFormModel form)
     {
+        var course_with_name = await _courseLookupService.GetCourseByNameAsync(form.name);
+
+        if (course_with_name is not null)
+        {
+            _logger.LogWarning("Course with name {0} already exists", form.name);
+            return -1;
+        }
+        
         var course = form.ToModel(new Course());
         course = EntityMetadataHelper.NewRecord(course, _usernameRetriever.Username);
         return await _courseManagementRepository.Insert(course);
@@ -60,7 +44,7 @@ public class CourseManagementService
     
     public async Task<bool> UpdateCourseAsync(long courseId, CourseFormModel form)
     {
-        var course = await GetCourseByIdAsync(courseId);
+        var course = await _courseLookupService.GetCourseByIdAsync(courseId);
         
         // should never happen here but here in case
         if (course == null) return false;
@@ -75,7 +59,7 @@ public class CourseManagementService
 
     public async Task<int> AddTeeAsync(long courseId, TeeboxFormModel form)
     {
-        var course = await GetCourseByIdAsync(courseId);
+        var course = await _courseLookupService.GetCourseByIdAsync(courseId);
 
         if (course is null)
         {
@@ -92,7 +76,7 @@ public class CourseManagementService
     
     public async Task<bool> UpdateTeeAsync(long teeboxId, TeeboxFormModel form)
     {
-        var tee = await GetTeeByIdAsync(teeboxId);
+        var tee = await _teeboxLookupService.GetTeeByIdAsync(teeboxId);
 
         if (tee is null)
         {
@@ -100,15 +84,14 @@ public class CourseManagementService
             return false;
         }
         
-        var holes = await GetHolesForTeeAsync(teeboxId);
+        var holes = await _holeLookupService.GetHolesForTeeAsync(teeboxId);
 
-        for (int i = 0; i < holes.Count; i++)
+        for (var i = 0; i < holes.Count; i++)
         {
             holes[i] = EntityMetadataHelper.UpdateRecord(form.Holes[i].ToModel(holes[i]), _usernameRetriever.Username);
         }
         
         tee = form.ToModel(tee);
-        //var holes = form.Holes.Select(hole => EntityMetadataHelper.UpdateRecord(hole.ToModel(), _usernameRetriever.Username)).ToList();
         tee = EntityMetadataHelper.UpdateRecord(tee, _usernameRetriever.Username);
         
         return await _courseManagementRepository.UpdateTeeAsync(tee, holes);

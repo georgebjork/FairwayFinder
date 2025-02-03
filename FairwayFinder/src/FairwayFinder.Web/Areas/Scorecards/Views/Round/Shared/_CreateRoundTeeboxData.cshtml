@@ -1,0 +1,53 @@
+﻿@model FairwayFinder.Core.Features.Scorecards.Models.FormModels.CreateRoundFormModel
+
+
+@if (Model.Teebox.teebox_id > 0)
+{
+    <div class="col-6">
+        <div class="mb-3">
+            <label class="form-label"> Yardage </label>
+            <input class="form-control" value="@Model.Teebox.yardage_total" disabled/>
+        </div>
+    </div>
+
+    <div class="col-6">
+        <div class="mb-3">
+            <label class="form-label"> Slope / Rating </label>
+            <input class="form-control" value="@Model.Teebox.slope / @Model.Teebox.rating" disabled/>
+        </div>
+    </div>
+}
+
+@if (Model.Holes.Count > 0)
+{
+    @foreach(var hole in Model.Holes)
+    {
+        <div class="col-4 p-3">
+            <div class="card">
+                <div class="card-header">
+                    Hole @hole.hole_number
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="mb-3 col-6">
+                            <label class="form-label"> Yardage </label>
+                            <input value="@hole.yardage" type="text" class="form-control" autocomplete="off" disabled/>
+                        </div>
+
+                        <div class="mb-3 col-6">
+                            <label class="form-label"> Par </label>
+                            <input value="@hole.par" type="text" class="form-control" autocomplete="off" disabled/>
+                        </div>
+
+
+                        <div class="mb-3 col-12">
+                            <label class="form-label">Score</label>
+                            <input type="text" class="form-control" autocomplete="off"/>
+                            <span class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}

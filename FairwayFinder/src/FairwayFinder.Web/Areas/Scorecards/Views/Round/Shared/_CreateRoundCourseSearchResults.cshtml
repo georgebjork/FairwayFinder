@@ -12,7 +12,7 @@ else
             { 
                 <li>
                     <a class="dropdown-item"
-                       hx-get="@Url.Action("GetCourseAndTeeboxesForRoundForm", new { courseId = c.course_id })"
+                       hx-get="@Url.Action("GetCourseData", new { courseId = c.course_id})"
                        hx-target="#course-information"
                        hx-swap="innerHTML">
                         @c.course_name

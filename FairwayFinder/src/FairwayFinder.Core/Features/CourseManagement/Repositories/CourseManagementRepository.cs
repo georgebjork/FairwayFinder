@@ -11,8 +11,6 @@ namespace FairwayFinder.Core.Features.CourseManagement.Repositories;
 
 public interface ICourseManagementRepository : IBaseRepository
 {
-    public Task<List<Hole>> GetHolesForTeeAsync(long teeboxId);
-    
     // Inserts
     public Task<int> InsertNewTeeAsync(Teebox teebox, List<Hole> holes);
     public Task<bool> UpdateTeeAsync(Teebox tee, List<Hole> holes);
@@ -20,14 +18,6 @@ public interface ICourseManagementRepository : IBaseRepository
 
 public class CourseManagementRepository(IConfiguration configuration, ILogger<ICourseManagementRepository> logger) : BasePgRepository(configuration), ICourseManagementRepository 
 {
-    public async Task<List<Hole>> GetHolesForTeeAsync(long teeboxId)
-    {
-        var sql = "SELECT * FROM hole WHERE is_deleted = false AND teebox_id = @id";
-        await using var conn = await GetNewOpenConnection();
-        var rv = await conn.QueryAsync<Hole>(sql, new { Id = teeboxId });
-        return rv.ToList();
-    }
-
     public async Task<int> InsertNewTeeAsync(Teebox teebox, List<Hole> holes)
     {
         await using var conn = await GetNewOpenConnection();

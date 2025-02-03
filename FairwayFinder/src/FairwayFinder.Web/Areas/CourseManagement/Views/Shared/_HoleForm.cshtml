@@ -16,21 +16,21 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="form-floating mb-3 col-12">
+                        <div class="mb-3 col-12">
+                            <label class="form-label" asp-for="Holes[i].Yardage"></label>
                             <input asp-for="Holes[i].Yardage" type="text" class="form-control" autocomplete="off"/>
-                            <label asp-for="Holes[i].Yardage"></label>
                             <span asp-validation-for="Holes[i].Yardage" class="text-danger"></span>
                         </div>
 
-                        <div class="form-floating mb-3 col-6">
+                        <div class="mb-3 col-6">
+                            <label class="form-label" asp-for="Holes[i].Handicap"></label>
                             <input asp-for="Holes[i].Handicap" type="text" class="form-control" autocomplete="off"/>
-                            <label asp-for="Holes[i].Handicap"></label>
                             <span asp-validation-for="Holes[i].Handicap" class="text-danger"></span>
                         </div>
 
-                        <div class="form-floating mb-3 col-6">
+                        <div class="mb-3 col-6">
+                            <label class="form-label" asp-for="Holes[i].Par"></label>
                             <input asp-for="Holes[i].Par" type="text" class="form-control" autocomplete="off"/>
-                            <label asp-for="Holes[i].Par"></label>
                             <span asp-validation-for="Holes[i].Par" class="text-danger"></span>
                         </div>
                     </div>

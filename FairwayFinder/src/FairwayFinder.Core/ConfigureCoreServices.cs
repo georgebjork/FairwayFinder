@@ -18,6 +18,7 @@ public static class ConfigureCoreServices
         services.AddTransient<ICourseManagementRepository, CourseManagementRepository>();
         services.AddTransient<ICourseLookupRepository, CourseLookupRepository>();
         services.AddTransient<ITeeboxLookupRepository, TeeboxLookupRepository>();
+        services.AddTransient<IHoleLookupRepository, HoleLookupRepository>();
         
         // Services
         services.AddTransient<IUsernameRetriever, UsernameRetriever>();
@@ -25,6 +26,7 @@ public static class ConfigureCoreServices
         services.AddTransient<CourseManagementService>();
         services.AddTransient<CourseLookupService>();
         services.AddTransient<TeeboxLookupService>();
+        services.AddTransient<HoleLookupService>();
         
         return services;
     } 
