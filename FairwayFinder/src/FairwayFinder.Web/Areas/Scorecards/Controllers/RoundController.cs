@@ -55,17 +55,8 @@ public class RoundController : BaseScorecardController
             return Redirect(nameof(AddRound));
         }
 
-        // Retrieve the teeboxes dropdown list for the course.
-        var teeboxes = await _teeboxLookupService.GetTeesDropdownForCourseAsync(courseId);
-
-        // Create the view model with common properties.
-        var viewModel = new CreateRoundFormModel
-        {
-            Course = course,
-            TeeboxeSelectList = teeboxes
-        };
-        
-        return PartialView("Shared/_RoundForm", viewModel);
+        var form = await BuildCourseFormModelData(course);
+        return PartialView("Shared/_RoundForm", form);
     }
     
     
@@ -81,16 +72,93 @@ public class RoundController : BaseScorecardController
             return Ok();
         }
 
-        var holes = await _holeLookupService.GetHolesForTeeAsync(teeboxId);
-        
-        // Create the view model with common properties.
-        var viewModel = new CreateRoundFormModel
-        {
-            Teebox = teebox,
-            Holes = holes
-        };
-        
-        return PartialView("Shared/_CreateRoundTeeboxData", viewModel);
+        var form = await BuildTeeboxFormModelData(teebox); 
+        return PartialView("Shared/_CreateRoundTeeboxData", form);
     }
+
+    [HttpPost]
+    [Route("/scorecards/add")]
+    public async Task<IActionResult> AddRoundPost([FromForm] CreateRoundFormModel form)
+    {
+        if (!ModelState.IsValid)
+        {
+
+            form = await RefreshFormModelForError(form);
+            return PartialView("Shared/_RoundForm", form);
+        }
+        
+        return PartialView("Shared/_RoundForm", form);
+    }
+
+    private async Task<CreateRoundFormModel> BuildCourseFormModelData(Course course)
+    {
+        var vm = new CreateRoundFormModel();
+        
+        var teeboxes_dropdown = await _teeboxLookupService.GetTeesDropdownForCourseAsync(course.course_id);
+        vm.TeeboxSelectList = teeboxes_dropdown;
+        vm.Course = course;
+        
+        return vm;
+    }
+    
+    private async Task<CreateRoundFormModel> BuildTeeboxFormModelData(Teebox teebox)
+    {
+        var vm = new CreateRoundFormModel();
+        var holes = await _holeLookupService.GetHolesForTeeAsync(teebox.teebox_id);
+        var hole_scores = new List<HoleScoreFormModel>();
+
+        foreach (var hole in holes)
+        {
+            var hs = new HoleScoreFormModel
+            {
+                HoleId = hole.hole_id,
+                Hole = hole
+            };
+            hole_scores.Add(hs);
+        }
+
+        vm.Teebox = teebox;
+        vm.HoleScore = hole_scores;
+        
+        var course = await _courseLookupService.GetCourseByIdAsync(teebox.course_id);
+        if (course is null) // This should never happen but just to make the complier happy.
+        {
+            _logger.LogError("Course with id {0} came back null when trying to retrive form data.", teebox.course_id);
+            return vm;
+        }
+
+        vm.Course = course;
+
+        return vm;
+    }
+    
+    private async Task<CreateRoundFormModel> RefreshFormModelForError(CreateRoundFormModel form)
+    {
+        var course = await _courseLookupService.GetCourseByIdAsync(form.CourseId ?? 0);
+        var teebox = await _teeboxLookupService.GetTeeByIdAsync(int.Parse(form.TeeboxId ?? "0"));
+
+        if (course is null || teebox is null) return form; // Should not happen, but just in case
+        
+        var teeboxes_dropdown = await _teeboxLookupService.GetTeesDropdownForCourseAsync(course.course_id);
+        var holes = await _holeLookupService.GetHolesForTeeAsync(teebox.teebox_id);
+        
+        form.Course = course;
+        form.Teebox = teebox;
+        form.TeeboxSelectList = teeboxes_dropdown;
+        
+        
+        // Ensure we are in the correct order before we merge lists
+        var orderedHoles = holes.OrderBy(h => h.hole_number).ToList();
+        var orderedHoleScores = form.HoleScore.OrderBy(hs => hs.Hole.hole_number).ToList();
+
+        form.HoleScore = orderedHoleScores.Zip(orderedHoles, (holeScore, hole) =>
+        {
+            holeScore.Hole = hole;
+            return holeScore;
+        }).ToList();
+
+        return form;
+    }
+
 
 }

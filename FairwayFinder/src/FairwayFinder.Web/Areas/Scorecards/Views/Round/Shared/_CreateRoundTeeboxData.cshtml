@@ -18,32 +18,34 @@
     </div>
 }
 
-@if (Model.Holes.Count > 0)
+@if (Model.HoleScore.Count > 0)
 {
-    @foreach(var hole in Model.Holes)
+    @for (int i = 0; i < Model.HoleScore.Count; i++)
     {
+        <input type="hidden" asp-for="@Model.HoleScore[i].HoleId" value="@Model.HoleScore[i].HoleId" />
+        
         <div class="col-4 p-3">
             <div class="card">
                 <div class="card-header">
-                    Hole @hole.hole_number
+                    Hole @Model.HoleScore[i].Hole.hole_number
                 </div>
                 <div class="card-body">
                     <div class="row">
                         <div class="mb-3 col-6">
                             <label class="form-label"> Yardage </label>
-                            <input value="@hole.yardage" type="text" class="form-control" autocomplete="off" disabled/>
+                            <input value="@Model.HoleScore[i].Hole.yardage" type="text" class="form-control" autocomplete="off" disabled/>
                         </div>
 
                         <div class="mb-3 col-6">
                             <label class="form-label"> Par </label>
-                            <input value="@hole.par" type="text" class="form-control" autocomplete="off" disabled/>
+                            <input value="@Model.HoleScore[i].Hole.par" type="text" class="form-control" autocomplete="off" disabled/>
                         </div>
 
 
                         <div class="mb-3 col-12">
-                            <label class="form-label">Score</label>
-                            <input type="text" class="form-control" autocomplete="off"/>
-                            <span class="text-danger"></span>
+                            <label class="form-label" asp-for="@Model.HoleScore[i].Score">Score</label>
+                            <input type="number" class="form-control" asp-for="@Model.HoleScore[i].Score" autocomplete="off"/>
+                            <span class="text-danger" asp-validation-for="@Model.HoleScore[i].Score"></span>
                         </div>
                     </div>
                 </div>

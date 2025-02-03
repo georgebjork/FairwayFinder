@@ -6,18 +6,19 @@ namespace FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 public class CreateRoundFormModel
 {
     [Required]
-    public long CourseId {get; set;}
+    public long? CourseId {get; set;}
 
     [Display(Name = "Course Name")]
     public string CourseName { get; set; } = "";
 
     [Required] 
-    public string TeeboxId { get; set; } = ""; // This is intentional for the dropdown list
+    public string? TeeboxId { get; set; } = ""; // This is intentional for the dropdown list
+    
+    public List<HoleScoreFormModel> HoleScore { get; set; } = [];
     
     
     // Non form fields
     public Course Course { get; set; } = new();
     public Teebox Teebox { get; set; } = new();
-    public List<Hole> Holes { get; set; } = new();
-    public Dictionary<string, string> TeeboxeSelectList { get; set; } = new();
+    public Dictionary<string, string> TeeboxSelectList { get; set; } = new();
 }

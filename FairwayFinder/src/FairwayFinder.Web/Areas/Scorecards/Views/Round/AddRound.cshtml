@@ -20,7 +20,7 @@
         @await Html.PartialAsync("_Divider")
 
         <form
-            hx-post=""
+            hx-post="@Url.Action("AddRoundPost")"
             hx-swap="innerHTML"
             hx-target="#round-form">
             
