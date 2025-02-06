@@ -1,4 +1,5 @@
 @using FairwayFinder.Core.Helpers
+@model FairwayFinder.Core.Features.Scorecards.Models.ViewModels.ScorecardsViewModel
 
 <table class="table table-responsive">
     <thead>
@@ -10,11 +11,17 @@
     </thead>
     
     <tbody>
-    <td>blah balh</td>
-    <td>blah </td>
-    <td>72</td>
-    <td>75/142</td>
-    <td>@DateTime.UtcNow.FormatDate()</td>
+    @foreach (var r in Model.Rounds)
+    {
+        <tr>
+            <td>@r.course_name</td>
+            <td>@r.teebox_name </td>
+            <td>@r.score</td>
+            <td>@r.slope / @r.rating</td>
+            <td>@r.date_played.FormatDate()</td>
+        </tr>
+    }
+    
     </tbody>
 </table>
 

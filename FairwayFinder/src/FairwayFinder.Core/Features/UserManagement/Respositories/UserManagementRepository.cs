@@ -16,6 +16,7 @@ public interface IUserManagementRepository : IBaseRepository
     public Task<List<UserInvitation>> GetAllInvitedUsers();
     public Task<List<string>> FindAllSimilarUsernames(string user_name);
     Task<UserInvitation?> GetInvite(string inviteId);
+    Task<string?> GetUserIdByUsername(string username);
 }
 
 public class UserManagementRepository(IConfiguration configuration, ILogger<UserManagementRepository> logger) : BasePgRepository(configuration), IUserManagementRepository
@@ -65,6 +66,14 @@ public class UserManagementRepository(IConfiguration configuration, ILogger<User
         var sql = "SELECT * FROM user_invitation WHERE is_deleted = false AND invitation_identifier = @id";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryFirstOrDefaultAsync<UserInvitation>(sql, new {id = inviteId});
+        return rv;
+    }
+
+    public async Task<string?> GetUserIdByUsername(string username)
+    {
+        var sql = @"SELECT ""Id"" FROM public.""AspNetUsers"" WHERE ""UserName"" = @username";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryFirstOrDefaultAsync<string>(sql, new { username });
         return rv;
     }
 }

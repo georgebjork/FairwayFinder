@@ -33,7 +33,6 @@ public class Score : IEntityMetadata
     public long round_id { get; set; }
     public long hole_id { get; set; }
     public short hole_score { get; set; }
-    public string score_type { get; set; } = "";
     public string user_id { get; set; } = "";
     public string created_by { get; set; } = "";
     public DateTime created_on { get; set; }
@@ -73,6 +72,10 @@ public class Round : IEntityMetadata
     public string updated_by { get; set; } = "";
     public DateTime updated_on { get; set; }
     public bool is_deleted { get; set; }
+    public int score { get; set; }
+    public int score_out { get; set; }
+    public int score_in { get; set; }
+    public string user_id { get; set; } = "";
 }
 
 [Table("stats")]

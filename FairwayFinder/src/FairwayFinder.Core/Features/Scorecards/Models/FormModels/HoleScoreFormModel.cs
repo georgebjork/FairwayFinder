@@ -6,11 +6,14 @@ namespace FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 public class HoleScoreFormModel
 {
     [Required]
-    public long? HoleId { get; set; } 
+    public long HoleId { get; set; } 
+    
+    [Required]
+    public long HoleNumber { get; set; }
     
     [Required]
     [Range(1, 20)]
-    public int? Score { get; set; }
+    public short Score { get; set; }
 
     public Hole Hole { get; set; } = new();
 }

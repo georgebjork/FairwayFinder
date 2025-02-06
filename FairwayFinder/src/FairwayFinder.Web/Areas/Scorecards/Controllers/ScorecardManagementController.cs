@@ -1,32 +1,35 @@
 ﻿using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
+using FairwayFinder.Core.Features.Scorecards.Services;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FairwayFinder.Web.Areas.Scorecards.Controllers;
 
-public class RoundController : BaseScorecardController
+public class ScorecardManagementController : BaseScorecardController
 {
-    private readonly ILogger<RoundController> _logger;
+    private readonly ILogger<ScorecardManagementController> _logger;
     private readonly IUsernameRetriever _usernameRetriever;
     private readonly CourseLookupService _courseLookupService;
     private readonly TeeboxLookupService _teeboxLookupService;
     private readonly HoleLookupService _holeLookupService;
+    private readonly ScorecardService _scorecardService;
 
-    public RoundController(ILogger<RoundController> logger, IUsernameRetriever usernameRetriever, CourseLookupService courseLookupService, TeeboxLookupService teeboxLookupService, HoleLookupService holeLookupService)
+    public ScorecardManagementController(ILogger<ScorecardManagementController> logger, IUsernameRetriever usernameRetriever, CourseLookupService courseLookupService, TeeboxLookupService teeboxLookupService, HoleLookupService holeLookupService, ScorecardService scorecardService)
     {
         _logger = logger;
         _usernameRetriever = usernameRetriever;
         _courseLookupService = courseLookupService;
         _teeboxLookupService = teeboxLookupService;
         _holeLookupService = holeLookupService;
+        _scorecardService = scorecardService;
     }
 
     [HttpGet]
     [Route("scorecards/add")]
     public IActionResult AddRound()
     {
-        var form = new CreateRoundFormModel();
+        var form = new ScorecardFormModel();
         return View(form);
     }
 
@@ -78,21 +81,30 @@ public class RoundController : BaseScorecardController
 
     [HttpPost]
     [Route("/scorecards/add")]
-    public async Task<IActionResult> AddRoundPost([FromForm] CreateRoundFormModel form)
+    public async Task<IActionResult> AddRoundPost([FromForm] ScorecardFormModel form)
     {
         if (!ModelState.IsValid)
         {
-
             form = await RefreshFormModelForError(form);
             return PartialView("Shared/_RoundForm", form);
         }
         
-        return PartialView("Shared/_RoundForm", form);
+        var result = await _scorecardService.CreateNewScorecardAsync(form);
+
+        if (result <= 0)
+        {
+            SetErrorMessageHtmx("Error occurred adding new round. Please try again.");
+            form = await RefreshFormModelForError(form);
+            return PartialView("Shared/_RoundForm", form);
+        }
+        
+        SetSuccessMessage("Successfully added round.");
+        return Redirect(nameof(Index), new { username = _usernameRetriever.Username }, "Scorecard");
     }
 
-    private async Task<CreateRoundFormModel> BuildCourseFormModelData(Course course)
+    private async Task<ScorecardFormModel> BuildCourseFormModelData(Course course)
     {
-        var vm = new CreateRoundFormModel();
+        var vm = new ScorecardFormModel();
         
         var teeboxes_dropdown = await _teeboxLookupService.GetTeesDropdownForCourseAsync(course.course_id);
         vm.TeeboxSelectList = teeboxes_dropdown;
@@ -101,9 +113,9 @@ public class RoundController : BaseScorecardController
         return vm;
     }
     
-    private async Task<CreateRoundFormModel> BuildTeeboxFormModelData(Teebox teebox)
+    private async Task<ScorecardFormModel> BuildTeeboxFormModelData(Teebox teebox)
     {
-        var vm = new CreateRoundFormModel();
+        var vm = new ScorecardFormModel();
         var holes = await _holeLookupService.GetHolesForTeeAsync(teebox.teebox_id);
         var hole_scores = new List<HoleScoreFormModel>();
 
@@ -132,10 +144,10 @@ public class RoundController : BaseScorecardController
         return vm;
     }
     
-    private async Task<CreateRoundFormModel> RefreshFormModelForError(CreateRoundFormModel form)
+    private async Task<ScorecardFormModel> RefreshFormModelForError(ScorecardFormModel form)
     {
-        var course = await _courseLookupService.GetCourseByIdAsync(form.CourseId ?? 0);
-        var teebox = await _teeboxLookupService.GetTeeByIdAsync(int.Parse(form.TeeboxId ?? "0"));
+        var course = await _courseLookupService.GetCourseByIdAsync(form.CourseId);
+        var teebox = await _teeboxLookupService.GetTeeByIdAsync(int.Parse(form.TeeboxId));
 
         if (course is null || teebox is null) return form; // Should not happen, but just in case
         

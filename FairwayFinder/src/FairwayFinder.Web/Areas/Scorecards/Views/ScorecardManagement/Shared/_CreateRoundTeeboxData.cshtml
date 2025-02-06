@@ -1,4 +1,4 @@
-﻿@model FairwayFinder.Core.Features.Scorecards.Models.FormModels.CreateRoundFormModel
+﻿@model FairwayFinder.Core.Features.Scorecards.Models.FormModels.ScorecardFormModel
 
 
 @if (Model.Teebox.teebox_id > 0)
@@ -23,25 +23,24 @@
     @for (int i = 0; i < Model.HoleScore.Count; i++)
     {
         <input type="hidden" asp-for="@Model.HoleScore[i].HoleId" value="@Model.HoleScore[i].HoleId" />
+        <input type="hidden" asp-for="@Model.HoleScore[i].HoleNumber" value="@Model.HoleScore[i].Hole.hole_number" />
         
         <div class="col-4 p-3">
             <div class="card">
                 <div class="card-header">
-                    Hole @Model.HoleScore[i].Hole.hole_number
+                    <div class="d-flex justify-content-between">
+                        <div class="col-auto">
+                            Hole @Model.HoleScore[i].Hole.hole_number
+                        </div>
+
+                        <div class="col-auto">
+                            Par @Model.HoleScore[i].Hole.par | @Model.HoleScore[i].Hole.yardage Yards
+                        </div>
+                    </div>
+                    
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="mb-3 col-6">
-                            <label class="form-label"> Yardage </label>
-                            <input value="@Model.HoleScore[i].Hole.yardage" type="text" class="form-control" autocomplete="off" disabled/>
-                        </div>
-
-                        <div class="mb-3 col-6">
-                            <label class="form-label"> Par </label>
-                            <input value="@Model.HoleScore[i].Hole.par" type="text" class="form-control" autocomplete="off" disabled/>
-                        </div>
-
-
                         <div class="mb-3 col-12">
                             <label class="form-label" asp-for="@Model.HoleScore[i].Score">Score</label>
                             <input type="number" class="form-control" asp-for="@Model.HoleScore[i].Score" autocomplete="off"/>

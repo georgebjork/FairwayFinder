@@ -1,18 +1,26 @@
 ﻿@using FairwayFinder.Core.Models
 @using FairwayFinder.Web.Helpers
 @using Microsoft.AspNetCore.Mvc.TagHelpers
-@model FairwayFinder.Core.Features.Scorecards.Models.FormModels.CreateRoundFormModel
+@model FairwayFinder.Core.Features.Scorecards.Models.FormModels.ScorecardFormModel
 
 <input type="hidden" asp-for="CourseId" value="@Model.Course.course_id"/>
 
-<div class="col-6">
+<div class="col-4">
     <div class="mb-3">
         <label class="form-label"> Course Name </label>
         <input class="form-control" asp-for="@Model.Course.course_name" disabled/>
     </div>
 </div>
 
-<div class="col-6">
+<div class="col-4">
+    <div class="mb-3">
+        <label class="form-label" asp-for="DatePlayed"> Date Played </label>
+        <input class="form-control" type="date" asp-for="DatePlayed"/>
+        <span asp-validation-for="DatePlayed"></span>
+    </div>
+</div>
+
+<div class="col-4">
     <label class="form-label"> Tee Name</label>
     @if (Model.TeeboxSelectList.Count <= 0)
     {

@@ -5,5 +5,5 @@ namespace FairwayFinder.Core.Features.Scorecards.Models.ViewModels;
 
 public class ScorecardsViewModel
 {
-    public List<RoundsQueryModel> Rounds { get; set; } = [];
+    public List<ScorecardSummaryQueryModel> Rounds { get; set; } = [];
 }

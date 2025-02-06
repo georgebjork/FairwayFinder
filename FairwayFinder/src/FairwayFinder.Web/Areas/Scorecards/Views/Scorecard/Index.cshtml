@@ -1,4 +1,4 @@
-
+@model FairwayFinder.Core.Features.Scorecards.Models.ViewModels.ScorecardsViewModel
 
 @{
     ViewData["Title"] = "My Scorecards";
@@ -10,7 +10,7 @@
     </div>
 
     <div class="col-auto">
-        <a class="btn btn-primary" asp-controller="Round" asp-action="AddRound">
+        <a class="btn btn-primary" asp-controller="ScorecardManagement" asp-action="AddRound">
             <i class="fa-solid fa-plus"></i> Add New Round
         </a>
     </div>
@@ -34,7 +34,7 @@
 
 <div class="row">
     <div class="col-12">
-        @await Html.PartialAsync("_RoundsTable")
+        @await Html.PartialAsync("_RoundsTable", Model)
     </div>
 </div>
 

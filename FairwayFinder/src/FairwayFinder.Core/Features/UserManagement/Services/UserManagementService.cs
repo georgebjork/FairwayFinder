@@ -19,6 +19,7 @@ public interface IUserManagementService
     public Task<bool> InviteUser(string email);
     public Task<UserInvitation?> GetValidInvite(string inviteId);
     public Task<bool> RevokeInvite(string invitationCode);
+    public Task<string?> GetUserIdByUsername(string username);
 }
 
 public class UserManagementService : IUserManagementService
@@ -159,5 +160,10 @@ public class UserManagementService : IUserManagementService
         invite.updated_by = _usernameRetriever.Username;
 
         return await _userManagementRepository.Update(invite);
+    }
+
+    public async Task<string?> GetUserIdByUsername(string username)
+    {
+        return await _userManagementRepository.GetUserIdByUsername(username);
     }
 }
