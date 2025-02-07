@@ -1,0 +1,31 @@
+﻿@using FairwayFinder.Core.Identity
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@inject SignInManager<ApplicationUser> SignInManager
+
+
+<ul class="nav nav-pills flex-column">
+
+    <li class="nav-item mb-auto">
+        <a class="nav-link text-body" aria-current="page" href="/" data-bs-toggle="pill" data-bs-target="#pills-home">
+            <i class="fa-solid fa-house pe-2"></i> Dashboard
+        </a>
+    </li>
+
+    @if (SignInManager.IsSignedIn(User))
+    {
+        <li class="nav-item mb-auto">
+            <a class="nav-link text-body" asp-area="Scorecards" asp-controller="Scorecard"
+               asp-action="Index" asp-route-username="@User.Identity?.Name">
+                <i class="fa-solid fa-pencil pe-2"></i> My Scorecards
+            </a>
+        </li>
+
+        <li class="nav-item mb-auto">
+            <a class="nav-link text-body" asp-area="CourseManagement" asp-controller="CourseManagement" 
+               asp-action="Index">
+                <i class="fa-solid fa-golf-ball-tee pe-2"></i> Golf Courses
+            </a>
+        </li>
+    }
+</ul>

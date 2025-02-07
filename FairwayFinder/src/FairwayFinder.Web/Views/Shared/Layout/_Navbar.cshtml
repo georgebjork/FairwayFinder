@@ -1,0 +1,30 @@
+﻿@using FairwayFinder.Core.Identity
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+
+@inject SignInManager<ApplicationUser> SignInManager
+
+
+<nav class="navbar navbar-expand-md box-shadow mb-3 d-flex align-items-center" hx-preserve="true">
+    <!-- Left side: Toggle button (visible on small screens) -->
+    <div class="mx-2">
+        <button class="btn btn-dark d-md-none" type="button"
+                data-bs-toggle="offcanvas"
+                data-bs-target="#mobileSidebar"
+                aria-controls="mobileSidebar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        
+        <span class="fs-4">
+            @ViewData["Title"]
+        </span>
+    </div>
+    
+
+    <!-- Right side: Login partial -->
+    <div class="ms-auto pe-3">
+        <partial name="Layout/_LoginPartial"/>
+    </div>
+
+</nav>

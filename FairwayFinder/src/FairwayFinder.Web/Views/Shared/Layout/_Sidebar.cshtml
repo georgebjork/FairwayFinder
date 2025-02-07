@@ -1,0 +1,40 @@
+﻿@using Microsoft.AspNetCore.Mvc.TagHelpers
+
+@* Desktop Sidebar (visible on md and larger) *@
+<nav class="d-none d-md-block col-md-3 col-lg-2 sidebar min-vh-100 border-end">
+    <div class="position-sticky pt-3">
+        <ul class="nav flex-column">
+
+            <a class="d-flex justify-content-center text-decoration-none text-body">
+                <span class="fs-4">
+                    <i class="fa-solid fa-golf-ball-tee"></i>
+                    FairwayFinder
+                </span>
+            </a>
+            <hr>
+            
+            <div class="px-3">
+            @await Html.PartialAsync("Layout/_SidebarItems")
+                
+            </div>
+            
+        </ul>
+    </div>
+</nav>
+
+@* Mobile Offcanvas Sidebar (visible only on small screens) *@
+<div class="offcanvas offcanvas-start bg-dark text-white d-md-none" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="mobileSidebarLabel">        
+            <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                <h4>
+                    <i class="fa-solid fa-golf-ball-tee"></i> FairwayFinder
+                </h4>
+            </a>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        @await Html.PartialAsync("Layout/_SidebarItems")
+    </div>
+</div>
