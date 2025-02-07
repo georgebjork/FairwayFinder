@@ -44,7 +44,31 @@ public class ScorecardController : BaseScorecardController
         
         var vm = new ScorecardsViewModel
         {
-            Rounds = rounds
+            Rounds = rounds,
+            Username = username
+        };
+        return View(vm);
+    }
+    
+    
+    [Route("scorecards/@{username}/round/{roundId:long}")]
+    public async Task<IActionResult> ViewScorecard([FromRoute] string username, [FromRoute] long roundId)
+    {
+        
+        var scorecard_summary = await _scorecardService.GetScorecardSummaryByRoundIdAsync(roundId);
+
+        if (scorecard_summary is null)
+        {
+            SetErrorMessage("No round was returned with that Id");
+            return Redirect(nameof(Index), new { username });
+        }
+        
+        var scorecard_scores = await _scorecardService.GetScorecardHoleScoresByRoundIdAsync(roundId);
+        
+        var vm = new ScorecardViewModel
+        {
+            ScorecardSummary = scorecard_summary,
+            Holes = scorecard_scores
         };
         return View(vm);
     }

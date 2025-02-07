@@ -3,6 +3,7 @@ using FairwayFinder.Core.Features.CourseManagement.Models.ViewModels;
 using FairwayFinder.Core.Features.CourseManagement.Services;
 using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Services;
+using LanguageExt;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FairwayFinder.Web.Areas.CourseManagement.Controllers;
@@ -153,11 +154,33 @@ public class CourseManagementController : BaseCourseManagementController
     [Route("course-management/{courseId:long}/teebox/add")]
     public async Task<IActionResult> AddTee([FromRoute] long courseId)
     {
-        var form = new TeeboxFormModel
+        // We are going to check if any teeboxes exist for this course. If so, we can reuse the par and handicap, only yardages will change.
+        var teeboxes = await _teeboxLookupService.GetTeesForCourseAsync(courseId);
+
+        var form = new TeeboxFormModel();
+        form.CourseId = courseId;
+        if (!teeboxes.Any())
         {
-            CourseId = courseId,
-            Holes = Enumerable.Range(1, 18).Select(i => new HoleFormModel { HoleNumber = i }).ToList()
-        };
+            form.Holes = Enumerable.Range(1, 18).Select(i => new HoleFormModel { HoleNumber = i }).ToList();
+            return View(form);
+        }
+
+        form.Par = teeboxes.First().par;
+        var holes = await _holeLookupService.GetHolesForTeeAsync(teeboxes.First().teebox_id); // Doesnt matter which one, we will just take the first teebox
+        
+        foreach (var hole in holes)
+        {
+            form.Holes.Add(new HoleFormModel
+            {
+                HoleNumber = hole.hole_number,
+                CourseId = courseId,
+                Handicap = hole.handicap,
+                Par = hole.par,
+                ParHandicapReadonly = true
+            });
+        }
+
+        form.Holes = form.Holes.OrderBy(h => h.HoleNumber).ToList(); // Order by hole number
         return View(form);
     }
     
@@ -168,6 +191,12 @@ public class CourseManagementController : BaseCourseManagementController
     {
         if (!ModelState.IsValid)
         {
+            return PartialView("_TeeboxForm", form);
+        }
+
+        if (form.Yardage != form.Holes.Sum(h => h.Yardage))
+        {
+            ModelState.AddModelError(string.Empty, "Sum of yardages dont match Tee Box yardages.");
             return PartialView("_TeeboxForm", form);
         }
 

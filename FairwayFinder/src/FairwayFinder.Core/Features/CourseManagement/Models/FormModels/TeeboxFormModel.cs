@@ -17,20 +17,21 @@ public class TeeboxFormModel
     public long Par { get; set; }
     
     [Required]
-    [Range(1, int.MaxValue)]
+    [Range(1, 100)]
     [Display(Name = "Rating")]
     public decimal Rating { get; set; }
     
     [Required]
-    [Range(1, int.MaxValue)]
+    [Range(1, 200)]
     [Display(Name = "Slope")]
     public long Slope { get; set; }
     
     [Required]
-    [Range(1, int.MaxValue)]
+    [Range(1, 9000)]
     [Display(Name = "Yardage Out")]
     public long YardageOut { get; set; }
     
+    [Range(1, 9000)]
     [Display(Name = "Yardage In")]
     public long YardageIn { get; set; }
 

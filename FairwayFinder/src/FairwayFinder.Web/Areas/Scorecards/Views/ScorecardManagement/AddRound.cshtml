@@ -1,4 +1,6 @@
+@using FairwayFinder.Core.Services
 @model FairwayFinder.Core.Features.Scorecards.Models.FormModels.ScorecardFormModel
+@inject IUsernameRetriever _UsernameRetriever
 @{
     ViewData["Title"] = "Add New Round";
 }
@@ -11,7 +13,7 @@
             </div>
 
             <div class="col-auto">
-                <a class="btn btn-link" asp-controller="Scorecard" asp-action="Index">
+                <a class="btn btn-link" asp-controller="Scorecard" asp-action="Index" asp-route-username="@_UsernameRetriever.Username">
                     <i class="fa-solid fa-arrow-left"></i> Back
                 </a>
             </div>

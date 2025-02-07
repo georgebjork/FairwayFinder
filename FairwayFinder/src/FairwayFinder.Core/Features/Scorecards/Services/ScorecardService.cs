@@ -30,6 +30,16 @@ public class ScorecardService
     {
         return await _scorecardRepository.GetScorecardSummaryByUserIdAsync(username);
     }
+    
+    public async Task<ScorecardSummaryQueryModel?> GetScorecardSummaryByRoundIdAsync(long roundId)
+    {
+        return await _scorecardRepository.GetScorecardSummaryByRoundIdAsync(roundId);
+    }
+
+    public async Task<List<HoleScoreQueryModel>> GetScorecardHoleScoresByRoundIdAsync(long roundId)
+    {
+        return await _scorecardRepository.GetScorecardHoleScoresByRoundIdAsync(roundId);
+    }
 
     public async Task<int> CreateNewScorecardAsync(ScorecardFormModel form)
     {

@@ -27,4 +27,6 @@ public class HoleFormModel
     [Display(Name = "Par")]
     [Range(3, 7)]
     public long Par { get; set; }
+    
+    public bool ParHandicapReadonly { get; set; }
 }

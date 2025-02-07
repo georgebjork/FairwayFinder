@@ -14,6 +14,9 @@ public interface IScorecardRepository : IBaseRepository
 {
     Task<int> CreateNewScorecardAsync(Round round, List<Score> scores);
     Task<List<ScorecardSummaryQueryModel>> GetScorecardSummaryByUserIdAsync(string userId);
+    Task<ScorecardSummaryQueryModel?> GetScorecardSummaryByRoundIdAsync(long roundId);
+    Task<List<HoleScoreQueryModel>> GetScorecardHoleScoresByRoundIdAsync(long roundId);
+
 }
 
 public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecardRepository> logger) : BasePgRepository(configuration), IScorecardRepository
@@ -44,13 +47,38 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
 
     public async Task<List<ScorecardSummaryQueryModel>> GetScorecardSummaryByUserIdAsync(string userId)
     {
-        var sql = @"SELECT c.course_name, t.teebox_name, t.slope, t.rating, r.score, r.date_played, r.user_id
+        var sql = @"SELECT c.course_name, t.teebox_name, t.slope, t.rating, r.score, r.date_played, r.user_id, r.round_id, t.yardage_out, t.yardage_in, t.yardage_total, r.score_out, r.score_in
                     FROM round as r
 	                    INNER JOIN course as c ON c.course_id = r.course_id
-	                    INNER JOIN teebox as t ON t.course_id = c.course_id 
-                    WHERE user_id = @userId";
+	                    INNER JOIN teebox as t ON t.course_id = c.course_id AND t.teebox_id = r.teebox_id
+                    WHERE user_id = @userId AND r.is_deleted = false";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryAsync<ScorecardSummaryQueryModel>(sql, new {userId});
+        return rv.ToList();
+    }
+    
+    public async Task<ScorecardSummaryQueryModel?> GetScorecardSummaryByRoundIdAsync(long roundId)
+    {
+        var sql = @"SELECT c.course_name, t.teebox_name, t.slope, t.rating, r.score, r.date_played, r.user_id, r.round_id, t.yardage_out, t.yardage_in, t.yardage_total, r.score_out, r.score_in
+                    FROM round as r
+	                    INNER JOIN course as c ON c.course_id = r.course_id
+	                    INNER JOIN teebox as t ON t.course_id = c.course_id AND t.teebox_id = r.teebox_id
+                    WHERE r.round_id = @roundId AND r.is_deleted = false";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryFirstOrDefaultAsync<ScorecardSummaryQueryModel>(sql, new {roundId});
+        return rv;
+    }
+
+    public async Task<List<HoleScoreQueryModel>> GetScorecardHoleScoresByRoundIdAsync(long roundId)
+    {
+        var sql = @"SELECT s.hole_score, h.hole_id, h.yardage, h.handicap, h.par
+                    FROM score as s 
+	                    INNER JOIN hole as h ON s.hole_id = h.hole_id
+	                    INNER JOIN teebox as t ON h.teebox_id = t.teebox_id 
+	                    INNER JOIN round as r ON r.teebox_id = t.teebox_id
+                    WHERE r.round_id = @roundId AND r.is_deleted = false";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryAsync<HoleScoreQueryModel>(sql, new {roundId});
         return rv.ToList();
     }
 }

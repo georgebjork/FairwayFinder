@@ -7,12 +7,6 @@
 
 <div class="row d-flex justify-content-center">
     <div class="col-8">
-
-        <div class="col-12">
-            <h1>Add Tee Box</h1>
-        </div>
-
-        <hr/>
         
         <form
             hx-post="@Url.Action("AddTeePost", new { courseId = Model.CourseId })"
@@ -22,6 +16,7 @@
             <input type="hidden" asp-for="CourseId" value="@Model.CourseId"/>
 
             <div id="teebox-form">
+                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
                 @await Html.PartialAsync("_TeeboxForm", Model)
             </div>
 

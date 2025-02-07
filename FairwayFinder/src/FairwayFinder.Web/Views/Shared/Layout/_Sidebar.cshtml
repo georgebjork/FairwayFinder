@@ -1,17 +1,17 @@
 ﻿@using Microsoft.AspNetCore.Mvc.TagHelpers
 
 @* Desktop Sidebar (visible on md and larger) *@
-<nav class="d-none d-md-block col-md-3 col-lg-2 sidebar min-vh-100 border-end">
+<nav class="d-none d-md-block sidebar min-vh-100 border-end" style="min-width: 280px;">
     <div class="position-sticky pt-3">
         <ul class="nav flex-column">
 
-            <a class="d-flex justify-content-center text-decoration-none text-body">
+            <a class="d-flex justify-content-center text-decoration-none text-body mb-3">
                 <span class="fs-4">
                     <i class="fa-solid fa-golf-ball-tee"></i>
                     FairwayFinder
                 </span>
             </a>
-            <hr>
+            
             
             <div class="px-3">
             @await Html.PartialAsync("Layout/_SidebarItems")
