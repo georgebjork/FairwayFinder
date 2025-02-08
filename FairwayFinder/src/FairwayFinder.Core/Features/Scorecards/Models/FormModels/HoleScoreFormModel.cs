@@ -20,7 +20,5 @@ public class HoleScoreFormModel
     
     // Non form fields
     public long Par { get; set; }
-    public long Yardage { get; set; }
-
-    public Hole Hole { get; set; } = new();
+    public long Yardage { get; set; } 
 }

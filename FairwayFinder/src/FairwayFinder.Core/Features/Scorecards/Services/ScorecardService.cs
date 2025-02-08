@@ -5,6 +5,7 @@ using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Repositories.Interfaces;
 using FairwayFinder.Core.Services;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Core.Features.Scorecards.Services;
@@ -56,13 +57,15 @@ public class ScorecardService
 
         foreach (var score in scores)
         {
+            var h = holes.FirstOrDefault(x => x.hole_id == score.hole_id);
             score_forms.Add(new HoleScoreFormModel
             {
                 HoleId = score.hole_id,
                 ScoreId = score.score_id,
                 HoleNumber = score.hole_number,
                 Score = score.hole_score,
-                Par = score.par
+                Par = score.par,
+                Yardage = h.yardage
             });
         }
 
@@ -143,5 +146,55 @@ public class ScorecardService
             _logger.LogError(ex, "Error occurred while creating a new scorecard.");
             return -1;
         }
+    }
+
+    public async Task<bool> UpdateScorecardAsync(ScorecardFormModel form)
+    {
+        if (form.RoundId is null)
+        {
+            _logger.LogError("Round Id was null when trying to update round.");
+            return false;
+        }
+
+        var roundId = form.RoundId.Value;
+        
+        var round = await _scorecardRepository.GetRoundByIdAsync(roundId);
+        if (round is null)
+        {
+            _logger.LogError("Round came back null with id {0}", roundId);
+            return false;
+        }
+
+
+        // Retrieve hole scores and round stats
+        var hole_scores = await _scorecardRepository.GetScoresForRoundByRoundIdAsync(roundId);
+        var round_stats = await _scorecardRepository.GetRoundStatsForRoundAsync(roundId);
+        
+        
+        // Initialize or update round stats
+        round_stats = round_stats is null
+            ? EntityMetadataHelper.NewRecord(GolfStatHelpers.GenerateRoundStats(form.HoleScore), _usernameRetriever.Username)
+            : EntityMetadataHelper.UpdateRecord(round_stats.RefreshRoundStats(form.HoleScore), _usernameRetriever.Username);
+        round_stats.round_id = roundId;
+        
+        // Update hole_scores with scores from form.HoleScores
+        var updated_hole_scores = hole_scores.Select(score =>
+        {
+            var matchingScore = form.HoleScore.FirstOrDefault(h => h.HoleId == score.hole_id);
+            if (matchingScore != null)
+            {
+                score.hole_score = matchingScore.Score;
+                score.hole_number = matchingScore.HoleNumber;
+                return EntityMetadataHelper.UpdateRecord(score, _usernameRetriever.Username);
+            }
+            return score;
+        }).ToList();
+
+        round.score_out = updated_hole_scores.Where(x => x.hole_number <= 9).Sum(y => y.hole_score);
+        round.score_in = updated_hole_scores.Where(x => x.hole_number > 9).Sum(y => y.hole_score);
+        round.score = round.score_out + round.score_in;
+        round = EntityMetadataHelper.UpdateRecord(round, _usernameRetriever.Username);
+        
+        return await _scorecardRepository.UpdateScorecardAsync(round, updated_hole_scores, round_stats);
     }
 }

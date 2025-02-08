@@ -29,20 +29,33 @@
     }
     else
     {
-        <select class="form-select" asp-for="TeeboxId" >
-
-            <option value="0"> Select Tee </option>
-            @foreach (var t in Model.TeeboxSelectList)
-            {
-                <option value="@t.Key"
-                        hx-get="@Url.Action("GetTeeboxData", new {teeboxId = int.Parse(t.Key)})"
-                        hx-target="#teebox-data"
-                        hx-swap="innerHTML"
-                        hx-trigger="click">
-                    @t.Value
+        if (Model.IsUpdate)
+        {
+            <input type="hidden" asp-for="TeeboxId" value="@Model.TeeboxId"/>
+            <select class="form-select" asp-for="TeeboxId" disabled>
+                <option value="@Model.TeeboxSelectList[Model.TeeboxId]">
+                    @Model.TeeboxSelectList[Model.TeeboxId]
                 </option>
-            }
-        </select> 
+            </select>
+        }
+        else
+        {
+            <select class="form-select" asp-for="TeeboxId" >
+
+                <option value="0"> Select Tee </option>
+                @foreach (var t in Model.TeeboxSelectList)
+                {
+                    <option value="@t.Key"
+                            hx-get="@Url.Action("GetTeeboxData", new {teeboxId = int.Parse(t.Key)})"
+                            hx-target="#teebox-data"
+                            hx-swap="innerHTML"
+                            hx-trigger="click">
+                        @t.Value
+                    </option>
+                }
+            </select> 
+        }
+        
     }
     <span asp-validation-for="TeeboxId" class="text-danger"></span>
 </div>

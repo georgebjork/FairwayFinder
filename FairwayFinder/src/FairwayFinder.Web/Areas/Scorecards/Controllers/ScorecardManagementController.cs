@@ -99,7 +99,7 @@ public class ScorecardManagementController : BaseScorecardController
         }
         
         SetSuccessMessage("Successfully added round.");
-        return Redirect(nameof(Index), new { username = _usernameRetriever.Username }, "Scorecard");
+        return Redirect("ViewScorecard", new { username = _usernameRetriever.Username, roundId = result }, "Scorecard");
     }
     
     [HttpGet]
@@ -116,7 +116,7 @@ public class ScorecardManagementController : BaseScorecardController
         }
         var course = await _courseLookupService.GetCourseByIdAsync(round.course_id);
         var teebox = await _teeboxLookupService.GetTeeByIdAsync(round.teebox_id);
-        var teeboxes_dropdown = await _teeboxLookupService.GetTeesDropdownForCourseAsync(round.teebox_id);
+        var teeboxes_dropdown = await _teeboxLookupService.GetTeesDropdownForCourseAsync(round.course_id);
         
         if (course is null)
         {
@@ -137,23 +137,44 @@ public class ScorecardManagementController : BaseScorecardController
         form.TeeboxId = teebox.teebox_id.ToString();
         form.TeeboxSelectList = teeboxes_dropdown;
         form.Teebox = teebox;
-
-
+        
         form.HoleScore = hole_scores;
         
         return View(form);
+    }
+
+
+    [HttpPost]
+    [Route("scorecards/{roundId:long}/edit")]
+    public async Task<IActionResult> EditRoundPost([FromRoute] long roundId, [FromForm] ScorecardFormModel form)
+    {
+        if (!ModelState.IsValid)
+        {
+            form = await RefreshFormModelForError(form);
+            form.IsUpdate = true;
+            form.RoundId = roundId;
+            return PartialView("Shared/_RoundForm", form);
+        }
+        
+        var result = await _scorecardService.UpdateScorecardAsync(form);
+
+        if (!result)
+        {
+            SetErrorMessageHtmx("Error occurred updating round. Please try again.");
+            form = await RefreshFormModelForError(form);
+            form.IsUpdate = true;
+            form.RoundId = roundId;
+            return PartialView("Shared/_RoundForm", form);
+        }
+        
+        SetSuccessMessage("Successfully added round.");
+        return Redirect("ViewScorecard", new { username = _usernameRetriever.Username, roundId }, "Scorecard");
     }
     
     
     
     
     
-    
-    
-    
-    
-    
-
     private async Task<ScorecardFormModel> BuildCourseFormModelData(Course course)
     {
         var vm = new ScorecardFormModel();
@@ -176,8 +197,8 @@ public class ScorecardManagementController : BaseScorecardController
             var hs = new HoleScoreFormModel
             {
                 HoleId = hole.hole_id,
-                Hole = hole, 
                 Par = hole.par,
+                Yardage = hole.yardage,
                 HoleNumber = hole.hole_number
             };
             hole_scores.Add(hs);
@@ -211,17 +232,6 @@ public class ScorecardManagementController : BaseScorecardController
         form.Course = course;
         form.Teebox = teebox;
         form.TeeboxSelectList = teeboxes_dropdown;
-        
-        
-        // Ensure we are in the correct order before we merge lists
-        var orderedHoles = holes.OrderBy(h => h.hole_number).ToList();
-        var orderedHoleScores = form.HoleScore.OrderBy(hs => hs.Hole.hole_number).ToList();
-
-        form.HoleScore = orderedHoleScores.Zip(orderedHoles, (holeScore, hole) =>
-        {
-            holeScore.Hole = hole;
-            return holeScore;
-        }).ToList();
 
         return form;
     }

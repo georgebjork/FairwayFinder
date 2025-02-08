@@ -39,6 +39,9 @@ public class Score : IEntityMetadata
     public string updated_by { get; set; } = "";
     public DateTime updated_on { get; set; }
     public bool is_deleted { get; set; }
+    
+    [Computed]
+    public long hole_number { get; set; }
 }
 
 [Table("hole")]

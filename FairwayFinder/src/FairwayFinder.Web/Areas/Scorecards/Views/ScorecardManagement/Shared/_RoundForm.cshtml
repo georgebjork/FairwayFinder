@@ -6,17 +6,21 @@
 
 <div id="course-information">
     <div class="mb-3">
+        
+        <input asp-for="RoundId" value="@Model.RoundId" type="hidden"/>
+        @if (!Model.IsUpdate)
+        {
+            <input id="course-search" type="text" class="form-control" placeholder="Search For Course" autocomplete="off"
+                   name="course"
+                   hx-get="@Url.Action("SearchForCourseHtmx")"
+                   hx-trigger="keyup changed delay:500ms"
+                   hx-target="#course-search-results"
+                   hx-swap="innerHTML"/>
 
-        <input id="course-search" type="text" class="form-control" placeholder="Search For Course" autocomplete="off"
-               name="course"
-               hx-get="@Url.Action("SearchForCourseHtmx")"
-               hx-trigger="keyup changed delay:500ms"
-               hx-target="#course-search-results"
-               hx-swap="innerHTML"/>
-
-        <div id="course-search-results">
-            @await Html.PartialAsync("Shared/_CreateRoundCourseSearchResults", new List<Course>())
-        </div>
+            <div id="course-search-results">
+                @await Html.PartialAsync("Shared/_CreateRoundCourseSearchResults", new List<Course>())
+            </div>
+        }
     </div>
 
     <div class="row" id="course-data">

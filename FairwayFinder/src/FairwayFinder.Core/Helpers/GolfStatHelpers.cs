@@ -20,4 +20,18 @@ public static class GolfStatHelpers
             triple_or_worse = holes.Count(x => x.Score >= x.Par + 3),
         };
     }
+    
+    public static RoundStats RefreshRoundStats(this RoundStats stats, List<HoleScoreFormModel> holes)
+    {
+        stats.hole_in_one = holes.Count(x => x.Score == 1);
+        stats.double_eagles = holes.Count(x => x.Score == x.Par - 3);
+        stats.eagles = holes.Count(x => x.Score == x.Par - 2);
+        stats.birdies = holes.Count(x => x.Score == x.Par - 1);
+        stats.pars = holes.Count(x => x.Score == x.Par);
+        stats.bogies = holes.Count(x => x.Score == x.Par + 1);
+        stats.double_bogies = holes.Count(x => x.Score == x.Par + 2);
+        stats.triple_or_worse = holes.Count(x => x.Score >= x.Par + 3);
+
+        return stats;
+    }
 }
