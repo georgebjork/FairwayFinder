@@ -4,7 +4,8 @@ using FairwayFinder.Web.Models;
 
 namespace FairwayFinder.Web.Controllers;
 
-public class HomeController : Controller
+
+public class HomeController : BaseAuthorizedController
 {
     private readonly ILogger<HomeController> _logger;
 

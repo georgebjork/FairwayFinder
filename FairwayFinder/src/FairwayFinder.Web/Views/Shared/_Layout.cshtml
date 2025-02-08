@@ -22,8 +22,8 @@
         <!-- Main content -->
         <main class="px-0 flex-grow-1">
             @await Html.PartialAsync("Layout/_Navbar")
-            @await Html.PartialAsync("_MessagePartial")
             <div class="p-3">
+                @await Html.PartialAsync("_MessagePartial")
                 @RenderBody()
             </div>
         </main>

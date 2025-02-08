@@ -30,6 +30,14 @@
 
             <li><hr class="dropdown-divider"></li>
 
+            <li>
+                <a class="dropdown-item" asp-area="UserManagement" asp-controller="ChangePassword" asp-action="ChangePassword">
+                    <i class="fa-solid fa-lock pe-2"></i> Change Password
+                </a>
+            </li>
+
+            <li><hr class="dropdown-divider"></li>
+
             @if (User.IsInRole(Roles.Admin)) {
                 <li>
                     <a class="dropdown-item" asp-area="UserManagement" asp-controller="UserManagement" asp-action="Index">
