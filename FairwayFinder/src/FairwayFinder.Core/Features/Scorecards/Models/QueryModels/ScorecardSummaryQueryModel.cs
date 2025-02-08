@@ -14,4 +14,5 @@ public class ScorecardSummaryQueryModel
     public long yardage_out { get; set; }
     public long yardage_in { get; set; }
     public long yardage_total { get; set; }
+    public long par { get; set; }
 }

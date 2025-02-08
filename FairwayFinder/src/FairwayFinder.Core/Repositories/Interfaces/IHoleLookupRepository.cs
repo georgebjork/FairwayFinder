@@ -6,4 +6,5 @@ public interface IHoleLookupRepository : IBaseRepository
 {
     public Task<List<Hole>> GetHolesForTeeAsync(long teeboxId);
 
+    public Task<List<Hole>> GetHolesForRoundByRoundIdAsync(long roundId);
 }

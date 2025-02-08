@@ -1,0 +1,38 @@
+﻿@using FairwayFinder.Core.Services
+@model FairwayFinder.Core.Features.Scorecards.Models.FormModels.ScorecardFormModel
+@inject IUsernameRetriever _UsernameRetriever
+@{
+    ViewData["Title"] = "Edit Round";
+}
+
+<div class="row d-flex justify-content-center">
+    <div class="col-md-8 col-sm-12">
+        <div class="row d-flex justify-content-between">
+            <div class="col-auto">
+                <h1>Edit Round</h1>
+            </div>
+
+            <div class="col-auto">
+                <a class="btn btn-link" asp-controller="Scorecard" asp-action="Index" asp-route-username="@_UsernameRetriever.Username">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </a>
+            </div>
+        </div>
+        
+        @await Html.PartialAsync("_Divider")
+
+        <form
+            hx-post="@Url.Action("AddRoundPost")"
+            hx-swap="innerHTML"
+            hx-target="#round-form">
+            
+            <div id="round-form">
+                @await Html.PartialAsync("Shared/_RoundForm", Model)
+            </div>
+
+            <div>
+                <button id="login-submit" type="submit" class="btn btn-lg btn-primary w-100">Update Round</button>
+            </div>
+        </form>
+    </div>
+</div>

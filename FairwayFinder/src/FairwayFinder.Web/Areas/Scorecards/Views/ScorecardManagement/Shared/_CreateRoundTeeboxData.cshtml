@@ -23,18 +23,19 @@
     @for (int i = 0; i < Model.HoleScore.Count; i++)
     {
         <input type="hidden" asp-for="@Model.HoleScore[i].HoleId" value="@Model.HoleScore[i].HoleId" />
-        <input type="hidden" asp-for="@Model.HoleScore[i].HoleNumber" value="@Model.HoleScore[i].Hole.hole_number" />
+        <input type="hidden" asp-for="@Model.HoleScore[i].HoleNumber" value="@Model.HoleScore[i].HoleNumber" />
+        <input type="hidden" asp-for="@Model.HoleScore[i].Par" value="@Model.HoleScore[i].Par" />
         
         <div class="col-4 p-3">
             <div class="card">
                 <div class="card-header">
                     <div class="d-flex justify-content-between">
                         <div class="col-auto">
-                            Hole @Model.HoleScore[i].Hole.hole_number
+                            Hole @Model.HoleScore[i].HoleNumber
                         </div>
 
                         <div class="col-auto">
-                            Par @Model.HoleScore[i].Hole.par | @Model.HoleScore[i].Hole.yardage Yards
+                            Par @Model.HoleScore[i].Par | @Model.HoleScore[i].Yardage Yards
                         </div>
                     </div>
                     

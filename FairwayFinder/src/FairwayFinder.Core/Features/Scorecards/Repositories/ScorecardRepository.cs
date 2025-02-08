@@ -12,16 +12,16 @@ namespace FairwayFinder.Core.Features.Scorecards.Repositories;
 
 public interface IScorecardRepository : IBaseRepository
 {
-    Task<int> CreateNewScorecardAsync(Round round, List<Score> scores);
+    Task<int> CreateNewScorecardAsync(Round round, List<Score> scores, RoundStats stats);
     Task<List<ScorecardSummaryQueryModel>> GetScorecardSummaryByUserIdAsync(string userId);
     Task<ScorecardSummaryQueryModel?> GetScorecardSummaryByRoundIdAsync(long roundId);
     Task<List<HoleScoreQueryModel>> GetScorecardHoleScoresByRoundIdAsync(long roundId);
-
+    Task<Round?> GetScorecardByIdAsync(long roundId);
 }
 
 public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecardRepository> logger) : BasePgRepository(configuration), IScorecardRepository
 {
-    public async Task<int> CreateNewScorecardAsync(Round round, List<Score> scores)
+    public async Task<int> CreateNewScorecardAsync(Round round, List<Score> scores, RoundStats stats)
     {
         await using var conn = await GetNewOpenConnection();
         await using var trans = await conn.BeginTransactionAsync();
@@ -34,6 +34,10 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
                 score.round_id = round_id;
                 await conn.InsertAsync(score, trans);
             }
+
+            stats.round_id = round_id;
+            await conn.InsertAsync(stats, trans);
+            
             await trans.CommitAsync();
             return round_id;
         }
@@ -47,7 +51,7 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
 
     public async Task<List<ScorecardSummaryQueryModel>> GetScorecardSummaryByUserIdAsync(string userId)
     {
-        var sql = @"SELECT c.course_name, t.teebox_name, t.slope, t.rating, r.score, r.date_played, r.user_id, r.round_id, t.yardage_out, t.yardage_in, t.yardage_total, r.score_out, r.score_in
+        var sql = @"SELECT c.course_name, t.teebox_name, t.slope, t.rating, r.score, r.date_played, r.user_id, r.round_id, t.yardage_out, t.yardage_in, t.yardage_total, r.score_out, r.score_in, t.par
                     FROM round as r
 	                    INNER JOIN course as c ON c.course_id = r.course_id
 	                    INNER JOIN teebox as t ON t.course_id = c.course_id AND t.teebox_id = r.teebox_id
@@ -59,7 +63,7 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
     
     public async Task<ScorecardSummaryQueryModel?> GetScorecardSummaryByRoundIdAsync(long roundId)
     {
-        var sql = @"SELECT c.course_name, t.teebox_name, t.slope, t.rating, r.score, r.date_played, r.user_id, r.round_id, t.yardage_out, t.yardage_in, t.yardage_total, r.score_out, r.score_in
+        var sql = @"SELECT c.course_name, t.teebox_name, t.slope, t.rating, r.score, r.date_played, r.user_id, r.round_id, t.yardage_out, t.yardage_in, t.yardage_total, r.score_out, r.score_in, t.par
                     FROM round as r
 	                    INNER JOIN course as c ON c.course_id = r.course_id
 	                    INNER JOIN teebox as t ON t.course_id = c.course_id AND t.teebox_id = r.teebox_id
@@ -71,7 +75,7 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
 
     public async Task<List<HoleScoreQueryModel>> GetScorecardHoleScoresByRoundIdAsync(long roundId)
     {
-        var sql = @"SELECT s.hole_score, h.hole_id, h.yardage, h.handicap, h.par
+        var sql = @"SELECT s.hole_score, h.hole_id, h.yardage, h.handicap, h.par, h.hole_number, s.score_id
                     FROM score as s 
 	                    INNER JOIN hole as h ON s.hole_id = h.hole_id
 	                    INNER JOIN teebox as t ON h.teebox_id = t.teebox_id 
@@ -80,5 +84,13 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryAsync<HoleScoreQueryModel>(sql, new {roundId});
         return rv.ToList();
+    }
+
+    public async Task<Round?> GetScorecardByIdAsync(long roundId)
+    {
+        var sql = @"SELECT * FROM round WHERE round_id = @roundId AND is_deleted = false";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryFirstOrDefaultAsync<Round>(sql, new {roundId});
+        return rv;
     }
 }

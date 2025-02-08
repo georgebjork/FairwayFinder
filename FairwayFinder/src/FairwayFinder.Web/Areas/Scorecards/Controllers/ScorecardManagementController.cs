@@ -101,6 +101,58 @@ public class ScorecardManagementController : BaseScorecardController
         SetSuccessMessage("Successfully added round.");
         return Redirect(nameof(Index), new { username = _usernameRetriever.Username }, "Scorecard");
     }
+    
+    [HttpGet]
+    [Route("scorecards/{roundId:long}/edit")]
+    public async Task<IActionResult> EditRound([FromRoute] long roundId)
+    {
+        var form = new ScorecardFormModel();
+        var round = await _scorecardService.GetScorecardByIdAsync(roundId);
+
+        if (round is null)
+        {
+            SetErrorMessage("Round does not exist.");
+            return Redirect(nameof(Index), controllerName: "Scorecard", routeValues: new {username = _usernameRetriever.Username});
+        }
+        var course = await _courseLookupService.GetCourseByIdAsync(round.course_id);
+        var teebox = await _teeboxLookupService.GetTeeByIdAsync(round.teebox_id);
+        var teeboxes_dropdown = await _teeboxLookupService.GetTeesDropdownForCourseAsync(round.teebox_id);
+        
+        if (course is null)
+        {
+            SetErrorMessage("Golf course does not exist.");
+            return Redirect(nameof(Index), controllerName: "Scorecard", routeValues: new {username = _usernameRetriever.Username});
+        }
+
+        var hole_scores = await _scorecardService.GetHoleScoreFormsByRoundIdAsync(roundId);
+
+        form.IsUpdate = true;
+        form.RoundId = round.round_id;
+        form.DatePlayed = round.date_played;
+        
+        form.CourseId = course.course_id;
+        form.CourseName = course.course_name;
+        form.Course = course;
+        
+        form.TeeboxId = teebox.teebox_id.ToString();
+        form.TeeboxSelectList = teeboxes_dropdown;
+        form.Teebox = teebox;
+
+
+        form.HoleScore = hole_scores;
+        
+        return View(form);
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
     private async Task<ScorecardFormModel> BuildCourseFormModelData(Course course)
     {
@@ -124,7 +176,9 @@ public class ScorecardManagementController : BaseScorecardController
             var hs = new HoleScoreFormModel
             {
                 HoleId = hole.hole_id,
-                Hole = hole
+                Hole = hole, 
+                Par = hole.par,
+                HoleNumber = hole.hole_number
             };
             hole_scores.Add(hs);
         }

@@ -15,15 +15,17 @@ public class ScorecardService
     private readonly IScorecardRepository _scorecardRepository;
     private readonly CourseLookupService _courseLookupService;
     private readonly TeeboxLookupService _teeboxLookupService;
+    private readonly HoleLookupService _holeLookupService;
     private readonly IUsernameRetriever _usernameRetriever;
 
-    public ScorecardService(ILogger<ScorecardService> logger, IScorecardRepository scorecardRepository, TeeboxLookupService teeboxLookupService, CourseLookupService courseLookupService, IUsernameRetriever usernameRetriever)
+    public ScorecardService(ILogger<ScorecardService> logger, IScorecardRepository scorecardRepository, TeeboxLookupService teeboxLookupService, CourseLookupService courseLookupService, IUsernameRetriever usernameRetriever, HoleLookupService holeLookupService)
     {
         _logger = logger;
         _scorecardRepository = scorecardRepository;
         _teeboxLookupService = teeboxLookupService;
         _courseLookupService = courseLookupService;
         _usernameRetriever = usernameRetriever;
+        _holeLookupService = holeLookupService;
     }
 
     public async Task<List<ScorecardSummaryQueryModel>> GetScorecardSummaryByUserIdAsync(string username)
@@ -39,6 +41,32 @@ public class ScorecardService
     public async Task<List<HoleScoreQueryModel>> GetScorecardHoleScoresByRoundIdAsync(long roundId)
     {
         return await _scorecardRepository.GetScorecardHoleScoresByRoundIdAsync(roundId);
+    }
+    
+    public async Task<Round?> GetScorecardByIdAsync(long roundId)
+    {
+        return await _scorecardRepository.GetScorecardByIdAsync(roundId);
+    }
+    
+    public async Task<List<HoleScoreFormModel>> GetHoleScoreFormsByRoundIdAsync(long roundId)
+    {
+        var holes = await _holeLookupService.GetHolesForRoundByRoundIdAsync(roundId);
+        var scores = await _scorecardRepository.GetScorecardHoleScoresByRoundIdAsync(roundId);
+        var score_forms = new List<HoleScoreFormModel>();
+
+        foreach (var score in scores)
+        {
+            score_forms.Add(new HoleScoreFormModel
+            {
+                HoleId = score.hole_id,
+                ScoreId = score.score_id,
+                HoleNumber = score.hole_number,
+                Score = score.hole_score,
+                Par = score.par
+            });
+        }
+
+        return score_forms;
     }
 
     public async Task<int> CreateNewScorecardAsync(ScorecardFormModel form)
@@ -77,6 +105,7 @@ public class ScorecardService
             var username = _usernameRetriever.Username;
             var user_id = _usernameRetriever.UserId;
             
+            // Round
             var round = new Round()
             {
                 course_id = form.CourseId,
@@ -88,7 +117,12 @@ public class ScorecardService
                 score_in = form.HoleScore.Where(x => x.HoleNumber > 9).Sum(x => x.Score)
             };
             round = EntityMetadataHelper.NewRecord(round, username);
-
+            
+            // Round stats
+            var round_stats = GolfStatHelpers.GenerateRoundStats(form.HoleScore);
+            round_stats = EntityMetadataHelper.NewRecord(round_stats, username);
+            
+            // Hole Scores
             var holes = new List<Score>();
             foreach (var h in form.HoleScore)
             {
@@ -101,7 +135,7 @@ public class ScorecardService
                 holes.Add(EntityMetadataHelper.NewRecord(hole, username));
             }
             
-            var rv = await _scorecardRepository.CreateNewScorecardAsync(round, holes);
+            var rv = await _scorecardRepository.CreateNewScorecardAsync(round, holes, round_stats);
             return rv;
         }
         catch (Exception ex)
@@ -110,5 +144,4 @@ public class ScorecardService
             return -1;
         }
     }
-
 }

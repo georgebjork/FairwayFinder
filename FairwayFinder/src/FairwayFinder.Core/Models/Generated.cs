@@ -78,17 +78,39 @@ public class Round : IEntityMetadata
     public string user_id { get; set; } = "";
 }
 
-[Table("stats")]
-public class Stats : IEntityMetadata
+[Table("hole_stats")]
+public class HoleStats : IEntityMetadata
 {
     [Key]
-    public long stat_id { get; set; }
+    public long hole_stats_id { get; set; }
+    public long round_id { get; set; }
     public long score_id { get; set; }
     public bool? hit_fairway { get; set; }
     public string miss_fairway_type { get; set; } = "";
     public bool? hit_green { get; set; }
     public string miss_green_type { get; set; } = "";
     public short? number_of_putts { get; set; }
+    public string created_by { get; set; } = "";
+    public DateTime created_on { get; set; }
+    public string updated_by { get; set; } = "";
+    public DateTime updated_on { get; set; }
+    public bool is_deleted { get; set; }
+}
+
+[Table("round_stats")]
+public class RoundStats : IEntityMetadata
+{
+    [Key]
+    public long round_stats_id { get; set; }
+    public long round_id { get; set; }
+    public int hole_in_one { get; set; }
+    public int double_eagles { get; set; }
+    public int eagles { get; set; }
+    public int birdies { get; set; }
+    public int pars { get; set; }
+    public int bogies { get; set; }
+    public int double_bogies { get; set; }
+    public int triple_or_worse { get; set; }
     public string created_by { get; set; } = "";
     public DateTime created_on { get; set; }
     public string updated_by { get; set; } = "";

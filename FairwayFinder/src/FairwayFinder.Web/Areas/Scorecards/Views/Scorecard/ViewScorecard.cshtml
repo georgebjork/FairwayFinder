@@ -1,4 +1,5 @@
-﻿@model FairwayFinder.Core.Features.Scorecards.Models.ViewModels.ScorecardViewModel
+﻿@using FairwayFinder.Core.Helpers
+@model FairwayFinder.Core.Features.Scorecards.Models.ViewModels.ScorecardViewModel
 
 @{
     ViewData["Title"] = $"Scorecard - {Model.ScorecardSummary.course_name}";
@@ -12,7 +13,29 @@
 }
 
 
+<div class="row d-flex justify-content-between">
+    <div class="col-auto">
+        <h1>@Model.ScorecardSummary.course_name</h1>
+    </div>
 
+    <div class="col-auto">
+        <a class="btn btn-link me-2" asp-action="Index" asp-route-username="@Model.Username">
+            <i class="fa-solid fa-arrow-left"></i> Scorecards
+        </a>
+        <a class="btn btn-link" asp-controller="ScorecardManagement" asp-action="EditRound" asp-route-roundId="@Model.ScorecardSummary.round_id">
+            <i class="fa-solid fa-pen-to-square"></i> Edit Round
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12 mb-0">
+        <p class="text-secondary mb-0"> Tee Box: @Model.ScorecardSummary.teebox_name</p>
+    </div>
+    <div class="col-12">
+        <p class="text-secondary"> Date: @Model.ScorecardSummary.date_played.FormatDate()</p>
+    </div>
+</div>
 
 
 
@@ -21,21 +44,22 @@
     @await Html.PartialAsync("_ScorecardHeader", true)
     </thead>
     <tbody>
-    @*Par*@
+
+    @*Yardage*@
     <tr>
-        <th colspan="2">Par</th>
+        <th colspan="2">@Model.ScorecardSummary.teebox_name</th>
         @for (var i = 0; i < front_nine_max; i++)
         {
-            <td class="text-center">@Model.Holes[i].par</td>
+            <td class="text-center">@Model.Holes[i].yardage</td>
         }
-        <td class="text-center" colspan="2">&nbsp;</td>
+        <td class="text-center" colspan="2">@Model.ScorecardSummary.yardage_out</td>
         @for (var i = front_nine_max; i < back_nine_max; i++)
         {
-            <td class="text-center">@Model.Holes[i].par</td>
+            <td class="text-center">@Model.Holes[i].yardage</td>
         }
-        <td class="text-center" colspan="2">&nbsp;</td>
-        <td class="text-center" colspan="2">&nbsp;</td>
-        <td class="text-center" colspan="2">&nbsp;</td>
+        <td class="text-center" colspan="2">@Model.ScorecardSummary.yardage_in</td>
+        <td class="text-center" colspan="2">@Model.ScorecardSummary.yardage_total</td>
+        <td class="text-center" colspan="2">@Model.ScorecardSummary.slope / @Model.ScorecardSummary.rating</td>
     </tr>
 
     @*Handicap*@
@@ -55,27 +79,27 @@
         <td class="text-center" colspan="2">&nbsp;</td>
     </tr>
 
-    @*Yardage*@
+
+    @*Par*@
     <tr>
-        <th colspan="2">@Model.ScorecardSummary.teebox_name</th>
+        <th colspan="2">Par</th>
         @for (var i = 0; i < front_nine_max; i++)
         {
-            <td class="text-center">@Model.Holes[i].yardage</td>
+            <td class="text-center">@Model.Holes[i].par</td>
         }
-        <td class="text-center" colspan="2">@Model.ScorecardSummary.yardage_out</td>
+        <td class="text-center" colspan="2">@Model.Holes.Where(x => x.hole_number <= front_nine_max).Sum(h => h.par)</td>
         @for (var i = front_nine_max; i < back_nine_max; i++)
         {
-            <td class="text-center">@Model.Holes[i].yardage</td>
+            <td class="text-center">@Model.Holes[i].par</td>
         }
-        <td class="text-center" colspan="2">@Model.ScorecardSummary.yardage_in</td>
-        <td class="text-center" colspan="2">@Model.ScorecardSummary.yardage_total</td>
-        <td class="text-center" colspan="2">@Model.ScorecardSummary.slope / @Model.ScorecardSummary.rating</td>
+        <td class="text-center" colspan="2">@Model.Holes.Where(x => x.hole_number > front_nine_max).Sum(h => h.par)</td>
+        <td class="text-center" colspan="2">@Model.ScorecardSummary.par</td>
+        <td class="text-center" colspan="2">&nbsp;</td>
     </tr>
 
-
-    @*Yardage*@
+    @*Score*@
     <tr>
-        <th colspan="2">Name</th>
+        <td colspan="2">@Model.Name</td>
         @for (var i = 0; i < front_nine_max; i++)
         {
             <td class="text-center">@Model.Holes[i].hole_score</td>
@@ -91,3 +115,17 @@
     </tr>
     </tbody>
 </table>
+
+
+
+<div class="row d-flex justify-content-between">
+    <div class="col-auto">
+        <h1>Stats</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div>
+        
+    </div>
+</div>

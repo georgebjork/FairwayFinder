@@ -19,4 +19,9 @@ public class HoleLookupService
     {
         return await _holeLookupRepository.GetHolesForTeeAsync(teeboxId);
     }
+
+    public async Task<List<Hole>> GetHolesForRoundByRoundIdAsync(long roundId)
+    {
+        return await _holeLookupRepository.GetHolesForRoundByRoundIdAsync(roundId);
+    }
 }
