@@ -1,5 +1,6 @@
 using FairwayFinder.Core.Features.UserManagement.Models.FormModels;
 using FairwayFinder.Core.Identity;
+using FairwayFinder.Core.Services;
 using FairwayFinder.Web.Controllers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -18,15 +19,18 @@ public class ChangePasswordController : BaseUserManagementController
     }
 
     [HttpGet]
-    [Route("change-password")]
-    public IActionResult ChangePassword()
+    [Route("user-management/{userId}/change-password")]
+    public IActionResult ChangePassword([FromRoute] string userId)
     {
-        return View(new ChangePasswordFormModel());
+        return PartialView(new ChangePasswordFormModel
+        {
+            UserId = userId
+        });
     }
     
     [HttpPost]
-    [Route("change-password")]
-    public async Task<IActionResult> ChangePasswordPost([FromForm] ChangePasswordFormModel form)
+    [Route("user-management/{userId}/change-password")]
+    public async Task<IActionResult> ChangePasswordPost([FromRoute] string userId, [FromForm] ChangePasswordFormModel form)
     {
         if (!ModelState.IsValid)
         {
@@ -36,8 +40,8 @@ public class ChangePasswordController : BaseUserManagementController
         var user = await _userManager.GetUserAsync(User);
         if (user == null)
         {
-            SetErrorMessage("Unable to find user.");
-            return Redirect(nameof(ChangePassword));
+            SetErrorMessageHtmx("Unable to find user.");
+            return PartialView("_ChangePasswordForm", new ChangePasswordFormModel());
         }
 
         var result = await _userManager.ChangePasswordAsync(user, form.OldPassword, form.NewPassword);
@@ -52,7 +56,7 @@ public class ChangePasswordController : BaseUserManagementController
 
         await _signInManager.RefreshSignInAsync(user);
         
-        SetSuccessMessage("Password successfully changed");
-        return Redirect(nameof(ChangePassword));
+        SetSuccessMessageHtmx("Password successfully changed");
+        return PartialView("_ChangePasswordForm", new ChangePasswordFormModel());
     }
 }

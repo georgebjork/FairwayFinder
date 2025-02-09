@@ -1,9 +1,10 @@
 ﻿@using FairwayFinder.Core.Identity
 @using FairwayFinder.Core.Identity.Settings
+@using FairwayFinder.Core.Services
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 @inject SignInManager<ApplicationUser> SignInManager
-
+@inject IUsernameRetriever _usernameRetriever;
 
 @if (SignInManager.IsSignedIn(User))
 {
@@ -23,19 +24,10 @@
 
         <ul class="dropdown-menu">
             <li>
-                <a class="dropdown-item" title="Manage">
+                <a class="dropdown-item" title="Manage" asp-area="UserManagement" asp-controller="EditUser" asp-action="EditUser" asp-route-userId="@_usernameRetriever.UserId">
                     <i class="fa-solid fa-user-gear pe-2"></i> Profile
                 </a>
             </li>
-
-            <li><hr class="dropdown-divider"></li>
-
-            <li>
-                <a class="dropdown-item" asp-area="UserManagement" asp-controller="ChangePassword" asp-action="ChangePassword">
-                    <i class="fa-solid fa-lock pe-2"></i> Change Password
-                </a>
-            </li>
-
             <li><hr class="dropdown-divider"></li>
 
             @if (User.IsInRole(Roles.Admin)) {

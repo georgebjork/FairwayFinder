@@ -86,7 +86,7 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
 
     public async Task<List<ScorecardSummaryQueryModel>> GetScorecardSummaryByUserIdAsync(string userId)
     {
-        var sql = @"SELECT c.course_name, t.teebox_name, t.slope, t.rating, r.score, r.date_played, r.user_id, r.round_id, t.yardage_out, t.yardage_in, t.yardage_total, r.score_out, r.score_in, t.par
+            var sql = @"SELECT c.course_name, t.teebox_name, t.slope, t.rating, r.score, r.date_played, r.user_id, r.round_id, t.yardage_out, t.yardage_in, t.yardage_total, r.score_out, r.score_in, t.par
                     FROM round as r
 	                    INNER JOIN course as c ON c.course_id = r.course_id
 	                    INNER JOIN teebox as t ON t.course_id = c.course_id AND t.teebox_id = r.teebox_id

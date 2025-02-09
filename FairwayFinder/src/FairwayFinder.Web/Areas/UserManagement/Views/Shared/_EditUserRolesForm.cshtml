@@ -1,0 +1,74 @@
+@model FairwayFinder.Core.Features.UserManagement.Models.FormModels.UserRolesFormModel
+
+<div class="row">
+    
+    <div class="col-12">
+        @await Html.PartialAsync("_MessageHtmxPartial")
+    </div>
+    
+    <div class="col-6">
+        <div class="card">
+            <div class="card-header">
+                Available Roles
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                @foreach (var role in Model.AvailableRoles)
+                {
+                    <a class="list-group-item list-group-item-action d-flex justify-content-between">
+                        <div class="align-middle">@role</div>
+                        <div>
+                            <form
+                                hx-post="@Url.Action("AssignUserRole", new {userId = Model.UserId})"
+                                hx-target="#content"
+                                hx-swap="innerHTML">
+                               
+                                <input type="hidden" asp-for="SelectRole" value="@role"/>
+                                <input type="hidden" asp-for="UserId" value="@Model.UserId"/>
+
+                                <button class="btn btn-secondary btn-sm" type="submit">
+                                    <i class="fa-solid fa-plus pe-2"></i> Assign
+                                </button>
+                            </form>
+                        </div>
+                    </a>
+                }
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-6">
+        <div class="card">
+            <div class="card-header">
+                Assigned Roles
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    @foreach (var role in Model.CurrentRoles)
+                    {
+                        <a class="list-group-item list-group-item-action d-flex justify-content-between">
+                            <div class="align-middle">@role</div>
+                            <div>
+                                <div>
+                                    <form
+                                        hx-post="@Url.Action("RemoveUserRole", new {userId = Model.UserId})"
+                                        hx-target="#content"
+                                        hx-swap="innerHTML">
+
+                                        <input type="hidden" asp-for="SelectRole" value="@role"/>
+                                        <input type="hidden" asp-for="UserId" value="@Model.UserId"/>
+
+                                        <button class="btn btn-danger btn-sm">
+                                            <i class="fa-solid fa-trash-can pe-2"></i> Remove
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

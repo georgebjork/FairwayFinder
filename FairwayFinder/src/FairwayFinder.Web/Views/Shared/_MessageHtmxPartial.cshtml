@@ -15,7 +15,7 @@
     <script type='text/javascript'>
         $(function() {
             $("#success-message-htmx").fadeTo(4000, 500).slideUp(500, function(){
-                $(this).alert('close');
+                $(this).remove();
             });
         });
     </script>
@@ -32,7 +32,7 @@
     <script type='text/javascript'>
         $(function() {
             $("#error-message-htmx").fadeTo(4000, 500).slideUp(500, function(){
-                $(this).alert('close');
+                $(this).remove();
             });
         });
     </script>
