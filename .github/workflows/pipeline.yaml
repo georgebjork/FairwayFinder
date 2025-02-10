@@ -1,8 +1,10 @@
 name: Deploy Images to GHCR
 on:
  push:
-   branches:
-     - main
+  branches:
+    - main
+  paths:
+    - 'FairwayFinder/**'
 
 permissions:
   packages: write
