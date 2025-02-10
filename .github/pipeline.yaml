@@ -1,11 +1,8 @@
-
-
 name: Deploy Images to GHCR
-
 on:
  push:
    branches:
-     - "main"
+     - main
 
 permissions:
   packages: write
