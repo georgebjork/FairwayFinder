@@ -5,6 +5,7 @@ using FairwayFinder.Core.Identity;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Services;
 using FairwayFinder.Core.UserManagement.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
@@ -27,6 +28,7 @@ public class ScorecardController : BaseScorecardController
         _userManager = userManager;
     }
 
+    [AllowAnonymous]
     [Route("scorecards/@{username}")]
     public async Task<IActionResult> Index([FromRoute] string username)
     {
@@ -54,7 +56,7 @@ public class ScorecardController : BaseScorecardController
         return View(vm);
     }
     
-    
+    [AllowAnonymous]
     [Route("scorecards/@{username}/round/{roundId:long}")]
     public async Task<IActionResult> ViewScorecard([FromRoute] string username, [FromRoute] long roundId)
     {
