@@ -67,7 +67,6 @@ public class ScorecardManagementController : BaseScorecardController
     [Route("/scorecards/get-teebox-data/{teeboxId:long}")]
     public async Task<IActionResult> GetTeeboxData(long teeboxId)
     {
-        // Retrieve the course. If it doesn't exist, set an error and redirect.
         var teebox = await _teeboxLookupService.GetTeeByIdAsync(teeboxId);
         if (teebox is null)
         {
@@ -205,7 +204,7 @@ public class ScorecardManagementController : BaseScorecardController
         }
 
         vm.Teebox = teebox;
-        vm.HoleScore = hole_scores;
+        vm.HoleScore = hole_scores.OrderBy(x => x.HoleNumber).ToList();
         
         var course = await _courseLookupService.GetCourseByIdAsync(teebox.course_id);
         if (course is null) // This should never happen but just to make the complier happy.
