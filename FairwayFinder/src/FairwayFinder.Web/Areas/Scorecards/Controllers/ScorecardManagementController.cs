@@ -204,7 +204,7 @@ public class ScorecardManagementController : BaseScorecardController
         }
 
         vm.Teebox = teebox;
-        vm.HoleScore = hole_scores.OrderBy(x => x.HoleNumber).ToList();
+        vm.HoleScore = hole_scores;
         
         var course = await _courseLookupService.GetCourseByIdAsync(teebox.course_id);
         if (course is null) // This should never happen but just to make the complier happy.

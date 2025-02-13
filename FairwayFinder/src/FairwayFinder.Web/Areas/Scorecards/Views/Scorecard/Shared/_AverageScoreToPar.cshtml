@@ -1,0 +1,23 @@
+@model FairwayFinder.Core.Features.Scorecards.Models.ScorecardRoundStats
+
+<div class="card">
+    <div class="card-header">
+        Average Score To Par
+    </div>
+    <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex justify-content-between">
+            <div>Par 3:</div>
+            <div>@Model.Par3AverageScoreToPar</div>
+        </li>
+
+        <li class="list-group-item d-flex justify-content-between">
+            <div>Par 4:</div>
+            <div>@Model.Par4AverageScoreToPar</div>
+        </li>
+
+        <li class="list-group-item d-flex justify-content-between">
+            <div>Par 5:</div>
+            <div>@Model.Par5AverageScoreToPar</div>
+        </li>
+    </ul>
+</div>

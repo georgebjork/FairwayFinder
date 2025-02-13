@@ -1,0 +1,56 @@
+@model FairwayFinder.Core.Features.Scorecards.Models.ScorecardRoundStats
+
+<div class="card">
+    <div class="card-header">
+        Score To Par
+    </div>
+    <ul class="list-group list-group-flush">
+        <li class="list-group-item d-flex justify-content-between">
+            <div>Par 3:</div>
+            @switch (Model.Par3ScoreToPar)
+            {
+                case 0:
+                    <div>E</div>
+                    break;
+                case > 0:
+                    <div>+@Model.Par3ScoreToPar</div>
+                    break;
+                default:
+                    <div>@Model.Par3ScoreToPar</div>
+                    break;
+            }
+        </li>
+
+        <li class="list-group-item d-flex justify-content-between">
+            <div>Par 4:</div>
+            @switch (Model.Par4ScoreToPar)
+            {
+                case 0:
+                    <div>E</div>
+                    break;
+                case > 0:
+                    <div>+@Model.Par4ScoreToPar</div>
+                    break;
+                default:
+                    <div>@Model.Par4ScoreToPar</div>
+                    break;
+            }
+        </li>
+
+        <li class="list-group-item d-flex justify-content-between">
+            <div>Par 5:</div>
+            @switch (Model.Par5ScoreToPar)
+            {
+                case 0:
+                    <div>E</div>
+                    break;
+                case > 0:
+                    <div>+@Model.Par5ScoreToPar</div>
+                    break;
+                default:
+                    <div>@Model.Par5ScoreToPar</div>
+                    break;
+            }
+        </li>
+    </ul>
+</div>

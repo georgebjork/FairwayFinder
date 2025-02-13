@@ -37,11 +37,33 @@
     </div>
 </div>
 
+<style>
+    .score-birdie {
+        color: green;
+        border: 2px solid green;
+        border-radius: 50%;
+        padding: 5px;
+        display: inline-block;
+        width: 30px;
+        text-align: center;
+    }
+    .score-bogie {
+        color: red;
+        border: 2px solid red;
+        border-radius: 50%;
+        padding: 5px;
+        display: inline-block;
+        width: 30px;
+        text-align: center;
+    }
+</style>
 
 
-<table class="table table-bordered table-responsive">
+<table class="table table-responsive border-start border-top border-end border-bottom">
     <thead>
-    @await Html.PartialAsync("_ScorecardHeader", true)
+    <tr>
+        @await Html.PartialAsync("_ScorecardHeader", true)
+    </tr>
     </thead>
     <tbody>
 
@@ -59,7 +81,6 @@
         }
         <td class="text-center" colspan="2">@Model.ScorecardSummary.yardage_in</td>
         <td class="text-center" colspan="2">@Model.ScorecardSummary.yardage_total</td>
-        <td class="text-center" colspan="2">@Model.ScorecardSummary.slope / @Model.ScorecardSummary.rating</td>
     </tr>
 
     @*Handicap*@
@@ -75,8 +96,7 @@
             <td class="text-center">@Model.Holes[i].handicap</td>
         }
         <td class="text-center" colspan="2">&nbsp;</td>
-        <td class="text-center" colspan="2">&nbsp;</td>
-        <td class="text-center" colspan="2">&nbsp;</td>
+        <td class="text-center" colspan="2">@Model.ScorecardSummary.slope / @Model.ScorecardSummary.rating</td>
     </tr>
 
 
@@ -94,7 +114,6 @@
         }
         <td class="text-center" colspan="2">@Model.Holes.Where(x => x.hole_number > front_nine_max).Sum(h => h.par)</td>
         <td class="text-center" colspan="2">@Model.ScorecardSummary.par</td>
-        <td class="text-center" colspan="2">&nbsp;</td>
     </tr>
 
     @*Score*@
@@ -111,7 +130,6 @@
         }
         <td class="text-center" colspan="2">@Model.ScorecardSummary.score_in</td>
         <td class="text-center" colspan="2">@Model.ScorecardSummary.score</td>
-        <td class="text-center" colspan="2">&nbsp;</td>
     </tr>
     </tbody>
 </table>
@@ -125,7 +143,76 @@
 </div>
 
 <div class="row">
-    <div>
-        
+    @*Score count *@
+    <div class="col-4">
+        @await Html.PartialAsync("Shared/_ScoreCountStats", Model.ScorecardRoundStats.ScoreCountStats)
+    </div>
+
+    <div class="col-4">
+        @await Html.PartialAsync("Shared/_ScoreToPar", Model.ScorecardRoundStats)
+    </div>
+
+    <div class="col-4">
+        @await Html.PartialAsync("Shared/_AverageScoreToPar", Model.ScorecardRoundStats)
     </div>
 </div>
+
+<div class="row mt-3">
+    <div class="col-6">
+        <div class="card">
+            <div class="card-header">
+                Score Distribution
+            </div>
+            <div class="card-body">
+                <canvas id="myPieChart" style="max-height: 400px"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@section Scripts
+{
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            
+            var eagles_or_better = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.eagles + Model.ScorecardRoundStats.ScoreCountStats.double_eagles + Model.ScorecardRoundStats.ScoreCountStats.hole_in_ones));
+            var birdies = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.birdies));
+            var pars = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.pars));
+            var bogies = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.bogies));
+            var doubles = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.double_bogies));
+            var worse = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.triple_or_worse));
+            
+            var ctx = document.getElementById('myPieChart').getContext('2d');
+
+            var myPieChart = new Chart(ctx, {
+                type: 'pie',  // Defines the type of chart
+                data: {
+                    labels: ["Eagles or Better", "Birdies", "Pars", "Bogeys", "Double Bogeys", "Worse"], 
+                    datasets: [{
+                        data: [eagles_or_better, birdies, pars, bogies, doubles, worse], 
+                        backgroundColor: [
+                            "#1d3658",  // Eagles or Better
+                            "#447a9c",  // Birdies
+                            "#a7dadc",  // Pars
+                            "#f2faef",  // Bogeys
+                            "#e63746",  // Double Bogeys
+                            "#5f1c21"   // Worse
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true, // Makes the chart responsive
+                    plugins: {
+                        legend: {
+                            position: 'bottom'  // Positions the legend at the bottom
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+}
+

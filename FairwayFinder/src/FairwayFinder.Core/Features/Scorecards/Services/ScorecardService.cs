@@ -1,3 +1,4 @@
+using FairwayFinder.Core.Features.Scorecards.Models;
 using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 using FairwayFinder.Core.Features.Scorecards.Models.QueryModels;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
@@ -42,6 +43,24 @@ public class ScorecardService
     public async Task<List<HoleScoreQueryModel>> GetScorecardHoleScoresByRoundIdAsync(long roundId)
     {
         return await _scorecardRepository.GetScorecardHoleScoresByRoundIdAsync(roundId);
+    }
+    
+    public async Task<ScorecardRoundStats> GetScorecardRoundStatsAsync(long roundId)
+    {
+        var stats = new ScorecardRoundStats();
+        var scorecard_round_stats = await _scorecardRepository.GetScorecardRoundStatsAsync(roundId);
+        var hole_scores = await GetScorecardHoleScoresByRoundIdAsync(roundId);
+
+        stats.Par3ScoreToPar = GolfStatHelpers.ScoreToParStats(hole_scores, par: 3);
+        stats.Par4ScoreToPar = GolfStatHelpers.ScoreToParStats(hole_scores, par: 4);
+        stats.Par5ScoreToPar = GolfStatHelpers.ScoreToParStats(hole_scores, par: 5);
+        
+        stats.Par3AverageScoreToPar = GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 3);
+        stats.Par4AverageScoreToPar = GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 4);
+        stats.Par5AverageScoreToPar = GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 5);
+        
+        stats.ScoreCountStats = scorecard_round_stats ?? new ScorecardRoundStatsQueryModel();
+        return stats;
     }
     
     public async Task<Round?> GetScorecardByIdAsync(long roundId)

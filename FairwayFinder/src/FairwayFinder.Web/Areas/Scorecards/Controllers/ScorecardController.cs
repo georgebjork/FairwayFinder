@@ -1,4 +1,5 @@
 using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
+using FairwayFinder.Core.Features.Scorecards.Models.QueryModels;
 using FairwayFinder.Core.Features.Scorecards.Models.ViewModels;
 using FairwayFinder.Core.Features.Scorecards.Services;
 using FairwayFinder.Core.Identity;
@@ -61,16 +62,6 @@ public class ScorecardController : BaseScorecardController
     public async Task<IActionResult> ViewScorecard([FromRoute] string username, [FromRoute] long roundId)
     {
         
-        var scorecard_summary = await _scorecardService.GetScorecardSummaryByRoundIdAsync(roundId);
-        var scorecard_scores = await _scorecardService.GetScorecardHoleScoresByRoundIdAsync(roundId);
-
-        if (scorecard_summary is null)
-        {
-            SetErrorMessage("No round was returned with that Id");
-            return Redirect(nameof(Index), new { username });
-        }
-        
-        
         var userId = await _userManagementService.GetUserIdByUsername(username);
         if (string.IsNullOrEmpty(userId))
         {
@@ -80,9 +71,20 @@ public class ScorecardController : BaseScorecardController
         
         var user = await _userManager.FindByIdAsync(userId);
         
+        var scorecard_summary = await _scorecardService.GetScorecardSummaryByRoundIdAsync(roundId);
+        var scorecard_scores = await _scorecardService.GetScorecardHoleScoresByRoundIdAsync(roundId);
+        var scorecard_stats = await _scorecardService.GetScorecardRoundStatsAsync(roundId);
+
+        if (scorecard_summary is null)
+        {
+            SetErrorMessage("No round was returned with that Id");
+            return Redirect(nameof(Index), new { username });
+        }
+        
         var vm = new ScorecardViewModel
         {
             ScorecardSummary = scorecard_summary,
+            ScorecardRoundStats = scorecard_stats,
             Holes = scorecard_scores,
             Name = $"{user.FirstName} {user.LastName}",
             Username = username

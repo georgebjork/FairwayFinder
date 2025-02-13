@@ -21,6 +21,7 @@ public interface IScorecardRepository : IBaseRepository
     Task<List<Score>> GetScoresForRoundByRoundIdAsync(long roundId);
     Task<RoundStats?> GetRoundStatsForRoundAsync(long roundId);
     Task<Round?> GetRoundByIdAsync(long roundId);
+    Task<ScorecardRoundStatsQueryModel?> GetScorecardRoundStatsAsync(long roundId);
 }
 
 public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecardRepository> logger) : BasePgRepository(configuration), IScorecardRepository
@@ -116,7 +117,8 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
                     INNER JOIN teebox AS t ON t.teebox_id = h.teebox_id
                     INNER JOIN round AS r ON r.teebox_id = t.teebox_id 
                         AND r.round_id = s.round_id 
-                    WHERE r.round_id = @roundId AND r.is_deleted = false";
+                    WHERE r.round_id = @roundId AND r.is_deleted = false
+                    ORDER BY h.hole_number";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryAsync<HoleScoreQueryModel>(sql, new {roundId});
         return rv.ToList();
@@ -151,6 +153,14 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
         var sql = "SELECT * FROM round WHERE round_id = @roundId AND is_deleted = false";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryFirstOrDefaultAsync<Round>(sql, new {roundId});
+        return rv;
+    }
+
+    public async Task<ScorecardRoundStatsQueryModel?> GetScorecardRoundStatsAsync(long roundId)
+    {
+        var sql = "SELECT * FROM round_stats WHERE round_id = @roundId AND is_deleted = false";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryFirstOrDefaultAsync<ScorecardRoundStatsQueryModel>(sql, new {roundId});
         return rv;
     }
 }
