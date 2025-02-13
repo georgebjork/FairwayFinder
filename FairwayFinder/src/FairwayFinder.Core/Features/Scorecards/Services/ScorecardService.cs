@@ -193,6 +193,7 @@ public class ScorecardService
         round.score_out = updated_hole_scores.Where(x => x.hole_number <= 9).Sum(y => y.hole_score);
         round.score_in = updated_hole_scores.Where(x => x.hole_number > 9).Sum(y => y.hole_score);
         round.score = round.score_out + round.score_in;
+        round.date_played = form.DatePlayed;
         round = EntityMetadataHelper.UpdateRecord(round, _usernameRetriever.Username);
         
         return await _scorecardRepository.UpdateScorecardAsync(round, updated_hole_scores, round_stats);
