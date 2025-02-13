@@ -55,9 +55,9 @@ public class ScorecardService
         stats.Par4ScoreToPar = GolfStatHelpers.ScoreToParStats(hole_scores, par: 4);
         stats.Par5ScoreToPar = GolfStatHelpers.ScoreToParStats(hole_scores, par: 5);
         
-        stats.Par3AverageScoreToPar = GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 3);
-        stats.Par4AverageScoreToPar = GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 4);
-        stats.Par5AverageScoreToPar = GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 5);
+        stats.Par3AverageScoreToPar = Math.Round(GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 3), 2, MidpointRounding.AwayFromZero);
+        stats.Par4AverageScoreToPar = Math.Round(GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 4), 2, MidpointRounding.AwayFromZero);
+        stats.Par5AverageScoreToPar = Math.Round(GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 5), 2, MidpointRounding.AwayFromZero);
         
         stats.ScoreCountStats = scorecard_round_stats ?? new ScorecardRoundStatsQueryModel();
         return stats;

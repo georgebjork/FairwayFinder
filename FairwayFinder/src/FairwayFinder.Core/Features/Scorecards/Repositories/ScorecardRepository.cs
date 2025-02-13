@@ -91,7 +91,8 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
                     FROM round as r
 	                    INNER JOIN course as c ON c.course_id = r.course_id
 	                    INNER JOIN teebox as t ON t.course_id = c.course_id AND t.teebox_id = r.teebox_id
-                    WHERE user_id = @userId AND r.is_deleted = false";
+                    WHERE user_id = @userId AND r.is_deleted = false
+                    ORDER BY date_played DESC";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryAsync<ScorecardSummaryQueryModel>(sql, new {userId});
         return rv.ToList();

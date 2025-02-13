@@ -166,7 +166,7 @@ public class ScorecardManagementController : BaseScorecardController
             return PartialView("Shared/_RoundForm", form);
         }
         
-        SetSuccessMessage("Successfully added round.");
+        SetSuccessMessage("Successfully updated round.");
         return Redirect("ViewScorecard", new { username = _usernameRetriever.Username, roundId }, "Scorecard");
     }
     
