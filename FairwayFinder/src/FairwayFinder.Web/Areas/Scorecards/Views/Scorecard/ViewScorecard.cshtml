@@ -185,6 +185,18 @@
     </div>
 </div>
 
+@{
+
+        long cumulative = 0;
+        var cumulativeScores = Model.Holes
+            .OrderBy(x => x.hole_number)
+            .Select(x =>
+            {
+                cumulative += (x.hole_score - x.par);
+                return cumulative;
+            })
+            .ToList();
+}
 
 
 @section Scripts
@@ -209,11 +221,8 @@
 
             // Retrieve holes and scores from the model
             const numOfHoles = @Html.Raw(Json.Serialize(Model.Holes.Select(x => x.hole_number).OrderBy(y => y)));
-            const scores = @Html.Raw(Json.Serialize(
-                               Model.Holes.OrderBy(y => y.hole_number).Select(x => x.hole_score - x.par)
-                           ));
-            console.log(numOfHoles);
-
+            const scores = @Html.Raw(Json.Serialize(cumulativeScores));
+            console.log(scores)
             // Line Chart configuration
             const lineData = {
                 labels: numOfHoles,
