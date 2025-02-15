@@ -26,4 +26,13 @@
       <ProjectReference Include="..\FairwayFinder.Core\FairwayFinder.Core.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Content Update="wwwroot\lib\bootstrap\bootstrap-5.3.3-dist\css\bootstrap.min.css.map">
+        <DependentUpon>bootstrap.css</DependentUpon>
+      </Content>
+      <Content Update="wwwroot\lib\bootstrap\bootstrap-5.3.3-dist\css\bootstrap.css.map">
+        <DependentUpon>bootstrap.css</DependentUpon>
+      </Content>
+    </ItemGroup>
+
 </Project>

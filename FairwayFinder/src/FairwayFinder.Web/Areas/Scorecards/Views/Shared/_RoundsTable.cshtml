@@ -1,7 +1,7 @@
 @using FairwayFinder.Core.Helpers
 @model FairwayFinder.Core.Features.Scorecards.Models.ViewModels.ScorecardsViewModel
 
-<table class="table table-responsive">
+<table class="table table-responsive" id="rounds-table">
     <thead>
     <th>Course Name</th>
     <th>Teebox</th>
@@ -23,7 +23,8 @@
             <td>@r.score</td>
             <td>@r.slope / @r.rating</td>
             <td>@r.date_played.FormatDate()</td>
-        </tr>
+        </tr> 
+    
     }
     
     </tbody>

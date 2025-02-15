@@ -18,7 +18,7 @@
     <div class="col-auto">
         <div class="mb-3 input-group">
             <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
-            <input type="text" class="form-control" placeholder="Search Round"/>
+            <input id="customSearch" type="text" class="form-control" placeholder="Search Round"/>
         </div>
     </div>
 </div>
@@ -29,3 +29,17 @@
     </div>
 </div>
 
+@section Scripts
+{
+    <script type="text/javascript">
+        $(document).ready(function () {
+            const table = $('#rounds-table').DataTable({
+                dom: 'lrtip'
+            });
+
+            $('#customSearch').on('keyup', function () {
+                table.search(this.value).draw();
+            });
+        });
+    </script>
+}

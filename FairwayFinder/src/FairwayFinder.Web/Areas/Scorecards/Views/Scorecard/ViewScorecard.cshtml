@@ -164,7 +164,22 @@
                 Score Distribution
             </div>
             <div class="card-body">
-                <canvas id="myPieChart" style="max-height: 400px"></canvas>
+                <div class="ratio ratio-4x3">
+                     <canvas id="scoreDistribution"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-6">
+        <div class="card">
+            <div class="card-header">
+                Score To Par
+            </div>
+            <div class="card-body">
+                <div class="ratio ratio-4x3">
+                    <canvas id="scoreChange"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -174,40 +189,83 @@
 
 @section Scripts
 {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
         $(document).ready(function () {
-            
-            var eagles_or_better = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.eagles + Model.ScorecardRoundStats.ScoreCountStats.double_eagles + Model.ScorecardRoundStats.ScoreCountStats.hole_in_ones));
-            var birdies = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.birdies));
-            var pars = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.pars));
-            var bogies = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.bogies));
-            var doubles = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.double_bogies));
-            var worse = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.triple_or_worse));
-            
-            var ctx = document.getElementById('myPieChart').getContext('2d');
+            // Extract stats from your model
+            const eaglesOrBetter = @Html.Raw(Json.Serialize(
+                                       Model.ScorecardRoundStats.ScoreCountStats.eagles +
+                                       Model.ScorecardRoundStats.ScoreCountStats.double_eagles +
+                                       Model.ScorecardRoundStats.ScoreCountStats.hole_in_ones
+                                   ));
+            const birdies = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.birdies));
+            const pars = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.pars));
+            const bogies = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.bogies));
+            const doubles = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.double_bogies));
+            const worse = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.triple_or_worse));
 
-            var myPieChart = new Chart(ctx, {
-                type: 'pie',  // Defines the type of chart
-                data: {
-                    labels: ["Eagles or Better", "Birdies", "Pars", "Bogeys", "Double Bogeys", "Worse"], 
-                    datasets: [{
-                        data: [eagles_or_better, birdies, pars, bogies, doubles, worse], 
-                        backgroundColor: [
-                            "#1d3658",  // Eagles or Better
-                            "#447a9c",  // Birdies
-                            "#a7dadc",  // Pars
-                            "#f2faef",  // Bogeys
-                            "#e63746",  // Double Bogeys
-                            "#5f1c21"   // Worse
-                        ]
-                    }]
-                },
+            // Get canvas contexts
+            const ctxDonut = document.getElementById('scoreDistribution').getContext('2d');
+            const ctxLine = document.getElementById('scoreChange').getContext('2d');
+
+            // Retrieve holes and scores from the model
+            const numOfHoles = @Html.Raw(Json.Serialize(Model.Holes.Select(x => x.hole_number).OrderBy(y => y)));
+            const scores = @Html.Raw(Json.Serialize(
+                               Model.Holes.OrderBy(y => y.hole_number).Select(x => x.hole_score - x.par)
+                           ));
+            console.log(numOfHoles);
+
+            // Line Chart configuration
+            const lineData = {
+                labels: numOfHoles,
+                datasets: [{
+                    label: 'Score to Par',
+                    data: scores,
+                    borderWidth: 2,
+                }]
+            };
+
+            const lineChart = new Chart(ctxLine, {
+                type: 'line',
+                data: lineData,
                 options: {
-                    responsive: true, // Makes the chart responsive
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                            },
+                        },
+                    },
+                }
+            });
+
+            // Donut Chart configuration
+            const donutData = {
+                labels: ["Eagles or Better", "Birdies", "Pars", "Bogeys", "Double Bogeys", "Worse"],
+                datasets: [{
+                    data: [eaglesOrBetter, birdies, pars, bogies, doubles, worse],
+                    backgroundColor: [
+                        "#1d3658",  // Eagles or Better
+                        "#447a9c",  // Birdies
+                        "#a7dadc",  // Pars
+                        "#f2faef",  // Bogeys
+                        "#e63746",  // Double Bogeys
+                        "#5f1c21"   // Worse
+                    ]
+                }]
+            };
+
+            const donutChart = new Chart(ctxDonut, {
+                type: 'doughnut',
+                data: donutData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'bottom'  // Positions the legend at the bottom
+                            position: 'bottom'
                         }
                     }
                 }
