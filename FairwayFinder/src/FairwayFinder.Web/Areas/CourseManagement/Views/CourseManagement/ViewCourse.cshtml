@@ -45,39 +45,41 @@
                 </div>
             </div>
             <div class="card-body">
-                <table class="table">
-                    <thead>
-                    <tr class="border-b-2 border-neutral">
-                        <th>Name</th>
-                        <th>Par</th>
-                        <th>Course Rating</th>
-                        <th>Slope</th>
-                        <th>Front 9 Yardage</th>
-                        <th>Back 9 Yardage</th>
-                        <th>Total</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @foreach (var tee in Model.Teeboxes)
-                    {
-                        <tr>
-                            <td>
-                                <a asp-action="ViewTeebox"
-                                   asp-route-courseId="@tee.course_id"
-                                   asp-route-teeboxId="@tee.teebox_id">
-                                    @tee.teebox_name
-                                </a>
-                            </td>
-                            <td>@tee.par</td>
-                            <td>@tee.rating</td>
-                            <td>@tee.slope</td>
-                            <td>@tee.yardage_out</td>
-                            <td>@tee.yardage_in</td>
-                            <td>@tee.yardage_total</td>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                        <tr class="border-b-2 border-neutral">
+                            <th>Name</th>
+                            <th>Par</th>
+                            <th>Course Rating</th>
+                            <th>Slope</th>
+                            <th>Front 9 Yardage</th>
+                            <th>Back 9 Yardage</th>
+                            <th>Total</th>
                         </tr>
-                    }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                        @foreach (var tee in Model.Teeboxes)
+                        {
+                            <tr>
+                                <td>
+                                    <a asp-action="ViewTeebox"
+                                       asp-route-courseId="@tee.course_id"
+                                       asp-route-teeboxId="@tee.teebox_id">
+                                        @tee.teebox_name
+                                    </a>
+                                </td>
+                                <td>@tee.par</td>
+                                <td>@tee.rating</td>
+                                <td>@tee.slope</td>
+                                <td>@tee.yardage_out</td>
+                                <td>@tee.yardage_in</td>
+                                <td>@tee.yardage_total</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>    
             </div>
         </div>
     </div>

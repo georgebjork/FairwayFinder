@@ -48,11 +48,13 @@ public class ScorecardController : BaseScorecardController
         }
 
         var rounds = await _scorecardService.GetScorecardSummaryByUserIdAsync(userId);
+
         
+        // Helps pass the username into the view 
+        ViewBag.Username = username;
         var vm = new ScorecardsViewModel
         {
             Rounds = rounds,
-            Username = username
         };
         return View(vm);
     }

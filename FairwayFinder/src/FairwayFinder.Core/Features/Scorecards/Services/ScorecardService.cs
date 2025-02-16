@@ -30,9 +30,14 @@ public class ScorecardService
         _holeLookupService = holeLookupService;
     }
 
-    public async Task<List<ScorecardSummaryQueryModel>> GetScorecardSummaryByUserIdAsync(string username)
+    public async Task<List<ScorecardSummaryQueryModel>> GetScorecardSummaryByUserIdAsync(string userId)
     {
-        return await _scorecardRepository.GetScorecardSummaryByUserIdAsync(username);
+        return await _scorecardRepository.GetScorecardSummaryByUserIdAsync(userId);
+    }
+    
+    public async Task<List<ScorecardSummaryQueryModel>> GetRecentScorecardsByUserIdAsync(string userId, int number)
+    {
+        return await _scorecardRepository.GetScorecardSummaryByUserIdAsync(userId, number);
     }
     
     public async Task<ScorecardSummaryQueryModel?> GetScorecardSummaryByRoundIdAsync(long roundId)

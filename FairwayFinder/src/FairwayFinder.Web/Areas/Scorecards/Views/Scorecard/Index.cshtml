@@ -25,7 +25,7 @@
 
 <div class="row">
     <div class="col-12">
-        @await Html.PartialAsync("_RoundsTable", Model)
+        @await Html.PartialAsync("_RoundsTable", Model.Rounds)
     </div>
 </div>
 
@@ -33,12 +33,16 @@
 {
     <script type="text/javascript">
         $(document).ready(function () {
-            const table = $('#rounds-table').DataTable({
-                dom: 'lrtip'
+            var roundTable = $('#rounds-table').DataTable({
+                dom: 'rtip',
+                pageLength: 20,
+                destroy: true,
+                stateSave: true,
+                responsive: true
             });
 
             $('#customSearch').on('keyup', function () {
-                table.search(this.value).draw();
+                roundTable.search(this.value).draw();
             });
         });
     </script>

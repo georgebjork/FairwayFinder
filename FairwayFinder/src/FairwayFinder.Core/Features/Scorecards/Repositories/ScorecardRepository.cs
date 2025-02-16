@@ -14,7 +14,7 @@ public interface IScorecardRepository : IBaseRepository
 {
     Task<int> CreateNewScorecardAsync(Round round, List<Score> scores, RoundStats stats);
     Task<bool> UpdateScorecardAsync(Round round, List<Score> scores, RoundStats stats);
-    Task<List<ScorecardSummaryQueryModel>> GetScorecardSummaryByUserIdAsync(string userId);
+    Task<List<ScorecardSummaryQueryModel>> GetScorecardSummaryByUserIdAsync(string userId, int? limit = null);
     Task<ScorecardSummaryQueryModel?> GetScorecardSummaryByRoundIdAsync(long roundId);
     Task<List<HoleScoreQueryModel>> GetScorecardHoleScoresByRoundIdAsync(long roundId);
     Task<Round?> GetScorecardByIdAsync(long roundId);
@@ -85,16 +85,22 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
         }
     }
 
-    public async Task<List<ScorecardSummaryQueryModel>> GetScorecardSummaryByUserIdAsync(string userId)
+    public async Task<List<ScorecardSummaryQueryModel>> GetScorecardSummaryByUserIdAsync(string userId, int? limit = null)
     {
-            var sql = @"SELECT c.course_name, t.teebox_name, t.slope, t.rating, r.score, r.date_played, r.user_id, r.round_id, t.yardage_out, t.yardage_in, t.yardage_total, r.score_out, r.score_in, t.par
-                    FROM round as r
-	                    INNER JOIN course as c ON c.course_id = r.course_id
-	                    INNER JOIN teebox as t ON t.course_id = c.course_id AND t.teebox_id = r.teebox_id
-                    WHERE user_id = @userId AND r.is_deleted = false
-                    ORDER BY date_played DESC";
+        var sql = @"SELECT c.course_name, t.teebox_name, t.slope, t.rating, r.score, r.date_played, r.user_id, r.round_id, t.yardage_out, t.yardage_in, t.yardage_total, r.score_out, r.score_in, t.par
+                FROM round as r
+	                INNER JOIN course as c ON c.course_id = r.course_id
+	                INNER JOIN teebox as t ON t.course_id = c.course_id AND t.teebox_id = r.teebox_id
+                WHERE user_id = @userId AND r.is_deleted = false
+                ORDER BY date_played DESC";
+
+        if (limit is not null)
+        {
+            sql += " LIMIT @limit";
+        }
+            
         await using var conn = await GetNewOpenConnection();
-        var rv = await conn.QueryAsync<ScorecardSummaryQueryModel>(sql, new {userId});
+        var rv = await conn.QueryAsync<ScorecardSummaryQueryModel>(sql, new {userId, limit});
         return rv.ToList();
     }
     

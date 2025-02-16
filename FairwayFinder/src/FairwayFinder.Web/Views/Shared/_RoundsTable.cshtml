@@ -1,0 +1,37 @@
+
+@using FairwayFinder.Core.Helpers
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@model List<FairwayFinder.Core.Features.Scorecards.Models.QueryModels.ScorecardSummaryQueryModel>
+
+<div class="table-responsive">
+    <table class="table table-responsive" id="rounds-table">
+        <thead>
+        <th>Course Name</th>
+        <th>Teebox</th>
+        <th>Score</th>
+        <th>Slope/Rating</th>
+        <th>Date</th>
+        </thead>
+
+        <tbody>
+        @foreach (var r in Model)
+        {
+        <tr>
+            <td>
+                <a asp-area="Scorecards" asp-controller="Scorecard" asp-action="ViewScorecard" asp-route-username="@ViewBag.Username" asp-route-roundId="@r.round_id">
+                    @r.course_name
+                </a>
+            </td>
+            <td>@r.teebox_name </td>
+            <td>@r.score</td>
+            <td>@r.slope / @r.rating</td>
+            <td>@r.date_played.FormatDate()</td>
+        </tr>
+
+        }
+
+        </tbody>
+    </table>
+</div>
+
+
