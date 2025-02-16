@@ -19,6 +19,9 @@ public class ScorecardFormModel
     [Required]
     [Display(Name = "Date Played")]
     public DateTime DatePlayed { get; set; } = DateTime.UtcNow;
+
+    [Required]
+    public bool UsingHoleStats { get; set; }
     
     public List<HoleScoreFormModel> HoleScore { get; set; } = [];
     

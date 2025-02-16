@@ -4,12 +4,19 @@ namespace FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 
 public class HoleStatsFormModel
 {
+    public long? HoleStatsId { get; set; }
+    
     [Required]
-    public int HoleId { get; set; }
-    public int RoundId { get; set; }
+    public long HoleId { get; set; }
+    
+    [Required]
+    public long ScoreId { get; set; }
+    
+    public long RoundId { get; set; }
     
     [Display(Name = "Missed Fairway")]
     public bool MissedFairway { get; set; }
+    
     [Display(Name = "Miss Type")]
     public int? MissFairwayType { get; set; }
     
@@ -19,10 +26,11 @@ public class HoleStatsFormModel
     [Display(Name = "Missed Type")]
     public int? MissGreenType { get; set; }
     
+    [Range(0, 10)]
     [Display(Name = "Number of Putts")]
-    public int NumberOfPutts { get; set; }
+    public short? NumberOfPutts { get; set; }
     
     [Display(Name = "Approach Yardage")]
-    public int YardageOut { get; set; }
+    public int? YardageOut { get; set; }
     
 }

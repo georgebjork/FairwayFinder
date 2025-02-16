@@ -27,7 +27,7 @@
         @await Html.PartialAsync("Shared/_CreateRoundCourseData", Model)
     </div>
 
-    <div class="row" id="teebox-data" x-data="{ showAdvancedStats: false }">
+    <div class="row" id="teebox-data" x-data="{ showAdvancedStats: @Json.Serialize(Model.UsingHoleStats) }">
         @await Html.PartialAsync("Shared/_CreateRoundTeeboxData", Model)
     </div>
 </div>

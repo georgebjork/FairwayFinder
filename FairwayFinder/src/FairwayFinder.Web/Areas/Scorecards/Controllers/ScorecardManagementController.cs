@@ -117,21 +117,29 @@ public class ScorecardManagementController : BaseScorecardController
             return Redirect(nameof(Index), controllerName: "Scorecard", routeValues: new {username = _usernameRetriever.Username});
         }
         var course = await _courseLookupService.GetCourseByIdAsync(round.course_id);
-        var teebox = await _teeboxLookupService.GetTeeByIdAsync(round.teebox_id);
-        var teeboxes_dropdown = await _lookupRepository.GetTeesForCourseAsync(round.course_id);
-        var miss_type = await _lookupRepository.GetMissTypes();
         
         if (course is null)
         {
             SetErrorMessage("Golf course does not exist.");
             return Redirect(nameof(Index), controllerName: "Scorecard", routeValues: new {username = _usernameRetriever.Username});
         }
+        
+        var teebox = await _teeboxLookupService.GetTeeByIdAsync(round.teebox_id);
+        var teeboxes_dropdown = await _lookupRepository.GetTeesForCourseAsync(round.course_id);
+        var miss_type = await _lookupRepository.GetMissTypes();
 
         var hole_scores = await _scorecardService.GetHoleScoreFormsByRoundIdAsync(roundId);
+        var hole_stats = await _scorecardService.GetHoleScoreStatsFormsByRoundIdAsync(roundId);
+
+        foreach (var hs in hole_scores)
+        {
+            hs.HoleStats = hole_stats.First(x => x.HoleId == hs.HoleId);
+        }
 
         form.IsUpdate = true;
         form.RoundId = round.round_id;
         form.DatePlayed = round.date_played;
+        form.UsingHoleStats = round.using_hole_stats;
         
         form.CourseId = course.course_id;
         form.CourseName = course.course_name;
@@ -185,6 +193,7 @@ public class ScorecardManagementController : BaseScorecardController
         var vm = new ScorecardFormModel();
         
         var teeboxes_dropdown = await _lookupRepository.GetTeesForCourseAsync(course.course_id);
+
         vm.TeeboxSelectList = teeboxes_dropdown;
         vm.Course = course;
         
@@ -195,6 +204,8 @@ public class ScorecardManagementController : BaseScorecardController
     {
         var vm = new ScorecardFormModel();
         var holes = await _holeLookupService.GetHolesForTeeAsync(teebox.teebox_id);
+        var miss_type_dropdown = await _lookupRepository.GetMissTypes();
+
         var hole_scores = new List<HoleScoreFormModel>();
 
         foreach (var hole in holes)
@@ -211,6 +222,7 @@ public class ScorecardManagementController : BaseScorecardController
 
         vm.Teebox = teebox;
         vm.HoleScore = hole_scores;
+        vm.MissTypeSelectList = miss_type_dropdown;
         
         var course = await _courseLookupService.GetCourseByIdAsync(teebox.course_id);
         if (course is null) // This should never happen but just to make the complier happy.

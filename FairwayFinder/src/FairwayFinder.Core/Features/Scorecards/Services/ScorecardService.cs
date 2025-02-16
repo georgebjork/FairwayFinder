@@ -95,6 +95,14 @@ public class ScorecardService
 
         return score_forms;
     }
+    
+    public async Task<List<HoleStatsFormModel>> GetHoleScoreStatsFormsByRoundIdAsync(long roundId)
+    {
+        var hole_stats = await _scorecardRepository.GetHoleStatsForRound(roundId);
+        var hole_stats_form = hole_stats.Select(stats => stats.ToForm()).ToList();
+
+        return hole_stats_form;
+    }
 
     public async Task<int> CreateNewScorecardAsync(ScorecardFormModel form)
     {
@@ -134,7 +142,8 @@ public class ScorecardService
                 user_id = user_id,
                 score = form.HoleScore.Sum(x => x.Score),
                 score_out = form.HoleScore.Where(x => x.HoleNumber <= 9).Sum(x => x.Score),
-                score_in = form.HoleScore.Where(x => x.HoleNumber > 9).Sum(x => x.Score)
+                score_in = form.HoleScore.Where(x => x.HoleNumber > 9).Sum(x => x.Score),
+                using_hole_stats = form.UsingHoleStats
             };
             round = EntityMetadataHelper.NewRecord(round, username);
             
@@ -155,7 +164,20 @@ public class ScorecardService
                 holes.Add(EntityMetadataHelper.NewRecord(hole, username));
             }
             
-            var rv = await _scorecardRepository.CreateNewScorecardAsync(round, holes, round_stats);
+            var hole_stats = new List<HoleStats>();
+            foreach (var h in form.HoleScore)
+            {
+                var hole = h.HoleStats.ToModel();
+
+                if (!form.UsingHoleStats)
+                {
+                    hole.hit_fairway = null;
+                    hole.hit_green = null;
+                }
+                hole_stats.Add(EntityMetadataHelper.NewRecord(hole, username));
+            }
+            
+            var rv = await _scorecardRepository.CreateNewScorecardAsync(round, holes, round_stats, hole_stats);
             return rv;
         }
         catch (Exception ex)
@@ -211,6 +233,7 @@ public class ScorecardService
         round.score_in = updated_hole_scores.Where(x => x.hole_number > 9).Sum(y => y.hole_score);
         round.score = round.score_out + round.score_in;
         round.date_played = form.DatePlayed;
+        round.using_hole_stats = form.UsingHoleStats;
         round = EntityMetadataHelper.UpdateRecord(round, _usernameRetriever.Username);
         
         return await _scorecardRepository.UpdateScorecardAsync(round, updated_hole_scores, round_stats);

@@ -12,7 +12,7 @@ namespace FairwayFinder.Core.Features.Scorecards.Repositories;
 
 public interface IScorecardRepository : IBaseRepository
 {
-    Task<int> CreateNewScorecardAsync(Round round, List<Score> scores, RoundStats stats);
+    Task<int> CreateNewScorecardAsync(Round round, List<Score> scores, RoundStats stats, List<HoleStats> holeStats);
     Task<bool> UpdateScorecardAsync(Round round, List<Score> scores, RoundStats stats);
     Task<List<ScorecardSummaryQueryModel>> GetScorecardSummaryByUserIdAsync(string userId, int? limit = null);
     Task<ScorecardSummaryQueryModel?> GetScorecardSummaryByRoundIdAsync(long roundId);
@@ -22,11 +22,12 @@ public interface IScorecardRepository : IBaseRepository
     Task<RoundStats?> GetRoundStatsForRoundAsync(long roundId);
     Task<Round?> GetRoundByIdAsync(long roundId);
     Task<ScorecardRoundStatsQueryModel?> GetScorecardRoundStatsAsync(long roundId);
+    Task<List<HoleStats>> GetHoleStatsForRound(long roundId);
 }
 
 public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecardRepository> logger) : BasePgRepository(configuration), IScorecardRepository
 {
-    public async Task<int> CreateNewScorecardAsync(Round round, List<Score> scores, RoundStats stats)
+    public async Task<int> CreateNewScorecardAsync(Round round, List<Score> scores, RoundStats stats, List<HoleStats> holeStats)
     {
         await using var conn = await GetNewOpenConnection();
         await using var trans = await conn.BeginTransactionAsync();
@@ -37,7 +38,16 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
             foreach (var score in scores)
             {
                 score.round_id = round_id;
-                await conn.InsertAsync(score, trans);
+                var score_id = await conn.InsertAsync(score, trans);
+
+                var hole_stat = holeStats.FirstOrDefault(x => x.hole_id == score.hole_id);
+
+                if (hole_stat is not null)
+                {
+                    hole_stat.score_id = score_id;
+                    hole_stat.round_id = round_id;
+                    await conn.InsertAsync(hole_stat, trans);
+                }
             }
 
             stats.round_id = round_id;
@@ -169,5 +179,13 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryFirstOrDefaultAsync<ScorecardRoundStatsQueryModel>(sql, new {roundId});
         return rv;
+    }
+
+    public async Task<List<HoleStats>> GetHoleStatsForRound(long roundId)
+    {
+        var sql = "SELECT * FROM hole_stats WHERE round_id = @roundId AND is_deleted = false";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryAsync<HoleStats>(sql, new {roundId});
+        return rv.ToList();
     }
 }

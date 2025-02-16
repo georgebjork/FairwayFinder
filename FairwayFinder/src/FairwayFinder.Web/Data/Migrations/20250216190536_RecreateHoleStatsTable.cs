@@ -20,6 +20,7 @@ namespace FairwayFinder.Web.Migrations
                     hole_stats_id BIGSERIAL NOT NULL PRIMARY KEY,
                     score_id BIGINT NOT NULL,
                     round_id BIGINT NOT NULL,
+                    hole_id BIGINT NOT NULL,
                     hit_fairway BOOLEAN NULL,
                     miss_fairway_type INT NULL,
                     hit_green BOOLEAN NULL,
