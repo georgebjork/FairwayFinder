@@ -1,4 +1,5 @@
-﻿@model FairwayFinder.Core.Features.Scorecards.Models.FormModels.ScorecardFormModel
+﻿@using FairwayFinder.Web.Helpers
+@model FairwayFinder.Core.Features.Scorecards.Models.FormModels.ScorecardFormModel
 
 
 @if (Model.Teebox.teebox_id > 0)
@@ -77,7 +78,10 @@
                             <div class="col-auto mb-2" x-show="missedFairway_@Model.HoleScore[i].HoleNumber" x-transition>
 
                                 <label class="form-label"> Miss Type</label>
-                                <select class="form-select form-select-sm" asp-for="@Model.HoleScore[i].HoleStats.MissFairwayType"></select>
+                                <select class="form-select form-select-sm"
+                                        asp-for="@Model.HoleScore[i].HoleStats.MissFairwayType"
+                                        asp-items="@Model.MissTypeSelectList.ToSelectList("Miss Type", "0")"
+                                ></select>
                             </div>
                         </div>
 
@@ -97,7 +101,10 @@
                             <div class="col-auto mb-2" x-show="missedGreen_@Model.HoleScore[i].HoleNumber" x-transition>
 
                                 <label class="form-label"> Miss Type</label>
-                                <select class="form-select form-select-sm" asp-for="@Model.HoleScore[i].HoleStats.MissedGreen"></select>
+                                <select class="form-select form-select-sm" 
+                                        asp-for="@Model.HoleScore[i].HoleStats.MissGreenType"
+                                        asp-items="@Model.MissTypeSelectList.ToSelectList("Miss Type", "0")"
+                                        ></select>
                             </div>
                         </div>
                         

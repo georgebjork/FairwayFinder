@@ -11,13 +11,13 @@ public class HoleStatsFormModel
     [Display(Name = "Missed Fairway")]
     public bool MissedFairway { get; set; }
     [Display(Name = "Miss Type")]
-    public string? MissFairwayType { get; set; }
+    public int? MissFairwayType { get; set; }
     
     [Display(Name = "Missed Green")]
     public bool MissedGreen { get; set; }
     
     [Display(Name = "Missed Type")]
-    public string? MissGreenType { get; set; }
+    public int? MissGreenType { get; set; }
     
     [Display(Name = "Number of Putts")]
     public int NumberOfPutts { get; set; }
@@ -25,5 +25,4 @@ public class HoleStatsFormModel
     [Display(Name = "Approach Yardage")]
     public int YardageOut { get; set; }
     
-    public Dictionary<string, string> MissTypeSelectList { get; set; } = new();
 }

@@ -89,10 +89,11 @@ public class HoleStats : IEntityMetadata
     public long round_id { get; set; }
     public long score_id { get; set; }
     public bool? hit_fairway { get; set; }
-    public string miss_fairway_type { get; set; } = "";
+    public int miss_fairway_type { get; set; }
     public bool? hit_green { get; set; }
-    public string miss_green_type { get; set; } = "";
+    public int miss_green_type { get; set; }
     public short? number_of_putts { get; set; }
+    public int approach_yardage { get; set; }
     public string created_by { get; set; } = "";
     public DateTime created_on { get; set; }
     public string updated_by { get; set; } = "";

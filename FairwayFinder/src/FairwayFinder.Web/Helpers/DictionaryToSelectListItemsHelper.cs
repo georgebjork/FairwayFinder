@@ -12,6 +12,14 @@ public static class DictionaryToSelectListItemsHelper
         }
         return rv;
     }
+    
+    public static List<SelectListItem> ToSelectList(this Dictionary<long, string> dict, string chooseListText = "", string chooseListValue = "") {
+        var rv = dict.Keys.Select(key => new SelectListItem(dict[key], key.ToString())).ToList();
+        if (!string.IsNullOrWhiteSpace(chooseListText)) {
+            rv.Insert(0, new SelectListItem(chooseListText, chooseListValue));
+        }
+        return rv;
+    }
 
     public static List<SelectListItem> ToSelectList(this Dictionary<string, string> dict, string chooseListText = "", string chooseListValue = "")
     {

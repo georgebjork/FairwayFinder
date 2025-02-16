@@ -98,13 +98,6 @@ public class ScorecardService
 
     public async Task<int> CreateNewScorecardAsync(ScorecardFormModel form)
     {
-        // Validate TeeboxId is a valid integer
-        if (!int.TryParse(form.TeeboxId, out int teeboxId))
-        {
-            _logger.LogError("Invalid TeeboxId format: {TeeboxId}", form.TeeboxId);
-            return -1;
-        }
-
         // Validate that the course exists
         var course = await _courseLookupService.GetCourseByIdAsync(form.CourseId);
         if (course == null)
@@ -114,10 +107,10 @@ public class ScorecardService
         }
 
         // Validate that the teebox exists
-        var teebox = await _teeboxLookupService.GetTeeByIdAsync(teeboxId);
+        var teebox = await _teeboxLookupService.GetTeeByIdAsync(form.TeeboxId);
         if (teebox == null)
         {
-            _logger.LogError("Teebox not found for TeeboxId: {TeeboxId}", teeboxId);
+            _logger.LogError("Teebox not found for TeeboxId: {TeeboxId}", form.TeeboxId);
             return -1;
         }
 
@@ -136,7 +129,7 @@ public class ScorecardService
             var round = new Round()
             {
                 course_id = form.CourseId,
-                teebox_id = int.Parse(form.TeeboxId),
+                teebox_id = form.TeeboxId,
                 date_played = form.DatePlayed,
                 user_id = user_id,
                 score = form.HoleScore.Sum(x => x.Score),

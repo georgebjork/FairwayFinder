@@ -1,6 +1,7 @@
 ﻿using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 using FairwayFinder.Core.Features.Scorecards.Services;
 using FairwayFinder.Core.Models;
+using FairwayFinder.Core.Repositories;
 using FairwayFinder.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,8 +15,9 @@ public class ScorecardManagementController : BaseScorecardController
     private readonly TeeboxLookupService _teeboxLookupService;
     private readonly HoleLookupService _holeLookupService;
     private readonly ScorecardService _scorecardService;
+    private readonly ILookupRepository _lookupRepository;
 
-    public ScorecardManagementController(ILogger<ScorecardManagementController> logger, IUsernameRetriever usernameRetriever, CourseLookupService courseLookupService, TeeboxLookupService teeboxLookupService, HoleLookupService holeLookupService, ScorecardService scorecardService)
+    public ScorecardManagementController(ILogger<ScorecardManagementController> logger, IUsernameRetriever usernameRetriever, CourseLookupService courseLookupService, TeeboxLookupService teeboxLookupService, HoleLookupService holeLookupService, ScorecardService scorecardService, ILookupRepository lookupRepository)
     {
         _logger = logger;
         _usernameRetriever = usernameRetriever;
@@ -23,6 +25,7 @@ public class ScorecardManagementController : BaseScorecardController
         _teeboxLookupService = teeboxLookupService;
         _holeLookupService = holeLookupService;
         _scorecardService = scorecardService;
+        _lookupRepository = lookupRepository;
     }
 
     [HttpGet]
@@ -115,7 +118,8 @@ public class ScorecardManagementController : BaseScorecardController
         }
         var course = await _courseLookupService.GetCourseByIdAsync(round.course_id);
         var teebox = await _teeboxLookupService.GetTeeByIdAsync(round.teebox_id);
-        var teeboxes_dropdown = await _teeboxLookupService.GetTeesDropdownForCourseAsync(round.course_id);
+        var teeboxes_dropdown = await _lookupRepository.GetTeesForCourseAsync(round.course_id);
+        var miss_type = await _lookupRepository.GetMissTypes();
         
         if (course is null)
         {
@@ -133,9 +137,11 @@ public class ScorecardManagementController : BaseScorecardController
         form.CourseName = course.course_name;
         form.Course = course;
         
-        form.TeeboxId = teebox.teebox_id.ToString();
+        form.TeeboxId = teebox.teebox_id;
         form.TeeboxSelectList = teeboxes_dropdown;
         form.Teebox = teebox;
+
+        form.MissTypeSelectList = miss_type;
         
         form.HoleScore = hole_scores;
         
@@ -178,7 +184,7 @@ public class ScorecardManagementController : BaseScorecardController
     {
         var vm = new ScorecardFormModel();
         
-        var teeboxes_dropdown = await _teeboxLookupService.GetTeesDropdownForCourseAsync(course.course_id);
+        var teeboxes_dropdown = await _lookupRepository.GetTeesForCourseAsync(course.course_id);
         vm.TeeboxSelectList = teeboxes_dropdown;
         vm.Course = course;
         
@@ -221,11 +227,11 @@ public class ScorecardManagementController : BaseScorecardController
     private async Task<ScorecardFormModel> RefreshFormModelForError(ScorecardFormModel form)
     {
         var course = await _courseLookupService.GetCourseByIdAsync(form.CourseId);
-        var teebox = await _teeboxLookupService.GetTeeByIdAsync(int.Parse(form.TeeboxId));
+        var teebox = await _teeboxLookupService.GetTeeByIdAsync(form.TeeboxId);
 
         if (course is null || teebox is null) return form; // Should not happen, but just in case
         
-        var teeboxes_dropdown = await _teeboxLookupService.GetTeesDropdownForCourseAsync(course.course_id);
+        var teeboxes_dropdown = await _lookupRepository.GetTeesForCourseAsync(course.course_id);
         var holes = await _holeLookupService.GetHolesForTeeAsync(teebox.teebox_id);
         
         form.Course = course;

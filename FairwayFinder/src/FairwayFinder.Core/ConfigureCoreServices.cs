@@ -22,6 +22,7 @@ public static class ConfigureCoreServices
         services.AddTransient<ITeeboxLookupRepository, TeeboxLookupRepository>();
         services.AddTransient<IHoleLookupRepository, HoleLookupRepository>();
         services.AddTransient<IScorecardRepository, ScorecardRepository>();
+        services.AddTransient<ILookupRepository, LookupRepository>();
 
         
         // Services

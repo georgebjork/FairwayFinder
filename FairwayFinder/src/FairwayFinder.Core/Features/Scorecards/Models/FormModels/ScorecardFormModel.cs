@@ -14,7 +14,7 @@ public class ScorecardFormModel
     public string CourseName { get; set; } = "";
 
     [Required] 
-    public string TeeboxId { get; set; } = ""; // This is intentional for the dropdown list
+    public long TeeboxId { get; set; }
 
     [Required]
     [Display(Name = "Date Played")]
@@ -26,7 +26,8 @@ public class ScorecardFormModel
     // Non form fields
     public Course Course { get; set; } = new();
     public Teebox Teebox { get; set; } = new();
-    public Dictionary<string, string> TeeboxSelectList { get; set; } = new();
-    
+    public Dictionary<long, string> TeeboxSelectList { get; set; } = new();
+    public Dictionary<int, string> MissTypeSelectList { get; set; } = new();
+
     public bool IsUpdate { get; set; }
 }
