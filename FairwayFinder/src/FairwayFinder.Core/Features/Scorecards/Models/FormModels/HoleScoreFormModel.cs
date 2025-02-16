@@ -16,9 +16,11 @@ public class HoleScoreFormModel
     [Required]
     [Range(1, 20)]
     public short Score { get; set; }
-    
+
+    public HoleStatsFormModel HoleStats { get; set; } = new();
     
     // Non form fields
     public long Par { get; set; }
     public long Yardage { get; set; } 
+    
 }

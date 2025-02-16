@@ -18,7 +18,7 @@
         {
         <tr>
             <td>
-                <a asp-area="Scorecards" asp-controller="Scorecard" asp-action="ViewScorecard" asp-route-username="@ViewBag.Username" asp-route-roundId="@r.round_id">
+                <a asp-area="Scorecards" asp-controller="Scorecard" asp-action="ViewScorecard" asp-route-username="@ViewBag.Username" asp-route-roundId="@r.round_id" hx-boost="false">
                     @r.course_name
                 </a>
             </td>

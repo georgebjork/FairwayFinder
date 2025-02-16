@@ -16,5 +16,10 @@ namespace FairwayFinder.Web.Migrations
                 DROP COLUMN IF EXISTS score_type;
             ");
         }
+        
+        /// <inheritdoc />
+        protected override void Down(MigrationBuilder migrationBuilder)
+        {
+        }
     }
 }

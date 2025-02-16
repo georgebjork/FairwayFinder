@@ -20,14 +20,27 @@
 
 @if (Model.HoleScore.Count > 0)
 {
-    @for (int i = 0; i < Model.HoleScore.Count; i++)
+    <div class="col-12">
+        <input
+            type="checkbox"
+            id="toggleAdvancedStats"
+            class="form-check-input"
+            x-model="showAdvancedStats">
+        <label class="form-check-label" for="toggleAdvancedStats">Use Advanced Stats</label>
+    </div>
+    for (int i = 0; i < Model.HoleScore.Count; i++)
     {
+        @*Hidden fields for Hole Scores*@
         <input type="hidden" asp-for="@Model.HoleScore[i].HoleId" value="@Model.HoleScore[i].HoleId" />
         <input type="hidden" asp-for="@Model.HoleScore[i].HoleNumber" value="@Model.HoleScore[i].HoleNumber" />
         <input type="hidden" asp-for="@Model.HoleScore[i].Par" value="@Model.HoleScore[i].Par" />
         <input type="hidden" asp-for="@Model.HoleScore[i].Yardage" value="@Model.HoleScore[i].Yardage" />
         
-        <div class="col-4 p-3">
+        @*Hidden fields for Hole Stats*@
+        <input type="hidden" asp-for="@Model.HoleScore[i].HoleStats.HoleId" value="@Model.HoleScore[i].HoleId" />
+        <input type="hidden" asp-for="@Model.HoleScore[i].HoleNumber" value="@Model.RoundId" />
+        
+        <div class="col-4 my-3">
             <div class="card">
                 <div class="card-header">
                     <div class="d-flex justify-content-between">
@@ -48,6 +61,46 @@
                             <input type="number" class="form-control" asp-for="@Model.HoleScore[i].Score" autocomplete="off"/>
                             <span class="text-danger" asp-validation-for="@Model.HoleScore[i].Score"></span>
                         </div>
+
+                        <div x-data="{ missedFairway_@Model.HoleScore[i].HoleNumber: false }" x-show="showAdvancedStats">
+                            <div class="col-auto">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        asp-for="@Model.HoleScore[i].HoleStats.MissedFairway"
+                                        type="checkbox"
+                                        x-model="missedFairway_@Model.HoleScore[i].HoleNumber">
+                                    <label class="form-check-label" asp-for="@Model.HoleScore[i].HoleStats.MissedFairway"></label>
+                                </div>
+                            </div>
+
+                            <div class="col-auto mb-2" x-show="missedFairway_@Model.HoleScore[i].HoleNumber" x-transition>
+
+                                <label class="form-label"> Miss Type</label>
+                                <select class="form-select form-select-sm" asp-for="@Model.HoleScore[i].HoleStats.MissFairwayType"></select>
+                            </div>
+                        </div>
+
+
+                        <div x-data="{ missedGreen_@Model.HoleScore[i].HoleNumber: false }" x-show="showAdvancedStats">
+                            <div class="col-auto">
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        asp-for="@Model.HoleScore[i].HoleStats.MissedGreen"
+                                        type="checkbox"
+                                        x-model="missedGreen_@Model.HoleScore[i].HoleNumber">
+                                    <label class="form-check-label" asp-for="@Model.HoleScore[i].HoleStats.MissedGreen"></label>
+                                </div>
+                            </div>
+
+                            <div class="col-auto mb-2" x-show="missedGreen_@Model.HoleScore[i].HoleNumber" x-transition>
+
+                                <label class="form-label"> Miss Type</label>
+                                <select class="form-select form-select-sm" asp-for="@Model.HoleScore[i].HoleStats.MissedGreen"></select>
+                            </div>
+                        </div>
+                        
                     </div>
                 </div>
             </div>
