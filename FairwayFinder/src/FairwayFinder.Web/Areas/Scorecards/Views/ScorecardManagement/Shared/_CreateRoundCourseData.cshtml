@@ -3,7 +3,7 @@
 @using Microsoft.AspNetCore.Mvc.TagHelpers
 @model FairwayFinder.Core.Features.Scorecards.Models.FormModels.ScorecardFormModel
 
-<input type="hidden" asp-for="CourseId" value="@Model.Course.course_id"/>
+<input type="hidden" asp-for="RoundFormModel.CourseId" value="@Model.Course.course_id"/>
 
 <div class="col-4">
     <div class="mb-3">
@@ -14,9 +14,9 @@
 
 <div class="col-4">
     <div class="mb-3">
-        <label class="form-label" asp-for="DatePlayed"> Date Played </label>
-        <input class="form-control" type="date" asp-for="DatePlayed"/>
-        <span asp-validation-for="DatePlayed"></span>
+        <label class="form-label" asp-for="RoundFormModel.DatePlayed"> Date Played </label>
+        <input class="form-control" type="date" asp-for="RoundFormModel.DatePlayed"/>
+        <span asp-validation-for="RoundFormModel.DatePlayed"></span>
     </div>
 </div>
 
@@ -24,23 +24,23 @@
     <label class="form-label"> Tee Name</label>
     @if (Model.TeeboxSelectList.Count <= 0)
     {
-        <select class="form-select" asp-for="TeeboxId" asp-items="@Model.TeeboxSelectList.ToSelectList("No Tees Available", "0")" disabled> </select>
+        <select class="form-select" asp-for="RoundFormModel.TeeboxId" asp-items="@Model.TeeboxSelectList.ToSelectList("No Tees Available", "0")" disabled> </select>
 
     }
     else
     {
         if (Model.IsUpdate)
         {
-            <input type="hidden" asp-for="TeeboxId" value="@Model.TeeboxId"/>
-            <select class="form-select" asp-for="TeeboxId" disabled>
-                <option value="@Model.TeeboxSelectList[Model.TeeboxId]">
-                    @Model.TeeboxSelectList[Model.TeeboxId]
+            <input type="hidden" asp-for="RoundFormModel.TeeboxId" value="@Model.RoundFormModel.TeeboxId"/>
+            <select class="form-select" asp-for="RoundFormModel.TeeboxId" disabled>
+                <option value="@Model.TeeboxSelectList[Model.RoundFormModel.TeeboxId]">
+                    @Model.TeeboxSelectList[Model.RoundFormModel.TeeboxId]
                 </option>
             </select>
         }
         else
         {
-            <select class="form-select" asp-for="TeeboxId" >
+            <select class="form-select" asp-for="RoundFormModel.TeeboxId" >
 
                 <option value="0"> Select Tee </option>
                 @foreach (var t in Model.TeeboxSelectList)
@@ -57,5 +57,5 @@
         }
         
     }
-    <span asp-validation-for="TeeboxId" class="text-danger"></span>
+    <span asp-validation-for="RoundFormModel.TeeboxId" class="text-danger"></span>
 </div>

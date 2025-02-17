@@ -13,7 +13,7 @@ namespace FairwayFinder.Core.Features.Scorecards.Repositories;
 public interface IScorecardRepository : IBaseRepository
 {
     Task<int> CreateNewScorecardAsync(Round round, List<Score> scores, RoundStats stats, List<HoleStats> holeStats);
-    Task<bool> UpdateScorecardAsync(Round round, List<Score> scores, RoundStats stats);
+    Task<bool> UpdateScorecardAsync(Round round, List<Score> scores, RoundStats stats, List<HoleStats> holeStats);
     Task<List<ScorecardSummaryQueryModel>> GetScorecardSummaryByUserIdAsync(string userId, int? limit = null);
     Task<ScorecardSummaryQueryModel?> GetScorecardSummaryByRoundIdAsync(long roundId);
     Task<List<HoleScoreQueryModel>> GetScorecardHoleScoresByRoundIdAsync(long roundId);
@@ -23,6 +23,7 @@ public interface IScorecardRepository : IBaseRepository
     Task<Round?> GetRoundByIdAsync(long roundId);
     Task<ScorecardRoundStatsQueryModel?> GetScorecardRoundStatsAsync(long roundId);
     Task<List<HoleStats>> GetHoleStatsForRound(long roundId);
+    Task<bool> InsertHoleStatsAsync(List<HoleStats> holeStats);
 }
 
 public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecardRepository> logger) : BasePgRepository(configuration), IScorecardRepository
@@ -64,7 +65,7 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
         }
     }
 
-    public async Task<bool> UpdateScorecardAsync(Round round, List<Score> scores, RoundStats stats)
+    public async Task<bool> UpdateScorecardAsync(Round round, List<Score> scores, RoundStats stats, List<HoleStats> holeStats)
     {
         await using var conn = await GetNewOpenConnection();
         await using var trans = await conn.BeginTransactionAsync();
@@ -75,6 +76,11 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
             foreach (var score in scores)
             {
                 await conn.UpdateAsync(score, trans);
+            }
+            
+            foreach (var stat in holeStats)
+            {
+                await conn.UpdateAsync(stat, trans);
             }
             
             // Check if round stats needs to be updated or inserted
@@ -187,5 +193,27 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryAsync<HoleStats>(sql, new {roundId});
         return rv.ToList();
+    }
+
+    public async Task<bool> InsertHoleStatsAsync(List<HoleStats> holeStats)
+    {
+        await using var conn = await GetNewOpenConnection();
+        await using var trans = await conn.BeginTransactionAsync();
+        
+        try
+        {
+            foreach (var hs in holeStats)
+            {
+                await conn.InsertAsync(hs, trans);
+            }
+            await trans.CommitAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, ex.Message);
+            await trans.RollbackAsync();
+            return false;
+        }
     }
 }

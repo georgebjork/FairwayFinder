@@ -115,12 +115,26 @@ public static class MappingHelpers
             RoundId = hole.round_id,
             ScoreId = hole.score_id,
             HoleId = hole.hole_id,
-            MissedFairway = !hole.hit_fairway ?? true,
+            MissedFairway = !hole.hit_fairway ?? false,
             MissFairwayType = hole.miss_fairway_type,
-            MissedGreen = !hole.hit_green ?? true,
+            MissedGreen = !hole.hit_green ?? false,
             MissGreenType = hole.miss_green_type,
             NumberOfPutts = hole.number_of_putts,
             YardageOut = hole.approach_yardage
+        };
+    }
+
+    public static Round ToModel(this RoundFormModel form)
+    {
+        return new Round
+        {
+            course_id = form.CourseId,
+            teebox_id = form.TeeboxId,
+            date_played = form.DatePlayed,
+            score = 0,
+            score_out = 0,
+            score_in = 0,
+            using_hole_stats = form.UsingHoleStats
         };
     }
 }
