@@ -133,6 +133,26 @@
                                 <span class="text-danger" asp-validation-for="@Model.HoleScore[i].HoleStats.YardageOut"></span>
                             </div>
 
+                            <div x-data="{ value: null }" class="form-check">
+                                <!-- True Checkbox -->
+                                <input type="checkbox" id="trueCheck"
+                                       class="form-check-input"
+                                       :checked="value === true"
+                                       @@click="value = (value === true) ? null : true">
+                                <label for="trueCheck" class="form-check-label">True</label>
+
+                                <!-- False Checkbox -->
+                                <input type="checkbox" id="falseCheck"
+                                       class="form-check-input ms-3"
+                                       :checked="value === false"
+                                       @@click="value = (value === false) ? null : false">
+                                <label for="falseCheck" class="form-check-label">False</label>
+
+                                <!-- Hidden Input for Form Submission -->
+                                <input type="hidden" name="myField" x-model="value">
+                            </div>
+
+
                         </div>
                     </div>
                 </div>
