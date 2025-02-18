@@ -27,6 +27,7 @@
             hx-target="#round-form">
             
             <div id="round-form">
+                <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
                 @await Html.PartialAsync("Shared/_RoundForm", Model)
             </div>
 

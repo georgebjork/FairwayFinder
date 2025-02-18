@@ -90,6 +90,7 @@
                                                     asp-for="@Model.HoleScore[i].HoleStats.MissFairwayType"
                                                     asp-items="@Model.MissTypeSelectList.ToSelectList("Miss Type", "")"
                                             ></select>
+                                            <span class="text-danger" asp-validation-for="@Model.HoleScore[i].HoleStats.MissFairwayType"></span>
                                         </div>
                                     </div>
                                 </div>
@@ -113,6 +114,7 @@
                                             asp-for="@Model.HoleScore[i].HoleStats.MissGreenType"
                                             asp-items="@Model.MissTypeSelectList.ToSelectList("Miss Type", "")">
                                     </select>
+                                    <span class="text-danger" asp-validation-for="@Model.HoleScore[i].HoleStats.MissGreenType"></span>
                                 </div>
                             </div>
 

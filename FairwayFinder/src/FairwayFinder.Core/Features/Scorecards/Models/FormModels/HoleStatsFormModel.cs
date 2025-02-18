@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using FairwayFinder.Core.Validation;
 
 namespace FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 
@@ -17,12 +18,14 @@ public class HoleStatsFormModel
     [Display(Name = "Missed Fairway")]
     public bool MissedFairway { get; set; }
     
+    [RequiredIf(nameof(MissedFairway), true)]
     [Display(Name = "Miss Type")]
     public int? MissFairwayType { get; set; }
     
     [Display(Name = "Missed Green")]
     public bool MissedGreen { get; set; }
     
+    [RequiredIf(nameof(MissedGreen), true)]
     [Display(Name = "Missed Type")]
     public int? MissGreenType { get; set; }
     

@@ -255,12 +255,16 @@ public class ScorecardService
         var updatedHoleStats = form.HoleScore.Select(formScore =>
         {
             var holeStat = holeStats.First(x => x.hole_id == formScore.HoleId);
+            
             holeStat.hit_fairway = !formScore.HoleStats.MissedFairway;
-            holeStat.miss_fairway_type = formScore.HoleStats.MissFairwayType;
+            holeStat.miss_fairway_type = !formScore.HoleStats.MissedFairway ? null : formScore.HoleStats.MissFairwayType;
+
             holeStat.hit_green = !formScore.HoleStats.MissedGreen;
-            holeStat.miss_green_type = formScore.HoleStats.MissGreenType;
+            holeStat.miss_green_type = !formScore.HoleStats.MissedGreen ? null : formScore.HoleStats.MissGreenType;
+
             holeStat.number_of_putts = formScore.HoleStats.NumberOfPutts;
             holeStat.approach_yardage = formScore.HoleStats.YardageOut;
+            
             return EntityMetadataHelper.UpdateRecord(holeStat, _usernameRetriever.Username);
         }).ToList();
 
