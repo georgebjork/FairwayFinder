@@ -116,8 +116,10 @@ public static class MappingHelpers
             ScoreId = hole.score_id,
             HoleId = hole.hole_id,
             MissedFairway = !hole.hit_fairway ?? false,
+            HitFairway = hole.hit_fairway ?? false,
             MissFairwayType = hole.miss_fairway_type,
             MissedGreen = !hole.hit_green ?? false,
+            HitGreen = hole.hit_green ?? false,
             MissGreenType = hole.miss_green_type,
             NumberOfPutts = hole.number_of_putts,
             YardageOut = hole.approach_yardage

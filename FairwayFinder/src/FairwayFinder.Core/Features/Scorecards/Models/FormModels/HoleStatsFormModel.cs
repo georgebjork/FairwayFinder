@@ -14,15 +14,16 @@ public class HoleStatsFormModel
     public long ScoreId { get; set; }
     
     public long RoundId { get; set; }
-    
-    [Display(Name = "Missed Fairway")]
     public bool MissedFairway { get; set; }
+    public bool HitFairway { get; set; }
+
     
     [RequiredIf(nameof(MissedFairway), true)]
     [Display(Name = "Miss Type")]
     public int? MissFairwayType { get; set; }
     
-    [Display(Name = "Missed Green")]
+   
+    public bool HitGreen { get; set; }
     public bool MissedGreen { get; set; }
     
     [RequiredIf(nameof(MissedGreen), true)]

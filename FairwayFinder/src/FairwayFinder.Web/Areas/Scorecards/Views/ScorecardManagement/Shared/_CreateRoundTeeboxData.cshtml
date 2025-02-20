@@ -71,44 +71,69 @@
                             @if (Model.HoleScore[i].Par > 2)
                             {
 
-                                <div x-data="{ missedFairway: @Model.HoleScore[i].HoleStats.MissedFairway.ToString().ToLower() }">
-                                    <div>
-                                        <div class="col-auto">
-                                            <div class="form-check">
-                                                <input
-                                                    class="form-check-input"
-                                                    asp-for="@Model.HoleScore[i].HoleStats.MissedFairway"
-                                                    type="checkbox"
-                                                    x-model="missedFairway">
-                                                <label class="form-check-label" asp-for="@Model.HoleScore[i].HoleStats.MissedFairway"></label>
-                                            </div>
+                                <div x-data="{ missedFairwayDropdown: @Model.HoleScore[i].HoleStats.MissedFairway.ToString().ToLower() }">
+                                    <div x-data="{ missedFairway: @Json.Serialize(Model.HoleScore[i].HoleStats.MissedFairway), hitFairway: @Json.Serialize(Model.HoleScore[i].HoleStats.HitFairway) }">
+
+                                        <!-- Hidden Inputs for Form Submission -->
+                                        <input type="hidden" asp-for="@Model.HoleScore[i].HoleStats.MissedFairway" x-model="missedFairway">
+                                        <input type="hidden" asp-for="@Model.HoleScore[i].HoleStats.HitFairway" x-model="hitFairway">
+
+                                        <div class="form-check form-check-inline">
+                                            <!-- Hit Checkbox -->
+                                            <input type="checkbox" id="hitCheck"
+                                                   class="form-check-input"
+                                                   :checked="hitFairway"
+                                                   @@click="hitFairway = !hitFairway; if (hitFairway) { missedFairway = false; missedFairwayDropdown = false;}">
+                                            <label for="hitCheck" class="form-check-label">Hit Fwy</label>
                                         </div>
-                                        
-                                        <div class="col-auto mb-2" x-show="missedFairway" x-transition>
-                                            <label class="form-label"> Miss Type</label>
-                                            <select class="form-select form-select-sm"
-                                                    asp-for="@Model.HoleScore[i].HoleStats.MissFairwayType"
-                                                    asp-items="@Model.MissTypeSelectList.ToSelectList("Miss Type", "")"
-                                            ></select>
-                                            <span class="text-danger" asp-validation-for="@Model.HoleScore[i].HoleStats.MissFairwayType"></span>
+
+                                        <div class="form-check form-check-inline">
+                                            <!-- Miss Checkbox -->
+                                            <input type="checkbox" id="missCheck"
+                                                   class="form-check-input"
+                                                   :checked="missedFairway"
+                                                   @@click="missedFairway = !missedFairway; if (missedFairway) { hitFairway = false; missedFairwayDropdown = true;} else { missedFairwayDropdown = false; }">
+                                            <label for="missCheck" class="form-check-label">Miss Fwy</label>
                                         </div>
+                                    </div>
+
+                                    <div class="col-auto mb-2" x-show="missedFairwayDropdown" x-transition>
+                                        <label class="form-label"> Miss Type</label>
+                                        <select class="form-select form-select-sm"
+                                                asp-for="@Model.HoleScore[i].HoleStats.MissFairwayType"
+                                                asp-items="@Model.MissTypeSelectList.ToSelectList("Miss Type", "")"></select>
+                                        <span class="text-danger" asp-validation-for="@Model.HoleScore[i].HoleStats.MissFairwayType"></span>
                                     </div>
                                 </div>
                             }
 
-                            <div x-data="{ missedGreen: @Model.HoleScore[i].HoleStats.MissedGreen.ToString().ToLower() }">
-                                <div class="col-auto">
-                                    <div class="form-check">
-                                        <input
-                                            class="form-check-input"
-                                            asp-for="@Model.HoleScore[i].HoleStats.MissedGreen"
-                                            type="checkbox"
-                                            x-model="missedGreen">
-                                        <label class="form-check-label" asp-for="@Model.HoleScore[i].HoleStats.MissedGreen"></label>
+                            <div x-data="{ missedGreenDropdown: @Model.HoleScore[i].HoleStats.MissedGreen.ToString().ToLower() }">
+                                <div x-data="{ missedGreen: @Json.Serialize(Model.HoleScore[i].HoleStats.MissedGreen), hitGreen: @Json.Serialize(Model.HoleScore[i].HoleStats.HitGreen) }">
+
+                                    <!-- Hidden Inputs for Form Submission -->
+                                    <input type="hidden" asp-for="@Model.HoleScore[i].HoleStats.MissedGreen" x-model="missedGreen">
+                                    <input type="hidden" asp-for="@Model.HoleScore[i].HoleStats.HitGreen" x-model="hitGreen">
+
+                                    <div class="form-check form-check-inline">
+                                        <!-- Hit Checkbox -->
+                                        <input type="checkbox" id="hitCheck"
+                                               class="form-check-input"
+                                               :checked="hitGreen"
+                                               @@click="hitGreen = !hitGreen; if (hitGreen) { missedGreen = false; missedGreenDropdown = false;}">
+                                        <label for="hitCheck" class="form-check-label">Hit GIR</label>
+                                    </div>
+
+                                    <div class="form-check form-check-inline">
+                                        <!-- Miss Checkbox -->
+                                        <input type="checkbox" id="missCheck"
+                                               class="form-check-input"
+                                               :checked="missedGreen"
+                                               @@click="missedGreen = !missedGreen; if (missedGreen) { hitGreen = false; missedGreenDropdown = true;} else { missedGreenDropdown = false; }">
+                                        <label for="missCheck" class="form-check-label">Miss GIR</label>
                                     </div>
                                 </div>
 
-                                <div class="col-auto mb-2" x-show="missedGreen" x-transition>
+                                <div class="col-auto mb-2" x-show="missedGreenDropdown" x-transition>
                                     <label class="form-label">Miss Type</label>
                                     <select class="form-select form-select-sm"
                                             asp-for="@Model.HoleScore[i].HoleStats.MissGreenType"
@@ -119,40 +144,17 @@
                             </div>
 
 
-                            @*x-show="showAdvancedStats"*@
                             <div class="col-auto">
                                 <label class="form-label" asp-for="@Model.HoleScore[i].HoleStats.NumberOfPutts"></label>
                                 <input type="number" class="form-control form-control-sm" asp-for="@Model.HoleScore[i].HoleStats.NumberOfPutts" autocomplete="off"/>
                                 <span class="text-danger" asp-validation-for="@Model.HoleScore[i].HoleStats.NumberOfPutts"></span>
                             </div>
 
-                            @*x-show="showAdvancedStats"*@
                             <div class="col-auto">
                                 <label class="form-label" asp-for="@Model.HoleScore[i].HoleStats.YardageOut"></label>
                                 <input type="number" class="form-control form-control-sm" asp-for="@Model.HoleScore[i].HoleStats.YardageOut" autocomplete="off"/>
                                 <span class="text-danger" asp-validation-for="@Model.HoleScore[i].HoleStats.YardageOut"></span>
                             </div>
-
-                            <div x-data="{ value: null }" class="form-check">
-                                <!-- True Checkbox -->
-                                <input type="checkbox" id="trueCheck"
-                                       class="form-check-input"
-                                       :checked="value === true"
-                                       @@click="value = (value === true) ? null : true">
-                                <label for="trueCheck" class="form-check-label">True</label>
-
-                                <!-- False Checkbox -->
-                                <input type="checkbox" id="falseCheck"
-                                       class="form-check-input ms-3"
-                                       :checked="value === false"
-                                       @@click="value = (value === false) ? null : false">
-                                <label for="falseCheck" class="form-check-label">False</label>
-
-                                <!-- Hidden Input for Form Submission -->
-                                <input type="hidden" name="myField" x-model="value">
-                            </div>
-
-
                         </div>
                     </div>
                 </div>

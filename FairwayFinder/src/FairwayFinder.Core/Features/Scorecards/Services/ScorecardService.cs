@@ -100,7 +100,7 @@ public class ScorecardService
     {
         var hole_stats = await _scorecardRepository.GetHoleStatsForRound(roundId);
         var hole_stats_form = hole_stats.Select(stats => stats.ToForm()).ToList();
-
+        
         return hole_stats_form;
     }
 
@@ -256,11 +256,13 @@ public class ScorecardService
         {
             var holeStat = holeStats.First(x => x.hole_id == formScore.HoleId);
             
-            holeStat.hit_fairway = !formScore.HoleStats.MissedFairway;
-            holeStat.miss_fairway_type = !formScore.HoleStats.MissedFairway ? null : formScore.HoleStats.MissFairwayType;
-
-            holeStat.hit_green = !formScore.HoleStats.MissedGreen;
-            holeStat.miss_green_type = !formScore.HoleStats.MissedGreen ? null : formScore.HoleStats.MissGreenType;
+            // If both Hit and Miss are false, leave the value as null. Otherwise, take the true value since both cant be true
+            holeStat.hit_fairway = formScore.HoleStats.HitFairway ? true : formScore.HoleStats.MissedFairway ? false : null;
+            holeStat.hit_green = formScore.HoleStats.HitGreen ? true : formScore.HoleStats.MissedGreen ? false : null;
+            
+            // If we hit, it should be null. If we miss it should have a value. If both are false, then it should be null.
+            holeStat.miss_fairway_type = formScore.HoleStats.HitFairway || !formScore.HoleStats.MissedFairway ? null : formScore.HoleStats.MissFairwayType;
+            holeStat.miss_green_type = formScore.HoleStats.HitGreen || !formScore.HoleStats.MissedGreen ? null : formScore.HoleStats.MissGreenType;
 
             holeStat.number_of_putts = formScore.HoleStats.NumberOfPutts;
             holeStat.approach_yardage = formScore.HoleStats.YardageOut;
