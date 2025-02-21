@@ -76,6 +76,7 @@ public class ScorecardController : BaseScorecardController
         var scorecard_summary = await _scorecardService.GetScorecardSummaryByRoundIdAsync(roundId);
         var scorecard_scores = await _scorecardService.GetScorecardHoleScoresByRoundIdAsync(roundId);
         var scorecard_stats = await _scorecardService.GetScorecardRoundStatsAsync(roundId);
+        var scorecard_hole_stats = await _scorecardService.GetHoleStatsByRoundIdAsync(roundId);
 
         if (scorecard_summary is null)
         {
@@ -88,6 +89,7 @@ public class ScorecardController : BaseScorecardController
             ScorecardSummary = scorecard_summary,
             ScorecardRoundStats = scorecard_stats,
             Holes = scorecard_scores,
+            HoleStats = scorecard_hole_stats,
             Name = $"{user.FirstName} {user.LastName}",
             Username = username
         };

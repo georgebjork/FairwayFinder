@@ -98,7 +98,7 @@
 
         @*Score*@
         <tr>
-            <td colspan="2">@Model.Name</td>
+            <th colspan="2">@Model.Name</th>
             @for (var i = 0; i < front_nine_max; i++)
             {
                 <td class="text-center position-relative">
@@ -145,6 +145,71 @@
             <td class="text-center" colspan="2">@Model.ScorecardSummary.score_in</td>
             <td class="text-center" colspan="2">@Model.ScorecardSummary.score</td>
         </tr>
+            @if (Model.ScorecardSummary.using_hole_stats)
+            {
+                <tr>
+                    <th colspan="2">Fairways</th>
+                    @for (var i = 0; i < front_nine_max; i++)
+                    {
+                        <td class="text-center">
+                            @await Html.PartialAsync("Shared/_FairwayStatIcon", Model.HoleStats[i])
+                        </td>
+                    }
+                    <td class="text-center" colspan="2">&nbsp;</td>
+                    @for (var i = front_nine_max; i < back_nine_max; i++)
+                    {
+                        <td class="text-center">
+                            @await Html.PartialAsync("Shared/_FairwayStatIcon", Model.HoleStats[i])
+                        </td>
+                    }
+                    <td class="text-center" colspan="4">&nbsp;</td>
+                </tr>
+                <tr>
+                    <th colspan="2">GIR</th>
+                    @for (var i = 0; i < front_nine_max; i++)
+                    {
+                        <td class="text-center">
+                            @await Html.PartialAsync("Shared/_GreenStatIcon", Model.HoleStats[i])
+                        </td>
+                    }
+                    <td class="text-center" colspan="2">&nbsp;</td>
+                    @for (var i = front_nine_max; i < back_nine_max; i++)
+                    {
+                        <td class="text-center">
+                            @await Html.PartialAsync("Shared/_GreenStatIcon", Model.HoleStats[i])
+                        </td>
+                    }
+                    <td class="text-center" colspan="4">&nbsp;</td>
+                </tr>
+                <tr>
+                    <th colspan="2">Putts</th>
+                    @for (var i = 0; i < front_nine_max; i++)
+                    {
+                        if (Model.HoleStats[i].number_of_putts >= 3)
+                        {
+                            <td class="text-center text-danger">@Model.HoleStats[i].number_of_putts</td>
+                        }
+                        else
+                        {
+                            <td class="text-center">@Model.HoleStats[i].number_of_putts</td>
+                        }
+                    }
+                    <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number <= 9).Sum(x => x.number_of_putts)</td>
+                    @for (var i = front_nine_max; i < back_nine_max; i++)
+                    {
+                        if (Model.HoleStats[i].number_of_putts >= 3)
+                        {
+                            <td class="text-center text-danger">@Model.HoleStats[i].number_of_putts</td>
+                        }
+                        else
+                        {
+                            <td class="text-center">@Model.HoleStats[i].number_of_putts</td>
+                        }
+                    }
+                    <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number > 9).Sum(x => x.number_of_putts)</td>
+                    <td class="text-center" colspan="2">@Model.HoleStats.Sum(x => x.number_of_putts)</td>
+                </tr>
+            }
         </tbody>
     </table>
 </div>
@@ -181,7 +246,7 @@
             </div>
             <div class="card-body">
                 <div class="ratio ratio-4x3">
-                     <canvas id="scoreDistribution"></canvas>
+                    <canvas id="scoreDistribution"></canvas>
                 </div>
             </div>
         </div>
@@ -200,6 +265,45 @@
         </div>
     </div>
 </div>
+
+@if (Model.ScorecardSummary.using_hole_stats)
+{
+    <div class="row mt-3">
+        <div class="col-6">
+            <div class="card">
+                <div class="card-header">
+                    <div class="row d-flex justify-content-between">
+                        <div class="col-auto">
+                            Putting
+                        </div>
+
+                        <div class="col-auto text-muted">
+                            @Model.HoleStats.Count(x => x.number_of_putts != null) Holes Recorded
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="ratio ratio-4x3">
+                        <canvas id="puttingDistribution"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6">
+            <div class="card">
+                <div class="card-header">
+                    Driving Accuracy
+                </div>
+                <div class="card-body">
+                    <div class="ratio ratio-4x3">
+                        <canvas id="drivingAccuracy"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @{
 
@@ -230,9 +334,15 @@
             const bogies = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.bogies));
             const doubles = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.double_bogies));
             const worse = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.triple_or_worse));
-
+            
+            const onePutts = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts <= 1)))
+            const twoPutts = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts == 2)))
+            const threePuttsOrWorse = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts >= 3)))
+            
+            
             // Get canvas contexts
-            const ctxDonut = document.getElementById('scoreDistribution').getContext('2d');
+            const ctxDonutScores = document.getElementById('scoreDistribution').getContext('2d');
+            const ctxDonutPutts = document.getElementById('puttingDistribution').getContext('2d');
             const ctxLine = document.getElementById('scoreChange').getContext('2d');
 
             // Retrieve holes and scores from the model
@@ -267,7 +377,7 @@
             });
 
             // Donut Chart configuration
-            const donutData = {
+            const scoringData = {
                 labels: ["Eagles or Better", "Birdies", "Pars", "Bogeys", "Double Bogeys", "Worse"],
                 datasets: [{
                     data: [eaglesOrBetter, birdies, pars, bogies, doubles, worse],
@@ -282,9 +392,22 @@
                 }]
             };
 
-            const donutChart = new Chart(ctxDonut, {
+            // Donut Chart configuration
+            const puttingData = {
+                labels: ["1 Putt or Better", "2 Putt", "3 Putt or Worse"],
+                datasets: [{
+                    data: [onePutts, twoPutts, threePuttsOrWorse],
+                    backgroundColor: [
+                        "#1d3658",  // 1 putt
+                        "#447a9c",  // 2 putt
+                        "#e63746",  // 3 putt
+                    ]
+                }]
+            };
+
+            const donutChartScores = new Chart(ctxDonutScores, {
                 type: 'doughnut',
-                data: donutData,
+                data: scoringData,
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
@@ -295,6 +418,23 @@
                     }
                 }
             });
+
+            Chart.defaults.plugins.datalabels = ChartDataLabels;
+            // Create the chart
+            const donutChartPutting = new Chart(ctxDonutPutts, {
+                type: 'doughnut',
+                data: puttingData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
         });
     </script>
 }

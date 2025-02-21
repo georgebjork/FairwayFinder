@@ -15,4 +15,5 @@ public class ScorecardSummaryQueryModel
     public long yardage_in { get; set; }
     public long yardage_total { get; set; }
     public long par { get; set; }
+    public bool using_hole_stats { get; set; }
 }

@@ -68,7 +68,7 @@
                         </div>
                         
                         <div x-show="showAdvancedStats" id="advanced-stats">
-                            @if (Model.HoleScore[i].Par > 2)
+                            @if (Model.HoleScore[i].Par > 3)
                             {
 
                                 <div x-data="{ missedFairwayDropdown: @Model.HoleScore[i].HoleStats.MissedFairway.ToString().ToLower() }">

@@ -68,6 +68,11 @@ public class ScorecardService
         return stats;
     }
     
+    public async Task<List<HoleStatsQueryModel>> GetHoleStatsByRoundIdAsync(long roundId)
+    {
+        return await _scorecardRepository.GetHoleStatsByRoundIdAsync(roundId);
+    }
+    
     public async Task<Round?> GetScorecardByIdAsync(long roundId)
     {
         return await _scorecardRepository.GetScorecardByIdAsync(roundId);

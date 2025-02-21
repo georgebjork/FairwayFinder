@@ -1,0 +1,31 @@
+@using FairwayFinder.Core.Models.Enums
+@model FairwayFinder.Core.Features.Scorecards.Models.QueryModels.HoleStatsQueryModel
+
+@switch (Model.hit_fairway)
+{
+    case true:
+        <i class="fa-regular fa-circle-check text-success"></i>
+        break;
+    case false:
+        if (Model.miss_fairway_type == (int)MissType.Left)
+        {
+            <i class="fa-regular fa-circle-left text-danger"></i>
+        }
+        else if (Model.miss_fairway_type == (int)MissType.Right)
+        {
+            <i class="fa-regular fa-circle-right text-danger"></i>
+        }
+        else if (Model.miss_fairway_type == (int)MissType.Short)
+        {
+            <i class="fa-regular fa-circle-down text-danger"></i>
+        }
+        else if (Model.miss_fairway_type == (int)MissType.Long)
+        {
+            <i class="fa-regular fa-circle-up text-danger"></i>
+        }
+        else
+        {
+            <i class="fa-regular fa-circle-xmark text-danger"></i>
+        }
+        break;
+}

@@ -24,6 +24,7 @@ public interface IScorecardRepository : IBaseRepository
     Task<ScorecardRoundStatsQueryModel?> GetScorecardRoundStatsAsync(long roundId);
     Task<List<HoleStats>> GetHoleStatsForRound(long roundId);
     Task<bool> InsertHoleStatsAsync(List<HoleStats> holeStats);
+    Task<List<HoleStatsQueryModel>> GetHoleStatsByRoundIdAsync(long roundId);
 }
 
 public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecardRepository> logger) : BasePgRepository(configuration), IScorecardRepository
@@ -122,7 +123,7 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
     
     public async Task<ScorecardSummaryQueryModel?> GetScorecardSummaryByRoundIdAsync(long roundId)
     {
-        var sql = @"SELECT c.course_name, t.teebox_name, t.slope, t.rating, r.score, r.date_played, r.user_id, r.round_id, t.yardage_out, t.yardage_in, t.yardage_total, r.score_out, r.score_in, t.par
+        var sql = @"SELECT c.course_name, t.teebox_name, t.slope, t.rating, r.score, r.date_played, r.user_id, r.round_id, t.yardage_out, t.yardage_in, t.yardage_total, r.score_out, r.score_in, t.par, r.using_hole_stats
                     FROM round as r
 	                    INNER JOIN course as c ON c.course_id = r.course_id
 	                    INNER JOIN teebox as t ON t.course_id = c.course_id AND t.teebox_id = r.teebox_id
@@ -215,5 +216,35 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
             await trans.RollbackAsync();
             return false;
         }
+    }
+
+    public async Task<List<HoleStatsQueryModel>> GetHoleStatsByRoundIdAsync(long roundId)
+    {
+        var sql = @"SELECT 
+                    h.hole_number, 
+                    hs.hole_stats_id,
+                    hs.round_id,
+                    hs.score_id,
+                    hs.hole_id,
+                    hs.hit_fairway,
+	                hs.hit_green,
+	                hs.number_of_putts,
+	                hs.approach_yardage,
+	                hs.miss_fairway_type,
+	                hs.miss_green_type,
+                    mt_fairway.miss_type AS miss_fairway_type_string, 
+                    mt_green.miss_type AS miss_green_type_string
+                FROM hole_stats AS hs
+                INNER JOIN hole AS h 
+                    ON h.hole_id = hs.hole_id
+                LEFT JOIN miss_type AS mt_fairway 
+                    ON hs.miss_fairway_type = mt_fairway.miss_type_id
+                LEFT JOIN miss_type AS mt_green 
+                    ON hs.miss_green_type = mt_green.miss_type_id
+                WHERE hs.round_id = @roundId
+                ORDER BY h.hole_number;";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryAsync<HoleStatsQueryModel>(sql, new {roundId});
+        return rv.ToList();
     }
 }
