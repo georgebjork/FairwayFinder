@@ -335,14 +335,8 @@
             const doubles = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.double_bogies));
             const worse = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.triple_or_worse));
             
-            const onePutts = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts <= 1)))
-            const twoPutts = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts == 2)))
-            const threePuttsOrWorse = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts >= 3)))
-            
-            
             // Get canvas contexts
             const ctxDonutScores = document.getElementById('scoreDistribution').getContext('2d');
-            const ctxDonutPutts = document.getElementById('puttingDistribution').getContext('2d');
             const ctxLine = document.getElementById('scoreChange').getContext('2d');
 
             // Retrieve holes and scores from the model
@@ -392,19 +386,6 @@
                 }]
             };
 
-            // Donut Chart configuration
-            const puttingData = {
-                labels: ["1 Putt or Better", "2 Putt", "3 Putt or Worse"],
-                datasets: [{
-                    data: [onePutts, twoPutts, threePuttsOrWorse],
-                    backgroundColor: [
-                        "#1d3658",  // 1 putt
-                        "#447a9c",  // 2 putt
-                        "#e63746",  // 3 putt
-                    ]
-                }]
-            };
-
             const donutChartScores = new Chart(ctxDonutScores, {
                 type: 'doughnut',
                 data: scoringData,
@@ -419,21 +400,45 @@
                 }
             });
 
-            Chart.defaults.plugins.datalabels = ChartDataLabels;
-            // Create the chart
-            const donutChartPutting = new Chart(ctxDonutPutts, {
-                type: 'doughnut',
-                data: puttingData,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
+            const isUsingAdvancedStats = @Html.Raw(Json.Serialize(Model.ScorecardSummary.using_hole_stats))
+
+            if (isUsingAdvancedStats) 
+            {
+                const onePutts = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts <= 1)))
+                const twoPutts = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts == 2)))
+                const threePuttsOrWorse = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts >= 3)))
+
+                const ctxDonutPutts = document.getElementById('puttingDistribution').getContext('2d');
+
+
+                // Donut Chart configuration
+                const puttingData = {
+                    labels: ["1 Putt or Better", "2 Putt", "3 Putt or Worse"],
+                    datasets: [{
+                        data: [onePutts, twoPutts, threePuttsOrWorse],
+                        backgroundColor: [
+                            "#1d3658",  // 1 putt
+                            "#447a9c",  // 2 putt
+                            "#e63746",  // 3 putt
+                        ]
+                    }]
+                };
+
+                // Create the chart
+                const donutChartPutting = new Chart(ctxDonutPutts, {
+                    type: 'doughnut',
+                    data: puttingData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
 
         });
     </script>
