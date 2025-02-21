@@ -68,6 +68,11 @@ public class ScorecardService
         return stats;
     }
     
+    public async Task<List<HoleStatsQueryModel>> GetHoleStatsByRoundIdAsync(long roundId)
+    {
+        return await _scorecardRepository.GetHoleStatsByRoundIdAsync(roundId);
+    }
+    
     public async Task<Round?> GetScorecardByIdAsync(long roundId)
     {
         return await _scorecardRepository.GetScorecardByIdAsync(roundId);
@@ -95,29 +100,30 @@ public class ScorecardService
 
         return score_forms;
     }
+    
+    public async Task<List<HoleStatsFormModel>> GetHoleScoreStatsFormsByRoundIdAsync(long roundId)
+    {
+        var hole_stats = await _scorecardRepository.GetHoleStatsForRound(roundId);
+        var hole_stats_form = hole_stats.Select(stats => stats.ToForm()).ToList();
+        
+        return hole_stats_form;
+    }
 
     public async Task<int> CreateNewScorecardAsync(ScorecardFormModel form)
     {
-        // Validate TeeboxId is a valid integer
-        if (!int.TryParse(form.TeeboxId, out int teeboxId))
-        {
-            _logger.LogError("Invalid TeeboxId format: {TeeboxId}", form.TeeboxId);
-            return -1;
-        }
-
         // Validate that the course exists
-        var course = await _courseLookupService.GetCourseByIdAsync(form.CourseId);
+        var course = await _courseLookupService.GetCourseByIdAsync(form.RoundFormModel.CourseId);
         if (course == null)
         {
-            _logger.LogError("Course not found for CourseId: {CourseId}", form.CourseId);
+            _logger.LogError("Course not found for CourseId: {CourseId}", form.RoundFormModel.CourseId);
             return -1;
         }
 
         // Validate that the teebox exists
-        var teebox = await _teeboxLookupService.GetTeeByIdAsync(teeboxId);
+        var teebox = await _teeboxLookupService.GetTeeByIdAsync(form.RoundFormModel.TeeboxId);
         if (teebox == null)
         {
-            _logger.LogError("Teebox not found for TeeboxId: {TeeboxId}", teeboxId);
+            _logger.LogError("Teebox not found for TeeboxId: {TeeboxId}", form.RoundFormModel.TeeboxId);
             return -1;
         }
 
@@ -135,13 +141,14 @@ public class ScorecardService
             // Round
             var round = new Round()
             {
-                course_id = form.CourseId,
-                teebox_id = int.Parse(form.TeeboxId),
-                date_played = form.DatePlayed,
+                course_id = form.RoundFormModel.CourseId,
+                teebox_id = form.RoundFormModel.TeeboxId,
+                date_played = form.RoundFormModel.DatePlayed,
                 user_id = user_id,
                 score = form.HoleScore.Sum(x => x.Score),
                 score_out = form.HoleScore.Where(x => x.HoleNumber <= 9).Sum(x => x.Score),
-                score_in = form.HoleScore.Where(x => x.HoleNumber > 9).Sum(x => x.Score)
+                score_in = form.HoleScore.Where(x => x.HoleNumber > 9).Sum(x => x.Score),
+                using_hole_stats = form.RoundFormModel.UsingHoleStats
             };
             round = EntityMetadataHelper.NewRecord(round, username);
             
@@ -162,7 +169,20 @@ public class ScorecardService
                 holes.Add(EntityMetadataHelper.NewRecord(hole, username));
             }
             
-            var rv = await _scorecardRepository.CreateNewScorecardAsync(round, holes, round_stats);
+            var hole_stats = new List<HoleStats>();
+            foreach (var h in form.HoleScore)
+            {
+                var hole = h.HoleStats.ToModel();
+
+                if (!form.RoundFormModel.UsingHoleStats)
+                {
+                    hole.hit_fairway = null;
+                    hole.hit_green = null;
+                }
+                hole_stats.Add(EntityMetadataHelper.NewRecord(hole, username));
+            }
+            
+            var rv = await _scorecardRepository.CreateNewScorecardAsync(round, holes, round_stats, hole_stats);
             return rv;
         }
         catch (Exception ex)
@@ -174,14 +194,16 @@ public class ScorecardService
 
     public async Task<bool> UpdateScorecardAsync(ScorecardFormModel form)
     {
-        if (form.RoundId is null)
+        // Validate round ID from the form
+        if (form.RoundFormModel.RoundId is null)
         {
             _logger.LogError("Round Id was null when trying to update round.");
             return false;
         }
 
-        var roundId = form.RoundId.Value;
-        
+        var roundId = form.RoundFormModel.RoundId.Value;
+
+        // Retrieve the round from the repository
         var round = await _scorecardRepository.GetRoundByIdAsync(roundId);
         if (round is null)
         {
@@ -189,37 +211,82 @@ public class ScorecardService
             return false;
         }
 
+        // Fetch hole scores, round stats, and hole stats concurrently
+        var holeScoresTask = _scorecardRepository.GetScoresForRoundByRoundIdAsync(roundId);
+        var roundStatsTask = _scorecardRepository.GetRoundStatsForRoundAsync(roundId);
+        var holeStatsTask = _scorecardRepository.GetHoleStatsForRound(roundId);
 
-        // Retrieve hole scores and round stats
-        var hole_scores = await _scorecardRepository.GetScoresForRoundByRoundIdAsync(roundId);
-        var round_stats = await _scorecardRepository.GetRoundStatsForRoundAsync(roundId);
-        
-        
-        // Initialize or update round stats
-        round_stats = round_stats is null
-            ? EntityMetadataHelper.NewRecord(GolfStatHelpers.GenerateRoundStats(form.HoleScore), _usernameRetriever.Username)
-            : EntityMetadataHelper.UpdateRecord(round_stats.RefreshRoundStats(form.HoleScore), _usernameRetriever.Username);
-        round_stats.round_id = roundId;
-        
-        // Update hole_scores with scores from form.HoleScores
-        var updated_hole_scores = hole_scores.Select(score =>
+        await Task.WhenAll(holeScoresTask, roundStatsTask, holeStatsTask);
+
+        var holeScores = await holeScoresTask;
+        var roundStats = await roundStatsTask;
+        var holeStats = await holeStatsTask;
+
+        if (holeStats.Count <= 0 && form.RoundFormModel.UsingHoleStats)
         {
-            var matchingScore = form.HoleScore.FirstOrDefault(h => h.HoleId == score.hole_id);
-            if (matchingScore != null)
+            var hole_stats = new List<HoleStats>();
+            
+            // Generate blank holestats to use
+            holeStats.AddRange(holeScores.Select(hole => new HoleStats
             {
-                score.hole_score = matchingScore.Score;
-                score.hole_number = matchingScore.HoleNumber;
-                return EntityMetadataHelper.UpdateRecord(score, _usernameRetriever.Username);
+                score_id = hole.score_id, round_id = hole.round_id, hole_id = hole.hole_id,
+            }).Select(hs => EntityMetadataHelper.NewRecord(hs, _usernameRetriever.Username)));
+
+            await _scorecardRepository.InsertHoleStatsAsync(holeStats);
+
+            holeStats = await _scorecardRepository.GetHoleStatsForRound(roundId);
+        }
+
+        // Update or create round stats based on the form's hole scores
+        roundStats = roundStats is null 
+            ? EntityMetadataHelper.NewRecord(GolfStatHelpers.GenerateRoundStats(form.HoleScore), _usernameRetriever.Username)
+            : EntityMetadataHelper.UpdateRecord(roundStats.RefreshRoundStats(form.HoleScore), _usernameRetriever.Username);
+        roundStats.round_id = roundId;
+
+        // Update each hole score with values from the form
+        var updatedHoleScores = holeScores.Select(score =>
+        {
+            var formScore = form.HoleScore.FirstOrDefault(h => h.HoleId == score.hole_id);
+            if (formScore != null)
+            {
+                score.hole_score = formScore.Score;
+                score.hole_number = formScore.HoleNumber;
+                score = EntityMetadataHelper.UpdateRecord(score, _usernameRetriever.Username);
             }
             return score;
         }).ToList();
 
-        round.score_out = updated_hole_scores.Where(x => x.hole_number <= 9).Sum(y => y.hole_score);
-        round.score_in = updated_hole_scores.Where(x => x.hole_number > 9).Sum(y => y.hole_score);
+        // Update hole stats based on the form values
+        var updatedHoleStats = form.HoleScore.Select(formScore =>
+        {
+            var holeStat = holeStats.First(x => x.hole_id == formScore.HoleId);
+            
+            // If both Hit and Miss are false, leave the value as null. Otherwise, take the true value since both cant be true
+            holeStat.hit_fairway = formScore.HoleStats.HitFairway ? true : formScore.HoleStats.MissedFairway ? false : null;
+            holeStat.hit_green = formScore.HoleStats.HitGreen ? true : formScore.HoleStats.MissedGreen ? false : null;
+            
+            // If we hit, it should be null. If we miss it should have a value. If both are false, then it should be null.
+            holeStat.miss_fairway_type = formScore.HoleStats.HitFairway || !formScore.HoleStats.MissedFairway ? null : formScore.HoleStats.MissFairwayType;
+            holeStat.miss_green_type = formScore.HoleStats.HitGreen || !formScore.HoleStats.MissedGreen ? null : formScore.HoleStats.MissGreenType;
+
+            holeStat.number_of_putts = formScore.HoleStats.NumberOfPutts;
+            holeStat.approach_yardage = formScore.HoleStats.YardageOut;
+            
+            return EntityMetadataHelper.UpdateRecord(holeStat, _usernameRetriever.Username);
+        }).ToList();
+
+        // Recalculate round scores from the updated hole scores
+        round.score_out = updatedHoleScores.Where(x => x.hole_number <= 9).Sum(y => y.hole_score);
+        round.score_in = updatedHoleScores.Where(x => x.hole_number > 9).Sum(y => y.hole_score);
         round.score = round.score_out + round.score_in;
-        round.date_played = form.DatePlayed;
+
+        // Update round properties based on the form
+        round.date_played = form.RoundFormModel.DatePlayed;
+        round.using_hole_stats = form.RoundFormModel.UsingHoleStats;
         round = EntityMetadataHelper.UpdateRecord(round, _usernameRetriever.Username);
-        
-        return await _scorecardRepository.UpdateScorecardAsync(round, updated_hole_scores, round_stats);
+
+        // Persist the updated scorecard details
+        return await _scorecardRepository.UpdateScorecardAsync(round, updatedHoleScores, roundStats, updatedHoleStats);
     }
+
 }

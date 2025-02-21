@@ -6,20 +6,21 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FairwayFinder.Web.Migrations
 {
     /// <inheritdoc />
-    public partial class DropScoreType : Migration
+    public partial class AddUsingHoleStatsFieldToRound : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql(@"
-                ALTER TABLE score
-                DROP COLUMN IF EXISTS score_type;
+                ALTER TABLE round
+                ADD COLUMN using_hole_stats BOOLEAN NOT NULL DEFAULT FALSE
             ");
         }
-        
+
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            
         }
     }
 }

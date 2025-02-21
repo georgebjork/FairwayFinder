@@ -17,10 +17,10 @@
     <link rel="stylesheet" href="~/FairwayFinder.Web.styles.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/lib/font-awesome/css/all.css" />
     <link rel="stylesheet" href="~/lib/datatable/datatables.min.css" asp-append-version="true">
-
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
     <script src="~/lib/bootstrap/bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js" defer="defer"></script>
 </head>
-<body class="mb-0" hx-boost="true">
+<body class="mb-0" hx-boost="true" x-data>
 <div class="container-fluid">
     <div class="d-flex">
         <!-- Sidebar -->
@@ -46,6 +46,7 @@
 <script src="~/js/htmx.min.js" asp-append-version="true"></script>
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/chart.js/chart.umd.js" asp-append-version="true"></script>
+<script src="~/lib/chart.js/plugins/chartjs-plugin-datalabels.min.js" asp-append-version="true"></script>
 <script src="~/lib/datatable/datatables.min.js" asp-append-version="true"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
 @await RenderSectionAsync("Scripts", required: false)
