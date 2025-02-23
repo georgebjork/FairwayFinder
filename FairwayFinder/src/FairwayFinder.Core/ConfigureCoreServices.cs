@@ -1,5 +1,6 @@
 ﻿using FairwayFinder.Core.Features.CourseManagement.Repositories;
 using FairwayFinder.Core.Features.CourseManagement.Services;
+using FairwayFinder.Core.Features.Dashboard.Services;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
 using FairwayFinder.Core.Features.Scorecards.Services;
 using FairwayFinder.Core.Repositories;
@@ -33,6 +34,7 @@ public static class ConfigureCoreServices
         services.AddTransient<TeeboxLookupService>();
         services.AddTransient<HoleLookupService>();
         services.AddTransient<ScorecardService>();
+        services.AddTransient<DashboardService>();
         
         return services;
     } 

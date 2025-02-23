@@ -37,7 +37,6 @@
 
     <ItemGroup>
       <Folder Include="Areas\Scorecards\Views\Shared\" />
-      <Folder Include="Views\Home\Shared\" />
     </ItemGroup>
 
 </Project>

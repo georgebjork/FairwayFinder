@@ -30,17 +30,12 @@ public class ScorecardService
         _holeLookupService = holeLookupService;
     }
 
-    public async Task<List<ScorecardSummaryQueryModel>> GetScorecardSummaryByUserIdAsync(string userId)
+    public async Task<List<RoundSummaryQueryModel>> GetRoundSummaryByUserId(string userId, int? limit = null)
     {
-        return await _scorecardRepository.GetScorecardSummaryByUserIdAsync(userId);
+        return await _scorecardRepository.GetRoundsSummaryByUserIdAsync(userId, limit);
     }
     
-    public async Task<List<ScorecardSummaryQueryModel>> GetRecentScorecardsByUserIdAsync(string userId, int number)
-    {
-        return await _scorecardRepository.GetScorecardSummaryByUserIdAsync(userId, number);
-    }
-    
-    public async Task<ScorecardSummaryQueryModel?> GetScorecardSummaryByRoundIdAsync(long roundId)
+    public async Task<RoundSummaryQueryModel?> GetScorecardSummaryByRoundIdAsync(long roundId)
     {
         return await _scorecardRepository.GetScorecardSummaryByRoundIdAsync(roundId);
     }
@@ -213,7 +208,7 @@ public class ScorecardService
 
         // Fetch hole scores, round stats, and hole stats concurrently
         var holeScoresTask = _scorecardRepository.GetScoresForRoundByRoundIdAsync(roundId);
-        var roundStatsTask = _scorecardRepository.GetRoundStatsForRoundAsync(roundId);
+        var roundStatsTask = _scorecardRepository.GetRoundStatsByRoundIdAsync(roundId);
         var holeStatsTask = _scorecardRepository.GetHoleStatsForRound(roundId);
 
         await Task.WhenAll(holeScoresTask, roundStatsTask, holeStatsTask);

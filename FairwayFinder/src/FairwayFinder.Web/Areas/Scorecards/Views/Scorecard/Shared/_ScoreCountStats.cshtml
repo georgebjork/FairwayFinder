@@ -4,25 +4,7 @@
     <div class="card-header">
         Score Count
     </div>
-    <ul class="list-group list-group-flush">
-        @*
-        @if (Model.hole_in_ones > 0)
-        {
-            <li class="list-group-item d-flex justify-content-between">
-                <div>Hole-in-ones:</div>
-                <div>@Model.hole_in_ones</div>
-            </li>
-        }
-
-        @if (Model.double_eagles > 0)
-        {
-            <li class="list-group-item d-flex justify-content-between">
-                <div>Double Eagles:</div>
-                <div>@Model.double_eagles</div>
-            </li>
-        }
-        *@
-        
+    <ul class="list-group list-group-flush">    
         <li class="list-group-item d-flex justify-content-between">
             <div>Eagles or better:</div>
             <div>@(Model.eagles + Model.double_eagles + Model.hole_in_ones)</div>

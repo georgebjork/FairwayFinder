@@ -26,7 +26,7 @@ public class LookupRepository(IConfiguration configuration, ILogger<LookupReposi
 
     public async Task<Dictionary<long, string>> GetTeesForCourseAsync(long courseId)
     {
-        var sql = "SELECT teebox_id::text as Key, teebox_name as Value FROM teebox WHERE is_deleted = false AND course_id = @courseId ORDER BY yardage_total";
+        var sql = "SELECT teebox_id::text as Key, teebox_name as Value FROM teebox WHERE is_deleted = false AND course_id = @courseId ORDER BY yardage_total AND slope AND rating";
         await using var conn = await GetNewOpenConnection();
         var data = await conn.QueryAsync<KeyValuePair<long, string>>(sql, new {courseId});
         return new Dictionary<long, string>(data);
