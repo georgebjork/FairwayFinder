@@ -47,7 +47,7 @@ public class ScorecardController : BaseScorecardController
             return RedirectToAction(nameof(Index), "Home");
         }
 
-        var rounds = await _scorecardService.GetScorecardSummaryByUserIdAsync(userId);
+        var rounds = await _scorecardService.GetRoundSummaryByUserId(userId);
 
         
         // Helps pass the username into the view 
@@ -86,7 +86,7 @@ public class ScorecardController : BaseScorecardController
         
         var vm = new ScorecardViewModel
         {
-            ScorecardSummary = scorecard_summary,
+            roundSummary = scorecard_summary,
             ScorecardRoundStats = scorecard_stats,
             Holes = scorecard_scores,
             HoleStats = scorecard_hole_stats,

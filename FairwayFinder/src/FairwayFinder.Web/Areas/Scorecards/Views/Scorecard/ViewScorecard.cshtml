@@ -2,7 +2,7 @@
 @model FairwayFinder.Core.Features.Scorecards.Models.ViewModels.ScorecardViewModel
 
 @{
-    ViewData["Title"] = $"Scorecard - {Model.ScorecardSummary.course_name}";
+    ViewData["Title"] = $"Scorecard - {Model.roundSummary.course_name}";
 }
 
 
@@ -15,14 +15,14 @@
 
 <div class="row d-flex justify-content-between">
     <div class="col-auto">
-        <h1>@Model.ScorecardSummary.course_name</h1>
+        <h1>@Model.roundSummary.course_name</h1>
     </div>
 
     <div class="col-auto">
         <a class="btn btn-link me-2" asp-action="Index" asp-route-username="@Model.Username">
             <i class="fa-solid fa-arrow-left"></i> Scorecards
         </a>
-        <a class="btn btn-link" asp-controller="ScorecardManagement" asp-action="EditRound" asp-route-roundId="@Model.ScorecardSummary.round_id">
+        <a class="btn btn-link" asp-controller="ScorecardManagement" asp-action="EditRound" asp-route-roundId="@Model.roundSummary.round_id">
             <i class="fa-solid fa-pen-to-square"></i> Edit Round
         </a>
     </div>
@@ -30,10 +30,10 @@
 
 <div class="row">
     <div class="col-12 mb-0">
-        <p class="text-secondary mb-0"> Tee Box: @Model.ScorecardSummary.teebox_name</p>
+        <p class="text-secondary mb-0"> Tee Box: @Model.roundSummary.teebox_name</p>
     </div>
     <div class="col-12">
-        <p class="text-secondary"> Date: @Model.ScorecardSummary.date_played.FormatDate()</p>
+        <p class="text-secondary"> Date: @Model.roundSummary.date_played.FormatDate()</p>
     </div>
 </div>
 
@@ -49,18 +49,18 @@
 
         @*Yardage*@
         <tr>
-            <th colspan="2">@Model.ScorecardSummary.teebox_name</th>
+            <th colspan="2">@Model.roundSummary.teebox_name</th>
             @for (var i = 0; i < front_nine_max; i++)
             {
                 <td class="text-center">@Model.Holes[i].yardage</td>
             }
-            <td class="text-center" colspan="2">@Model.ScorecardSummary.yardage_out</td>
+            <td class="text-center" colspan="2">@Model.roundSummary.yardage_out</td>
             @for (var i = front_nine_max; i < back_nine_max; i++)
             {
                 <td class="text-center">@Model.Holes[i].yardage</td>
             }
-            <td class="text-center" colspan="2">@Model.ScorecardSummary.yardage_in</td>
-            <td class="text-center" colspan="2">@Model.ScorecardSummary.yardage_total</td>
+            <td class="text-center" colspan="2">@Model.roundSummary.yardage_in</td>
+            <td class="text-center" colspan="2">@Model.roundSummary.yardage_total</td>
         </tr>
 
         @*Handicap*@
@@ -76,7 +76,7 @@
                 <td class="text-center">@Model.Holes[i].handicap</td>
             }
             <td class="text-center" colspan="2">&nbsp;</td>
-            <td class="text-center" colspan="2">@Model.ScorecardSummary.slope / @Model.ScorecardSummary.rating</td>
+            <td class="text-center" colspan="2">@Model.roundSummary.slope / @Model.roundSummary.rating</td>
         </tr>
 
 
@@ -93,7 +93,7 @@
                 <td class="text-center">@Model.Holes[i].par</td>
             }
             <td class="text-center" colspan="2">@Model.Holes.Where(x => x.hole_number > front_nine_max).Sum(h => h.par)</td>
-            <td class="text-center" colspan="2">@Model.ScorecardSummary.par</td>
+            <td class="text-center" colspan="2">@Model.roundSummary.par</td>
         </tr>
 
         @*Score*@
@@ -120,7 +120,7 @@
                     }
                 </td>
             }
-            <td class="text-center" colspan="2">@Model.ScorecardSummary.score_out</td>
+            <td class="text-center" colspan="2">@Model.roundSummary.score_out</td>
             @for (var i = front_nine_max; i < back_nine_max; i++)
             {
                 <td class="text-center position-relative">
@@ -142,10 +142,10 @@
                     }
                 </td>
             }
-            <td class="text-center" colspan="2">@Model.ScorecardSummary.score_in</td>
-            <td class="text-center" colspan="2">@Model.ScorecardSummary.score</td>
+            <td class="text-center" colspan="2">@Model.roundSummary.score_in</td>
+            <td class="text-center" colspan="2">@Model.roundSummary.score</td>
         </tr>
-            @if (Model.ScorecardSummary.using_hole_stats)
+            @if (Model.roundSummary.using_hole_stats)
             {
                 <tr>
                     <th colspan="2">Fairways</th>
@@ -155,14 +155,15 @@
                             @await Html.PartialAsync("Shared/_FairwayStatIcon", Model.HoleStats[i])
                         </td>
                     }
-                    <td class="text-center" colspan="2">&nbsp;</td>
+                    <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number <= front_nine_max).Count(x => x.hit_fairway == true)</td>
                     @for (var i = front_nine_max; i < back_nine_max; i++)
                     {
                         <td class="text-center">
                             @await Html.PartialAsync("Shared/_FairwayStatIcon", Model.HoleStats[i])
                         </td>
                     }
-                    <td class="text-center" colspan="4">&nbsp;</td>
+                    <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number > front_nine_max).Count(x => x.hit_fairway == true)</td>
+                    <td class="text-center" colspan="2">@Model.HoleStats.Count(x => x.hit_fairway == true) / @Model.Holes.Count(x => x.par > 3)</td>
                 </tr>
                 <tr>
                     <th colspan="2">GIR</th>
@@ -172,14 +173,15 @@
                             @await Html.PartialAsync("Shared/_GreenStatIcon", Model.HoleStats[i])
                         </td>
                     }
-                    <td class="text-center" colspan="2">&nbsp;</td>
+                    <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number <= front_nine_max).Count(x => x.hit_green == true)</td>
                     @for (var i = front_nine_max; i < back_nine_max; i++)
                     {
                         <td class="text-center">
                             @await Html.PartialAsync("Shared/_GreenStatIcon", Model.HoleStats[i])
                         </td>
                     }
-                    <td class="text-center" colspan="4">&nbsp;</td>
+                    <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number > front_nine_max).Count(x => x.hit_green == true)</td>
+                    <td class="text-center" colspan="2">@Model.HoleStats.Count(x => x.hit_green == true) / @Model.HoleStats.Count</td>
                 </tr>
                 <tr>
                     <th colspan="2">Putts</th>
@@ -266,7 +268,7 @@
     </div>
 </div>
 
-@if (Model.ScorecardSummary.using_hole_stats)
+@if (Model.roundSummary.using_hole_stats)
 {
     <div class="row mt-3">
         <div class="col-6">
@@ -335,14 +337,8 @@
             const doubles = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.double_bogies));
             const worse = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.triple_or_worse));
             
-            const onePutts = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts <= 1)))
-            const twoPutts = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts == 2)))
-            const threePuttsOrWorse = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts >= 3)))
-            
-            
             // Get canvas contexts
             const ctxDonutScores = document.getElementById('scoreDistribution').getContext('2d');
-            const ctxDonutPutts = document.getElementById('puttingDistribution').getContext('2d');
             const ctxLine = document.getElementById('scoreChange').getContext('2d');
 
             // Retrieve holes and scores from the model
@@ -392,19 +388,6 @@
                 }]
             };
 
-            // Donut Chart configuration
-            const puttingData = {
-                labels: ["1 Putt or Better", "2 Putt", "3 Putt or Worse"],
-                datasets: [{
-                    data: [onePutts, twoPutts, threePuttsOrWorse],
-                    backgroundColor: [
-                        "#1d3658",  // 1 putt
-                        "#447a9c",  // 2 putt
-                        "#e63746",  // 3 putt
-                    ]
-                }]
-            };
-
             const donutChartScores = new Chart(ctxDonutScores, {
                 type: 'doughnut',
                 data: scoringData,
@@ -419,21 +402,45 @@
                 }
             });
 
-            Chart.defaults.plugins.datalabels = ChartDataLabels;
-            // Create the chart
-            const donutChartPutting = new Chart(ctxDonutPutts, {
-                type: 'doughnut',
-                data: puttingData,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
+            const isUsingAdvancedStats = @Html.Raw(Json.Serialize(Model.roundSummary.using_hole_stats))
+
+            if (isUsingAdvancedStats) 
+            {
+                const onePutts = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts <= 1)))
+                const twoPutts = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts == 2)))
+                const threePuttsOrWorse = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts >= 3)))
+
+                const ctxDonutPutts = document.getElementById('puttingDistribution').getContext('2d');
+
+
+                // Donut Chart configuration
+                const puttingData = {
+                    labels: ["1 Putt or Better", "2 Putt", "3 Putt or Worse"],
+                    datasets: [{
+                        data: [onePutts, twoPutts, threePuttsOrWorse],
+                        backgroundColor: [
+                            "#1d3658",  // 1 putt
+                            "#447a9c",  // 2 putt
+                            "#e63746",  // 3 putt
+                        ]
+                    }]
+                };
+
+                // Create the chart
+                const donutChartPutting = new Chart(ctxDonutPutts, {
+                    type: 'doughnut',
+                    data: puttingData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
 
         });
     </script>
