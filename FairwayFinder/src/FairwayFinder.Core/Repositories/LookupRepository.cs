@@ -15,7 +15,6 @@ public class LookupRepository(IConfiguration configuration, ILogger<LookupReposi
 {
     private readonly ILogger<LookupRepository> _logger = logger;
 
-
     public async Task<Dictionary<int, string>> GetMissTypes()
     {
         var sql = "SELECT miss_type_id as Key, miss_type as Value FROM miss_type";

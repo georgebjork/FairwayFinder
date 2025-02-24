@@ -3,26 +3,26 @@
 <ul class="list-group list-group-flush">
     <li class="list-group-item d-flex justify-content-between">
         <div>Eagles or better:</div>
-        <div>@(Model.RoundStatsList.Sum(x => x.hole_in_one) + Model.RoundStatsList.Sum(x => x.double_eagles) + Model.RoundStatsList.Sum(x => x.eagles))</div>
+        <div>@(Model.ScoreStats.hole_in_one + Model.ScoreStats.double_bogies + Model.ScoreStats.eagles)</div>
     </li>
     <li class="list-group-item d-flex justify-content-between">
         <div>Birdies:</div>
-        <div>@Model.RoundStatsList.Sum(x => x.birdies)</div>
+        <div>@Model.ScoreStats.birdies</div>
     </li>
     <li class="list-group-item d-flex justify-content-between">
         <div>Pars:</div>
-        <div>@Model.RoundStatsList.Sum(x => x.pars)</div>
+        <div>@Model.ScoreStats.pars</div>
     </li>
     <li class="list-group-item d-flex justify-content-between">
         <div>Bogeys:</div>
-        <div>@Model.RoundStatsList.Sum(x => x.bogies)</div>
+        <div>@Model.ScoreStats.bogies</div>
     </li>
     <li class="list-group-item d-flex justify-content-between">
         <div>Doubles:</div>
-        <div>@Model.RoundStatsList.Sum(x => x.double_bogies)</div>
+        <div>@Model.ScoreStats.double_bogies</div>
     </li>
     <li class="list-group-item d-flex justify-content-between">
         <div>Worse:</div>
-        <div>@Model.RoundStatsList.Sum(x => x.triple_or_worse)</div>
+        <div>@Model.ScoreStats.triple_or_worse</div>
     </li>
 </ul>

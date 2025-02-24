@@ -329,7 +329,7 @@
             const eaglesOrBetter = @Html.Raw(Json.Serialize(
                                        Model.ScorecardRoundStats.ScoreCountStats.eagles +
                                        Model.ScorecardRoundStats.ScoreCountStats.double_eagles +
-                                       Model.ScorecardRoundStats.ScoreCountStats.hole_in_ones
+                                       Model.ScorecardRoundStats.ScoreCountStats.hole_in_one
                                    ));
             const birdies = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.birdies));
             const pars = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.pars));

@@ -1,5 +1,4 @@
-@model FairwayFinder.Core.Features.Scorecards.Models.QueryModels.ScorecardRoundStatsQueryModel
-
+@model FairwayFinder.Core.Features.Stats.Models.QueryModels.RoundScoreStats
 <div class="card">
     <div class="card-header">
         Score Count
@@ -7,7 +6,7 @@
     <ul class="list-group list-group-flush">    
         <li class="list-group-item d-flex justify-content-between">
             <div>Eagles or better:</div>
-            <div>@(Model.eagles + Model.double_eagles + Model.hole_in_ones)</div>
+            <div>@(Model.eagles + Model.double_eagles + Model.hole_in_one)</div>
         </li>
         <li class="list-group-item d-flex justify-content-between">
             <div>Birdies:</div>

@@ -1,6 +1,7 @@
 using FairwayFinder.Core.Features.Dashboard.Models.ViewModel;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
 using FairwayFinder.Core.Features.Scorecards.Services;
+using FairwayFinder.Core.Features.Stats.Repositories;
 using FairwayFinder.Core.Services;
 using Microsoft.Extensions.Logging;
 
@@ -10,13 +11,15 @@ public class DashboardService
 {
     private readonly ILogger<DashboardService> _logger;
     private readonly IScorecardRepository _scorecardRepository;
+    private readonly IStatRepository _statRepository;
     private readonly IUsernameRetriever _usernameRetriever;
 
-    public DashboardService(ILogger<DashboardService> logger, IUsernameRetriever usernameRetriever, IScorecardRepository scorecardRepository)
+    public DashboardService(ILogger<DashboardService> logger, IUsernameRetriever usernameRetriever, IScorecardRepository scorecardRepository, IStatRepository statRepository)
     {
         _logger = logger;
         _usernameRetriever = usernameRetriever;
         _scorecardRepository = scorecardRepository;
+        _statRepository = statRepository;
     }
 
     public async Task<RoundListViewModel> GetRoundsListAsync(int limit)
@@ -37,11 +40,11 @@ public class DashboardService
     {
         var userId = _usernameRetriever.UserId;
 
-        var round_stats = await _scorecardRepository.GetRoundStatsListAsync(userId);
+        var round_stats = await _statRepository.GetScoreStatsByUserIdAsync(userId);
 
         return new RoundStatsViewModel
         {
-            RoundStatsList = round_stats
+            ScoreStats = round_stats
         };
     }
 }
