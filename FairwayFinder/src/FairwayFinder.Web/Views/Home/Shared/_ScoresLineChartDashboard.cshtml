@@ -1,0 +1,53 @@
+
+<div class="col-12">
+    <div class="card" style="max-height: 30%">
+        <div class="card-header">
+            Scores
+        </div>
+        <div class="card-body">
+            <div class="ratio ratio-21x9">
+                <canvas id="scores"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts
+{
+    <script>
+        document.body.addEventListener("renderChart", function(evt) {
+            
+            // Extract stats from your model
+            const worse = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.triple_or_worse));
+
+            const ctxLine = document.getElementById('scores').getContext('2d');
+
+            // Line Chart configuration
+            const lineData = {
+                labels: numOfHoles,
+                datasets: [{
+                    label: 'Score to Par',
+                    data: scores,
+                    borderWidth: 2,
+                }]
+            };
+
+            const lineChart = new Chart(ctxLine, {
+                type: 'line',
+                data: lineData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1,
+                            },
+                        },
+                    },
+                }
+            });
+        })
+    </script>
+}

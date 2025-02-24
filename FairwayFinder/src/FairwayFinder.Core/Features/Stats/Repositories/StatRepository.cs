@@ -11,6 +11,10 @@ public interface IStatRepository : IBaseRepository
 {
     public Task<RoundScoreStats> GetScoreStatsByUserIdAsync(string userId);
     public Task<RoundScoreStats> GetScoreStatsByRoundIdAsync(long roundId);
+
+    public Task<long> GetNumberOfRoundsPlayedAsync(string userId);
+    public Task<double> GetAverageScoreOfRoundsAsync(string userId);
+    public Task<int> GetLowScoreOfRoundsAsync(string userId);
 }
 
 public class StatRepository(IConfiguration configuration, ILogger<StatRepository> logger) : BasePgRepository(configuration), IStatRepository
@@ -36,5 +40,29 @@ public class StatRepository(IConfiguration configuration, ILogger<StatRepository
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryFirstOrDefaultAsync<RoundScoreStats>(sql, new { roundId });
         return rv ?? new RoundScoreStats();
+    }
+
+    public async Task<long> GetNumberOfRoundsPlayedAsync(string userId)
+    {
+        var sql = "SELECT count(*) as round_count FROM round WHERE is_deleted = False AND user_id = @userId";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.ExecuteScalarAsync<long>(sql, new { userId });
+        return rv;
+    }
+
+    public async Task<double> GetAverageScoreOfRoundsAsync(string userId)
+    {
+        var sql = "SELECT avg(score) as round_avg FROM round WHERE is_deleted = False AND user_id = @userId";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.ExecuteScalarAsync<double>(sql, new { userId });
+        return rv;
+    }
+
+    public async Task<int> GetLowScoreOfRoundsAsync(string userId)
+    {
+        var sql = "SELECT min(score) as low_score FROM round WHERE is_deleted = False AND user_id = @userId";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.ExecuteScalarAsync<int>(sql, new { userId });
+        return rv;
     }
 }

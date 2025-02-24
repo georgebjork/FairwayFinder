@@ -1,7 +1,21 @@
-﻿@{
+﻿@using FairwayFinder.Core.Features.Dashboard.Models.ViewModel
+@{
     ViewData["Title"] = "Dashboard";
 }
 
+<div class="row" id="header-cards"
+     hx-get="@Url.Action("GetHeaderCardsData")"
+     hx-target="#header-cards"
+     hx-swap="innerHTML"
+     hx-trigger="load">
+    @await Html.PartialAsync("Shared/_DashboardHeaderCardStats", new DashboardHeaderCardsViewModel())
+</div>
+
+<div class="row">
+    @await Html.PartialAsync("Shared/_ScoresLineChartDashboard")
+</div>
+
+@*
 <div class="row">
     <div class="col-lg-6 col-md-12 my-3">
         <div class="card">
@@ -46,3 +60,4 @@
     
     
 </div>
+*@

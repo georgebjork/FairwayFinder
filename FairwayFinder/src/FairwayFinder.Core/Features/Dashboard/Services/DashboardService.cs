@@ -22,6 +22,12 @@ public class DashboardService
         _statRepository = statRepository;
     }
 
+    public async Task GetYearFilters()
+    {
+        var userId = _usernameRetriever.UserId;
+        
+    }
+
     public async Task<RoundListViewModel> GetRoundsListAsync(int limit)
     {
         var userId = _usernameRetriever.UserId;
@@ -45,6 +51,23 @@ public class DashboardService
         return new RoundStatsViewModel
         {
             ScoreStats = round_stats
+        };
+    }
+    
+    public async Task<DashboardHeaderCardsViewModel> GetHeaderCardsViewModel()
+    {
+        var userId = _usernameRetriever.UserId;
+
+        var round_count = await _statRepository.GetNumberOfRoundsPlayedAsync(userId);
+        var avg_score = await _statRepository.GetAverageScoreOfRoundsAsync(userId);
+        var low_score = await _statRepository.GetLowScoreOfRoundsAsync(userId);
+
+
+        return new DashboardHeaderCardsViewModel
+        {
+            AvgScore = avg_score,
+            RoundsPlayed = round_count,
+            LowRound = low_score
         };
     }
 }

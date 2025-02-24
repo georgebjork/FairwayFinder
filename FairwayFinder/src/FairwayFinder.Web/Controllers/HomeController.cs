@@ -36,4 +36,10 @@ public class HomeController : BaseAuthorizedController
         var vm = await _dashboardService.GetHoleScoreStats();
         return PartialView("Shared/_RoundStatsDashboard", vm);
     }
+
+    public async Task<IActionResult> GetHeaderCardsData()
+    {
+        var vm = await _dashboardService.GetHeaderCardsViewModel();
+        return PartialView("Shared/_DashboardHeaderCardStats", vm);
+    }
 }
