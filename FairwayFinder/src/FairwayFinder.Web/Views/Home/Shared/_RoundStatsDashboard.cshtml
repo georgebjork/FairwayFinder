@@ -3,26 +3,26 @@
 <ul class="list-group list-group-flush">
     <li class="list-group-item d-flex justify-content-between">
         <div>Eagles or better:</div>
-        <div>@(Model.ScoreStats.hole_in_one + Model.ScoreStats.double_bogies + Model.ScoreStats.eagles)</div>
+        <div>@(Model.ScoreStatsQueryModel.hole_in_one + Model.ScoreStatsQueryModel.double_bogies + Model.ScoreStatsQueryModel.eagles)</div>
     </li>
     <li class="list-group-item d-flex justify-content-between">
         <div>Birdies:</div>
-        <div>@Model.ScoreStats.birdies</div>
+        <div>@Model.ScoreStatsQueryModel.birdies</div>
     </li>
     <li class="list-group-item d-flex justify-content-between">
         <div>Pars:</div>
-        <div>@Model.ScoreStats.pars</div>
+        <div>@Model.ScoreStatsQueryModel.pars</div>
     </li>
     <li class="list-group-item d-flex justify-content-between">
         <div>Bogeys:</div>
-        <div>@Model.ScoreStats.bogies</div>
+        <div>@Model.ScoreStatsQueryModel.bogies</div>
     </li>
     <li class="list-group-item d-flex justify-content-between">
         <div>Doubles:</div>
-        <div>@Model.ScoreStats.double_bogies</div>
+        <div>@Model.ScoreStatsQueryModel.double_bogies</div>
     </li>
     <li class="list-group-item d-flex justify-content-between">
         <div>Worse:</div>
-        <div>@Model.ScoreStats.triple_or_worse</div>
+        <div>@Model.ScoreStatsQueryModel.triple_or_worse</div>
     </li>
 </ul>

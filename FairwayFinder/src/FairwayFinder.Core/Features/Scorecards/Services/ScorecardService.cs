@@ -62,7 +62,7 @@ public class ScorecardService
         stats.Par4AverageScoreToPar = Math.Round(GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 4), 2, MidpointRounding.AwayFromZero);
         stats.Par5AverageScoreToPar = Math.Round(GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 5), 2, MidpointRounding.AwayFromZero);
         
-        stats.ScoreCountStats = scorecard_round_stats;
+        stats.ScoreCountStatsQueryModel = scorecard_round_stats;
         return stats;
     }
     

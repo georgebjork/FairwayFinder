@@ -1,7 +1,22 @@
 ﻿@using FairwayFinder.Core.Features.Dashboard.Models.ViewModel
+@model DashboardViewModel
+
+
 @{
     ViewData["Title"] = "Dashboard";
 }
+
+<div class="row">
+    <div class="col-3">
+        <label class="form-label">Filter By Year</label>
+        <select class="form-select">
+            @foreach (var year in Model.YearFilters)
+            {
+                <option value="@year.Value">@year.Key</option>
+            }
+        </select>
+    </div>
+</div>
 
 <div class="row" id="header-cards"
      hx-get="@Url.Action("GetHeaderCardsData")"
@@ -11,8 +26,39 @@
     @await Html.PartialAsync("Shared/_DashboardHeaderCardStats", new DashboardHeaderCardsViewModel())
 </div>
 
-<div class="row">
-    @await Html.PartialAsync("Shared/_ScoresLineChartDashboard")
+<div class="row row-cols-lg-1 row-cols-xl-2 g-2">
+
+    <div class="col">
+        <div hx-get="@Url.Action("GetRounds")"
+             hx-target="#rounds-table"
+             hx-swap="innerHTML"
+             hx-trigger="load">
+
+            <div class="card h-100">
+                <div class="card-header">
+                    Rounds
+                </div>
+                <div class="card-body" id="rounds-table">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col"
+         hx-get="@Url.Action("GetScoresChartData")"
+         hx-target="#scores-chart"
+         hx-swap="innerHTML"
+         hx-trigger="load">
+
+        <div class="card h-100">
+            <div class="card-header">
+                Scores
+            </div>
+            <div class="card-body" id="scores-chart">
+                @await Html.PartialAsync("Shared/_DashboardScoresLineChart", new DashboardScoresChartViewModel())
+            </div>
+        </div>
+    </div>
 </div>
 
 @*

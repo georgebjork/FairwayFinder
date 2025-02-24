@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using System.Text.Json;
+using FairwayFinder.Core.Features.Dashboard.Models.ViewModel;
 using FairwayFinder.Core.Features.Dashboard.Services;
 using FairwayFinder.Core.Features.Scorecards.Services;
 using FairwayFinder.Core.Services;
@@ -19,14 +21,19 @@ public class HomeController : BaseAuthorizedController
         _dashboardService = dashboardService;
     }
 
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
-        return View();
+        var vm = new DashboardViewModel();
+
+        var year_filters = await _dashboardService.GetYearFilters();
+        vm.YearFilters = year_filters;
+        
+        return View(vm);
     }
 
     public async Task<IActionResult> GetRounds()
     {
-        var vm = await _dashboardService.GetRoundsListAsync(20);
+        var vm = await _dashboardService.GetRoundsListAsync();
         ViewBag.Username = vm.Username;
         return PartialView("_RoundsTable", vm.Rounds);
     }
@@ -41,5 +48,12 @@ public class HomeController : BaseAuthorizedController
     {
         var vm = await _dashboardService.GetHeaderCardsViewModel();
         return PartialView("Shared/_DashboardHeaderCardStats", vm);
+    }
+    
+    public async Task<IActionResult> GetScoresChartData()
+    {
+        var vm = await _dashboardService.GetRoundScoresChartViewModel();
+        Response.Headers.Append("HX-Trigger-After-Settle", JsonSerializer.Serialize(new { renderChart = true })); // Make the chart render on load
+        return PartialView("Shared/_DashboardScoresLineChart", vm);
     }
 }

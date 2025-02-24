@@ -9,9 +9,9 @@ namespace FairwayFinder.Core.Features.Stats.Repositories;
 
 public interface IStatRepository : IBaseRepository
 {
-    public Task<RoundScoreStats> GetScoreStatsByUserIdAsync(string userId);
-    public Task<RoundScoreStats> GetScoreStatsByRoundIdAsync(long roundId);
-
+    public Task<RoundScoreStatsQueryModel> GetScoreStatsByUserIdAsync(string userId);
+    public Task<RoundScoreStatsQueryModel> GetScoreStatsByRoundIdAsync(long roundId);
+    public Task<List<RoundScoreQueryModel>> GetRoundScoresByUserId(string userId);
     public Task<long> GetNumberOfRoundsPlayedAsync(string userId);
     public Task<double> GetAverageScoreOfRoundsAsync(string userId);
     public Task<int> GetLowScoreOfRoundsAsync(string userId);
@@ -21,25 +21,33 @@ public class StatRepository(IConfiguration configuration, ILogger<StatRepository
 {
     private readonly ILogger<StatRepository> _logger = logger;
     
-    public async Task<RoundScoreStats> GetScoreStatsByUserIdAsync(string userId)
+    public async Task<RoundScoreStatsQueryModel> GetScoreStatsByUserIdAsync(string userId)
     {
         var sql = @"SELECT SUM(hole_in_one) as hole_in_one, SUM(double_eagles) as double_eagle, SUM(eagles) as eagles, SUM(birdies) as birdies, SUM(pars) as pars, SUM(bogies) as bogies, SUM(double_bogies) as double_bogies, SUM(triple_or_worse) as triple_or_worse
                     FROM round_stats as rs
 	                    INNER JOIN round as r ON r.round_id = rs.round_id
                     WHERE r.user_id = @userId";
         await using var conn = await GetNewOpenConnection();
-        var rv = await conn.QueryFirstOrDefaultAsync<RoundScoreStats>(sql, new { userId });
-        return rv ?? new RoundScoreStats();
+        var rv = await conn.QueryFirstOrDefaultAsync<RoundScoreStatsQueryModel>(sql, new { userId });
+        return rv ?? new RoundScoreStatsQueryModel();
     }
 
-    public async Task<RoundScoreStats> GetScoreStatsByRoundIdAsync(long roundId)
+    public async Task<RoundScoreStatsQueryModel> GetScoreStatsByRoundIdAsync(long roundId)
     {
         var sql = @"SELECT SUM(hole_in_one) as hole_in_one, SUM(double_eagles) as double_eagle, SUM(eagles) as eagles, SUM(birdies) as birdies, SUM(pars) as pars, SUM(bogies) as bogies, SUM(double_bogies) as double_bogies, SUM(triple_or_worse) as triple_or_worse
                     FROM round_stats as rs
                     WHERE rs.round_id = @roundId";
         await using var conn = await GetNewOpenConnection();
-        var rv = await conn.QueryFirstOrDefaultAsync<RoundScoreStats>(sql, new { roundId });
-        return rv ?? new RoundScoreStats();
+        var rv = await conn.QueryFirstOrDefaultAsync<RoundScoreStatsQueryModel>(sql, new { roundId });
+        return rv ?? new RoundScoreStatsQueryModel();
+    }
+
+    public async Task<List<RoundScoreQueryModel>> GetRoundScoresByUserId(string userId)
+    {
+        var sql = "SELECT score, date_played FROM round WHERE is_deleted = False AND user_id = @userId ORDER BY date_played";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryAsync<RoundScoreQueryModel>(sql, new { userId });
+        return rv.ToList();
     }
 
     public async Task<long> GetNumberOfRoundsPlayedAsync(string userId)

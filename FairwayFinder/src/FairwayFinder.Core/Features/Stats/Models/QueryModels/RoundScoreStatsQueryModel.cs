@@ -1,6 +1,6 @@
 namespace FairwayFinder.Core.Features.Stats.Models.QueryModels;
 
-public class RoundScoreStats
+public class RoundScoreStatsQueryModel
 {
     public long hole_in_one { get; set; }
     public long double_eagles { get; set; }

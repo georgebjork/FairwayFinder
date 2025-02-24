@@ -5,7 +5,7 @@ namespace FairwayFinder.Core.Features.Scorecards.Models;
 
 public class ScorecardRoundStats
 {
-    public RoundScoreStats ScoreCountStats { get; set; } = new();
+    public RoundScoreStatsQueryModel ScoreCountStatsQueryModel { get; set; } = new();
     
     public int Par3ScoreToPar { get; set; }
     public double Par3AverageScoreToPar { get; set; }

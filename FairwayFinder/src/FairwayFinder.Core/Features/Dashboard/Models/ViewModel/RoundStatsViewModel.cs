@@ -4,5 +4,5 @@ namespace FairwayFinder.Core.Features.Dashboard.Models.ViewModel;
 
 public class RoundStatsViewModel
 {
-    public RoundScoreStats ScoreStats { get; set; } = new();
+    public RoundScoreStatsQueryModel ScoreStatsQueryModel { get; set; } = new();
 }

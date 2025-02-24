@@ -228,7 +228,7 @@
 <div class="row">
     @*Score count *@
     <div class="col-4">
-        @await Html.PartialAsync("Shared/_ScoreCountStats", Model.ScorecardRoundStats.ScoreCountStats)
+        @await Html.PartialAsync("Shared/_ScoreCountStats", Model.ScorecardRoundStats.ScoreCountStatsQueryModel)
     </div>
 
     <div class="col-4">
@@ -327,15 +327,15 @@
         $(document).ready(function () {
             // Extract stats from your model
             const eaglesOrBetter = @Html.Raw(Json.Serialize(
-                                       Model.ScorecardRoundStats.ScoreCountStats.eagles +
-                                       Model.ScorecardRoundStats.ScoreCountStats.double_eagles +
-                                       Model.ScorecardRoundStats.ScoreCountStats.hole_in_one
+                                       Model.ScorecardRoundStats.ScoreCountStatsQueryModel.eagles +
+                                       Model.ScorecardRoundStats.ScoreCountStatsQueryModel.double_eagles +
+                                       Model.ScorecardRoundStats.ScoreCountStatsQueryModel.hole_in_one
                                    ));
-            const birdies = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.birdies));
-            const pars = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.pars));
-            const bogies = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.bogies));
-            const doubles = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.double_bogies));
-            const worse = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStats.triple_or_worse));
+            const birdies = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStatsQueryModel.birdies));
+            const pars = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStatsQueryModel.pars));
+            const bogies = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStatsQueryModel.bogies));
+            const doubles = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStatsQueryModel.double_bogies));
+            const worse = @Html.Raw(Json.Serialize(Model.ScorecardRoundStats.ScoreCountStatsQueryModel.triple_or_worse));
             
             // Get canvas contexts
             const ctxDonutScores = document.getElementById('scoreDistribution').getContext('2d');

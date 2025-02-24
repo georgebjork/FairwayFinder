@@ -1,0 +1,54 @@
+@using FairwayFinder.Core.Helpers
+@model FairwayFinder.Core.Features.Dashboard.Models.ViewModel.DashboardScoresChartViewModel
+
+<canvas id="scoresChart"></canvas>
+
+<script>
+    document.body.addEventListener("renderChart", function(evt) {
+
+        let chartStatus = Chart.getChart("scoresChart");
+        if (chartStatus !== undefined) {
+            chartStatus.destroy();
+        }
+    
+        // Extract stats from your model
+        const scores = @Html.Raw(Json.Serialize(Model.Scores.OrderBy(x => x.date_played).Select(y => y.score)));
+        const dates = @Html.Raw(Json.Serialize(Model.Scores.OrderBy(x => x.date_played).Select(y => y.date_played.FormatDate())));
+        
+        const ctxLine = document.getElementById('scoresChart').getContext('2d');
+        
+        // Line Chart configuration
+        const lineData = {
+            labels: dates,
+            datasets: [{
+                label: '18 Hole Scores',
+                data: scores,
+                borderWidth: 2,
+            }]
+        };
+
+        const lineChart = new Chart(ctxLine, {
+            type: 'line',
+            data: lineData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                        },
+                    },
+                },
+                plugins: {
+                    decimation: {
+                        enabled: true,
+                        algorithm: 'min-max', // Ensures min/max points are retained
+                        samples: 100 // Number of samples to retain
+                    }
+                }
+            }
+        });
+    })
+</script>

@@ -31,8 +31,6 @@ public interface IScorecardRepository : IBaseRepository
     Task<bool> InsertHoleStatsAsync(List<HoleStats> holeStats);
     Task<List<HoleStatsQueryModel>> GetHoleStatsByRoundIdAsync(long roundId);
     Task<List<HoleScoreQueryModel>> GetHoleScoreStatsAsync(string userId);
-
-    Task<List<long>> GetDistinctYearsFromRoundsAsync(string userId);
 }
 
 public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecardRepository> logger) : BasePgRepository(configuration), IScorecardRepository
@@ -278,14 +276,6 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
         ";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryAsync<HoleScoreQueryModel>(sql, new {userId});
-        return rv.ToList();
-    }
-
-    public async Task<List<long>> GetDistinctYearsFromRoundsAsync(string userId)
-    {
-        var sql = "SELECT DISTINCT EXTRACT(YEAR FROM date_played) AS year FROM round ORDER BY year;";
-        await using var conn = await GetNewOpenConnection();
-        var rv = await conn.QueryAsync<long>(sql, new { userId });
         return rv.ToList();
     }
 }
