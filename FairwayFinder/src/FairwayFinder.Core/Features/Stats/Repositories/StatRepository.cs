@@ -12,9 +12,9 @@ public interface IStatRepository : IBaseRepository
     public Task<RoundScoreStatsQueryModel> GetScoreStatsByUserIdAsync(string userId);
     public Task<RoundScoreStatsQueryModel> GetScoreStatsByRoundIdAsync(long roundId);
     public Task<List<RoundScoreQueryModel>> GetRoundScoresByUserId(string userId);
-    public Task<long> GetNumberOfRoundsPlayedAsync(string userId);
-    public Task<double> GetAverageScoreOfRoundsAsync(string userId);
-    public Task<int> GetLowScoreOfRoundsAsync(string userId);
+    public Task<long> GetNumberOfRoundsPlayedAsync(StatsRequest request);
+    public Task<double> GetAverageScoreOfRoundsAsync(StatsRequest request);
+    public Task<int> GetLowScoreOfRoundsAsync(StatsRequest request);
 }
 
 public class StatRepository(IConfiguration configuration, ILogger<StatRepository> logger) : BasePgRepository(configuration), IStatRepository
@@ -50,27 +50,45 @@ public class StatRepository(IConfiguration configuration, ILogger<StatRepository
         return rv.ToList();
     }
 
-    public async Task<long> GetNumberOfRoundsPlayedAsync(string userId)
+    public async Task<long> GetNumberOfRoundsPlayedAsync(StatsRequest request)
     {
         var sql = "SELECT count(*) as round_count FROM round WHERE is_deleted = False AND user_id = @userId";
+
+        if (request.Year is not null)
+        {
+            sql += " AND EXTRACT(YEAR FROM date_played) = @year";
+        }
+        
         await using var conn = await GetNewOpenConnection();
-        var rv = await conn.ExecuteScalarAsync<long>(sql, new { userId });
+        var rv = await conn.ExecuteScalarAsync<long>(sql, new { userId = request.UserId, year = request.Year });
         return rv;
     }
 
-    public async Task<double> GetAverageScoreOfRoundsAsync(string userId)
+    public async Task<double> GetAverageScoreOfRoundsAsync(StatsRequest request)
     {
         var sql = "SELECT avg(score) as round_avg FROM round WHERE is_deleted = False AND user_id = @userId";
+        
+        if (request.Year is not null)
+        {
+            sql += " AND EXTRACT(YEAR FROM date_played) = @year";
+        }
+
         await using var conn = await GetNewOpenConnection();
-        var rv = await conn.ExecuteScalarAsync<double>(sql, new { userId });
+        var rv = await conn.ExecuteScalarAsync<double>(sql, new { userId = request.UserId, year = request.Year });
         return rv;
     }
 
-    public async Task<int> GetLowScoreOfRoundsAsync(string userId)
+    public async Task<int> GetLowScoreOfRoundsAsync(StatsRequest request)
     {
         var sql = "SELECT min(score) as low_score FROM round WHERE is_deleted = False AND user_id = @userId";
+        
+        if (request.Year is not null)
+        {
+            sql += " AND EXTRACT(YEAR FROM date_played) = @year";
+        }
+        
         await using var conn = await GetNewOpenConnection();
-        var rv = await conn.ExecuteScalarAsync<int>(sql, new { userId });
+        var rv = await conn.ExecuteScalarAsync<int>(sql, new { userId = request.UserId, year = request.Year });
         return rv;
     }
 }

@@ -1,6 +1,7 @@
 using FairwayFinder.Core.Features.Dashboard.Models.ViewModel;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
 using FairwayFinder.Core.Features.Scorecards.Services;
+using FairwayFinder.Core.Features.Stats;
 using FairwayFinder.Core.Features.Stats.Repositories;
 using FairwayFinder.Core.Repositories;
 using FairwayFinder.Core.Services;
@@ -58,13 +59,14 @@ public class DashboardService
         };
     }
     
-    public async Task<DashboardHeaderCardsViewModel> GetHeaderCardsViewModel()
+    public async Task<DashboardHeaderCardsViewModel> GetHeaderCardsViewModel(StatsRequest request)
     {
         var userId = _usernameRetriever.UserId;
+        request.UserId = _usernameRetriever.UserId;
 
-        var round_count = await _statRepository.GetNumberOfRoundsPlayedAsync(userId);
-        var avg_score = await _statRepository.GetAverageScoreOfRoundsAsync(userId);
-        var low_score = await _statRepository.GetLowScoreOfRoundsAsync(userId);
+        var round_count = await _statRepository.GetNumberOfRoundsPlayedAsync(request);
+        var avg_score = await _statRepository.GetAverageScoreOfRoundsAsync(request);
+        var low_score = await _statRepository.GetLowScoreOfRoundsAsync(request);
 
 
         return new DashboardHeaderCardsViewModel
