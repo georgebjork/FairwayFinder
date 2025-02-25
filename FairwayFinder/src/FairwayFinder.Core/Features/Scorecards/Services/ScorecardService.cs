@@ -2,6 +2,7 @@ using FairwayFinder.Core.Features.Scorecards.Models;
 using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 using FairwayFinder.Core.Features.Scorecards.Models.QueryModels;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
+using FairwayFinder.Core.Features.Stats.Repositories;
 using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Repositories.Interfaces;
@@ -15,12 +16,13 @@ public class ScorecardService
 {
     private readonly ILogger<ScorecardService> _logger;
     private readonly IScorecardRepository _scorecardRepository;
+    private readonly IStatRepository _statRepository;
     private readonly CourseLookupService _courseLookupService;
     private readonly TeeboxLookupService _teeboxLookupService;
     private readonly HoleLookupService _holeLookupService;
     private readonly IUsernameRetriever _usernameRetriever;
 
-    public ScorecardService(ILogger<ScorecardService> logger, IScorecardRepository scorecardRepository, TeeboxLookupService teeboxLookupService, CourseLookupService courseLookupService, IUsernameRetriever usernameRetriever, HoleLookupService holeLookupService)
+    public ScorecardService(ILogger<ScorecardService> logger, IScorecardRepository scorecardRepository, TeeboxLookupService teeboxLookupService, CourseLookupService courseLookupService, IUsernameRetriever usernameRetriever, HoleLookupService holeLookupService, IStatRepository statRepository)
     {
         _logger = logger;
         _scorecardRepository = scorecardRepository;
@@ -28,6 +30,7 @@ public class ScorecardService
         _courseLookupService = courseLookupService;
         _usernameRetriever = usernameRetriever;
         _holeLookupService = holeLookupService;
+        _statRepository = statRepository;
     }
 
     public async Task<List<RoundSummaryQueryModel>> GetRoundSummaryByUserId(string userId, int? limit = null)
@@ -48,7 +51,7 @@ public class ScorecardService
     public async Task<ScorecardRoundStats> GetScorecardRoundStatsAsync(long roundId)
     {
         var stats = new ScorecardRoundStats();
-        var scorecard_round_stats = await _scorecardRepository.GetScorecardRoundStatsAsync(roundId);
+        var scorecard_round_stats = await _statRepository.GetScoreStatsByRoundIdAsync(roundId);
         var hole_scores = await GetScorecardHoleScoresByRoundIdAsync(roundId);
 
         stats.Par3ScoreToPar = GolfStatHelpers.ScoreToParStats(hole_scores, par: 3);
@@ -59,7 +62,7 @@ public class ScorecardService
         stats.Par4AverageScoreToPar = Math.Round(GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 4), 2, MidpointRounding.AwayFromZero);
         stats.Par5AverageScoreToPar = Math.Round(GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 5), 2, MidpointRounding.AwayFromZero);
         
-        stats.ScoreCountStats = scorecard_round_stats ?? new ScorecardRoundStatsQueryModel();
+        stats.ScoreCountStatsQueryModel = scorecard_round_stats;
         return stats;
     }
     

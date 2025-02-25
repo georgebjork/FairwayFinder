@@ -1,0 +1,26 @@
+@model FairwayFinder.Core.Features.Dashboard.Models.ViewModel.DashboardHeaderCardsViewModel
+
+<div class="col-lg-4 col-sm-12 my-3">
+    <div class="card text-white bg-primary">
+        <div class="card-header">Rounds Played</div>
+        <div class="card-body">
+            <h1 class="card-text">@Model.RoundsPlayed</h1>
+        </div>
+    </div>
+</div>
+<div class="col-lg-4 col-sm-12 my-3">
+    <div class="card text-white bg-primary">
+        <div class="card-header">Avg. Score</div>
+        <div class="card-body">
+            <h1 class="card-text">@Model.AvgScore</h1>
+        </div>
+    </div>
+</div>
+<div class="col-lg-4 col-sm-12 my-3">
+    <div class="card text-white bg-primary">
+        <div class="card-header">Low Round</div>
+        <div class="card-body">
+            <h1 class="card-text">@Model.LowRound</h1>
+        </div>
+    </div>
+</div>

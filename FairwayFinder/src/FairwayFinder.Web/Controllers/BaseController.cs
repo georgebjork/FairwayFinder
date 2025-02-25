@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FairwayFinder.Web.Controllers;
@@ -50,4 +51,17 @@ public class BaseController : Controller {
         return Ok();
     }
 
+    public void SendHtmxTriggerAfterSettle(string triggerName)
+    {
+        var payload = new Dictionary<string, bool> { { triggerName, true } };
+        Response.Headers.Append("HX-Trigger-After-Settle", JsonSerializer.Serialize(payload));
+    }
+
+}
+
+
+public static class HtmxTriggers
+{
+    public static string RenderTable = "RenderTable";
+    public static string RenderChart = "RenderChart";
 }

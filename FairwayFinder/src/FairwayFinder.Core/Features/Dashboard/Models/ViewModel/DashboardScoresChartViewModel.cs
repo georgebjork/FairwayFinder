@@ -2,7 +2,7 @@ using FairwayFinder.Core.Features.Stats.Models.QueryModels;
 
 namespace FairwayFinder.Core.Features.Dashboard.Models.ViewModel;
 
-public class RoundStatsViewModel
+public class DashboardScoresChartViewModel
 {
-    public RoundScoreStatsQueryModel ScoreStatsQueryModel { get; set; } = new();
+    public List<RoundScoreQueryModel> Scores { get; set; } = [];
 }

@@ -73,7 +73,6 @@ public class ScorecardManagementController : BaseScorecardController
     }
     
     // Step 3: We've selected a teebox we need all of the data that comes with the teebox data.
-    // 1. 
     [HttpGet]
     [Route("/scorecards/get-teebox-data/{teeboxId:long}")]
     public async Task<IActionResult> GetTeeboxData(long teeboxId)
@@ -208,6 +207,8 @@ public class ScorecardManagementController : BaseScorecardController
     {
         if (!ModelState.IsValid)
         {
+            //IDEA: Everything that was need to get the edit originally should be cached and acessed
+            // by the RefreshFormModelForError. No need to go back to the db for a bunch of stuff.
             form = await RefreshFormModelForError(form);
             form.IsUpdate = true;
             form.RoundFormModel.RoundId = roundId;

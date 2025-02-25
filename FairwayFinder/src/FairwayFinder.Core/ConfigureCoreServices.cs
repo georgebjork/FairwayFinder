@@ -3,6 +3,7 @@ using FairwayFinder.Core.Features.CourseManagement.Services;
 using FairwayFinder.Core.Features.Dashboard.Services;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
 using FairwayFinder.Core.Features.Scorecards.Services;
+using FairwayFinder.Core.Features.Stats.Repositories;
 using FairwayFinder.Core.Repositories;
 using FairwayFinder.Core.Repositories.Interfaces;
 using FairwayFinder.Core.Services;
@@ -24,6 +25,7 @@ public static class ConfigureCoreServices
         services.AddTransient<IHoleLookupRepository, HoleLookupRepository>();
         services.AddTransient<IScorecardRepository, ScorecardRepository>();
         services.AddTransient<ILookupRepository, LookupRepository>();
+        services.AddTransient<IStatRepository, StatRepository>();
 
         
         // Services

@@ -1,10 +1,11 @@
 using FairwayFinder.Core.Features.Scorecards.Models.QueryModels;
+using FairwayFinder.Core.Features.Stats.Models.QueryModels;
 
 namespace FairwayFinder.Core.Features.Scorecards.Models;
 
 public class ScorecardRoundStats
 {
-    public ScorecardRoundStatsQueryModel ScoreCountStats { get; set; } = new();
+    public RoundScoreStatsQueryModel ScoreCountStatsQueryModel { get; set; } = new();
     
     public int Par3ScoreToPar { get; set; }
     public double Par3AverageScoreToPar { get; set; }
