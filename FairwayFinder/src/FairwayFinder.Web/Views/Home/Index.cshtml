@@ -30,7 +30,7 @@
 
     <div class="col">
         <div hx-get="@Url.Action("GetRounds")"
-             hx-target="#rounds-table"
+             hx-target="#rounds-table-card"
              hx-swap="innerHTML"
              hx-trigger="load">
 
@@ -38,7 +38,7 @@
                 <div class="card-header">
                     Rounds
                 </div>
-                <div class="card-body" id="rounds-table">
+                <div class="card-body" id="rounds-table-card">
                 </div>
             </div>
         </div>
@@ -46,7 +46,7 @@
     
     <div class="col"
          hx-get="@Url.Action("GetScoresChartData")"
-         hx-target="#scores-chart"
+         hx-target="#scores-chart-card"
          hx-swap="innerHTML"
          hx-trigger="load">
 
@@ -54,7 +54,7 @@
             <div class="card-header">
                 Scores
             </div>
-            <div class="card-body" id="scores-chart">
+            <div class="card-body" id="scores-chart-card">
                 @await Html.PartialAsync("Shared/_DashboardScoresLineChart", new DashboardScoresChartViewModel())
             </div>
         </div>

@@ -1,10 +1,11 @@
 @using FairwayFinder.Core.Helpers
+@using FairwayFinder.Web.Controllers
 @model FairwayFinder.Core.Features.Dashboard.Models.ViewModel.DashboardScoresChartViewModel
 
 <canvas id="scoresChart"></canvas>
 
 <script>
-    document.body.addEventListener("renderChart", function(evt) {
+    document.body.addEventListener("@HtmxTriggers.RenderChart", function(evt) {
 
         let chartStatus = Chart.getChart("scoresChart");
         if (chartStatus !== undefined) {

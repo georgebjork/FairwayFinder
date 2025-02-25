@@ -32,14 +32,14 @@ public class DashboardService
         return years;
     }
 
-    public async Task<RoundListViewModel> GetRoundsListAsync(int? limit = null)
+    public async Task<DashboardRoundsTableViewModel> GetRoundsListAsync(int? limit = null)
     {
         var userId = _usernameRetriever.UserId;
         var username = _usernameRetriever.Username;
         
         var rounds = await _scorecardRepository.GetRoundsSummaryByUserIdAsync(userId, limit);
 
-        return new RoundListViewModel
+        return new DashboardRoundsTableViewModel
         {
             Rounds = rounds,
             Username = username

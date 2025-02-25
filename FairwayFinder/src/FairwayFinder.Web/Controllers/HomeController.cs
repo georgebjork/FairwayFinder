@@ -34,8 +34,9 @@ public class HomeController : BaseAuthorizedController
     public async Task<IActionResult> GetRounds()
     {
         var vm = await _dashboardService.GetRoundsListAsync();
-        ViewBag.Username = vm.Username;
-        return PartialView("_RoundsTable", vm.Rounds);
+        
+        SendHtmxTriggerAfterSettle(HtmxTriggers.RenderTable);
+        return PartialView("Shared/_DashboardRoundsTable", vm);
     }
 
     public async Task<IActionResult> GetHoleScoreStats()
@@ -53,7 +54,8 @@ public class HomeController : BaseAuthorizedController
     public async Task<IActionResult> GetScoresChartData()
     {
         var vm = await _dashboardService.GetRoundScoresChartViewModel();
-        Response.Headers.Append("HX-Trigger-After-Settle", JsonSerializer.Serialize(new { renderChart = true })); // Make the chart render on load
+        
+        SendHtmxTriggerAfterSettle(HtmxTriggers.RenderChart);
         return PartialView("Shared/_DashboardScoresLineChart", vm);
     }
 }
