@@ -6,7 +6,8 @@
 
 <script>
     document.body.addEventListener("@HtmxTriggers.RenderChart", function(evt) {
-
+        
+        
         let chartStatus = Chart.getChart("scoresChart");
         if (chartStatus !== undefined) {
             chartStatus.destroy();
@@ -20,10 +21,10 @@
         
         // Line Chart configuration
         const lineData = {
-            labels: dates,
+            labels: ['1/1/2025','1/2/2025','1/3/2025','1/4/2025','1/5/2025'],
             datasets: [{
                 label: '18 Hole Scores',
-                data: scores,
+                data: [36,37,38,39,40],
                 borderWidth: 2,
             }]
         };
@@ -31,6 +32,7 @@
         const lineChart = new Chart(ctxLine, {
             type: 'line',
             data: lineData,
+            plugins: [ChartDataLabels],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -45,11 +47,31 @@
                 plugins: {
                     decimation: {
                         enabled: true,
-                        algorithm: 'min-max', // Ensures min/max points are retained
-                        samples: 100 // Number of samples to retain
+                        algorithm: 'min-max',
+                        samples: 100
+                    },
+                    datalabels: {
+                        color: '#fff', // White text for contrast
+                        backgroundColor: 'rgba(0, 123, 255, 0.8)', // Semi-transparent blue background
+                        borderRadius: 6,
+                        padding: 6,
+                        font: {
+                            size: 12,
+                            weight: 'bold',
+                            family: 'Arial'
+                        },
+                        align: 'top', // Position the label above the point
+                        anchor: 'end', // Keeps it near the data point
+                        formatter: (value, context) => {
+                            return value; // Ensures only the value is displayed
+                        },
+                        display: function(context) {
+                            return context.dataset.data[context.dataIndex] !== null; // Hide null values
+                        }
                     }
                 }
             }
         });
+
     })
 </script>
