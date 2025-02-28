@@ -1,8 +1,12 @@
+using FairwayFinder.Core.Features.Dashboard.Models;
+using FairwayFinder.Core.Features.Dashboard.Models.QueryModels;
 using FairwayFinder.Core.Features.Dashboard.Models.ViewModel;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
 using FairwayFinder.Core.Features.Scorecards.Services;
 using FairwayFinder.Core.Features.Stats;
+using FairwayFinder.Core.Features.Stats.Models.QueryModels;
 using FairwayFinder.Core.Features.Stats.Repositories;
+using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Repositories;
 using FairwayFinder.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -33,58 +37,32 @@ public class DashboardService
         return years;
     }
 
-    public async Task<DashboardRoundsTableViewModel> GetRoundsListAsync(int? limit = null)
+    public async Task<List<RoundsQueryModel>> GetRoundsByUserIdAsync(string userId, StatsRequest filters)
     {
-        var userId = _usernameRetriever.UserId;
-        var username = _usernameRetriever.Username;
-        
-        var rounds = await _scorecardRepository.GetRoundsSummaryByUserIdAsync(userId, limit);
-
-        return new DashboardRoundsTableViewModel
-        {
-            Rounds = rounds,
-            Username = username
-        };
+        var rounds = await _statRepository.GetRoundsByUserId(userId, filters);
+        return rounds;
     }
 
-    public async Task<RoundStatsViewModel> GetHoleScoreStats()
+    public async Task<RoundScoreStatsQueryModel> GetHoleScoreStats()
     {
         var userId = _usernameRetriever.UserId;
 
         var round_stats = await _statRepository.GetScoreStatsByUserIdAsync(userId);
-
-        return new RoundStatsViewModel
-        {
-            ScoreStatsQueryModel = round_stats
-        };
+        return round_stats;
     }
     
-    public async Task<DashboardHeaderCardsViewModel> GetHeaderCardsViewModel(StatsRequest request)
+    public async Task<RoundScoresSummaryResponse> GetRoundScoresSummaryByUserId(string userId, StatsRequest request)
     {
-        var userId = _usernameRetriever.UserId;
-        request.UserId = _usernameRetriever.UserId;
+        var round_count = await _statRepository.GetNumberOfRoundsPlayedAsync(userId, request);
+        var avg_score = await _statRepository.GetAverageScoreOfRoundsAsync(userId, request);
+        var low_score = await _statRepository.GetLowScoreOfRoundsAsync(userId, request);
 
-        var round_count = await _statRepository.GetNumberOfRoundsPlayedAsync(request);
-        var avg_score = await _statRepository.GetAverageScoreOfRoundsAsync(request);
-        var low_score = await _statRepository.GetLowScoreOfRoundsAsync(request);
-
-
-        return new DashboardHeaderCardsViewModel
+        
+        return new RoundScoresSummaryResponse
         {
             AvgScore = Math.Round(avg_score, 2),
             RoundsPlayed = round_count,
             LowRound = low_score
-        };
-    }
-
-    public async Task<DashboardScoresChartViewModel> GetRoundScoresChartViewModel()
-    {
-        var userId = _usernameRetriever.UserId;
-        var scores = await _statRepository.GetRoundScoresByUserId(userId);
-
-        return new DashboardScoresChartViewModel
-        {
-            Scores = scores
         };
     }
 }

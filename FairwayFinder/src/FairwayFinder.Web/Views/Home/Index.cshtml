@@ -1,20 +1,36 @@
 ﻿@using FairwayFinder.Core.Features.Dashboard.Models.ViewModel
+@using FairwayFinder.Web.Controllers
 @model DashboardViewModel
 
 
 @{
     ViewData["Title"] = "Dashboard";
 }
-    <div class="row">
+<script>
+    function getQueryParams() {
+        return Object.fromEntries(new URLSearchParams(window.location.search));
+    }
+</script>
+
+
+<div class="row">
         <div class="col-3">
             <label class="form-label">Filter By Year</label>
             <select>
+                <option value=""
+                        hx-get="@Url.Action("Index")"
+                        hx-trigger="click"
+                        hx-push-url="true"
+                        hx-target="body">
+                </option>
+                
                 @foreach (var year in Model.YearFilters)
                 {
+
                     if (Model.Filters.Year == year.Key)
                     {
                         <option value="@year.Value"
-                                hx-get="@Url.Action("Index", new {year = year.Value})"
+                                hx-get="@Url.Action("Index", new { year = year.Value })"
                                 hx-trigger="click"
                                 hx-push-url="true"
                                 hx-target="body" selected>
@@ -24,10 +40,10 @@
                     else
                     {
                         <option value="@year.Value"
-                                hx-get="@Url.Action("Index", new {year = year.Value})"
+                                hx-get="@Url.Action("Index", new { year = year.Value })"
                                 hx-trigger="click"
                                 hx-push-url="true"
-                                hx-target="body" >
+                                hx-target="body">
                             @year.Key
                         </option>
                     }
@@ -47,7 +63,7 @@
 <div class="row row-cols-lg-1 row-cols-xl-2 g-2">
 
     <div class="col">
-        <div hx-get="@Url.Action("GetRounds")"
+        <div hx-get="@Url.Action("GetRounds", Model.Filters)"
              hx-target="#rounds-table-card"
              hx-swap="innerHTML"
              hx-trigger="load">
@@ -63,8 +79,8 @@
     </div>
 
     <div class="col"
-         hx-get="@Url.Action("GetScoresChartData")"
-         hx-target="#scores-chart-card"
+         hx-get="@Url.Action("GetScoresChartData", Model.Filters)"
+         hx-target="#scores-chart-data"
          hx-swap="innerHTML"
          hx-trigger="load">
 
@@ -72,56 +88,17 @@
             <div class="card-header">
                 Scores
             </div>
+            
             <div class="card-body" id="scores-chart-card">
-                @await Html.PartialAsync("Shared/_DashboardScoresLineChart", new DashboardScoresChartViewModel())
+
+                <canvas id="scoresChart"></canvas>
+                
+                <div id="scores-chart-data">
+                    
+                </div>
+
+                @await Html.PartialAsync("Shared/_DashboardScoresLineChart")
             </div>
         </div>
     </div>
 </div>
-
-@*
-<div class="row">
-    <div class="col-lg-6 col-md-12 my-3">
-        <div class="card">
-            <div class="card-header">
-                Recent Rounds
-            </div>
-            <div class="card-body">
-                <div id="recent-rounds"
-                    hx-get="@Url.Action("GetRounds")"
-                    hx-target="#recent-rounds"
-                    hx-swap="outerHTML"
-                    hx-trigger="load"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-lg-6 col-md-12 my-3">
-        <div class="card">
-            <div class="card-header">
-                Hole Score Stats
-            </div>
-            <div class="card-body">
-                <div id="hole-score-stats"
-                     hx-get="@Url.Action("GetHoleScoreStats")"
-                     hx-target="#hole-score-stats"
-                     hx-swap="outerHTML"
-                     hx-trigger="load"></div>
-            </div>
-        </div>
-    </div>
-
-
-    <div class="col-lg-6 col-md-12 my-3">
-        <div class="card">
-            <div class="card-header">
-                Recent Rounds
-            </div>
-            <div class="card-body">
-            </div>
-        </div>
-    </div>
-    
-    
-</div>
-*@

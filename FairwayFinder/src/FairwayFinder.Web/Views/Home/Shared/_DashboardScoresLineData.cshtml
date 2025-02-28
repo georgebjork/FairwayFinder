@@ -1,0 +1,14 @@
+@using FairwayFinder.Core.Helpers
+@using FairwayFinder.Web.Controllers
+@model FairwayFinder.Core.Features.Dashboard.Models.ViewModel.DashboardScoresChartViewModel
+
+
+<script>
+    document.body.dispatchEvent(new CustomEvent("@HtmxTriggers.RenderChartData", {
+        detail: {
+            dates: @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Select(y => y.date_played.FormatDate()))),
+            scores: @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Select(y => y.score)))
+        }
+    }));
+</script>
+    

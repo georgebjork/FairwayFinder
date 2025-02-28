@@ -1,30 +1,40 @@
-@using FairwayFinder.Core.Helpers
 @using FairwayFinder.Web.Controllers
-@model FairwayFinder.Core.Features.Dashboard.Models.ViewModel.DashboardScoresChartViewModel
 
-<canvas id="scoresChart"></canvas>
+<script type="text/javascript">
 
-<script>
-    document.body.addEventListener("@HtmxTriggers.RenderChart", function(evt) {
-        
-        
+
+    document.addEventListener("DOMContentLoaded", function() {
+        console.log("Initial page load - Setting up chart.");
+        initializeChart(); 
+    });
+
+    // Listen for HTMX content replacement (when the chart's container is swapped)
+    document.body.addEventListener("@HtmxTriggers.RenderChart", function(event) {
+
+        if (document.getElementById("scoresChart")) {
+            console.log("Reinitializing Chart...");
+            initializeChart();
+        }
+    });
+
+    // Function to initialize Chart.js
+    function initializeChart() {
         let chartStatus = Chart.getChart("scoresChart");
         if (chartStatus !== undefined) {
             chartStatus.destroy();
         }
-    
-        // Extract stats from your model
-        const scores = @Html.Raw(Json.Serialize(Model.Scores.OrderBy(x => x.date_played).Select(y => y.score)));
-        const dates = @Html.Raw(Json.Serialize(Model.Scores.OrderBy(x => x.date_played).Select(y => y.date_played.FormatDate())));
-        
+
         const ctxLine = document.getElementById('scoresChart').getContext('2d');
-        
+
+        let dates = []
+        let scores = []
+
         // Line Chart configuration
         const lineData = {
-            labels: ['1/1/2025','1/2/2025','1/3/2025','1/4/2025','1/5/2025'],
+            labels: dates,
             datasets: [{
                 label: '18 Hole Scores',
-                data: [36,37,38,39,40],
+                data: scores,
                 borderWidth: 2,
             }]
         };
@@ -60,8 +70,8 @@
                             weight: 'bold',
                             family: 'Arial'
                         },
-                        align: 'top', // Position the label above the point
-                        anchor: 'end', // Keeps it near the data point
+                        align: 'center', // Position the label above the point
+                        anchor: 'center', // Keeps it near the data point
                         formatter: (value, context) => {
                             return value; // Ensures only the value is displayed
                         },
@@ -73,5 +83,26 @@
             }
         });
 
-    })
+
+
+        // Listen for chart re-render event from HTMX
+        document.body.addEventListener("@HtmxTriggers.RenderChartData", function(evt) {
+
+            console.log(evt.detail.dates)
+            console.log(evt.detail.scores)
+            console.log(evt.detail)
+
+            lineChart.update();
+
+            if (evt.detail && evt.detail.dates && evt.detail.scores) {
+                lineChart.data.labels = evt.detail.dates; // Update the labels
+                lineChart.data.datasets[0].data = evt.detail.scores; // Update the dataset values
+                lineChart.update(); // Re-render the chart
+            }
+        });
+    }
 </script>
+
+ 
+        
+        
