@@ -1,7 +1,7 @@
 ﻿@using Microsoft.AspNetCore.Mvc.TagHelpers
 
 @* Desktop Sidebar (visible on md and larger) *@
-<nav class="d-none d-md-block sidebar min-vh-100 border-end" style="min-width: 280px;">
+<nav class="d-none d-xxl-block sidebar min-vh-100 border-end" style="min-width: 280px;">
     <div class="position-sticky pt-3">
         <ul class="nav flex-column">
 
@@ -23,7 +23,7 @@
 </nav>
 
 @* Mobile Offcanvas Sidebar (visible only on small screens) *@
-<div class="offcanvas offcanvas-start bg-dark text-white d-md-none" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
+<div class="offcanvas offcanvas-start bg-dark text-white d-xxl-none" tabindex="-1" id="mobileSidebar" aria-labelledby="mobileSidebarLabel">
     <div class="offcanvas-header">
         <h5 class="offcanvas-title" id="mobileSidebarLabel">        
             <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
