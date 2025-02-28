@@ -1,9 +1,11 @@
 using FairwayFinder.Core;
 using FairwayFinder.Core.Identity;
 using FairwayFinder.Core.Identity.Settings;
+using FairwayFinder.Web;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using FairwayFinder.Web.Data;
+using FairwayFinder.Web.Data.Database;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,7 +58,8 @@ builder.Services.AddSession();
 builder.Services.AddMvc();
 builder.Services.AddControllersWithViews().AddRazorRuntimeCompilation();
 
-builder.Services.RegisterServices();
+builder.Services.RegisterCoreServices(); // Register services in Core Lib
+builder.Services.RegisterWebServices(); // Register services for Web Lib
 
 var app = builder.Build();
 
@@ -109,63 +112,15 @@ app.MapRazorPages();
 app.UseSession();
 
 
-using (var scope = app.Services.CreateScope()) {
-    await RunMigrations(scope.ServiceProvider);
-    await CreateRoles(scope.ServiceProvider);
-}
+using (var scope = app.Services.CreateScope())
+{
+    var scopedProvider = scope.ServiceProvider;
 
+    var userInit = scopedProvider.GetRequiredService<SeedAspNetIdentity>();
+    await userInit.CreateRoles();
+
+    var dbInit = scopedProvider.GetRequiredService<MigrationRunner>();
+    await dbInit.RunMigrations();
+}
 
 app.Run();
-
-
-async Task CreateRoles(IServiceProvider serviceProvider) {
-    //initializing custom roles 
-    var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    string[] roleNames = [Roles.Admin, Roles.User];
-
-    foreach (var roleName in roleNames) {
-        var roleExist = await roleManager.RoleExistsAsync(roleName);
-        // ensure that the role does not exist
-        if (!roleExist) {
-            //create the roles and seed them to the database: 
-            await roleManager.CreateAsync(new IdentityRole(roleName));
-        }
-    }
-
-    // Here you create the super admin who will maintain the web app. This password will obviously be changed. 
-    await AddAdminUser(userManager, "georgebjork@outlook.com", "password");
-}
-
-// This is used on an initial launch of the application.
-async Task AddAdminUser(UserManager<ApplicationUser> userManager, string email, string password) {
-    var user = await userManager.FindByEmailAsync(email);
-
-    // check if the user exists
-    if (user == null) {
-        //Here you could create the super admin who will maintain the web app
-        var seedUser = new ApplicationUser {
-            UserName = "georgebjork",
-            Email = email,
-            EmailConfirmed = true,
-            FirstName = "George",
-            LastName = "Bjork"
-        };
-        var createPowerUser = await userManager.CreateAsync(seedUser, password);
-        if (createPowerUser.Succeeded) {
-            //here we tie the new user to the role
-            await userManager.AddToRoleAsync(seedUser, Roles.Admin);
-        }
-    }
-}
-
-Task RunMigrations(IServiceProvider serviceProvider)
-{
-    var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
-    if (context.Database.GetPendingMigrations().Any())
-    {
-        context.Database.Migrate();
-    }
-
-    return Task.CompletedTask;
-}

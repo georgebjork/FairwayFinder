@@ -15,7 +15,7 @@ namespace FairwayFinder.Core;
 
 public static class ConfigureCoreServices
 {
-    public static IServiceCollection RegisterServices(this IServiceCollection services)
+    public static IServiceCollection RegisterCoreServices(this IServiceCollection services)
     {
         // Repositories
         services.AddTransient<IUserManagementRepository, UserManagementRepository>();
