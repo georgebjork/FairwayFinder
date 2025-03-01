@@ -1,24 +1,15 @@
-﻿@using FairwayFinder.Web.Extensions
-@using Microsoft.AspNetCore.Mvc.TagHelpers
+﻿<!-- Navbar -->
 
-<nav class="navbar navbar-expand-md box-shadow pt-3 pb-2 border-bottom" hx-preserve="true">
-    <div class="container-fluid d-flex align-items-center">
-        <!-- Left side: Toggle button and title -->
-        <div class="d-flex align-items-center">
-            <button class="btn btn-dark d-xxl-none me-2" type="button"
-                    data-bs-toggle="offcanvas"
-                    data-bs-target="#mobileSidebar"
-                    aria-controls="mobileSidebar">
+<nav class="navbar fixed-top border-bottom bg-body-tertiary" hx-preserve="true">
+    <div class="container-fluid">
+        <div class="navbar-brand">
+            <button class="navbar-toggler me-2 sidebar-toggle" type="button" id="sidebar-toggle">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <span class="fs-4">
-                @ViewData["Title"]
-                @*@Html.BuildBreadcrumbNavigation()*@
-            </span>
+            <a href="/" class="text-decoration-none text-reset"> <i class="fa-solid fa-golf-ball-tee"></i> FairwayFinder</a>
         </div>
-
-        <!-- Right side: Login partial -->
-        <div class="ms-auto d-flex align-items-center">
+        
+        <div>
             <partial name="Layout/_LoginPartial"/>
         </div>
     </div>

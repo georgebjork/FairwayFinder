@@ -20,30 +20,16 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
     <script src="~/lib/bootstrap/bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js" defer="defer"></script>
 </head>
-<body class="mb-0" hx-boost="true" x-data>
+<body hx-boost="true" x-data>
 
-@await Html.PartialAsync("Layout/New/_Navbar")
+@await Html.PartialAsync("Layout/_Navbar")
 
 <!-- Sidebar Backdrop (Mobile) -->
 <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
-@await Html.PartialAsync("Layout/New/_Sidebar")
+@await Html.PartialAsync("Layout/_Sidebar")
 
-<main id="content" class="p-4 mt-5">
-    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-        <h1 class="h2">Dashboard</h1>
-
-        <div class="btn-toolbar mb-2 mb-md-0">
-            <div class="btn-group me-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary">Share</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary">Export</button>
-            </div>
-            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle">
-                This week
-            </button>
-        </div>
-    </div>
-
+<main id="main-content" class="p-4 mt-5">
     @await Html.PartialAsync("_MessagePartial")
     @RenderBody()
 </main>
