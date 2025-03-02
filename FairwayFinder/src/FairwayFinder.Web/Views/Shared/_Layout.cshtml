@@ -7,18 +7,12 @@
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>@ViewData["Title"] - FairwayFinder</title>
-    @*Customized Theme*@
     <link rel="stylesheet" href="~/lib/bootstrap/bootstrap-5.3.3-dist/css/bootstrap.min.css">
-    @*
-    <link rel="stylesheet" href="~/lib/bootstrap/bootstrap-5.3.3-dist/css/bootstrap.css"/>
-    Old bootstrap theme
-    *@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/FairwayFinder.Web.styles.css" asp-append-version="true"/>
     <link rel="stylesheet" href="~/lib/font-awesome/css/all.css" />
     <link rel="stylesheet" href="~/lib/datatable/datatables.min.css" asp-append-version="true">
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
-    <script src="~/lib/bootstrap/bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js" defer="defer"></script>
 </head>
 <body hx-boost="true" x-data>
 
@@ -47,6 +41,8 @@
 <script src="~/lib/chart.js/plugins/chartjs-plugin-datalabels.min.js" asp-append-version="true"></script>
 <script src="~/lib/datatable/datatables.min.js" asp-append-version="true"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
+<script src="~/lib/bootstrap/bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js" defer="defer"></script>
+
 @await RenderSectionAsync("Scripts", required: false)
 
 
