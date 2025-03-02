@@ -46,23 +46,6 @@
 @await RenderSectionAsync("Scripts", required: false)
 
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const sidebarToggle = document.getElementById('sidebar-toggle');
-        const sidebarBackdrop = document.getElementById('sidebar-backdrop');
-
-        // Toggle sidebar on button click (small screens only)
-        sidebarToggle.addEventListener('click', function() {
-            document.body.classList.toggle('sidebar-expanded');
-        });
-
-        // Close sidebar when clicking on backdrop (mobile)
-        sidebarBackdrop.addEventListener('click', function() {
-            document.body.classList.remove('sidebar-expanded');
-        });
-    });
-</script>
-
 </body>
 </html>
 
