@@ -254,24 +254,31 @@ public class ScorecardService
             return score;
         }).ToList();
 
+        
         // Update hole stats based on the form values
-        var updatedHoleStats = form.HoleScore.Select(formScore =>
+        var updatedHoleStats = new List<HoleStats>();
+        if (form.RoundFormModel.UsingHoleStats)
         {
-            var holeStat = holeStats.First(x => x.hole_id == formScore.HoleId);
+            updatedHoleStats = form.HoleScore.Select(formScore =>
+            {
+                var holeStat = holeStats.First(x => x.hole_id == formScore.HoleId);
             
-            // If both Hit and Miss are false, leave the value as null. Otherwise, take the true value since both cant be true
-            holeStat.hit_fairway = formScore.HoleStats.HitFairway ? true : formScore.HoleStats.MissedFairway ? false : null;
-            holeStat.hit_green = formScore.HoleStats.HitGreen ? true : formScore.HoleStats.MissedGreen ? false : null;
+                // If both Hit and Miss are false, leave the value as null. Otherwise, take the true value since both cant be true
+                holeStat.hit_fairway = formScore.HoleStats.HitFairway ? true : formScore.HoleStats.MissedFairway ? false : null;
+                holeStat.hit_green = formScore.HoleStats.HitGreen ? true : formScore.HoleStats.MissedGreen ? false : null;
             
-            // If we hit, it should be null. If we miss it should have a value. If both are false, then it should be null.
-            holeStat.miss_fairway_type = formScore.HoleStats.HitFairway || !formScore.HoleStats.MissedFairway ? null : formScore.HoleStats.MissFairwayType;
-            holeStat.miss_green_type = formScore.HoleStats.HitGreen || !formScore.HoleStats.MissedGreen ? null : formScore.HoleStats.MissGreenType;
+                // If we hit, it should be null. If we miss it should have a value. If both are false, then it should be null.
+                holeStat.miss_fairway_type = formScore.HoleStats.HitFairway || !formScore.HoleStats.MissedFairway ? null : formScore.HoleStats.MissFairwayType;
+                holeStat.miss_green_type = formScore.HoleStats.HitGreen || !formScore.HoleStats.MissedGreen ? null : formScore.HoleStats.MissGreenType;
 
-            holeStat.number_of_putts = formScore.HoleStats.NumberOfPutts;
-            holeStat.approach_yardage = formScore.HoleStats.YardageOut;
+                holeStat.number_of_putts = formScore.HoleStats.NumberOfPutts;
+                holeStat.approach_yardage = formScore.HoleStats.YardageOut;
             
-            return EntityMetadataHelper.UpdateRecord(holeStat, _usernameRetriever.Username);
-        }).ToList();
+                return EntityMetadataHelper.UpdateRecord(holeStat, _usernameRetriever.Username);
+            }).ToList();
+        }
+        
+        
 
         // Recalculate round scores from the updated hole scores
         round.score_out = updatedHoleScores.Where(x => x.hole_number <= 9).Sum(y => y.hole_score);
