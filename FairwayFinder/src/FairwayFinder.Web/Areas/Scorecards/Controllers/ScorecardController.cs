@@ -86,7 +86,7 @@ public class ScorecardController : BaseScorecardController
         
         var vm = new ScorecardViewModel
         {
-            roundSummary = scorecard_summary,
+            RoundSummary = scorecard_summary,
             ScorecardRoundStats = scorecard_stats,
             Holes = scorecard_scores,
             HoleStats = scorecard_hole_stats,
