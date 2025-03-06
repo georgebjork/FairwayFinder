@@ -18,8 +18,7 @@ public class CourseLookupService
     
     public async Task<List<Course>> GetAllCoursesAsync()
     {
-        var courses = await _courseLookupRepository.GetAllCoursesAsync();
-        return courses;
+        return await _courseLookupRepository.GetAllCoursesAsync();
     }
     public async Task<Course?> GetCourseByIdAsync(long courseId)
     {

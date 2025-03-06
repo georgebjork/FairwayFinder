@@ -1,14 +1,10 @@
 using FairwayFinder.Core.Features.Dashboard.Models;
-using FairwayFinder.Core.Features.Dashboard.Models.QueryModels;
-using FairwayFinder.Core.Features.Dashboard.Models.ViewModel;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
-using FairwayFinder.Core.Features.Scorecards.Services;
-using FairwayFinder.Core.Features.Stats;
-using FairwayFinder.Core.Features.Stats.Models.QueryModels;
-using FairwayFinder.Core.Features.Stats.Repositories;
-using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Repositories;
 using FairwayFinder.Core.Services;
+using FairwayFinder.Core.Stats;
+using FairwayFinder.Core.Stats.Models.QueryModels;
+using FairwayFinder.Core.Stats.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Core.Features.Dashboard.Services;

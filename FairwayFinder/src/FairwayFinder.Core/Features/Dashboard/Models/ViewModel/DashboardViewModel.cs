@@ -1,4 +1,4 @@
-﻿using FairwayFinder.Core.Features.Stats;
+﻿using FairwayFinder.Core.Stats;
 
 namespace FairwayFinder.Core.Features.Dashboard.Models.ViewModel;
 

@@ -1,13 +1,8 @@
-using System.Diagnostics;
-using System.Text.Json;
 using FairwayFinder.Core.Features.Dashboard.Models.ViewModel;
 using FairwayFinder.Core.Features.Dashboard.Services;
-using FairwayFinder.Core.Features.Scorecards.Services;
-using FairwayFinder.Core.Features.Stats;
 using FairwayFinder.Core.Services;
+using FairwayFinder.Core.Stats;
 using Microsoft.AspNetCore.Mvc;
-using FairwayFinder.Web.Models;
-using Microsoft.AspNetCore.Components.RenderTree;
 
 namespace FairwayFinder.Web.Controllers;
 

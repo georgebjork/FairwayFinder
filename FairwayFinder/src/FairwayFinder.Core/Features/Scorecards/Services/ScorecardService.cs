@@ -2,11 +2,13 @@ using FairwayFinder.Core.Features.Scorecards.Models;
 using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 using FairwayFinder.Core.Features.Scorecards.Models.QueryModels;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
-using FairwayFinder.Core.Features.Stats.Repositories;
 using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Repositories.Interfaces;
 using FairwayFinder.Core.Services;
+using FairwayFinder.Core.Stats;
+using FairwayFinder.Core.Stats.Models.QueryModels;
+using FairwayFinder.Core.Stats.Repositories;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Logging;
 
@@ -50,19 +52,31 @@ public class ScorecardService
     
     public async Task<ScorecardRoundStats> GetScorecardRoundStatsAsync(long roundId)
     {
+        var userId = _usernameRetriever.UserId;
+        
         var stats = new ScorecardRoundStats();
         var scorecard_round_stats = await _statRepository.GetScoreStatsByRoundIdAsync(roundId);
+        var average_score_by_par = await _statRepository.GetAverageScoresByParAsync(userId, new StatsRequest { RoundId = roundId });
         var hole_scores = await GetScorecardHoleScoresByRoundIdAsync(roundId);
 
         stats.Par3ScoreToPar = GolfStatHelpers.ScoreToParStats(hole_scores, par: 3);
         stats.Par4ScoreToPar = GolfStatHelpers.ScoreToParStats(hole_scores, par: 4);
         stats.Par5ScoreToPar = GolfStatHelpers.ScoreToParStats(hole_scores, par: 5);
+
+        stats.Par3AverageScoreToPar =
+            Math.Round(average_score_by_par.FirstOrDefault(x => x.par == 3)?.average_score ?? 0, 2,
+                MidpointRounding.AwayFromZero);
         
-        stats.Par3AverageScoreToPar = Math.Round(GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 3), 2, MidpointRounding.AwayFromZero);
-        stats.Par4AverageScoreToPar = Math.Round(GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 4), 2, MidpointRounding.AwayFromZero);
-        stats.Par5AverageScoreToPar = Math.Round(GolfStatHelpers.AverageScoreToParStats(hole_scores, par: 5), 2, MidpointRounding.AwayFromZero);
+        stats.Par4AverageScoreToPar =
+            Math.Round(average_score_by_par.FirstOrDefault(x => x.par == 4)?.average_score ?? 0, 2,
+                MidpointRounding.AwayFromZero);
         
+        stats.Par5AverageScoreToPar =
+            Math.Round(average_score_by_par.FirstOrDefault(x => x.par == 4)?.average_score ?? 0, 2,
+                MidpointRounding.AwayFromZero);
+       
         stats.ScoreCountStatsQueryModel = scorecard_round_stats;
+        stats.AverageScoreByParQueryModel = average_score_by_par.OrderBy(x => x.par).ToList();
         return stats;
     }
     

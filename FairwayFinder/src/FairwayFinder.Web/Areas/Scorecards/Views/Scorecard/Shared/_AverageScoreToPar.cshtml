@@ -7,17 +7,23 @@
     <ul class="list-group list-group-flush">
         <li class="list-group-item d-flex justify-content-between">
             <div>Par 3:</div>
-            <div>@Model.Par3AverageScoreToPar</div>
+            <div>@Math.Round(Model.AverageScoreByParQueryModel.FirstOrDefault(x => x.par == 3)?.average_score ?? 0, 2,
+                         MidpointRounding.AwayFromZero)
+            </div>
         </li>
 
         <li class="list-group-item d-flex justify-content-between">
             <div>Par 4:</div>
-            <div>@Model.Par4AverageScoreToPar</div>
+            <div>@Math.Round(Model.AverageScoreByParQueryModel.FirstOrDefault(x => x.par == 4)?.average_score ?? 0, 2,
+                         MidpointRounding.AwayFromZero)
+            </div>
         </li>
 
         <li class="list-group-item d-flex justify-content-between">
             <div>Par 5:</div>
-            <div>@Model.Par5AverageScoreToPar</div>
+            <div>@Math.Round(Model.AverageScoreByParQueryModel.FirstOrDefault(x => x.par == 5)?.average_score ?? 0, 2,
+                         MidpointRounding.AwayFromZero)
+            </div>
         </li>
     </ul>
 </div>

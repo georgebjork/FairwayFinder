@@ -1,4 +1,4 @@
-namespace FairwayFinder.Core.Features.Dashboard.Models.QueryModels;
+namespace FairwayFinder.Core.Stats.Models.QueryModels;
 
 public class RoundsQueryModel
 {
