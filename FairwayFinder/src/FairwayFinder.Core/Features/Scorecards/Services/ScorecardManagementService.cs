@@ -1,4 +1,5 @@
 using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
+using FairwayFinder.Core.Features.Scorecards.Models.ResponseModels;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
 using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Models;
@@ -70,7 +71,7 @@ public class ScorecardManagementService
             var roundTask = _scorecardRepository.GetRoundByIdAsync(roundId);
             var holeScoresTask = _scorecardRepository.GetScoresForRoundByRoundIdAsync(roundId);
             var roundStatsTask = _scorecardRepository.GetRoundStatsByRoundIdAsync(roundId);
-            var holeStatsTask = _scorecardRepository.GetHoleStatsForRound(roundId);
+            var holeStatsTask = _scorecardRepository.GetHoleStatsByRoundAsync(roundId);
 
             await Task.WhenAll(roundTask, roundStatsTask, holeScoresTask, holeScoresTask);
 

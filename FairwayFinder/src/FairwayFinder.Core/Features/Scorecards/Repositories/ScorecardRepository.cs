@@ -20,14 +20,14 @@ public interface IScorecardRepository : IBaseRepository
     Task<List<RoundSummaryQueryModel>> GetRoundsSummaryByUserIdAsync(string userId, int? limit = null);
     
     Task<RoundSummaryQueryModel?> GetScorecardSummaryByRoundIdAsync(long roundId);
-    Task<List<HoleScoreQueryModel>> GetScorecardHoleScoresByRoundIdAsync(long roundId);
+    Task<List<HoleScoreQueryModel>> GetHoleScoresByRoundIdAsync(long roundId);
     Task<Round?> GetScorecardByIdAsync(long roundId);
     Task<List<Score>> GetScoresForRoundByRoundIdAsync(long roundId);
     Task<RoundStats?> GetRoundStatsByRoundIdAsync(long roundId);
     Task<List<RoundStats>> GetRoundStatsListAsync(string userId);
     Task<Round?> GetRoundByIdAsync(long roundId);
     Task<ScorecardRoundStatsQueryModel?> GetScorecardRoundStatsAsync(long roundId);
-    Task<List<HoleStats>> GetHoleStatsForRound(long roundId);
+    Task<List<HoleStats>> GetHoleStatsByRoundAsync(long roundId);
     Task<bool> InsertHoleStatsAsync(List<HoleStats> holeStats);
     Task<List<HoleStatsQueryModel>> GetHoleStatsByRoundIdAsync(long roundId);
     Task<List<HoleScoreQueryModel>> GetHoleScoreStatsAsync(string userId);
@@ -139,7 +139,7 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
         return rv;
     }
 
-    public async Task<List<HoleScoreQueryModel>> GetScorecardHoleScoresByRoundIdAsync(long roundId)
+    public async Task<List<HoleScoreQueryModel>> GetHoleScoresByRoundIdAsync(long roundId)
     {
         var sql = @"SELECT s.hole_score, h.hole_id, h.yardage, h.handicap, h.par, h.hole_number, s.score_id
                     FROM score AS s
@@ -206,7 +206,7 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
         return rv;
     }
 
-    public async Task<List<HoleStats>> GetHoleStatsForRound(long roundId)
+    public async Task<List<HoleStats>> GetHoleStatsByRoundAsync(long roundId)
     {
         var sql = "SELECT * FROM hole_stats WHERE round_id = @roundId AND is_deleted = false";
         await using var conn = await GetNewOpenConnection();

@@ -1,6 +1,7 @@
 using FairwayFinder.Core.Features.Scorecards.Models;
 using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 using FairwayFinder.Core.Features.Scorecards.Models.QueryModels;
+using FairwayFinder.Core.Features.Scorecards.Models.ResponseModels;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
 using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Models;
@@ -34,6 +35,48 @@ public class ScorecardService
         _holeLookupService = holeLookupService;
         _statRepository = statRepository;
     }
+    
+    
+    public async Task<ScorecardResponseModel> GetScorecardAsync(long roundId)
+    {
+        var response = new ScorecardResponseModel();
+        
+        // First check if the round exists
+        var round = await _scorecardRepository.GetRoundByIdAsync(roundId);
+        if (round is null)
+        {
+            response.Success = false;
+            response.ErrorMessage = "Round does not exist";
+            
+            _logger.LogError("User {0} tried to edit round id {1} that does not exist", _usernameRetriever.Email, roundId);
+            return response;
+        }
+        response.Round = round;
+        
+        // Now go get the course, teebox and holes
+        var course_task = _courseLookupService.GetCourseByIdAsync(round.course_id);
+        var teebox_task = _teeboxLookupService.GetTeeByIdAsync(round.teebox_id);
+        var holes_task = _holeLookupService.GetHolesForTeeAsync(round.teebox_id);
+        
+        await Task.WhenAll(course_task, teebox_task, holes_task);
+
+        response.Course = course_task.Result ?? new Course();
+        response.Teebox = teebox_task.Result ?? new Teebox();
+        response.HolesList = holes_task.Result;
+        
+        // Now get scores and stats
+        var hole_scores_task = _scorecardRepository.GetHoleScoresByRoundIdAsync(round.round_id);
+        var hole_stats_task = _scorecardRepository.GetHoleStatsByRoundAsync(round.round_id);
+        
+        await Task.WhenAll(hole_scores_task, hole_stats_task);
+
+        response.ScoresList = hole_scores_task.Result;
+        response.HoleStatsList = hole_stats_task.Result;
+        
+        response.Success = true;
+        return response;
+    }
+    
 
     public async Task<List<RoundSummaryQueryModel>> GetRoundSummaryByUserId(string userId, int? limit = null)
     {
@@ -47,7 +90,7 @@ public class ScorecardService
 
     public async Task<List<HoleScoreQueryModel>> GetScorecardHoleScoresByRoundIdAsync(long roundId)
     {
-        return await _scorecardRepository.GetScorecardHoleScoresByRoundIdAsync(roundId);
+        return await _scorecardRepository.GetHoleScoresByRoundIdAsync(roundId);
     }
     
     public async Task<ScorecardRoundStats> GetScorecardRoundStatsAsync(long roundId)
@@ -93,7 +136,7 @@ public class ScorecardService
     public async Task<List<HoleScoreFormModel>> GetHoleScoreFormsByRoundIdAsync(long roundId)
     {
         var holes = await _holeLookupService.GetHolesForRoundByRoundIdAsync(roundId);
-        var scores = await _scorecardRepository.GetScorecardHoleScoresByRoundIdAsync(roundId);
+        var scores = await _scorecardRepository.GetHoleScoresByRoundIdAsync(roundId);
         var score_forms = new List<HoleScoreFormModel>();
 
         foreach (var score in scores)
@@ -115,7 +158,7 @@ public class ScorecardService
     
     public async Task<List<HoleStatsFormModel>> GetHoleScoreStatsFormsByRoundIdAsync(long roundId)
     {
-        var hole_stats = await _scorecardRepository.GetHoleStatsForRound(roundId);
+        var hole_stats = await _scorecardRepository.GetHoleStatsByRoundAsync(roundId);
         var hole_stats_form = hole_stats.Select(stats => stats.ToForm()).ToList();
         
         return hole_stats_form;
@@ -226,7 +269,7 @@ public class ScorecardService
         // Fetch hole scores, round stats, and hole stats concurrently
         var holeScoresTask = _scorecardRepository.GetScoresForRoundByRoundIdAsync(roundId);
         var roundStatsTask = _scorecardRepository.GetRoundStatsByRoundIdAsync(roundId);
-        var holeStatsTask = _scorecardRepository.GetHoleStatsForRound(roundId);
+        var holeStatsTask = _scorecardRepository.GetHoleStatsByRoundAsync(roundId);
 
         await Task.WhenAll(holeScoresTask, roundStatsTask, holeStatsTask);
 
@@ -246,7 +289,7 @@ public class ScorecardService
 
             await _scorecardRepository.InsertHoleStatsAsync(holeStats);
 
-            holeStats = await _scorecardRepository.GetHoleStatsForRound(roundId);
+            holeStats = await _scorecardRepository.GetHoleStatsByRoundAsync(roundId);
         }
 
         // Update or create round stats based on the form's hole scores

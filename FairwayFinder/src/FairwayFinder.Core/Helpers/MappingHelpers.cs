@@ -1,5 +1,6 @@
 ﻿using FairwayFinder.Core.Features.CourseManagement.Models.FormModels;
 using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
+using FairwayFinder.Core.Features.Scorecards.Models.QueryModels;
 using FairwayFinder.Core.Models;
 
 namespace FairwayFinder.Core.Helpers;
@@ -126,6 +127,29 @@ public static class MappingHelpers
         };
     }
 
+    public static HoleScoreFormModel ToForm(this Score holeScore)
+    {
+        return new HoleScoreFormModel
+        {
+            ScoreId = holeScore.score_id,
+            HoleId = holeScore.hole_id,
+            Score = holeScore.hole_score
+        };
+    }
+    
+    public static HoleScoreFormModel ToForm(this HoleScoreQueryModel holeScore)
+    {
+        return new HoleScoreFormModel
+        {
+            ScoreId = holeScore.score_id,
+            HoleId = holeScore.hole_id,
+            Score = holeScore.hole_score,
+            Yardage = holeScore.yardage,
+            Par = holeScore.par,
+            HoleNumber = holeScore.hole_number
+        };
+    }
+
     public static Round ToModel(this RoundFormModel form)
     {
         return new Round
@@ -137,6 +161,18 @@ public static class MappingHelpers
             score_out = 0,
             score_in = 0,
             using_hole_stats = form.UsingHoleStats
+        };
+    }
+
+    public static RoundFormModel ToForm(this Round round)
+    {
+        return new RoundFormModel
+        {
+            RoundId = round.round_id,
+            DatePlayed = round.date_played,
+            UsingHoleStats = round.using_hole_stats,
+            CourseId = round.course_id,
+            TeeboxId = round.teebox_id
         };
     }
 }
