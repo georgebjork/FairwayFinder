@@ -1,4 +1,3 @@
-using FairwayFinder.Core.Features.Scorecards.Models.QueryModels;
 using FairwayFinder.Core.Stats.Models.QueryModels;
 
 namespace FairwayFinder.Core.Features.Scorecards.Models;

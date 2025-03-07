@@ -65,13 +65,15 @@ public class ScorecardService
         response.HolesList = holes_task.Result;
         
         // Now get scores and stats
-        var hole_scores_task = _scorecardRepository.GetHoleScoresByRoundIdAsync(round.round_id);
-        var hole_stats_task = _scorecardRepository.GetHoleStatsByRoundAsync(round.round_id);
+        var hole_scores_task = _scorecardRepository.GetHoleScoresByRoundIdAsync(roundId);
+        var hole_stats_task = _scorecardRepository.GetHoleStatsByRoundIdAsync(roundId);
+        var round_stats_task = _scorecardRepository.GetRoundStatsByRoundIdAsync(roundId);
         
-        await Task.WhenAll(hole_scores_task, hole_stats_task);
+        await Task.WhenAll(hole_scores_task, hole_stats_task, round_stats_task);
 
-        response.ScoresList = hole_scores_task.Result;
+        response.HoleScoresList = hole_scores_task.Result;
         response.HoleStatsList = hole_stats_task.Result;
+        response.RoundStats = round_stats_task.Result ?? new RoundStats();
         
         response.Success = true;
         return response;

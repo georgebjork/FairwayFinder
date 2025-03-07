@@ -159,7 +159,7 @@ public class ScorecardManagementController : BaseScorecardController
 
 
         var hole_score_form_list = new List<HoleScoreFormModel>();
-        foreach (var hs in scorecard.ScoresList)
+        foreach (var hs in scorecard.HoleScoresList)
         {
             var hs_form = hs.ToForm();
 

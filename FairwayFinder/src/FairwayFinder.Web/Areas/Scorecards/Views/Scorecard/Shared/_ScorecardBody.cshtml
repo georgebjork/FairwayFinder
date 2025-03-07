@@ -2,21 +2,28 @@
 @{
 var front_nine_max = 9;
 var back_nine_max = 18;
+
+var round = Model.Scorecard.Round;
+var teebox = Model.Scorecard.Teebox;
+var holes = Model.Scorecard.HoleScoresList;
+var holeStats = Model.Scorecard.HoleStatsList;
 }
+
+
 @*Yardage*@
 <tr>
-    <th colspan="2">@Model.RoundSummary.teebox_name</th>
+    <th colspan="2">@teebox.teebox_name</th>
     @for (var i = 0; i < front_nine_max; i++)
     {
-        <td class="text-center">@Model.Holes[i].yardage</td>
+        <td class="text-center">@holes[i].yardage</td>
     }
-    <td class="text-center" colspan="2">@Model.RoundSummary.yardage_out</td>
+    <td class="text-center" colspan="2">@teebox.yardage_out</td>
     @for (var i = front_nine_max; i < back_nine_max; i++)
     {
-        <td class="text-center">@Model.Holes[i].yardage</td>
+        <td class="text-center">@holes[i].yardage</td>
     }
-    <td class="text-center" colspan="2">@Model.RoundSummary.yardage_in</td>
-    <td class="text-center" colspan="2">@Model.RoundSummary.yardage_total</td>
+    <td class="text-center" colspan="2">@teebox.yardage_in</td>
+    <td class="text-center" colspan="2">@teebox.yardage_total</td>
 </tr>
 
 @*Handicap*@
@@ -24,15 +31,15 @@ var back_nine_max = 18;
     <th colspan="2">Handicap</th>
     @for (var i = 0; i < front_nine_max; i++)
     {
-        <td class="text-center">@Model.Holes[i].handicap</td>
+        <td class="text-center">@holes[i].handicap</td>
     }
     <td class="text-center" colspan="2">&nbsp;</td>
     @for (var i = front_nine_max; i < back_nine_max; i++)
     {
-        <td class="text-center">@Model.Holes[i].handicap</td>
+        <td class="text-center">@holes[i].handicap</td>
     }
     <td class="text-center" colspan="2">&nbsp;</td>
-    <td class="text-center" colspan="2">@Model.RoundSummary.slope / @Model.RoundSummary.rating</td>
+    <td class="text-center" colspan="2">@teebox.slope / @teebox.rating</td>
 </tr>
 
 
@@ -41,15 +48,15 @@ var back_nine_max = 18;
     <th colspan="2">Par</th>
     @for (var i = 0; i < front_nine_max; i++)
     {
-        <td class="text-center">@Model.Holes[i].par</td>
+        <td class="text-center">@holes[i].par</td>
     }
-    <td class="text-center" colspan="2">@Model.Holes.Where(x => x.hole_number <= front_nine_max).Sum(h => h.par)</td>
+    <td class="text-center" colspan="2">@holes.Where(x => x.hole_number <= front_nine_max).Sum(h => h.par)</td>
     @for (var i = front_nine_max; i < back_nine_max; i++)
     {
-        <td class="text-center">@Model.Holes[i].par</td>
+        <td class="text-center">@holes[i].par</td>
     }
-    <td class="text-center" colspan="2">@Model.Holes.Where(x => x.hole_number > front_nine_max).Sum(h => h.par)</td>
-    <td class="text-center" colspan="2">@Model.RoundSummary.par</td>
+    <td class="text-center" colspan="2">@holes.Where(x => x.hole_number > front_nine_max).Sum(h => h.par)</td>
+    <td class="text-center" colspan="2">@teebox.par</td>
 </tr>
 
 @*Score*@
@@ -58,8 +65,8 @@ var back_nine_max = 18;
     @for (var i = 0; i < front_nine_max; i++)
     {
         <td class="text-center position-relative">
-            <span>@Model.Holes[i].hole_score</span>
-            @switch (Model.Holes[i].hole_score - Model.Holes[i].par)
+            <span>@holes[i].hole_score</span>
+            @switch (holes[i].hole_score - holes[i].par)
             {
                 case <= -2:
                     @await Html.PartialAsync("ScorecardStyling/_Eagle")
@@ -76,12 +83,12 @@ var back_nine_max = 18;
             }
         </td>
     }
-    <td class="text-center" colspan="2">@Model.RoundSummary.score_out</td>
+    <td class="text-center" colspan="2">@round.score_out</td>
     @for (var i = front_nine_max; i < back_nine_max; i++)
     {
         <td class="text-center position-relative">
-            <span>@Model.Holes[i].hole_score</span>
-            @switch (Model.Holes[i].hole_score - Model.Holes[i].par)
+            <span>@holes[i].hole_score</span>
+            @switch (holes[i].hole_score - holes[i].par)
             {
                 case <= -2:
                     @await Html.PartialAsync("ScorecardStyling/_Eagle")
@@ -98,73 +105,73 @@ var back_nine_max = 18;
             }
         </td>
     }
-    <td class="text-center" colspan="2">@Model.RoundSummary.score_in</td>
-    <td class="text-center" colspan="2">@Model.RoundSummary.score</td>
+    <td class="text-center" colspan="2">@round.score_in</td>
+    <td class="text-center" colspan="2">@round.score</td>
 </tr>
-    @if (Model.RoundSummary.using_hole_stats)
+    @if (round.using_hole_stats)
     {
         <tr>
             <th colspan="2">Fairways</th>
             @for (var i = 0; i < front_nine_max; i++)
             {
                 <td class="text-center">
-                    @await Html.PartialAsync("Shared/_FairwayStatIcon", Model.HoleStats[i])
+                    @await Html.PartialAsync("Shared/_FairwayStatIcon", holeStats[i])
                 </td>
             }
-            <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number <= front_nine_max).Count(x => x.hit_fairway == true)</td>
+            <td class="text-center" colspan="2">@holeStats.Where(x => x.hole_number <= front_nine_max).Count(x => x.hit_fairway == true)</td>
             @for (var i = front_nine_max; i < back_nine_max; i++)
             {
                 <td class="text-center">
-                    @await Html.PartialAsync("Shared/_FairwayStatIcon", Model.HoleStats[i])
+                    @await Html.PartialAsync("Shared/_FairwayStatIcon", holeStats[i])
                 </td>
             }
-            <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number > front_nine_max).Count(x => x.hit_fairway == true)</td>
-            <td class="text-center" colspan="2">@Model.HoleStats.Count(x => x.hit_fairway == true) / @Model.Holes.Count(x => x.par > 3)</td>
+            <td class="text-center" colspan="2">@holeStats.Where(x => x.hole_number > front_nine_max).Count(x => x.hit_fairway == true)</td>
+            <td class="text-center" colspan="2">@holeStats.Count(x => x.hit_fairway == true) / @holes.Count(x => x.par > 3)</td>
         </tr>
         <tr>
             <th colspan="2">GIR</th>
             @for (var i = 0; i < front_nine_max; i++)
             {
                 <td class="text-center">
-                    @await Html.PartialAsync("Shared/_GreenStatIcon", Model.HoleStats[i])
+                    @await Html.PartialAsync("Shared/_GreenStatIcon", holeStats[i])
                 </td>
             }
-            <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number <= front_nine_max).Count(x => x.hit_green == true)</td>
+            <td class="text-center" colspan="2">@holeStats.Where(x => x.hole_number <= front_nine_max).Count(x => x.hit_green == true)</td>
             @for (var i = front_nine_max; i < back_nine_max; i++)
             {
                 <td class="text-center">
-                    @await Html.PartialAsync("Shared/_GreenStatIcon", Model.HoleStats[i])
+                    @await Html.PartialAsync("Shared/_GreenStatIcon", holeStats[i])
                 </td>
             }
-            <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number > front_nine_max).Count(x => x.hit_green == true)</td>
-            <td class="text-center" colspan="2">@Model.HoleStats.Count(x => x.hit_green == true) / @Model.HoleStats.Count</td>
+            <td class="text-center" colspan="2">@holeStats.Where(x => x.hole_number > front_nine_max).Count(x => x.hit_green == true)</td>
+            <td class="text-center" colspan="2">@holeStats.Count(x => x.hit_green == true) / @holeStats.Count</td>
         </tr>
         <tr>
             <th colspan="2">Putts</th>
             @for (var i = 0; i < front_nine_max; i++)
             {
-                if (Model.HoleStats[i].number_of_putts >= 3)
+                if (holeStats[i].number_of_putts >= 3)
                 {
-                    <td class="text-center text-danger">@Model.HoleStats[i].number_of_putts</td>
+                    <td class="text-center text-danger">@holeStats[i].number_of_putts</td>
                 }
                 else
                 {
-                    <td class="text-center">@Model.HoleStats[i].number_of_putts</td>
+                    <td class="text-center">@holeStats[i].number_of_putts</td>
                 }
             }
-            <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number <= 9).Sum(x => x.number_of_putts)</td>
+            <td class="text-center" colspan="2">@holeStats.Where(x => x.hole_number <= 9).Sum(x => x.number_of_putts)</td>
             @for (var i = front_nine_max; i < back_nine_max; i++)
             {
-                if (Model.HoleStats[i].number_of_putts >= 3)
+                if (holeStats[i].number_of_putts >= 3)
                 {
-                    <td class="text-center text-danger">@Model.HoleStats[i].number_of_putts</td>
+                    <td class="text-center text-danger">@holeStats[i].number_of_putts</td>
                 }
                 else
                 {
-                    <td class="text-center">@Model.HoleStats[i].number_of_putts</td>
+                    <td class="text-center">@holeStats[i].number_of_putts</td>
                 }
             }
-            <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number > 9).Sum(x => x.number_of_putts)</td>
-            <td class="text-center" colspan="2">@Model.HoleStats.Sum(x => x.number_of_putts)</td>
+            <td class="text-center" colspan="2">@holeStats.Where(x => x.hole_number > 9).Sum(x => x.number_of_putts)</td>
+            <td class="text-center" colspan="2">@holeStats.Sum(x => x.number_of_putts)</td>
         </tr>
     }

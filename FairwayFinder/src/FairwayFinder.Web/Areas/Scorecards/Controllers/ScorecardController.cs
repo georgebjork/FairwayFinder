@@ -72,13 +72,10 @@ public class ScorecardController : BaseScorecardController
         }
         
         var user = await _userManager.FindByIdAsync(userId);
-        
-        var scorecard_summary = await _scorecardService.GetScorecardSummaryByRoundIdAsync(roundId);
-        var scorecard_scores = await _scorecardService.GetScorecardHoleScoresByRoundIdAsync(roundId);
+        var scorecard = await _scorecardService.GetScorecardAsync(roundId);
         var scorecard_stats = await _scorecardService.GetScorecardRoundStatsAsync(roundId);
-        var scorecard_hole_stats = await _scorecardService.GetHoleStatsByRoundIdAsync(roundId);
 
-        if (scorecard_summary is null)
+        if (!scorecard.Success)
         {
             SetErrorMessage("No round was returned with that Id");
             return Redirect(nameof(Index), new { username });
@@ -86,10 +83,8 @@ public class ScorecardController : BaseScorecardController
         
         var vm = new ScorecardViewModel
         {
-            RoundSummary = scorecard_summary,
+            Scorecard = scorecard,
             ScorecardRoundStats = scorecard_stats,
-            Holes = scorecard_scores,
-            HoleStats = scorecard_hole_stats,
             Name = $"{user.FirstName} {user.LastName}",
             Username = username
         };

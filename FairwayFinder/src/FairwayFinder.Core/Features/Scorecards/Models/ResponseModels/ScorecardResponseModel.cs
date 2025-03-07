@@ -12,8 +12,9 @@ public class ScorecardResponseModel
 
     // Round related Data
     public Round Round { get; set; } = new();
-    public List<HoleScoreQueryModel> ScoresList { get; set; } = [];
-    public List<HoleStats> HoleStatsList { get; set; } = [];
+    public RoundStats RoundStats { get; set; } = new();
+    public List<HoleScoreQueryModel> HoleScoresList { get; set; } = [];
+    public List<HoleStatsQueryModel> HoleStatsList { get; set; } = [];
     
     public bool Success { get; set; }
     public string ErrorMessage { get; set; } = "";
