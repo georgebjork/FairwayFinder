@@ -145,7 +145,7 @@ public class ScorecardManagementController : BaseScorecardController
     [Route("scorecards/{roundId:long}/edit")]
     public async Task<IActionResult> EditRound([FromRoute] long roundId)
     {
-        var scorecard = await _scorecardService.GetScorecardAsync(roundId);
+        var scorecard = await _scorecardService.GetScorecardByRoundIdAsync(roundId);
 
         if (!scorecard.Success)
         {

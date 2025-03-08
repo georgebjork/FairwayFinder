@@ -8,22 +8,23 @@ using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Core.Features.Scorecards.Services;
 
-public class ScorecardManagementService
+public interface IScorecardManagementService
+{
+    public Task<int> CreateNewScorecardAsync(ScorecardFormModel form);
+    public Task<bool> UpdateScorecardAsync(ScorecardFormModel form);
+}
+
+
+public class ScorecardManagementService : IScorecardManagementService
 {
     private readonly ILogger<ScorecardManagementService> _logger;
-    private readonly CourseLookupService _courseLookupService;
-    private readonly TeeboxLookupService _teeboxLookupService;
-    private readonly HoleLookupService _holeLookupService;
     private readonly IScorecardManagementRepository _repository;
     private readonly IScorecardRepository _scorecardRepository;
     private readonly IUsernameRetriever _usernameRetriever;
 
-    public ScorecardManagementService(ILogger<ScorecardManagementService> logger, CourseLookupService courseLookupService, TeeboxLookupService teeboxLookupService, HoleLookupService holeLookupService, IUsernameRetriever usernameRetriever, IScorecardManagementRepository repository, IScorecardRepository scorecardRepository)
+    public ScorecardManagementService(ILogger<ScorecardManagementService> logger, IUsernameRetriever usernameRetriever, IScorecardManagementRepository repository, IScorecardRepository scorecardRepository)
     {
         _logger = logger;
-        _courseLookupService = courseLookupService;
-        _teeboxLookupService = teeboxLookupService;
-        _holeLookupService = holeLookupService;
         _usernameRetriever = usernameRetriever;
         _repository = repository;
         _scorecardRepository = scorecardRepository;
@@ -69,8 +70,8 @@ public class ScorecardManagementService
 
             // 4 tables that need to be updated. We will send all off at once
             var roundTask = _scorecardRepository.GetRoundByIdAsync(roundId);
-            var holeScoresTask = _scorecardRepository.GetScoresForRoundByRoundIdAsync(roundId);
-            var roundStatsTask = _scorecardRepository.GetRoundStatsByRoundIdAsync(roundId);
+            var holeScoresTask = _scorecardRepository.GetScoresForRoundByIdAsync(roundId);
+            var roundStatsTask = _scorecardRepository.GetRoundStatsByIdAsync(roundId);
             var holeStatsTask = _scorecardRepository.GetHoleStatsByRoundAsync(roundId);
 
             await Task.WhenAll(roundTask, roundStatsTask, holeScoresTask, holeScoresTask);

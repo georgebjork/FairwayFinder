@@ -3,8 +3,8 @@ using FairwayFinder.Core.Models;
 
 namespace FairwayFinder.Core.Features.Scorecards.Models.ViewModels;
 
-public class ScorecardsViewModel
+public class ScorecardListViewModel
 {
-    public List<RoundSummaryQueryModel> Rounds { get; set; } = [];
+    public List<ScorecardSummaryQueryModel> Scorecards { get; set; } = [];
     public string Username { get; set; } = "";
 }
