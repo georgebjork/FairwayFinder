@@ -1,11 +1,13 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FairwayFinder.Web.Controllers;
 
-public class BaseController : Controller {
-    
+public class BaseController : Controller
+{
+
     protected string RequestUrlBase => $"{Request.Scheme}://{Request.Host.Value}";
     public void SetInfoMessage(string message) {
         TempData["info_message"] = message;

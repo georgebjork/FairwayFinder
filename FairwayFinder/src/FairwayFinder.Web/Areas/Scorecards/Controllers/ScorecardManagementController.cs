@@ -3,9 +3,11 @@ using FairwayFinder.Core.Features.Scorecards.Cache;
 using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 using FairwayFinder.Core.Features.Scorecards.Services;
 using FairwayFinder.Core.Helpers;
+using FairwayFinder.Core.Identity.Settings;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Repositories;
 using FairwayFinder.Core.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
@@ -22,10 +24,11 @@ public class ScorecardManagementController : BaseScorecardController
     private readonly ScorecardService _scorecardService;
     private readonly ScorecardManagementService _scorecardManagementService;
     private readonly ILookupRepository _lookupRepository;
+    private readonly IAuthorizationService _authorizationService;
 
     private readonly IDistributedCache _cache;
     
-    public ScorecardManagementController(ILogger<ScorecardManagementController> logger, IUsernameRetriever usernameRetriever, CourseLookupService courseLookupService, TeeboxLookupService teeboxLookupService, HoleLookupService holeLookupService, ScorecardService scorecardService, ILookupRepository lookupRepository, ScorecardManagementService scorecardManagementService, IDistributedCache cache)
+    public ScorecardManagementController(ILogger<ScorecardManagementController> logger, IUsernameRetriever usernameRetriever, CourseLookupService courseLookupService, TeeboxLookupService teeboxLookupService, HoleLookupService holeLookupService, ScorecardService scorecardService, ILookupRepository lookupRepository, ScorecardManagementService scorecardManagementService, IDistributedCache cache, IAuthorizationService authorizationService)
     {
         _logger = logger;
         _usernameRetriever = usernameRetriever;
@@ -36,6 +39,7 @@ public class ScorecardManagementController : BaseScorecardController
         _lookupRepository = lookupRepository;
         _scorecardManagementService = scorecardManagementService;
         _cache = cache;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet]
@@ -140,6 +144,14 @@ public class ScorecardManagementController : BaseScorecardController
     [Route("scorecards/{roundId:long}/edit")]
     public async Task<IActionResult> EditRound([FromRoute] long roundId)
     {
+        var authResult = await _authorizationService.AuthorizeAsync(User, roundId, Policy.CanEditScorecard);
+        if (!authResult.Succeeded)
+        {
+            _logger.LogError($"{_usernameRetriever.Email} tried to edit a scorecard they dont have access to.");
+            SetErrorMessage("Unable to edit Scorecard.");
+            return Unauthorized();
+        }
+        
         var scorecard = await _scorecardService.GetScorecardByRoundIdAsync(roundId);
 
         if (!scorecard.Success)

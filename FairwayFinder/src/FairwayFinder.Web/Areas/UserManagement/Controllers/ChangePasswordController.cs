@@ -1,7 +1,7 @@
 using FairwayFinder.Core.Features.UserManagement.Models.FormModels;
 using FairwayFinder.Core.Identity;
-using FairwayFinder.Core.Services;
-using FairwayFinder.Web.Controllers;
+using FairwayFinder.Core.Identity.Settings;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,17 +11,25 @@ public class ChangePasswordController : BaseUserManagementController
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IAuthorizationService _authorizationService;
 
-    public ChangePasswordController(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager)
+    public ChangePasswordController(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager, IAuthorizationService authorizationService)
     {
         _signInManager = signInManager;
         _userManager = userManager;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet]
     [Route("user-management/{userId}/change-password")]
-    public IActionResult ChangePassword([FromRoute] string userId)
+    public async Task<IActionResult> ChangePassword([FromRoute] string userId)
     {
+        var auth_result = await _authorizationService.AuthorizeAsync(User, userId, Policy.CanEditProfile);
+        if (!auth_result.Succeeded)
+        {
+            return new ForbidResult();
+        }
+        
         return PartialView(new ChangePasswordFormModel
         {
             UserId = userId
@@ -32,6 +40,12 @@ public class ChangePasswordController : BaseUserManagementController
     [Route("user-management/{userId}/change-password")]
     public async Task<IActionResult> ChangePasswordPost([FromRoute] string userId, [FromForm] ChangePasswordFormModel form)
     {
+        var auth_result = await _authorizationService.AuthorizeAsync(User, userId, Policy.CanEditProfile);
+        if (!auth_result.Succeeded)
+        {
+            return new ForbidResult();
+        }
+        
         if (!ModelState.IsValid)
         {
             return PartialView("_ChangePasswordForm", form);

@@ -1,8 +1,14 @@
 ﻿@using FairwayFinder.Core.Helpers
+@using FairwayFinder.Core.Identity.Settings
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @model FairwayFinder.Core.Features.Scorecards.Models.ViewModels.ScorecardViewModel
+@inject IAuthorizationService AuthorizationService
 
 @{
     ViewData["Title"] = $"Scorecard - {Model.Scorecard.Course.course_name}";
+    
+    var canEditScorecard = (await AuthorizationService.AuthorizeAsync(User, Model.Scorecard.Round.round_id, Policy.CanEditScorecard)).Succeeded;
 }
 
 
@@ -15,9 +21,13 @@
         <a class="btn btn-link me-2" asp-action="Index" asp-route-username="@Model.Username">
             <i class="fa-solid fa-arrow-left"></i> Scorecards
         </a>
-        <a class="btn btn-link" asp-controller="ScorecardManagement" asp-action="EditRound" asp-route-roundId="@Model.Scorecard.Round.round_id">
-            <i class="fa-solid fa-pen-to-square"></i> Edit Round
-        </a>
+        
+        @if (canEditScorecard)
+        {
+            <a class="btn btn-link" asp-controller="ScorecardManagement" asp-action="EditRound" asp-route-roundId="@Model.Scorecard.Round.round_id">
+                <i class="fa-solid fa-pen-to-square"></i> Edit Round
+            </a>
+        }
     </div>
 </div>
 
