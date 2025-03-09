@@ -71,6 +71,7 @@ public class ScorecardManagementController : BaseScorecardController
         // Build form. Cache this. We want to reuse it across forms so less data retrival.
         var form = new ScorecardFormModel
         {
+            Course = course,
             RoundFormModel = new RoundFormModel
             {
                 CourseId = course.course_id,
@@ -107,13 +108,6 @@ public class ScorecardManagementController : BaseScorecardController
             HoleScore = holeScoresForms,
             MissTypeSelectList = missTypes
         };
-        
-        await _cache.SetStringAsync(_usernameRetriever.UserId, JsonSerializer.Serialize(form), 
-            new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30)
-            }
-        );
 
         return PartialView("Shared/_CreateRoundTeeboxData", form);
     }
