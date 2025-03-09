@@ -2,10 +2,13 @@ using FairwayFinder.Core;
 using FairwayFinder.Core.Identity;
 using FairwayFinder.Core.Identity.Settings;
 using FairwayFinder.Web;
+using FairwayFinder.Web.Authorization.Profile;
+using FairwayFinder.Web.Authorization.ScorecardManagement;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using FairwayFinder.Web.Data;
 using FairwayFinder.Web.Data.Database;
+using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,7 +57,16 @@ builder.Services.ConfigureApplicationCookie(o => {
 builder.Services.AddDistributedMemoryCache();
 
 builder.Services.AddAuthentication();
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(Policy.CanEditScorecard, policy =>
+        policy.Requirements.Add(new CanEditScorecardRequirement()));
+    
+    options.AddPolicy(Policy.CanEditProfile, policy =>
+        policy.Requirements.Add(new CanEditProfileRequirement()));
+});
+
+
 
 builder.Services.AddSession();
 builder.Services.AddMvc();

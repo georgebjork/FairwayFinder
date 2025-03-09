@@ -1,6 +1,7 @@
 using FairwayFinder.Core.Features.UserManagement.Models.FormModels;
 using FairwayFinder.Core.Identity;
-using FairwayFinder.Core.Services;
+using FairwayFinder.Core.Identity.Settings;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,18 +11,23 @@ public class EditUserController : BaseUserManagementController
 {
     private readonly ILogger<EditUserController> _logger;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IUsernameRetriever _usernameRetriever;
+    private readonly IAuthorizationService _authorizationService;
 
-    public EditUserController(ILogger<EditUserController> logger, UserManager<ApplicationUser> userManager, IUsernameRetriever usernameRetriever)
+    public EditUserController(ILogger<EditUserController> logger, UserManager<ApplicationUser> userManager, IAuthorizationService authorizationService)
     {
         _logger = logger;
         _userManager = userManager;
-        _usernameRetriever = usernameRetriever;
+        _authorizationService = authorizationService;
     }
 
     [Route("user-management/{userId}")]
     public async Task<IActionResult> EditUser([FromRoute] string userId)
     {
+        if (!await CheckAuth(userId))
+        {
+            return Unauthorized();
+        }
+        
         var user = await _userManager.FindByIdAsync(userId);
 
         // Dont want to edit a user that does not exist
@@ -35,6 +41,7 @@ public class EditUserController : BaseUserManagementController
     }
     
     [HttpGet]
+    [Authorize(Roles = Roles.Admin)]
     [Route("user-management/{userId}/roles/edit")]
     public async Task<IActionResult> EditUserRoles([FromRoute] string userId)
     {
@@ -63,6 +70,7 @@ public class EditUserController : BaseUserManagementController
     
     
     [HttpPost]
+    [Authorize(Roles = Roles.Admin)]
     [Route("user-management/{userId}/roles/edit/assign")]
     public async Task<IActionResult> AssignUserRole([FromRoute] string userId, [FromForm] UserRolesFormModel form)
     {
@@ -109,6 +117,7 @@ public class EditUserController : BaseUserManagementController
     
     
     [HttpPost]
+    [Authorize(Roles = Roles.Admin)]
     [Route("user-management/{userId}/roles/edit/remove")]
     public async Task<IActionResult> RemoveUserRole([FromRoute] string userId, [FromForm] UserRolesFormModel form)
     {
@@ -151,5 +160,11 @@ public class EditUserController : BaseUserManagementController
         form.AvailableRoles = available_roles;
         
         return PartialView("_EditUserRolesForm", form);
+    }
+
+    private async Task<bool> CheckAuth(string userId)
+    {
+        var auth_result = await _authorizationService.AuthorizeAsync(User, userId, Policy.CanEditProfile);
+        return auth_result.Succeeded;
     }
 }

@@ -1,4 +1,6 @@
-﻿using FairwayFinder.Core.Features.CourseManagement.Repositories;
+﻿using FairwayFinder.Core.Authorization;
+using FairwayFinder.Core.Authorization.Repositories;
+using FairwayFinder.Core.Features.CourseManagement.Repositories;
 using FairwayFinder.Core.Features.CourseManagement.Services;
 using FairwayFinder.Core.Features.Dashboard.Services;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
@@ -27,7 +29,6 @@ public static class ConfigureCoreServices
         services.AddTransient<IScorecardManagementRepository, ScorecardManagementRepository>();
         services.AddTransient<ILookupRepository, LookupRepository>();
         services.AddTransient<IStatRepository, StatRepository>();
-
         
         // Services
         services.AddTransient<IUsernameRetriever, UsernameRetriever>();
@@ -39,6 +40,14 @@ public static class ConfigureCoreServices
         services.AddTransient<ScorecardService>();
         services.AddTransient<ScorecardManagementService>();
         services.AddTransient<DashboardService>();
+        
+        
+        
+        // Auth Services
+        services.AddTransient<ScorecardAuthorizationService>();
+        
+        // Auth Repositories
+        services.AddTransient<IAuthorizationRepository, AuthorizationRepository>();
         
         return services;
     } 

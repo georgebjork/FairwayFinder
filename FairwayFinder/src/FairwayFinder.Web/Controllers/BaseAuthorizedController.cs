@@ -5,5 +5,4 @@ namespace FairwayFinder.Web.Controllers;
 [Authorize]
 public class BaseAuthorizedController : BaseController
 {
-    
 }
