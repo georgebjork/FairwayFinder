@@ -22,7 +22,7 @@
 @if (Model.HoleScore.Count > 0)
 {
     @* *@
-    <input type="hidden" asp-for="RoundFormModel.UsingHoleStats" value="@Model.RoundFormModel.UsingHoleStats" x-model="showAdvancedStats"/>    
+<input type="hidden" asp-for="RoundFormModel.UsingHoleStats" value="@Model.RoundFormModel.UsingHoleStats" x-model="showAdvancedStats"/>
     <div class="col-12">
         <input
             type="checkbox"
@@ -67,7 +67,7 @@
                             <span class="text-danger" asp-validation-for="@Model.HoleScore[i].Score"></span>
                         </div>
                         
-                        <div x-show="showAdvancedStats" id="advanced-stats">
+                        <div x-show="showAdvancedStats">
                             @if (Model.HoleScore[i].Par > 3)
                             {
 

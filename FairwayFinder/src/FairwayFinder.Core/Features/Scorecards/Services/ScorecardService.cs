@@ -1,3 +1,5 @@
+using System.Text.Json;
+using FairwayFinder.Core.Features.Scorecards.Cache;
 using FairwayFinder.Core.Features.Scorecards.Models;
 using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 using FairwayFinder.Core.Features.Scorecards.Models.QueryModels;
@@ -11,6 +13,7 @@ using FairwayFinder.Core.Stats;
 using FairwayFinder.Core.Stats.Models.QueryModels;
 using FairwayFinder.Core.Stats.Repositories;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Core.Features.Scorecards.Services;
@@ -34,7 +37,9 @@ public class ScorecardService : IScorecardService
     private readonly HoleLookupService _holeLookupService;
     private readonly IUsernameRetriever _usernameRetriever;
 
-    public ScorecardService(ILogger<ScorecardService> logger, IScorecardRepository scorecardRepository, TeeboxLookupService teeboxLookupService, CourseLookupService courseLookupService, IUsernameRetriever usernameRetriever, HoleLookupService holeLookupService, IStatRepository statRepository)
+    private readonly IDistributedCache _cache;
+
+    public ScorecardService(ILogger<ScorecardService> logger, IScorecardRepository scorecardRepository, TeeboxLookupService teeboxLookupService, CourseLookupService courseLookupService, IUsernameRetriever usernameRetriever, HoleLookupService holeLookupService, IStatRepository statRepository, IDistributedCache cache)
     {
         _logger = logger;
         _scorecardRepository = scorecardRepository;
@@ -43,6 +48,7 @@ public class ScorecardService : IScorecardService
         _usernameRetriever = usernameRetriever;
         _holeLookupService = holeLookupService;
         _statRepository = statRepository;
+        _cache = cache;
     }
     
     public async Task<List<ScorecardSummaryQueryModel>> GetScorecardListByUserIdAsync(string userId, int? limit = null)
@@ -52,6 +58,14 @@ public class ScorecardService : IScorecardService
     
     public async Task<ScorecardResponseModel> GetScorecardByRoundIdAsync(long roundId)
     {
+        // Get the cached response if possible
+        var cache_response = await _cache.GetStringAsync(ScorecardCacheKeys.GetScorecardCacheKey(roundId));
+        if (cache_response is not null)
+        {
+            var rv = JsonSerializer.Deserialize<ScorecardResponseModel>(cache_response);
+            return rv ?? new ScorecardResponseModel();
+        }
+        
         var response = new ScorecardResponseModel();
         
         // First check if the round exists
@@ -89,11 +103,27 @@ public class ScorecardService : IScorecardService
         response.RoundStats = round_stats_task.Result ?? new RoundStats();
         
         response.Success = true;
+
+        // Cache this data
+        await _cache.SetStringAsync(ScorecardCacheKeys.GetScorecardCacheKey(roundId), JsonSerializer.Serialize(response), new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
+        });
+        
         return response;
     }
     
     public async Task<ScorecardRoundStats> GetScorecardRoundStatsByRoundIdAsync(long roundId)
     {
+        // Get the cached response if possible
+        var cache_response = await _cache.GetStringAsync(ScorecardCacheKeys.GetScorecardStatsCacheKey(roundId));
+        if (cache_response is not null)
+        {
+            var rv = JsonSerializer.Deserialize<ScorecardRoundStats>(cache_response);
+            return rv ?? new ScorecardRoundStats();
+        }
+        
+        
         var userId = _usernameRetriever.UserId;
         
         var stats = new ScorecardRoundStats();
@@ -119,6 +149,13 @@ public class ScorecardService : IScorecardService
        
         stats.ScoreCountStatsQueryModel = scorecard_round_stats;
         stats.AverageScoreByParQueryModel = average_score_by_par.OrderBy(x => x.par).ToList();
+        
+        // Cache this data
+        await _cache.SetStringAsync(ScorecardCacheKeys.GetScorecardStatsCacheKey(roundId), JsonSerializer.Serialize(stats), new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
+        });
+        
         return stats;
     }
 }

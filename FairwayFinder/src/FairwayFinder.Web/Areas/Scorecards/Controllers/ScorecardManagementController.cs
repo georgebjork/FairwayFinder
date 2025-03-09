@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using FairwayFinder.Core.Features.Scorecards.Cache;
 using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 using FairwayFinder.Core.Features.Scorecards.Services;
 using FairwayFinder.Core.Helpers;
@@ -185,14 +186,8 @@ public class ScorecardManagementController : BaseScorecardController
             HoleScore = hole_score_form_list
         };
         
-        // Cache this result. No need to get it all again.
-        await _cache.SetStringAsync(_usernameRetriever.UserId, JsonSerializer.Serialize(form), 
-            new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30)
-            }
-        );
-
+        // Cache the form, no need to do this all again on reload or failure.
+        await CacheForm(_usernameRetriever.UserId, roundId, form);
         return View(form);
     }
 
@@ -203,10 +198,11 @@ public class ScorecardManagementController : BaseScorecardController
     {
         if (!ModelState.IsValid)
         {
-            form = await RefreshFormModelForError(form);
-            form.IsUpdate = true;
-            form.RoundFormModel.RoundId = roundId;
-            return PartialView("Shared/_RoundForm", form);
+            var updated_form = await RefreshFormModelForError(form);
+            updated_form.IsUpdate = true;
+            updated_form.RoundFormModel.RoundId = roundId;
+            updated_form.RoundFormModel.UsingHoleStats = form.RoundFormModel.UsingHoleStats;
+            return PartialView("Shared/_RoundForm", updated_form);
         }
         
         var result = await _scorecardManagementService.UpdateScorecardAsync(form);
@@ -214,27 +210,31 @@ public class ScorecardManagementController : BaseScorecardController
         if (!result)
         {
             SetErrorMessageHtmx("Error occurred updating round. Please try again.");
-            form = await RefreshFormModelForError(form);
-            form.IsUpdate = true;
-            form.RoundFormModel.RoundId = roundId;
+            var updated_form = await RefreshFormModelForError(form);
+            updated_form.IsUpdate = true;
+            updated_form.RoundFormModel.RoundId = roundId;
+            updated_form.RoundFormModel.UsingHoleStats = form.RoundFormModel.UsingHoleStats;
             return PartialView("Shared/_RoundForm", form);
         }
         
-        await _cache.RemoveAsync(_usernameRetriever.UserId);
+        // Clear the cache
+        await _cache.RemoveAsync(ScorecardCacheKeys.GetScorecardFormCacheKey(_usernameRetriever.UserId, roundId));
+        
         SetSuccessMessage("Successfully updated round.");
         return Redirect("ViewScorecard", new { username = _usernameRetriever.Username, roundId }, "Scorecard");
     }
     
     private async Task<ScorecardFormModel> RefreshFormModelForError(ScorecardFormModel form)
     {
-        var cached_form_json = await _cache.GetStringAsync(_usernameRetriever.UserId);
-        if (cached_form_json is not null)
+        // Use the cached form
+        var cached_form = await GetCachedForm(_usernameRetriever.UserId, form.RoundFormModel.RoundId ?? 0);
+        if (cached_form is not null)
         {
-            var cached_form = JsonSerializer.Deserialize<ScorecardFormModel>(cached_form_json) ?? new ScorecardFormModel();
             cached_form.HoleScore = form.HoleScore;
             return cached_form;
         }
         
+        // Manually get the parts we need.
         var course = await _courseLookupService.GetCourseByIdAsync(form.RoundFormModel.CourseId);
         var teebox = await _teeboxLookupService.GetTeeByIdAsync(form.RoundFormModel.TeeboxId);
 
@@ -252,4 +252,24 @@ public class ScorecardManagementController : BaseScorecardController
     }
 
 
+    private async Task CacheForm(string userId, long roundId, ScorecardFormModel form)
+    {
+        await _cache.SetStringAsync(
+            ScorecardCacheKeys.GetScorecardFormCacheKey(userId, roundId), 
+            JsonSerializer.Serialize(form), 
+            new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30)
+            }
+        );
+    }
+    
+    private async Task<ScorecardFormModel?> GetCachedForm(string userId, long roundId)
+    {
+        var form_string = await _cache.GetStringAsync(ScorecardCacheKeys.GetScorecardFormCacheKey(userId, roundId));
+        
+        // If the string is null, return null. Otherwise, attempt to deserialize
+        return form_string is null ? null : JsonSerializer.Deserialize<ScorecardFormModel>(form_string);
+    }
+    
 }

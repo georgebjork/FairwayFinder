@@ -1,9 +1,11 @@
+using FairwayFinder.Core.Features.Scorecards.Cache;
 using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 using FairwayFinder.Core.Features.Scorecards.Models.ResponseModels;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
 using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Services;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Core.Features.Scorecards.Services;
@@ -22,12 +24,15 @@ public class ScorecardManagementService : IScorecardManagementService
     private readonly IScorecardRepository _scorecardRepository;
     private readonly IUsernameRetriever _usernameRetriever;
 
-    public ScorecardManagementService(ILogger<ScorecardManagementService> logger, IUsernameRetriever usernameRetriever, IScorecardManagementRepository repository, IScorecardRepository scorecardRepository)
+    private readonly IDistributedCache _cache;
+
+    public ScorecardManagementService(ILogger<ScorecardManagementService> logger, IUsernameRetriever usernameRetriever, IScorecardManagementRepository repository, IScorecardRepository scorecardRepository, IDistributedCache cache)
     {
         _logger = logger;
         _usernameRetriever = usernameRetriever;
         _repository = repository;
         _scorecardRepository = scorecardRepository;
+        _cache = cache;
     }
 
     public async Task<int> CreateNewScorecardAsync(ScorecardFormModel form)
@@ -93,6 +98,10 @@ public class ScorecardManagementService : IScorecardManagementService
             // Update hole scores and stats
             var updated_scores = UpdateHoleScore(scores, form, userId);
             var updated_hole_stats = UpdateHoleStats(holeStats, form, userId);
+            
+            // Remove the cached scorecard since updated data will need to be retrived
+            await _cache.RemoveAsync(ScorecardCacheKeys.GetScorecardCacheKey(roundId));
+            await _cache.RemoveAsync(ScorecardCacheKeys.GetScorecardStatsCacheKey(roundId));
             
             return await _repository.UpdateScorecardAsync(updated_round, updated_scores, updated_round_stats, updated_hole_stats);
         }
