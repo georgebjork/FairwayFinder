@@ -80,6 +80,13 @@
                     Scores
                 </div>
                 <div class="card-body" id="scores-chart-card">
+
+                    <script>
+                        // Use window object to avoid re-declaration issues
+                        window.dates = @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Select(x => x.date_played.FormatDate())));
+                        window.scores = @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Select(x => x.score)));
+                    </script>
+                    
                     <canvas id="scoresChart"></canvas>
                 </div>
             </div>
@@ -105,7 +112,7 @@
             const roundTable = $('#rounds-table').DataTable({
                 layout: {
                     topStart: null,
-                    topEnd: null,
+                    topEnd: 'search',
                     bottomEnd: 'paging',
                     bottomStart: 'info',
                 },
@@ -132,10 +139,10 @@
         
         function initLineChart()
         {
+            console.log('hello there');
+        
             const ctxLine = document.getElementById('scoresChart').getContext('2d');
 
-            let dates = @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Select(x => x.date_played.FormatDate())));
-            let scores = @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Select(x => x.score)));
 
             // Line Chart configuration
             const lineData = {
