@@ -62,9 +62,5 @@ public class BaseController : Controller {
 
 public static class HtmxTriggers
 {
-    
-    public static string RenderTable = "RenderTable";
-    public static string RenderChart = "RenderChart";
-    public static string RenderChartData = "RenderChartData";
     public static string RenderDashboard = "RenderDashboard";
 }

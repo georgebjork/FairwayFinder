@@ -70,7 +70,20 @@
                 destroy: true,
                 stateSave: true,
                 responsive: true,
-                scrollX: true
+                scrollX: true,
+                order: [[4, 'desc']], // sorts the Date column (index 4) in descending order
+                columnDefs: [
+                    {
+                        targets: 4, // Date column
+                        render: function (data, type, row) {
+                            if (type === 'sort') {
+                                var parts = data.split('/');
+                                return new Date(parts[2], parts[0] - 1, parts[1]).getTime();
+                            }
+                            return data;
+                        }
+                    }
+                ]
             });
 
             $('#customSearch').on('keyup', function () {

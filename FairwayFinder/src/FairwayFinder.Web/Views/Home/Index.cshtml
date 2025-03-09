@@ -1,19 +1,16 @@
 ﻿@using FairwayFinder.Core.Features.Dashboard.Models.ViewModel
+@using FairwayFinder.Core.Helpers
 @using FairwayFinder.Web.Controllers
+@using Microsoft.AspNetCore.Mvc.TagHelpers
 @model DashboardViewModel
 
 
 @{
     ViewData["Title"] = "Dashboard";
 }
-<script>
-    function getQueryParams() {
-        return Object.fromEntries(new URLSearchParams(window.location.search));
-    }
-</script>
 
-
-<div class="row">
+<div id="dashboard-data">
+    <div class="row" >
         <div class="col-3">
             <label class="form-label">Filter By Year</label>
             <select>
@@ -21,7 +18,8 @@
                         hx-get="@Url.Action("Index")"
                         hx-trigger="click"
                         hx-push-url="true"
-                        hx-target="body">
+                        hx-target="#dashboard-data"
+                        hx-swap="innerHTML">
                 </option>
                 
                 @foreach (var year in Model.YearFilters)
@@ -33,7 +31,8 @@
                                 hx-get="@Url.Action("Index", new { year = year.Value })"
                                 hx-trigger="click"
                                 hx-push-url="true"
-                                hx-target="body" selected>
+                                hx-target="#dashboard-data"
+                                hx-swap="innerHTML" selected>
                             @year.Key
                         </option>
                     }
@@ -43,7 +42,8 @@
                                 hx-get="@Url.Action("Index", new { year = year.Value })"
                                 hx-trigger="click"
                                 hx-push-url="true"
-                                hx-target="body">
+                                hx-target="#dashboard-data"
+                                hx-swap="innerHTML">
                             @year.Key
                         </option>
                     }
@@ -52,53 +52,182 @@
         </div>
     </div>
 
-    <div class="row" id="header-cards"
-         hx-get="@Url.Action("GetHeaderCardsData", Model.Filters)"
-         hx-target="#header-cards"
-         hx-swap="innerHTML"
-         hx-trigger="load">
-        @await Html.PartialAsync("Shared/_DashboardHeaderCardStats", new DashboardHeaderCardsViewModel())
+    <div class="row" id="header-cards">
+        @await Html.PartialAsync("Shared/_DashboardHeaderCardStats", Model.CardData)
     </div>
 
-<div class="row row-cols-lg-1 row-cols-xl-2 g-2">
 
-    <div class="col">
-        <div hx-get="@Url.Action("GetRounds", Model.Filters)"
-             hx-target="#rounds-table-card"
-             hx-swap="innerHTML"
-             hx-trigger="load">
+    <div class="row row-cols-lg-1 row-cols-xl-2 g-2">
 
+        <div class="col">
             <div class="card h-100">
                 <div class="card-header">
                     Rounds
                 </div>
                 <div class="card-body" id="rounds-table-card">
+                    @await Html.PartialAsync("Shared/_DashboardRoundsTable", new DashboardRoundsTableViewModel
+                    {
+                        Rounds = Model.Rounds,
+                        Username = Model.Username
+                    })
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="col"
-         hx-get="@Url.Action("GetScoresChartData", Model.Filters)"
-         hx-target="#scores-chart-data"
-         hx-swap="innerHTML"
-         hx-trigger="load">
-
-        <div class="card h-100">
-            <div class="card-header">
-                Scores
-            </div>
-            
-            <div class="card-body" id="scores-chart-card">
-
-                <canvas id="scoresChart"></canvas>
-                
-                <div id="scores-chart-data">
-                    
+        <div class="col">
+            <div class="card h-100">
+                <div class="card-header">
+                    Scores
                 </div>
-
-                @await Html.PartialAsync("Shared/_DashboardScoresLineChart")
+                <div class="card-body" id="scores-chart-card">
+                    <canvas id="scoresChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+@section Scripts
+{
+    <script type="text/javascript">
+    $(document).ready(function () {
+    
+        initDataTable();
+        initLineChart();
+
+        document.body.addEventListener("@HtmxTriggers.RenderDashboard", function(evt) {
+            initDataTable();
+            initLineChart();
+        });
+        
+    
+        function initDataTable() {
+            const roundTable = $('#rounds-table').DataTable({
+                layout: {
+                    topStart: null,
+                    topEnd: null,
+                    bottomEnd: 'paging',
+                    bottomStart: 'info',
+                },
+                destroy: true,
+                stateSave: true,
+                responsive: true,
+                scrollX: true,
+                order: [[4, 'desc']], // sorts the Date column (index 4) in descending order
+                columnDefs: [
+                    {
+                        targets: 4, // Date column
+                        render: function (data, type, row) {
+                            if (type === 'sort') {
+                                var parts = data.split('/');
+                                return new Date(parts[2], parts[0] - 1, parts[1]).getTime();
+                            }
+                            return data;
+                        }
+                    }
+                ]
+            });
+        }
+    
+        
+        function initLineChart()
+        {
+            const ctxLine = document.getElementById('scoresChart').getContext('2d');
+
+            let dates = @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Select(x => x.date_played.FormatDate())));
+            let scores = @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Select(x => x.score)));
+
+            // Line Chart configuration
+            const lineData = {
+                labels: dates,
+                datasets: [{
+                    label: '18 Hole Scores',
+                    data: scores,
+                    borderWidth: 2,
+                }]
+            };
+
+            const lineChart = new Chart(ctxLine, {
+                type: 'line',
+                data: lineData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: Math.min(...scores) - 5,
+                            max: Math.max(...scores) + 5,
+                            ticks: {
+                                stepSize: 1,
+                                precision: 0
+                            },
+                        },
+                    },
+                    elements: {
+                        line: {
+                            tension: 0.4 // This makes the line smooth
+                        },
+                        point: {
+                            radius: 3, // Show points
+                            hoverRadius: 5 // Expand points on hover
+                        }
+                    },
+                    animation: {
+                        duration: 1000, // Smooth animation duration
+                        easing: 'easeInOutQuad' // Smooth easing effect
+                    }
+                }
+            });
+        }
+
+    });
+</script>
+}
+
+@*
+DATA LABELS REFERENCE FOR LATER
+
+type: 'line',
+            data: lineData,
+            plugins: [ChartDataLabels],
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1,
+                            precision: 0
+                        },
+                    },
+                },
+                plugins: {
+                    decimation: {
+                        enabled: true,
+                        algorithm: 'min-max',
+                        samples: 100
+                    },
+                    datalabels: {
+                        color: '#fff', // White text for contrast
+                        backgroundColor: 'rgba(0, 123, 255, 0.8)', // Semi-transparent blue background
+                        borderRadius: 6,
+                        padding: 6,
+                        font: {
+                            size: 12,
+                            weight: 'bold',
+                            family: 'Arial'
+                        },
+                        align: 'center', // Position the label above the point
+                        anchor: 'center', // Keeps it near the data point
+                        formatter: (value, context) => {
+                            return value; // Ensures only the value is displayed
+                        },
+                        display: function(context) {
+                            return context.dataset.data[context.dataIndex] !== null; // Hide null values
+                        }
+                    }
+                }
+            }
+
+*@
