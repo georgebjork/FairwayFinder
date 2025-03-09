@@ -1,5 +1,6 @@
 ﻿using FairwayFinder.Core.Features.CourseManagement.Models.FormModels;
 using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
+using FairwayFinder.Core.Features.Scorecards.Models.QueryModels;
 using FairwayFinder.Core.Models;
 
 namespace FairwayFinder.Core.Helpers;
@@ -125,6 +126,48 @@ public static class MappingHelpers
             YardageOut = hole.approach_yardage
         };
     }
+    
+    public static HoleStatsFormModel ToForm(this HoleStatsQueryModel hole)
+    {
+        return new HoleStatsFormModel
+        {
+            HoleStatsId = hole.hole_stats_id,
+            RoundId = hole.round_id,
+            ScoreId = hole.score_id,
+            HoleId = hole.hole_id,
+            MissedFairway = !hole.hit_fairway ?? false,
+            HitFairway = hole.hit_fairway ?? false,
+            MissFairwayType = hole.miss_fairway_type,
+            MissedGreen = !hole.hit_green ?? false,
+            HitGreen = hole.hit_green ?? false,
+            MissGreenType = hole.miss_green_type,
+            NumberOfPutts = hole.number_of_putts,
+            YardageOut = hole.approach_yardage
+        };
+    }
+
+    public static HoleScoreFormModel ToForm(this Score holeScore)
+    {
+        return new HoleScoreFormModel
+        {
+            ScoreId = holeScore.score_id,
+            HoleId = holeScore.hole_id,
+            Score = holeScore.hole_score
+        };
+    }
+    
+    public static HoleScoreFormModel ToForm(this HoleScoreQueryModel holeScore)
+    {
+        return new HoleScoreFormModel
+        {
+            ScoreId = holeScore.score_id,
+            HoleId = holeScore.hole_id,
+            Score = holeScore.hole_score,
+            Yardage = holeScore.yardage,
+            Par = holeScore.par,
+            HoleNumber = holeScore.hole_number
+        };
+    }
 
     public static Round ToModel(this RoundFormModel form)
     {
@@ -137,6 +180,18 @@ public static class MappingHelpers
             score_out = 0,
             score_in = 0,
             using_hole_stats = form.UsingHoleStats
+        };
+    }
+
+    public static RoundFormModel ToForm(this Round round)
+    {
+        return new RoundFormModel
+        {
+            RoundId = round.round_id,
+            DatePlayed = round.date_played,
+            UsingHoleStats = round.using_hole_stats,
+            CourseId = round.course_id,
+            TeeboxId = round.teebox_id
         };
     }
 }

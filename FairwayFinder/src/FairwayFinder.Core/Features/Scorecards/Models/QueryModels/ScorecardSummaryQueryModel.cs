@@ -1,6 +1,6 @@
 namespace FairwayFinder.Core.Features.Scorecards.Models.QueryModels;
 
-public class RoundSummaryQueryModel
+public class ScorecardSummaryQueryModel
 {
     public long round_id { get; set; }
     public string course_name { get; set; } = "";

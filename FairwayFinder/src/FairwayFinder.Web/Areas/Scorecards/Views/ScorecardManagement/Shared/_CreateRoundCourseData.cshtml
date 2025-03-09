@@ -4,11 +4,12 @@
 @model FairwayFinder.Core.Features.Scorecards.Models.FormModels.ScorecardFormModel
 
 <input type="hidden" asp-for="RoundFormModel.CourseId" value="@Model.Course.course_id"/>
+<input type="hidden" asp-for="RoundFormModel.CourseName" value="@Model.Course.course_name"/>
 
 <div class="col-4">
     <div class="mb-3">
         <label class="form-label"> Course Name </label>
-        <input class="form-control" asp-for="@Model.Course.course_name" disabled/>
+        <input class="form-control" asp-for="@Model.RoundFormModel.CourseName" disabled/>
     </div>
 </div>
 
@@ -46,7 +47,7 @@
                 @foreach (var t in Model.TeeboxSelectList)
                 {
                     <option value="@t.Key"
-                            hx-get="@Url.Action("GetTeeboxData", new {teeboxId = t.Key})"
+                            hx-get="@Url.Action("GetTeeboxAndHoleDataHtmx", new {teeboxId = t.Key})"
                             hx-target="#teebox-data"
                             hx-swap="innerHTML"
                             hx-trigger="click">

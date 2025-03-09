@@ -1,0 +1,105 @@
+﻿@model FairwayFinder.Core.Features.Scorecards.Models.ScorecardRoundStats
+
+
+<div class="col">
+        <div class="card">
+            <div class="card-header">
+                Avg. Score Fwy Hit
+            </div>
+            <ul class="list-group list-group-flush">
+                @foreach (var par in Model.AverageScoreByParQueryModel)
+                {
+                <li class="list-group-item d-flex justify-content-between">
+                    <div>Par @par.par:</div>
+                    <div>@Math.Round(par.average_score_fairway_hit ,2,MidpointRounding.AwayFromZero) (@par.average_score_fairway_hit_count)</div>
+                </li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                Avg. Score Fwy Miss
+            </div>
+            <ul class="list-group list-group-flush">
+                @foreach (var par in Model.AverageScoreByParQueryModel)
+                {
+                <li class="list-group-item d-flex justify-content-between">
+                    <div>Par @par.par:</div>
+                    <div>@Math.Round(par.average_score_fairway_miss ,2,MidpointRounding.AwayFromZero) (@par.average_score_fairway_miss_count)</div>
+                </li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                Avg. Score GIR Hit
+            </div>
+            <ul class="list-group list-group-flush">
+                @foreach (var par in Model.AverageScoreByParQueryModel)
+                {
+                <li class="list-group-item d-flex justify-content-between">
+                    <div>Par @par.par:</div>
+                    <div>@Math.Round(par.average_score_green_hit ,2,MidpointRounding.AwayFromZero) (@par.average_score_green_hit_count)</div>
+                </li>
+                }
+            </ul>
+        </div>
+    </div>
+
+<div class="col">
+    <div class="card">
+        <div class="card-header">
+            Avg. Score GIR Miss
+        </div>
+        <ul class="list-group list-group-flush">
+            @foreach (var par in Model.AverageScoreByParQueryModel)
+            {
+                <li class="list-group-item d-flex justify-content-between">
+                    <div>Par @par.par:</div>
+                    <div>@Math.Round(par.average_score_green_miss ,2,MidpointRounding.AwayFromZero) (@par.average_score_green_miss_count)</div>
+                </li>
+            }
+        </ul>
+    </div>
+</div>
+
+
+<div class="col">
+    <div class="card">
+        <div class="card-header">
+            Avg. Score FWY+ GIR Miss
+        </div>
+        <ul class="list-group list-group-flush">
+            @foreach (var par in Model.AverageScoreByParQueryModel)
+            {
+                <li class="list-group-item d-flex justify-content-between">
+                    <div>Par @par.par:</div>
+                    <div>@Math.Round(par.average_score_both_hit ,2,MidpointRounding.AwayFromZero) (@par.average_score_both_hit_count)</div>
+                </li>
+            }
+        </ul>
+    </div>
+</div>
+
+<div class="col">
+    <div class="card">
+        <div class="card-header">
+            Avg. Score FWY+ GIR Miss
+        </div>
+        <ul class="list-group list-group-flush">
+            @foreach (var par in Model.AverageScoreByParQueryModel)
+            {
+                <li class="list-group-item d-flex justify-content-between">
+                    <div>Par @par.par:</div>
+                    <div>@Math.Round(par.average_score_both_miss ,2,MidpointRounding.AwayFromZero) (@par.average_score_both_miss_count)</div>
+                </li>
+            }
+        </ul>
+    </div>
+</div>

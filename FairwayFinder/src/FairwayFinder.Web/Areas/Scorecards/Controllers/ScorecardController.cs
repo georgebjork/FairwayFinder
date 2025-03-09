@@ -4,7 +4,6 @@ using FairwayFinder.Core.Features.Scorecards.Models.ViewModels;
 using FairwayFinder.Core.Features.Scorecards.Services;
 using FairwayFinder.Core.Identity;
 using FairwayFinder.Core.Models;
-using FairwayFinder.Core.Services;
 using FairwayFinder.Core.UserManagement.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -15,15 +14,13 @@ namespace FairwayFinder.Web.Areas.Scorecards.Controllers;
 public class ScorecardController : BaseScorecardController
 {
     private readonly ILogger<ScorecardController> _logger;
-    private readonly IUsernameRetriever _usernameRetriever;
     private readonly ScorecardService _scorecardService;
     private readonly IUserManagementService _userManagementService;
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public ScorecardController(ILogger<ScorecardController> logger, IUsernameRetriever usernameRetriever, ScorecardService scorecardService, IUserManagementService userManagementService, UserManager<ApplicationUser> userManager)
+    public ScorecardController(ILogger<ScorecardController> logger, ScorecardService scorecardService, IUserManagementService userManagementService, UserManager<ApplicationUser> userManager)
     {
         _logger = logger;
-        _usernameRetriever = usernameRetriever;
         _scorecardService = scorecardService;
         _userManagementService = userManagementService;
         _userManager = userManager;
@@ -47,14 +44,12 @@ public class ScorecardController : BaseScorecardController
             return RedirectToAction(nameof(Index), "Home");
         }
 
-        var rounds = await _scorecardService.GetRoundSummaryByUserId(userId);
-
+        var rounds = await _scorecardService.GetScorecardListByUserIdAsync(userId);
         
-        // Helps pass the username into the view 
-        ViewBag.Username = username;
-        var vm = new ScorecardsViewModel
+        var vm = new ScorecardListViewModel
         {
-            Rounds = rounds,
+            Scorecards = rounds,
+            Username = username
         };
         return View(vm);
     }
@@ -72,13 +67,10 @@ public class ScorecardController : BaseScorecardController
         }
         
         var user = await _userManager.FindByIdAsync(userId);
-        
-        var scorecard_summary = await _scorecardService.GetScorecardSummaryByRoundIdAsync(roundId);
-        var scorecard_scores = await _scorecardService.GetScorecardHoleScoresByRoundIdAsync(roundId);
-        var scorecard_stats = await _scorecardService.GetScorecardRoundStatsAsync(roundId);
-        var scorecard_hole_stats = await _scorecardService.GetHoleStatsByRoundIdAsync(roundId);
+        var scorecard = await _scorecardService.GetScorecardByRoundIdAsync(roundId);
+        var scorecard_stats = await _scorecardService.GetScorecardRoundStatsByRoundIdAsync(roundId);
 
-        if (scorecard_summary is null)
+        if (!scorecard.Success)
         {
             SetErrorMessage("No round was returned with that Id");
             return Redirect(nameof(Index), new { username });
@@ -86,10 +78,8 @@ public class ScorecardController : BaseScorecardController
         
         var vm = new ScorecardViewModel
         {
-            roundSummary = scorecard_summary,
+            Scorecard = scorecard,
             ScorecardRoundStats = scorecard_stats,
-            Holes = scorecard_scores,
-            HoleStats = scorecard_hole_stats,
             Name = $"{user.FirstName} {user.LastName}",
             Username = username
         };

@@ -6,12 +6,43 @@
             <button class="navbar-toggler me-2 sidebar-toggle" type="button" id="sidebar-toggle">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <a href="/" class="text-decoration-none text-reset"> <i class="fa-solid fa-golf-ball-tee"></i> FairwayFinder</a>
+            <a href="/" class="text-decoration-none text-reset" hx-boost="false"> <i class="fa-solid fa-golf-ball-tee"></i> FairwayFinder</a>
         </div>
         
         <div>
             <partial name="Layout/_LoginPartial"/>
         </div>
     </div>
+
+
+    <script hx-preserve="true">
+        
+        function initSidebarToggle() {
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+
+            // Toggle sidebar on button click (small screens only)
+            sidebarToggle.addEventListener('click', function() {
+                document.body.classList.toggle('sidebar-expanded');
+            });
+
+            // Close sidebar when clicking on backdrop (mobile)
+            sidebarBackdrop.addEventListener('click', function() {
+                document.body.classList.remove('sidebar-expanded');
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            initSidebarToggle();
+        });
+        
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            initSidebarToggle();
+        });
+    
+    </script>
+
 </nav>
+
+
 

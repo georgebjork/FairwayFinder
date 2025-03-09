@@ -1,13 +1,8 @@
-using System.Diagnostics;
-using System.Text.Json;
 using FairwayFinder.Core.Features.Dashboard.Models.ViewModel;
 using FairwayFinder.Core.Features.Dashboard.Services;
-using FairwayFinder.Core.Features.Scorecards.Services;
-using FairwayFinder.Core.Features.Stats;
 using FairwayFinder.Core.Services;
+using FairwayFinder.Core.Stats;
 using Microsoft.AspNetCore.Mvc;
-using FairwayFinder.Web.Models;
-using Microsoft.AspNetCore.Components.RenderTree;
 
 namespace FairwayFinder.Web.Controllers;
 
@@ -27,64 +22,32 @@ public class HomeController : BaseAuthorizedController
 
     public async Task<IActionResult> Index([FromQuery] long? year = null)
     {
-        var vm = new DashboardViewModel();
+        var userId = _usernameRetriever.UserId;
+        var username = _usernameRetriever.Username;
+
+        var sr = new StatsRequest { Year = year };
 
         var year_filters = await _dashboardService.GetYearFilters();
-        vm.YearFilters = year_filters;
-        vm.Filters.Year = year;
-        
-        SendHtmxTriggerAfterSettle(HtmxTriggers.RenderChart);
-        
-        return View(vm);
-    }
+        var card_data = await _dashboardService.GetRoundScoresSummaryByUserId(userId, sr);
+        var rounds = await _dashboardService.GetRoundsByUserIdAsync(userId, sr);
 
-    public IActionResult ReRenderDashboard([FromQuery] long? year = null)
-    {
-        SendHtmxTriggerAfterSettle(HtmxTriggers.RenderDashboard);
-        return Ok();
-    }
-    
-    public async Task<IActionResult> GetHoleScoreStats()
-    {
-        var hole_stats = await _dashboardService.GetHoleScoreStats();
-        return PartialView("Shared/_RoundStatsDashboard", new RoundStatsViewModel
-        {
-            ScoreStatsQueryModel = hole_stats
-        });
-    }
 
-    public async Task<IActionResult> GetHeaderCardsData([FromQuery] StatsRequest filters)
-    {
-        var userId = _usernameRetriever.UserId;
-        
-        var response = await _dashboardService.GetRoundScoresSummaryByUserId(userId, filters);
-        return PartialView("Shared/_DashboardHeaderCardStats", new DashboardHeaderCardsViewModel
-        {
-            SummaryResponse = response
-        });
-    }
-    
-    public async Task<IActionResult> GetRounds([FromQuery] StatsRequest filters)
-    {
-        var userId = _usernameRetriever.UserId;
-        var rounds = await _dashboardService.GetRoundsByUserIdAsync(userId, filters);
-        
-        SendHtmxTriggerAfterSettle(HtmxTriggers.RenderTable);
-        return PartialView("Shared/_DashboardRoundsTable", new DashboardRoundsTableViewModel
+        var vm = new DashboardViewModel
         {
             Rounds = rounds,
-            Username = _usernameRetriever.Username
-        });
-    }
-    
-    public async Task<IActionResult> GetScoresChartData([FromQuery] StatsRequest filters)
-    {
-        var userId = _usernameRetriever.UserId;
-        var rounds = await _dashboardService.GetRoundsByUserIdAsync(userId, filters);
+            CardData = card_data,
+            Username = username,
+            YearFilters = year_filters,
+            Filters =
+            {
+                Year = year
+            }
+        };
+
+        if (!IsHtmx()) return View(vm);
         
-        return PartialView("Shared/_DashboardScoresLineData", new DashboardScoresChartViewModel
-        {
-            Rounds = rounds
-        });
+        SendHtmxTriggerAfterSettle(HtmxTriggers.RenderDashboard);
+        return PartialView(vm);
+
     }
 }

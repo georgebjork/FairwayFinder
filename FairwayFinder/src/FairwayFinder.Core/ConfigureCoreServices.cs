@@ -3,10 +3,10 @@ using FairwayFinder.Core.Features.CourseManagement.Services;
 using FairwayFinder.Core.Features.Dashboard.Services;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
 using FairwayFinder.Core.Features.Scorecards.Services;
-using FairwayFinder.Core.Features.Stats.Repositories;
 using FairwayFinder.Core.Repositories;
 using FairwayFinder.Core.Repositories.Interfaces;
 using FairwayFinder.Core.Services;
+using FairwayFinder.Core.Stats.Repositories;
 using FairwayFinder.Core.UserManagement.Respositories;
 using FairwayFinder.Core.UserManagement.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +24,7 @@ public static class ConfigureCoreServices
         services.AddTransient<ITeeboxLookupRepository, TeeboxLookupRepository>();
         services.AddTransient<IHoleLookupRepository, HoleLookupRepository>();
         services.AddTransient<IScorecardRepository, ScorecardRepository>();
+        services.AddTransient<IScorecardManagementRepository, ScorecardManagementRepository>();
         services.AddTransient<ILookupRepository, LookupRepository>();
         services.AddTransient<IStatRepository, StatRepository>();
 
@@ -36,6 +37,7 @@ public static class ConfigureCoreServices
         services.AddTransient<TeeboxLookupService>();
         services.AddTransient<HoleLookupService>();
         services.AddTransient<ScorecardService>();
+        services.AddTransient<ScorecardManagementService>();
         services.AddTransient<DashboardService>();
         
         return services;

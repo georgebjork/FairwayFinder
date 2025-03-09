@@ -1,6 +1,6 @@
-using FairwayFinder.Core.Features.Dashboard.Models.QueryModels;
 using FairwayFinder.Core.Features.Scorecards.Models.QueryModels;
 using FairwayFinder.Core.Models;
+using FairwayFinder.Core.Stats.Models.QueryModels;
 
 namespace FairwayFinder.Core.Features.Dashboard.Models.ViewModel;
 

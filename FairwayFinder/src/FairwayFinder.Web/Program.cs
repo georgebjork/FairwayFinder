@@ -51,6 +51,8 @@ builder.Services.ConfigureApplicationCookie(o => {
     };
 });
 
+builder.Services.AddDistributedMemoryCache();
+
 builder.Services.AddAuthentication();
 builder.Services.AddAuthorization();
 

@@ -1,9 +1,14 @@
-﻿using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
+﻿using System.Text.Json;
+using FairwayFinder.Core.Features.Scorecards.Cache;
+using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 using FairwayFinder.Core.Features.Scorecards.Services;
+using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Repositories;
 using FairwayFinder.Core.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace FairwayFinder.Web.Areas.Scorecards.Controllers;
 
@@ -15,9 +20,12 @@ public class ScorecardManagementController : BaseScorecardController
     private readonly TeeboxLookupService _teeboxLookupService;
     private readonly HoleLookupService _holeLookupService;
     private readonly ScorecardService _scorecardService;
+    private readonly ScorecardManagementService _scorecardManagementService;
     private readonly ILookupRepository _lookupRepository;
 
-    public ScorecardManagementController(ILogger<ScorecardManagementController> logger, IUsernameRetriever usernameRetriever, CourseLookupService courseLookupService, TeeboxLookupService teeboxLookupService, HoleLookupService holeLookupService, ScorecardService scorecardService, ILookupRepository lookupRepository)
+    private readonly IDistributedCache _cache;
+    
+    public ScorecardManagementController(ILogger<ScorecardManagementController> logger, IUsernameRetriever usernameRetriever, CourseLookupService courseLookupService, TeeboxLookupService teeboxLookupService, HoleLookupService holeLookupService, ScorecardService scorecardService, ILookupRepository lookupRepository, ScorecardManagementService scorecardManagementService, IDistributedCache cache)
     {
         _logger = logger;
         _usernameRetriever = usernameRetriever;
@@ -26,6 +34,8 @@ public class ScorecardManagementController : BaseScorecardController
         _holeLookupService = holeLookupService;
         _scorecardService = scorecardService;
         _lookupRepository = lookupRepository;
+        _scorecardManagementService = scorecardManagementService;
+        _cache = cache;
     }
 
     [HttpGet]
@@ -53,20 +63,21 @@ public class ScorecardManagementController : BaseScorecardController
     // Step 2: With out selected golf course, get our course data needed to create the round
     [HttpGet]
     [Route("/scorecards/get-course-data/{courseId:long}")]
-    public async Task<IActionResult> GetCourseData(long courseId)
+    public async Task<IActionResult> GetCourseDataHtmx(long courseId)
     {
-        // Retrieve the course. If it doesn't exist, set an error and redirect.
         var course = await _courseLookupService.GetCourseByIdAsync(courseId);
-        if (course is null)
-        {
-            SetErrorMessage("Error occurred getting data for course.");
-            return Redirect(nameof(AddRound));
-        }
-
+        var teebox_select = await _lookupRepository.GetTeesForCourseAsync(courseId);
+        
+        // Build form. Cache this. We want to reuse it across forms so less data retrival.
         var form = new ScorecardFormModel
         {
             Course = course,
-            TeeboxSelectList = await _lookupRepository.GetTeesForCourseAsync(course.course_id)
+            RoundFormModel = new RoundFormModel
+            {
+                CourseId = course.course_id,
+                CourseName = course.course_name
+            },
+            TeeboxSelectList = teebox_select
         };
         
         return PartialView("Shared/_RoundForm", form);
@@ -75,30 +86,27 @@ public class ScorecardManagementController : BaseScorecardController
     // Step 3: We've selected a teebox we need all of the data that comes with the teebox data.
     [HttpGet]
     [Route("/scorecards/get-teebox-data/{teeboxId:long}")]
-    public async Task<IActionResult> GetTeeboxData(long teeboxId)
+    public async Task<IActionResult> GetTeeboxAndHoleDataHtmx(long teeboxId)
     {
         // Get our teebox data
         var teebox = await _teeboxLookupService.GetTeeByIdAsync(teeboxId);
-        if (teebox == null)
-        {
-            SetErrorMessage("Error occurred getting data for teebox.");
-            return Ok();
-        }
-        
-        // Get our holes and create a form model for each hole and store the hole in each form model
-        var holes = await _holeLookupService.GetHolesForTeeAsync(teebox.teebox_id);
-        var holeScores = holes.Select(h => new HoleScoreFormModel { Par = h.par, Yardage = h.yardage, HoleNumber = h.hole_number, HoleId = h.hole_id}).ToList();
         
         // Get our course
-        var course = await _courseLookupService.GetCourseByIdAsync(teebox.course_id) ?? new Course();
+        var course = await _courseLookupService.GetCourseByIdAsync(teebox!.course_id) ?? new Course();
+        
+        // Get our holes for the desired teebox and create a form model for each hole and store the hole in each form model
+        var holes = await _holeLookupService.GetHolesForTeeAsync(teeboxId);
+        var holeScoresForms = holes.Select(h => new HoleScoreFormModel { Par = h.par, Yardage = h.yardage, HoleNumber = h.hole_number, HoleId = h.hole_id}).ToList();
 
+        var missTypes = await _lookupRepository.GetMissTypes();
+        
         // Combine into one scorecard model
         var form = new ScorecardFormModel
         {
+            Course = course,
             Teebox = teebox,
-            HoleScore = holeScores,
-            MissTypeSelectList = await _lookupRepository.GetMissTypes(),
-            Course = course
+            HoleScore = holeScoresForms,
+            MissTypeSelectList = missTypes
         };
 
         return PartialView("Shared/_CreateRoundTeeboxData", form);
@@ -114,7 +122,7 @@ public class ScorecardManagementController : BaseScorecardController
             return PartialView("Shared/_RoundForm", form);
         }
         
-        var result = await _scorecardService.CreateNewScorecardAsync(form);
+        var result = await _scorecardManagementService.CreateNewScorecardAsync(form);
 
         if (result <= 0)
         {
@@ -122,7 +130,8 @@ public class ScorecardManagementController : BaseScorecardController
             form = await RefreshFormModelForError(form);
             return PartialView("Shared/_RoundForm", form);
         }
-        
+
+        await _cache.RemoveAsync(_usernameRetriever.UserId);
         SetSuccessMessage("Successfully added round.");
         return Redirect("ViewScorecard", new { username = _usernameRetriever.Username, roundId = result }, "Scorecard");
     }
@@ -131,72 +140,48 @@ public class ScorecardManagementController : BaseScorecardController
     [Route("scorecards/{roundId:long}/edit")]
     public async Task<IActionResult> EditRound([FromRoute] long roundId)
     {
-        // Retrieve the round first
-        var round = await _scorecardService.GetScorecardByIdAsync(roundId);
-        if (round == null)
+        var scorecard = await _scorecardService.GetScorecardByRoundIdAsync(roundId);
+
+        if (!scorecard.Success)
         {
-            SetErrorMessage("Round does not exist.");
+            SetErrorMessage("An error occured retrieving scorecard.");
             return RedirectToAction(nameof(Index), "Scorecard", new { username = _usernameRetriever.Username });
         }
-
+        
         // Start independent tasks concurrently
-        var courseTask = _courseLookupService.GetCourseByIdAsync(round.course_id);
-        var teeboxTask = _teeboxLookupService.GetTeeByIdAsync(round.teebox_id);
-        var teeboxesDropdownTask = _lookupRepository.GetTeesForCourseAsync(round.course_id);
-        var missTypesTask = _lookupRepository.GetMissTypes();
-        var holeScoresTask = _scorecardService.GetHoleScoreFormsByRoundIdAsync(roundId);
-        var holeStatsTask = _scorecardService.GetHoleScoreStatsFormsByRoundIdAsync(roundId);
+        var teebox_dropdown = await _lookupRepository.GetTeesForCourseAsync(scorecard.Course.course_id);
+        var miss_types_dropdown = await _lookupRepository.GetMissTypes();
 
-        await Task.WhenAll(courseTask, teeboxTask, teeboxesDropdownTask, missTypesTask, holeScoresTask, holeStatsTask);
 
-        var course = courseTask.Result;
-        if (course == null)
+        var hole_score_form_list = new List<HoleScoreFormModel>();
+        foreach (var hs in scorecard.HoleScoresList)
         {
-            SetErrorMessage("Golf course does not exist.");
-            return RedirectToAction(nameof(Index), "Scorecard", new { username = _usernameRetriever.Username });
-        }
+            var hs_form = hs.ToForm();
 
-        var teebox = teeboxTask.Result;
-        var teeboxesDropdown = teeboxesDropdownTask.Result;
-        var missTypes = missTypesTask.Result;
-        var holeScores = holeScoresTask.Result;
-        var holeStats = holeStatsTask.Result;
-
-        // Build a dictionary for quick lookup of hole stats by HoleId.
-        var holeStatsLookup = holeStats.ToDictionary(stat => stat.HoleId);
-
-        // Assign corresponding HoleStats to each HoleScore.
-        foreach (var score in holeScores)
-        {
-            if (holeStatsLookup.TryGetValue(score.HoleId, out var stats))
-            {
-                score.HoleStats = stats;
-            }
+            var hole_stat = scorecard.HoleStatsList.FirstOrDefault(x => hs.score_id == x.score_id);
+            
+            hs_form.HoleStats = hole_stat?.ToForm() ?? new HoleStatsFormModel();
+            hole_score_form_list.Add(hs_form);
         }
 
         // Create the RoundFormModel with the relevant data.
-        var roundFormModel = new RoundFormModel
-        {
-            RoundId = round.round_id,
-            DatePlayed = round.date_played,
-            UsingHoleStats = round.using_hole_stats,
-            CourseId = course.course_id,
-            CourseName = course.course_name,
-            TeeboxId = teebox.teebox_id
-        };
+        var round_form_model = scorecard.Round.ToForm();
+        round_form_model.CourseName = scorecard.Course.course_name;
 
         // Build the overall form model.
         var form = new ScorecardFormModel
         {
             IsUpdate = true,
-            RoundFormModel = roundFormModel,
-            Course = course,
-            Teebox = teebox,
-            TeeboxSelectList = teeboxesDropdown,
-            MissTypeSelectList = missTypes,
-            HoleScore = holeScores
+            RoundFormModel = round_form_model,
+            Course = scorecard.Course,
+            Teebox = scorecard.Teebox,
+            TeeboxSelectList = teebox_dropdown,
+            MissTypeSelectList = miss_types_dropdown,
+            HoleScore = hole_score_form_list
         };
-
+        
+        // Cache the form, no need to do this all again on reload or failure.
+        await CacheForm(_usernameRetriever.UserId, roundId, form);
         return View(form);
     }
 
@@ -207,24 +192,27 @@ public class ScorecardManagementController : BaseScorecardController
     {
         if (!ModelState.IsValid)
         {
-            //IDEA: Everything that was need to get the edit originally should be cached and acessed
-            // by the RefreshFormModelForError. No need to go back to the db for a bunch of stuff.
-            form = await RefreshFormModelForError(form);
-            form.IsUpdate = true;
-            form.RoundFormModel.RoundId = roundId;
-            return PartialView("Shared/_RoundForm", form);
+            var updated_form = await RefreshFormModelForError(form);
+            updated_form.IsUpdate = true;
+            updated_form.RoundFormModel.RoundId = roundId;
+            updated_form.RoundFormModel.UsingHoleStats = form.RoundFormModel.UsingHoleStats;
+            return PartialView("Shared/_RoundForm", updated_form);
         }
         
-        var result = await _scorecardService.UpdateScorecardAsync(form);
+        var result = await _scorecardManagementService.UpdateScorecardAsync(form);
 
         if (!result)
         {
             SetErrorMessageHtmx("Error occurred updating round. Please try again.");
-            form = await RefreshFormModelForError(form);
-            form.IsUpdate = true;
-            form.RoundFormModel.RoundId = roundId;
+            var updated_form = await RefreshFormModelForError(form);
+            updated_form.IsUpdate = true;
+            updated_form.RoundFormModel.RoundId = roundId;
+            updated_form.RoundFormModel.UsingHoleStats = form.RoundFormModel.UsingHoleStats;
             return PartialView("Shared/_RoundForm", form);
         }
+        
+        // Clear the cache
+        await _cache.RemoveAsync(ScorecardCacheKeys.GetScorecardFormCacheKey(_usernameRetriever.UserId, roundId));
         
         SetSuccessMessage("Successfully updated round.");
         return Redirect("ViewScorecard", new { username = _usernameRetriever.Username, roundId }, "Scorecard");
@@ -232,6 +220,15 @@ public class ScorecardManagementController : BaseScorecardController
     
     private async Task<ScorecardFormModel> RefreshFormModelForError(ScorecardFormModel form)
     {
+        // Use the cached form
+        var cached_form = await GetCachedForm(_usernameRetriever.UserId, form.RoundFormModel.RoundId ?? 0);
+        if (cached_form is not null)
+        {
+            cached_form.HoleScore = form.HoleScore;
+            return cached_form;
+        }
+        
+        // Manually get the parts we need.
         var course = await _courseLookupService.GetCourseByIdAsync(form.RoundFormModel.CourseId);
         var teebox = await _teeboxLookupService.GetTeeByIdAsync(form.RoundFormModel.TeeboxId);
 
@@ -249,4 +246,24 @@ public class ScorecardManagementController : BaseScorecardController
     }
 
 
+    private async Task CacheForm(string userId, long roundId, ScorecardFormModel form)
+    {
+        await _cache.SetStringAsync(
+            ScorecardCacheKeys.GetScorecardFormCacheKey(userId, roundId), 
+            JsonSerializer.Serialize(form), 
+            new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30)
+            }
+        );
+    }
+    
+    private async Task<ScorecardFormModel?> GetCachedForm(string userId, long roundId)
+    {
+        var form_string = await _cache.GetStringAsync(ScorecardCacheKeys.GetScorecardFormCacheKey(userId, roundId));
+        
+        // If the string is null, return null. Otherwise, attempt to deserialize
+        return form_string is null ? null : JsonSerializer.Deserialize<ScorecardFormModel>(form_string);
+    }
+    
 }

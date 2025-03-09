@@ -36,3 +36,24 @@
         </form>
     </div>
 </div>
+
+<script>
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.elt.getAttribute('id') === 'round-form') {
+            Alpine.initTree(evt.detail.elt);
+
+            // Find the teebox-data element
+            const teeboxElement = evt.detail.elt.querySelector('#teebox-data');
+
+            // Access the Alpine data and log the showAdvancedStats value
+            if (teeboxElement) {
+                const showAdvancedStats = Alpine.$data(teeboxElement).showAdvancedStats;
+                console.log('showAdvancedStats value:', showAdvancedStats);
+            } else {
+                console.log('teebox-data element not found');
+            }
+
+            console.log('this should have ran');
+        }
+    });
+</script>

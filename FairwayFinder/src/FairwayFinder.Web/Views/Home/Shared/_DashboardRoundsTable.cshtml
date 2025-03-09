@@ -4,53 +4,34 @@
 @model FairwayFinder.Core.Features.Dashboard.Models.ViewModel.DashboardRoundsTableViewModel
 
 
-    <table class="table display nowrap" style="width:100%" id="rounds-table">
-        <thead>
-        <th>Course Name</th>
-        <th>Teebox</th>
-        <th>Score</th>
-        <th>Slope/Rating</th>
-        <th>Date</th>
-        </thead>
+<table class="table display nowrap" style="width:100%" id="rounds-table">
+    <thead>
+    <th>Course Name</th>
+    <th>Teebox</th>
+    <th>Score</th>
+    <th>Slope/Rating</th>
+    <th>Date</th>
+    </thead>
 
-        <tbody>
-        @foreach (var r in Model.Rounds)
-        {
-            <tr>
-                <td>
-                    <a asp-area="Scorecards" asp-controller="Scorecard" asp-action="ViewScorecard" 
-                       asp-route-username="@Model.Username" 
-                       asp-route-roundId="@r.round_id" 
-                       hx-boost="false">
-                        @r.course_name
-                    </a>
-                </td>
-                <td>@r.teebox_name </td>
-                <td>@r.score</td>
-                <td>@r.slope / @r.rating</td>
-                <td>@r.date_played.FormatDate()</td>
-            </tr>
-        }
-        </tbody>
-    </table>
+    <tbody>
+    @foreach (var r in Model.Rounds)
+    {
+        <tr>
+            <td>
+                <a asp-area="Scorecards" asp-controller="Scorecard" asp-action="ViewScorecard" 
+                   asp-route-username="@Model.Username" 
+                   asp-route-roundId="@r.round_id" 
+                   hx-boost="false">
+                    @r.course_name
+                </a>
+            </td>
+            <td>@r.teebox_name </td>
+            <td>@r.score</td>
+            <td>@r.slope / @r.rating</td>
+            <td>@r.date_played.FormatDate()</td>
+        </tr>
+    }
+    </tbody>
+</table>
 
 
-<script type="text/javascript">
-    document.body.addEventListener("@HtmxTriggers.RenderTable", function(evt) {
-        var roundTable = $('#rounds-table').DataTable({
-            layout: {
-                topStart: 'pageLength',
-                topEnd: 'search',
-                bottomEnd: 'paging',
-                bottomStart: null,
-            },
-            pageLength: 10,
-            destroy: true,
-            stateSave: true,
-            responsive: true,
-            scrollX: true
-        });
-
-       
-    });
-</script>

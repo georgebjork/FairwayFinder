@@ -12,103 +12,19 @@ namespace FairwayFinder.Core.Features.Scorecards.Repositories;
 
 public interface IScorecardRepository : IBaseRepository
 {
-    // CRUD Tasks
-    Task<int> CreateNewScorecardAsync(Round round, List<Score> scores, RoundStats stats, List<HoleStats> holeStats);
-    Task<bool> UpdateScorecardAsync(Round round, List<Score> scores, RoundStats stats, List<HoleStats> holeStats);
-    
-    // Getters
-    Task<List<RoundSummaryQueryModel>> GetRoundsSummaryByUserIdAsync(string userId, int? limit = null);
-    
-    Task<RoundSummaryQueryModel?> GetScorecardSummaryByRoundIdAsync(long roundId);
-    Task<List<HoleScoreQueryModel>> GetScorecardHoleScoresByRoundIdAsync(long roundId);
-    Task<Round?> GetScorecardByIdAsync(long roundId);
-    Task<List<Score>> GetScoresForRoundByRoundIdAsync(long roundId);
-    Task<RoundStats?> GetRoundStatsByRoundIdAsync(long roundId);
-    Task<List<RoundStats>> GetRoundStatsListAsync(string userId);
+    Task<List<ScorecardSummaryQueryModel>> GetScorecardListByUserIdAsync(string userId, int? limit = null);
+    Task<List<HoleScoreQueryModel>> GetHoleScoresByRoundIdAsync(long roundId);
+    Task<List<Score>> GetScoresForRoundByIdAsync(long roundId);
+    Task<RoundStats?> GetRoundStatsByIdAsync(long roundId);
     Task<Round?> GetRoundByIdAsync(long roundId);
-    Task<ScorecardRoundStatsQueryModel?> GetScorecardRoundStatsAsync(long roundId);
-    Task<List<HoleStats>> GetHoleStatsForRound(long roundId);
-    Task<bool> InsertHoleStatsAsync(List<HoleStats> holeStats);
+    Task<List<HoleStats>> GetHoleStatsByRoundAsync(long roundId);
     Task<List<HoleStatsQueryModel>> GetHoleStatsByRoundIdAsync(long roundId);
-    Task<List<HoleScoreQueryModel>> GetHoleScoreStatsAsync(string userId);
 }
 
 public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecardRepository> logger) : BasePgRepository(configuration), IScorecardRepository
 {
-    public async Task<int> CreateNewScorecardAsync(Round round, List<Score> scores, RoundStats stats, List<HoleStats> holeStats)
-    {
-        await using var conn = await GetNewOpenConnection();
-        await using var trans = await conn.BeginTransactionAsync();
-        
-        try
-        {
-            var round_id = await conn.InsertAsync(round, trans);
-            foreach (var score in scores)
-            {
-                score.round_id = round_id;
-                var score_id = await conn.InsertAsync(score, trans);
-
-                var hole_stat = holeStats.FirstOrDefault(x => x.hole_id == score.hole_id);
-
-                if (hole_stat is not null)
-                {
-                    hole_stat.score_id = score_id;
-                    hole_stat.round_id = round_id;
-                    await conn.InsertAsync(hole_stat, trans);
-                }
-            }
-
-            stats.round_id = round_id;
-            await conn.InsertAsync(stats, trans);
-            
-            await trans.CommitAsync();
-            return round_id;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, ex.Message);
-            await trans.RollbackAsync();
-            return -1;
-        }
-    }
-
-    public async Task<bool> UpdateScorecardAsync(Round round, List<Score> scores, RoundStats stats, List<HoleStats> holeStats)
-    {
-        await using var conn = await GetNewOpenConnection();
-        await using var trans = await conn.BeginTransactionAsync();
-        
-        try
-        {
-            await conn.UpdateAsync(round, trans);
-            foreach (var score in scores)
-            {
-                await conn.UpdateAsync(score, trans);
-            }
-            
-            foreach (var stat in holeStats)
-            {
-                await conn.UpdateAsync(stat, trans);
-            }
-            
-            // Check if round stats needs to be updated or inserted
-            if (stats.round_stats_id > 0) {
-                await conn.UpdateAsync(stats, trans);
-            }else {
-                await conn.InsertAsync(stats, trans);
-            }
-            
-            await trans.CommitAsync();
-            return true;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, ex.Message);
-            await trans.RollbackAsync();
-            return false;
-        }
-    }
-
-    public async Task<List<RoundSummaryQueryModel>> GetRoundsSummaryByUserIdAsync(string userId, int? limit = null)
+    
+    public async Task<List<ScorecardSummaryQueryModel>> GetScorecardListByUserIdAsync(string userId, int? limit = null)
     {
         var sql = @"SELECT c.course_name, t.teebox_name, t.slope, t.rating, r.score, r.date_played, r.user_id, r.round_id, t.yardage_out, t.yardage_in, t.yardage_total, r.score_out, r.score_in, t.par
                 FROM round as r
@@ -123,23 +39,11 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
         }
             
         await using var conn = await GetNewOpenConnection();
-        var rv = await conn.QueryAsync<RoundSummaryQueryModel>(sql, new {userId, limit});
+        var rv = await conn.QueryAsync<ScorecardSummaryQueryModel>(sql, new {userId, limit});
         return rv.ToList();
     }
     
-    public async Task<RoundSummaryQueryModel?> GetScorecardSummaryByRoundIdAsync(long roundId)
-    {
-        var sql = @"SELECT c.course_name, t.teebox_name, t.slope, t.rating, r.score, r.date_played, r.user_id, r.round_id, t.yardage_out, t.yardage_in, t.yardage_total, r.score_out, r.score_in, t.par, r.using_hole_stats
-                    FROM round as r
-	                    INNER JOIN course as c ON c.course_id = r.course_id
-	                    INNER JOIN teebox as t ON t.course_id = c.course_id AND t.teebox_id = r.teebox_id
-                    WHERE r.round_id = @roundId AND r.is_deleted = false";
-        await using var conn = await GetNewOpenConnection();
-        var rv = await conn.QueryFirstOrDefaultAsync<RoundSummaryQueryModel>(sql, new {roundId});
-        return rv;
-    }
-
-    public async Task<List<HoleScoreQueryModel>> GetScorecardHoleScoresByRoundIdAsync(long roundId)
+    public async Task<List<HoleScoreQueryModel>> GetHoleScoresByRoundIdAsync(long roundId)
     {
         var sql = @"SELECT s.hole_score, h.hole_id, h.yardage, h.handicap, h.par, h.hole_number, s.score_id
                     FROM score AS s
@@ -153,16 +57,8 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
         var rv = await conn.QueryAsync<HoleScoreQueryModel>(sql, new {roundId});
         return rv.ToList();
     }
-
-    public async Task<Round?> GetScorecardByIdAsync(long roundId)
-    {
-        var sql = @"SELECT * FROM round WHERE round_id = @roundId AND is_deleted = false";
-        await using var conn = await GetNewOpenConnection();
-        var rv = await conn.QueryFirstOrDefaultAsync<Round>(sql, new {roundId});
-        return rv;
-    }
-
-    public async Task<List<Score>> GetScoresForRoundByRoundIdAsync(long roundId)
+    
+    public async Task<List<Score>> GetScoresForRoundByIdAsync(long roundId)
     {
         var sql = "SELECT * FROM score WHERE round_id = @roundId AND is_deleted = false";
         await using var conn = await GetNewOpenConnection();
@@ -170,24 +66,12 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
         return rv.ToList();    
     }
 
-    public async Task<RoundStats?> GetRoundStatsByRoundIdAsync(long roundId)
+    public async Task<RoundStats?> GetRoundStatsByIdAsync(long roundId)
     {
         var sql = "SELECT * FROM round_stats WHERE round_id = @roundId AND is_deleted = false";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryFirstOrDefaultAsync<RoundStats>(sql, new {roundId});
         return rv;
-    }
-
-    public async Task<List<RoundStats>> GetRoundStatsListAsync(string userId)
-    {
-        var sql = @"SELECT * 
-                FROM round_stats as rs
-                INNER JOIN round as r 
-	                ON rs.round_id = r.round_id
-                WHERE r.user_id = @userId";
-        await using var conn = await GetNewOpenConnection();
-        var rv = await conn.QueryAsync<RoundStats>(sql, new {userId});
-        return rv.ToList();    
     }
 
     public async Task<Round?> GetRoundByIdAsync(long roundId)
@@ -198,42 +82,12 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
         return rv;
     }
 
-    public async Task<ScorecardRoundStatsQueryModel?> GetScorecardRoundStatsAsync(long roundId)
-    {
-        var sql = "SELECT * FROM round_stats WHERE round_id = @roundId AND is_deleted = false";
-        await using var conn = await GetNewOpenConnection();
-        var rv = await conn.QueryFirstOrDefaultAsync<ScorecardRoundStatsQueryModel>(sql, new {roundId});
-        return rv;
-    }
-
-    public async Task<List<HoleStats>> GetHoleStatsForRound(long roundId)
+    public async Task<List<HoleStats>> GetHoleStatsByRoundAsync(long roundId)
     {
         var sql = "SELECT * FROM hole_stats WHERE round_id = @roundId AND is_deleted = false";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryAsync<HoleStats>(sql, new {roundId});
         return rv.ToList();
-    }
-
-    public async Task<bool> InsertHoleStatsAsync(List<HoleStats> holeStats)
-    {
-        await using var conn = await GetNewOpenConnection();
-        await using var trans = await conn.BeginTransactionAsync();
-        
-        try
-        {
-            foreach (var hs in holeStats)
-            {
-                await conn.InsertAsync(hs, trans);
-            }
-            await trans.CommitAsync();
-            return true;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, ex.Message);
-            await trans.RollbackAsync();
-            return false;
-        }
     }
 
     public async Task<List<HoleStatsQueryModel>> GetHoleStatsByRoundIdAsync(long roundId)
@@ -263,19 +117,6 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
                 ORDER BY h.hole_number;";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryAsync<HoleStatsQueryModel>(sql, new {roundId});
-        return rv.ToList();
-    }
-
-    public async Task<List<HoleScoreQueryModel>> GetHoleScoreStatsAsync(string userId)
-    {
-        var sql = @"
-            SELECT h.par, s.* FROM score as s
-	        INNER JOIN hole as h 
-		        ON h.hole_id = s.hole_id 
-	        WHERE s.is_deleted = 0 AND s.user_id = @userId
-        ";
-        await using var conn = await GetNewOpenConnection();
-        var rv = await conn.QueryAsync<HoleScoreQueryModel>(sql, new {userId});
         return rv.ToList();
     }
 }

@@ -2,27 +2,20 @@
 @model FairwayFinder.Core.Features.Scorecards.Models.ViewModels.ScorecardViewModel
 
 @{
-    ViewData["Title"] = $"Scorecard - {Model.roundSummary.course_name}";
-}
-
-
-
-@{
-    var front_nine_max = 9;
-    var back_nine_max = 18;
+    ViewData["Title"] = $"Scorecard - {Model.Scorecard.Course.course_name}";
 }
 
 
 <div class="row d-flex justify-content-between">
     <div class="col-auto">
-        <h1>@Model.roundSummary.course_name</h1>
+        <h1>@Model.Scorecard.Course.course_name</h1>
     </div>
 
     <div class="col-auto">
         <a class="btn btn-link me-2" asp-action="Index" asp-route-username="@Model.Username">
             <i class="fa-solid fa-arrow-left"></i> Scorecards
         </a>
-        <a class="btn btn-link" asp-controller="ScorecardManagement" asp-action="EditRound" asp-route-roundId="@Model.roundSummary.round_id">
+        <a class="btn btn-link" asp-controller="ScorecardManagement" asp-action="EditRound" asp-route-roundId="@Model.Scorecard.Round.round_id">
             <i class="fa-solid fa-pen-to-square"></i> Edit Round
         </a>
     </div>
@@ -30,10 +23,10 @@
 
 <div class="row">
     <div class="col-12 mb-0">
-        <p class="text-secondary mb-0"> Tee Box: @Model.roundSummary.teebox_name</p>
+        <p class="text-secondary mb-0"> Tee Box: @Model.Scorecard.Teebox.teebox_name</p>
     </div>
     <div class="col-12">
-        <p class="text-secondary"> Date: @Model.roundSummary.date_played.FormatDate()</p>
+        <p class="text-secondary"> Date: @Model.Scorecard.Round.date_played.FormatDate()</p>
     </div>
 </div>
 
@@ -46,172 +39,7 @@
         </tr>
         </thead>
         <tbody>
-
-        @*Yardage*@
-        <tr>
-            <th colspan="2">@Model.roundSummary.teebox_name</th>
-            @for (var i = 0; i < front_nine_max; i++)
-            {
-                <td class="text-center">@Model.Holes[i].yardage</td>
-            }
-            <td class="text-center" colspan="2">@Model.roundSummary.yardage_out</td>
-            @for (var i = front_nine_max; i < back_nine_max; i++)
-            {
-                <td class="text-center">@Model.Holes[i].yardage</td>
-            }
-            <td class="text-center" colspan="2">@Model.roundSummary.yardage_in</td>
-            <td class="text-center" colspan="2">@Model.roundSummary.yardage_total</td>
-        </tr>
-
-        @*Handicap*@
-        <tr>
-            <th colspan="2">Handicap</th>
-            @for (var i = 0; i < front_nine_max; i++)
-            {
-                <td class="text-center">@Model.Holes[i].handicap</td>
-            }
-            <td class="text-center" colspan="2">&nbsp;</td>
-            @for (var i = front_nine_max; i < back_nine_max; i++)
-            {
-                <td class="text-center">@Model.Holes[i].handicap</td>
-            }
-            <td class="text-center" colspan="2">&nbsp;</td>
-            <td class="text-center" colspan="2">@Model.roundSummary.slope / @Model.roundSummary.rating</td>
-        </tr>
-
-
-        @*Par*@
-        <tr>
-            <th colspan="2">Par</th>
-            @for (var i = 0; i < front_nine_max; i++)
-            {
-                <td class="text-center">@Model.Holes[i].par</td>
-            }
-            <td class="text-center" colspan="2">@Model.Holes.Where(x => x.hole_number <= front_nine_max).Sum(h => h.par)</td>
-            @for (var i = front_nine_max; i < back_nine_max; i++)
-            {
-                <td class="text-center">@Model.Holes[i].par</td>
-            }
-            <td class="text-center" colspan="2">@Model.Holes.Where(x => x.hole_number > front_nine_max).Sum(h => h.par)</td>
-            <td class="text-center" colspan="2">@Model.roundSummary.par</td>
-        </tr>
-
-        @*Score*@
-        <tr>
-            <th colspan="2">@Model.Name</th>
-            @for (var i = 0; i < front_nine_max; i++)
-            {
-                <td class="text-center position-relative">
-                    <span>@Model.Holes[i].hole_score</span>
-                    @switch (Model.Holes[i].hole_score - Model.Holes[i].par)
-                    {
-                        case <= -2:
-                            @await Html.PartialAsync("ScorecardStyling/_Eagle")
-                            break;
-                        case -1:
-                            @await Html.PartialAsync("ScorecardStyling/_Birdie")
-                            break;
-                        case 1:
-                            @await Html.PartialAsync("ScorecardStyling/_Bogey")
-                            break;
-                        case >= 2:
-                            @await Html.PartialAsync("ScorecardStyling/_DoubleBogey")
-                            break;
-                    }
-                </td>
-            }
-            <td class="text-center" colspan="2">@Model.roundSummary.score_out</td>
-            @for (var i = front_nine_max; i < back_nine_max; i++)
-            {
-                <td class="text-center position-relative">
-                    <span>@Model.Holes[i].hole_score</span>
-                    @switch (Model.Holes[i].hole_score - Model.Holes[i].par)
-                    {
-                        case <= -2:
-                            @await Html.PartialAsync("ScorecardStyling/_Eagle")
-                            break;
-                        case -1:
-                            @await Html.PartialAsync("ScorecardStyling/_Birdie")
-                            break;
-                        case 1:
-                            @await Html.PartialAsync("ScorecardStyling/_Bogey")
-                            break;
-                        case >= 2:
-                            @await Html.PartialAsync("ScorecardStyling/_DoubleBogey")
-                            break;
-                    }
-                </td>
-            }
-            <td class="text-center" colspan="2">@Model.roundSummary.score_in</td>
-            <td class="text-center" colspan="2">@Model.roundSummary.score</td>
-        </tr>
-            @if (Model.roundSummary.using_hole_stats)
-            {
-                <tr>
-                    <th colspan="2">Fairways</th>
-                    @for (var i = 0; i < front_nine_max; i++)
-                    {
-                        <td class="text-center">
-                            @await Html.PartialAsync("Shared/_FairwayStatIcon", Model.HoleStats[i])
-                        </td>
-                    }
-                    <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number <= front_nine_max).Count(x => x.hit_fairway == true)</td>
-                    @for (var i = front_nine_max; i < back_nine_max; i++)
-                    {
-                        <td class="text-center">
-                            @await Html.PartialAsync("Shared/_FairwayStatIcon", Model.HoleStats[i])
-                        </td>
-                    }
-                    <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number > front_nine_max).Count(x => x.hit_fairway == true)</td>
-                    <td class="text-center" colspan="2">@Model.HoleStats.Count(x => x.hit_fairway == true) / @Model.Holes.Count(x => x.par > 3)</td>
-                </tr>
-                <tr>
-                    <th colspan="2">GIR</th>
-                    @for (var i = 0; i < front_nine_max; i++)
-                    {
-                        <td class="text-center">
-                            @await Html.PartialAsync("Shared/_GreenStatIcon", Model.HoleStats[i])
-                        </td>
-                    }
-                    <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number <= front_nine_max).Count(x => x.hit_green == true)</td>
-                    @for (var i = front_nine_max; i < back_nine_max; i++)
-                    {
-                        <td class="text-center">
-                            @await Html.PartialAsync("Shared/_GreenStatIcon", Model.HoleStats[i])
-                        </td>
-                    }
-                    <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number > front_nine_max).Count(x => x.hit_green == true)</td>
-                    <td class="text-center" colspan="2">@Model.HoleStats.Count(x => x.hit_green == true) / @Model.HoleStats.Count</td>
-                </tr>
-                <tr>
-                    <th colspan="2">Putts</th>
-                    @for (var i = 0; i < front_nine_max; i++)
-                    {
-                        if (Model.HoleStats[i].number_of_putts >= 3)
-                        {
-                            <td class="text-center text-danger">@Model.HoleStats[i].number_of_putts</td>
-                        }
-                        else
-                        {
-                            <td class="text-center">@Model.HoleStats[i].number_of_putts</td>
-                        }
-                    }
-                    <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number <= 9).Sum(x => x.number_of_putts)</td>
-                    @for (var i = front_nine_max; i < back_nine_max; i++)
-                    {
-                        if (Model.HoleStats[i].number_of_putts >= 3)
-                        {
-                            <td class="text-center text-danger">@Model.HoleStats[i].number_of_putts</td>
-                        }
-                        else
-                        {
-                            <td class="text-center">@Model.HoleStats[i].number_of_putts</td>
-                        }
-                    }
-                    <td class="text-center" colspan="2">@Model.HoleStats.Where(x => x.hole_number > 9).Sum(x => x.number_of_putts)</td>
-                    <td class="text-center" colspan="2">@Model.HoleStats.Sum(x => x.number_of_putts)</td>
-                </tr>
-            }
+            @await Html.PartialAsync("Shared/_ScorecardBody", Model)
         </tbody>
     </table>
 </div>
@@ -219,57 +47,87 @@
 
 
 
-<div class="row d-flex justify-content-between">
-    <div class="col-auto">
-        <h1>Stats</h1>
-    </div>
-</div>
+
 
 <div class="row">
-    @*Score count *@
-    <div class="col-4">
-        @await Html.PartialAsync("Shared/_ScoreCountStats", Model.ScorecardRoundStats.ScoreCountStatsQueryModel)
-    </div>
+    <!-- Scoring Breakdown Section -->
+    <div class="col-lg-5 col-md-12">
+        <div class="h-100">
+            <h1>Scoring Breakdown</h1>
+            <hr/>
 
-    <div class="col-4">
-        @await Html.PartialAsync("Shared/_ScoreToPar", Model.ScorecardRoundStats)
-    </div>
-
-    <div class="col-4">
-        @await Html.PartialAsync("Shared/_AverageScoreToPar", Model.ScorecardRoundStats)
-    </div>
-</div>
-
-<div class="row mt-3">
-    <div class="col-6">
-        <div class="card">
-            <div class="card-header">
-                Score Distribution
-            </div>
-            <div class="card-body">
-                <div class="ratio ratio-4x3">
-                    <canvas id="scoreDistribution"></canvas>
+            <!-- Score Count Stats -->
+            <div class="row">
+                <div class="col-12">
+                    @await Html.PartialAsync("Shared/_ScoreCountStats", Model.ScorecardRoundStats.ScoreCountStatsQueryModel)
                 </div>
+            </div>
+
+            <!-- Additional Score Stats -->
+            <div class="row row-cols-2 g-2 mt-2">
+                <div class="col">
+                    @await Html.PartialAsync("Shared/_ScoreToPar", Model.ScorecardRoundStats)
+                </div>
+                <div class="col">
+                    @await Html.PartialAsync("Shared/_AverageScoreToPar", Model.ScorecardRoundStats)
+                </div>
+                @await Html.PartialAsync("Shared/_AdvancedStatsAverageScore", Model.ScorecardRoundStats)
             </div>
         </div>
     </div>
 
-    <div class="col-6">
-        <div class="card">
-            <div class="card-header">
-                Score To Par
-            </div>
-            <div class="card-body">
-                <div class="ratio ratio-4x3">
-                    <canvas id="scoreChange"></canvas>
+    <!-- Charts Section -->
+    <div class="col-lg-7 col-md-12">
+        <div class="h-100">
+            <h1>Scoring Charts</h1>
+            <hr/>
+
+            <div class="row row-cols-1 g-2">
+                <!-- Score Distribution Chart -->
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-header">Score Distribution</div>
+                        <div class="card-body">
+                            <canvas id="scoreDistribution"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Score To Par Chart -->
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-header">Score To Par</div>
+                        <div class="card-body">
+                            <canvas id="scoreChange" style="min-height: 300px"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-@if (Model.roundSummary.using_hole_stats)
+
+
+
+
+
+
+
+
+<div class="row row-cols-4 g-2">
+    
+</div>
+
+
+
+
+
+@*@if (Model.RoundSummary.using_hole_stats)
 {
+    
+    
+    
     <div class="row mt-3">
         <div class="col-6">
             <div class="card">
@@ -305,12 +163,12 @@
             </div>
         </div>
     </div>
-}
+}*@
 
 @{
 
         long cumulative = 0;
-        var cumulativeScores = Model.Holes
+        var cumulativeScores = Model.Scorecard.HoleScoresList
             .OrderBy(x => x.hole_number)
             .Select(x =>
             {
@@ -342,7 +200,7 @@
             const ctxLine = document.getElementById('scoreChange').getContext('2d');
 
             // Retrieve holes and scores from the model
-            const numOfHoles = @Html.Raw(Json.Serialize(Model.Holes.Select(x => x.hole_number).OrderBy(y => y)));
+            const numOfHoles = @Html.Raw(Json.Serialize(Model.Scorecard.HoleScoresList.Select(x => x.hole_number).OrderBy(y => y)));
             const scores = @Html.Raw(Json.Serialize(cumulativeScores));
             console.log(scores)
             // Line Chart configuration
@@ -366,9 +224,11 @@
                             beginAtZero: true,
                             ticks: {
                                 stepSize: 1,
+                                precision: 0
                             },
                         },
                     },
+                
                 }
             });
 
@@ -402,13 +262,13 @@
                 }
             });
 
-            const isUsingAdvancedStats = @Html.Raw(Json.Serialize(Model.roundSummary.using_hole_stats))
+            const isUsingAdvancedStats = @Html.Raw(Json.Serialize(Model.Scorecard.Round.using_hole_stats))
 
             if (isUsingAdvancedStats) 
             {
-                const onePutts = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts <= 1)))
-                const twoPutts = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts == 2)))
-                const threePuttsOrWorse = @Html.Raw(Json.Serialize(Model.HoleStats.Count(x => x.number_of_putts >= 3)))
+                const onePutts = @Html.Raw(Json.Serialize(Model.Scorecard.HoleStatsList.Count(x => x.number_of_putts <= 1)))
+                const twoPutts = @Html.Raw(Json.Serialize(Model.Scorecard.HoleStatsList.Count(x => x.number_of_putts == 2)))
+                const threePuttsOrWorse = @Html.Raw(Json.Serialize(Model.Scorecard.HoleStatsList.Count(x => x.number_of_putts >= 3)))
 
                 const ctxDonutPutts = document.getElementById('puttingDistribution').getContext('2d');
 
@@ -441,7 +301,6 @@
                     }
                 });
             }
-
         });
     </script>
 }
