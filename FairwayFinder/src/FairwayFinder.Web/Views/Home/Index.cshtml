@@ -87,7 +87,7 @@
                         window.scores = @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Select(x => x.score)));
                     </script>
                     
-                    <canvas id="scoresChart"></canvas>
+                    <canvas id="scoresChart" style="min-height: 300px"></canvas>
                 </div>
             </div>
         </div>

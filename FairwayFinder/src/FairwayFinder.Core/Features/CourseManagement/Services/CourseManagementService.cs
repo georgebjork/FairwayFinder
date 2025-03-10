@@ -38,7 +38,7 @@ public class CourseManagementService
         }
         
         var course = form.ToModel(new Course());
-        course = EntityMetadataHelper.NewRecord(course, _usernameRetriever.Username);
+        course = EntityMetadataHelper.NewRecord(course, _usernameRetriever.UserId);
         return await _courseManagementRepository.Insert(course);
     }
     
@@ -53,7 +53,7 @@ public class CourseManagementService
         course.address = form.address;
         course.phone_number = form.phone_number;
         
-        course = EntityMetadataHelper.UpdateRecord(course, _usernameRetriever.Username);
+        course = EntityMetadataHelper.UpdateRecord(course, _usernameRetriever.UserId);
         return await _courseManagementRepository.Update(course);
     }
 
@@ -67,8 +67,8 @@ public class CourseManagementService
         }
 
         var tee = form.ToModel(new Teebox());
-        var holes = form.Holes.Select(hole => EntityMetadataHelper.NewRecord(hole.ToModel(new Hole()), _usernameRetriever.Username)).ToList();
-        tee = EntityMetadataHelper.NewRecord(tee, _usernameRetriever.Username);
+        var holes = form.Holes.Select(hole => EntityMetadataHelper.NewRecord(hole.ToModel(new Hole()), _usernameRetriever.UserId)).ToList();
+        tee = EntityMetadataHelper.NewRecord(tee, _usernameRetriever.UserId);
         
         return await _courseManagementRepository.InsertNewTeeAsync(tee, holes);
     }
@@ -88,11 +88,11 @@ public class CourseManagementService
 
         for (var i = 0; i < holes.Count; i++)
         {
-            holes[i] = EntityMetadataHelper.UpdateRecord(form.Holes[i].ToModel(holes[i]), _usernameRetriever.Username);
+            holes[i] = EntityMetadataHelper.UpdateRecord(form.Holes[i].ToModel(holes[i]), _usernameRetriever.UserId);
         }
         
         tee = form.ToModel(tee);
-        tee = EntityMetadataHelper.UpdateRecord(tee, _usernameRetriever.Username);
+        tee = EntityMetadataHelper.UpdateRecord(tee, _usernameRetriever.UserId);
         
         return await _courseManagementRepository.UpdateTeeAsync(tee, holes);
     }
