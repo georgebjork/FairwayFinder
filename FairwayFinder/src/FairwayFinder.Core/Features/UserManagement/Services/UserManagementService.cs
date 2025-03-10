@@ -126,18 +126,18 @@ public class UserManagementService : IUserManagementService
         if (user is not null) return false;
         
         var date = DateTime.UtcNow;
-        var username = _usernameRetriever.Username;
+        var userId = _usernameRetriever.UserId;
 
         var invite = new UserInvitation
         {
             invitation_identifier = Guid.NewGuid().ToString(),
             sent_to_email = email,
-            sent_by_user = username,
+            sent_by_user = userId,
             expires_on = date.AddDays(30),
             created_on = date,
-            created_by = username,
+            created_by = userId,
             updated_on = date,
-            updated_by = username
+            updated_by = userId
         };
         
         var rv = await _userManagementRepository.Insert(invite);
@@ -157,7 +157,7 @@ public class UserManagementService : IUserManagementService
         invite!.is_deleted = true;
         invite.claimed_on = date;
         invite.updated_on = date;
-        invite.updated_by = _usernameRetriever.Username;
+        invite.updated_by = _usernameRetriever.UserId;
 
         return await _userManagementRepository.Update(invite);
     }

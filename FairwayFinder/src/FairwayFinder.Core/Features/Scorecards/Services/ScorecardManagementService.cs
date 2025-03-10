@@ -37,7 +37,7 @@ public class ScorecardManagementService : IScorecardManagementService
 
     public async Task<int> CreateNewScorecardAsync(ScorecardFormModel form)
     {
-        var userId = _usernameRetriever.Username;
+        var userId = _usernameRetriever.UserId;
         try
         {
             // Create models for round and round stats
@@ -62,7 +62,7 @@ public class ScorecardManagementService : IScorecardManagementService
     {
         try
         {
-            var userId = _usernameRetriever.Username;
+            var userId = _usernameRetriever.UserId;
             
             // Validate round ID from the form
             if (form.RoundFormModel.RoundId is null)
