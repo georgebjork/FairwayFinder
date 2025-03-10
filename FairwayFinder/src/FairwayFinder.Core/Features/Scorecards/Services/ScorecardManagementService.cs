@@ -98,10 +98,8 @@ public class ScorecardManagementService : IScorecardManagementService
             // Update hole scores and stats
             var updated_scores = UpdateHoleScore(scores, form, userId);
             var updated_hole_stats = UpdateHoleStats(holeStats, form, userId);
-            
-            // Remove the cached scorecard since updated data will need to be retrived
-            await _cache.RemoveAsync(ScorecardCacheKeys.GetScorecardCacheKey(roundId));
-            await _cache.RemoveAsync(ScorecardCacheKeys.GetScorecardStatsCacheKey(roundId));
+
+            await ClearScorecardCache(roundId);
             
             return await _repository.UpdateScorecardAsync(updated_round, updated_scores, updated_round_stats, updated_hole_stats);
         }
@@ -246,5 +244,25 @@ public class ScorecardManagementService : IScorecardManagementService
         updated_round_stats = EntityMetadataHelper.UpdateRecord(updated_round_stats, userId);
         
         return updated_round_stats;
+    }
+
+    public async Task<bool> UpdateRoundExclusion(long roundId, bool exclude)
+    {
+        var round = await _scorecardRepository.GetRoundByIdAsync(roundId);
+
+        if (round is null) return false; // Yikes round does not exist
+
+        round.exclude_from_stats = exclude;
+        round = EntityMetadataHelper.UpdateRecord(round, _usernameRetriever.UserId);
+
+        await ClearScorecardCache(roundId);
+        return await _scorecardRepository.Update(round);
+    }
+
+    private async Task ClearScorecardCache(long roundId)
+    {
+        // Remove the cached scorecard since updated data will need to be retrived
+        await _cache.RemoveAsync(ScorecardCacheKeys.GetScorecardCacheKey(roundId));
+        await _cache.RemoveAsync(ScorecardCacheKeys.GetScorecardStatsCacheKey(roundId));
     }
 }

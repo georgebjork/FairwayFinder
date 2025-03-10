@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using SendGrid.Helpers.Mail.Model;
 
 namespace FairwayFinder.Web.Areas.Scorecards.Controllers;
 
@@ -257,6 +258,21 @@ public class ScorecardManagementController : BaseScorecardController
         return form;
     }
 
+
+    [HttpPost]
+    [Route("scorecards/{roundId:long}/edit/include")]
+    public async Task<IActionResult> UpdateRoundExclusion([FromRoute] long roundId, [FromQuery] bool exclude)
+    {
+        var result = await _scorecardManagementService.UpdateRoundExclusion(roundId, exclude);
+
+        if (!result) return BadRequest(); // This failed for whatever reason
+
+        return PartialView("~/Areas/Scorecards/Views/Scorecard/Shared/_ExcludeFromStatsButton.cshtml", new Round
+        {
+            round_id = roundId, 
+            exclude_from_stats = exclude
+        });
+    }
 
     private async Task CacheForm(string userId, long roundId, ScorecardFormModel form)
     {

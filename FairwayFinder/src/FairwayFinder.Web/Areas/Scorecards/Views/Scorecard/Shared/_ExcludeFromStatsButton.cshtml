@@ -1,0 +1,19 @@
+﻿@model FairwayFinder.Core.Models.Round
+
+
+@if (Model.exclude_from_stats)
+{
+        <button class="btn btn-sm btn-success" 
+                hx-post="@Url.Action("UpdateRoundExclusion", "ScorecardManagement", new { roundId = Model.round_id, exclude = false })"
+                hx-target="this"
+                hx-swap="outerHTML"
+        > <i class="pe-2 fa-solid fa-check"></i> Include Round </button>
+}
+else
+{
+        <button class="btn btn-sm btn-danger"
+                hx-post="@Url.Action("UpdateRoundExclusion", "ScorecardManagement", new { roundId = Model.round_id, exclude = true })"
+                hx-target="this"
+                hx-swap="outerHTML"
+        > <i class="pe-2 fa-solid fa-xmark"></i> Exclude Round  </button>
+}

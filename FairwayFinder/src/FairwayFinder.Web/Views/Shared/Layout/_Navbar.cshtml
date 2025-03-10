@@ -1,6 +1,6 @@
 ﻿<!-- Navbar -->
 
-<nav class="navbar fixed-top border-bottom bg-body-tertiary" hx-preserve="true">
+<nav class="navbar fixed-top border-bottom bg-body-tertiary" id="main-nav-bar" hx-preserve>
     <div class="container-fluid">
         <div class="navbar-brand">
             <button class="navbar-toggler me-2 sidebar-toggle" type="button" id="sidebar-toggle">
@@ -15,11 +15,12 @@
     </div>
 
 
-    <script hx-preserve="true">
-        
+
+    <script>
         function initSidebarToggle() {
             const sidebarToggle = document.getElementById('sidebar-toggle');
             const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+            const sidebar = document.getElementById('sidebar');
 
             // Toggle sidebar on button click (small screens only)
             sidebarToggle.addEventListener('click', function() {
@@ -30,18 +31,25 @@
             sidebarBackdrop.addEventListener('click', function() {
                 document.body.classList.remove('sidebar-expanded');
             });
+
+            // Close sidebar when clicking outside of it
+            document.addEventListener('click', function(event) {
+                // If sidebar is expanded and the click is outside the sidebar and not on the toggle button
+                if (document.body.classList.contains('sidebar-expanded') &&
+                    !sidebar.contains(event.target) &&
+                    !sidebarToggle.contains(event.target)) {
+                    document.body.classList.remove('sidebar-expanded');
+                }
+            });
         }
-        
+
         document.addEventListener('DOMContentLoaded', function() {
             initSidebarToggle();
         });
-        
-        document.body.addEventListener('htmx:afterSwap', function(event) {
-            initSidebarToggle();
-        });
-    
-    </script>
 
+    
+
+    </script>
 </nav>
 
 

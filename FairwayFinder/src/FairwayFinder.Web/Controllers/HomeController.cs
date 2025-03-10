@@ -44,7 +44,7 @@ public class HomeController : BaseAuthorizedController
             }
         };
 
-        if (!IsHtmx()) return View(vm);
+        if (!IsHtmx() || IsBoosted()) return View(vm);
         
         SendHtmxTriggerAfterSettle(HtmxTriggers.RenderDashboard);
         return PartialView(vm);
