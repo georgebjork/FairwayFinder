@@ -27,7 +27,7 @@ public class StatRepository(IConfiguration configuration, ILogger<StatRepository
         var sql = @"SELECT SUM(hole_in_one) as hole_in_one, SUM(double_eagles) as double_eagle, SUM(eagles) as eagles, SUM(birdies) as birdies, SUM(pars) as pars, SUM(bogies) as bogies, SUM(double_bogies) as double_bogies, SUM(triple_or_worse) as triple_or_worse
                     FROM round_stats as rs
 	                    INNER JOIN round as r ON r.round_id = rs.round_id
-                    WHERE r.user_id = @userId";
+                    WHERE r.user_id = @userId AND r.exclude_from_stats = False";
         await using var conn = await GetNewOpenConnection();
         var rv = await conn.QueryFirstOrDefaultAsync<RoundScoreStatsQueryModel>(sql, new { userId });
         return rv ?? new RoundScoreStatsQueryModel();
@@ -49,7 +49,7 @@ public class StatRepository(IConfiguration configuration, ILogger<StatRepository
             FROM round as r
                 INNER JOIN course as c ON c.course_id = r.course_id
                 INNER JOIN teebox as t ON t.teebox_id = r.teebox_id 
-            WHERE r.is_deleted = False AND r.user_id = @userId";
+            WHERE r.is_deleted = False AND r.user_id = @userId AND r.exclude_from_stats = False";
         
         if (request.Year is not null)
         {
@@ -65,7 +65,7 @@ public class StatRepository(IConfiguration configuration, ILogger<StatRepository
 
     public async Task<long> GetNumberOfRoundsPlayedAsync(string userId, StatsRequest request)
     {
-        var sql = "SELECT count(*) as round_count FROM round WHERE is_deleted = False AND user_id = @userId";
+        var sql = "SELECT count(*) as round_count FROM round WHERE is_deleted = False AND user_id = @userId AND exclude_from_stats = False";
 
         if (request.Year is not null)
         {
@@ -79,7 +79,7 @@ public class StatRepository(IConfiguration configuration, ILogger<StatRepository
 
     public async Task<double> GetAverageScoreOfRoundsAsync(string userId, StatsRequest request)
     {
-        var sql = "SELECT avg(score) as round_avg FROM round WHERE is_deleted = False AND user_id = @userId";
+        var sql = "SELECT avg(score) as round_avg FROM round WHERE is_deleted = False AND user_id = @userId AND exclude_from_stats = False";
         
         if (request.Year is not null)
         {
@@ -93,7 +93,7 @@ public class StatRepository(IConfiguration configuration, ILogger<StatRepository
 
     public async Task<int> GetLowScoreOfRoundsAsync(string userId, StatsRequest request)
     {
-        var sql = "SELECT min(score) as low_score FROM round WHERE is_deleted = False AND user_id = @userId";
+        var sql = "SELECT min(score) as low_score FROM round WHERE is_deleted = False AND user_id = @userId AND exclude_from_stats = False";
         
         if (request.Year is not null)
         {

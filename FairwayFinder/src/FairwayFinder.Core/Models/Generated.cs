@@ -80,6 +80,7 @@ public class Round : IEntityMetadata
     public int score_in { get; set; }
     public string user_id { get; set; } = "";
     public bool using_hole_stats { get; set; }
+    public bool exclude_from_stats { get; set; }
 }
 
 [Table("hole_stats")]

@@ -31,13 +31,24 @@
     </div>
 </div>
 
-<div class="row">
-    <div class="col-12 mb-0">
-        <p class="text-secondary mb-0"> Tee Box: @Model.Scorecard.Teebox.teebox_name</p>
+<div class="row d-flex justify-content-between">
+    
+    <div class="col-auto">
+        <div class="mb-0">
+            <p class="text-secondary mb-0"> Tee Box: @Model.Scorecard.Teebox.teebox_name</p>
+        </div>
+        <div>
+            <p class="text-secondary"> Date: @Model.Scorecard.Round.date_played.FormatDate()</p>
+        </div>
     </div>
-    <div class="col-12">
-        <p class="text-secondary"> Date: @Model.Scorecard.Round.date_played.FormatDate()</p>
+    
+    <div class="col-auto">
+        @if (canEditScorecard)
+        {
+            @await Html.PartialAsync("Shared/_ExcludeFromStatsButton", Model.Scorecard.Round)
+        }
     </div>
+    
 </div>
 
 

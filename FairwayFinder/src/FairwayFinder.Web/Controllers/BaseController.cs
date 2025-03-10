@@ -30,6 +30,7 @@ public class BaseController : Controller
 
     public bool CheckHtmxTrigger(string id) => Request.Headers["HX-Trigger"] == id;
     public bool IsHtmx() => Request.Headers["HX-Request"] == "true";
+    public bool IsBoosted() => Request.Headers["HX-Boosted"] == "true";
     public void SetHtmxRedirect(string? url) => Response.Headers["HX-Redirect"] = url;
     
     public IActionResult Redirect(string actionName, object? routeValues = null, string? controllerName = null)
