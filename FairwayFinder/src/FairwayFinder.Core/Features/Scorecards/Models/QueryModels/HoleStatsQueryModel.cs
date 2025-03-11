@@ -15,4 +15,6 @@ public class HoleStatsQueryModel
     public int? miss_green_type { get; set; }
     public short? number_of_putts { get; set; }
     public int? approach_yardage { get; set; }
+    public bool? tee_shot_ob { get; set; }
+    public bool? approach_shot_ob { get; set; }
 }

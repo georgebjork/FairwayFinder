@@ -218,13 +218,17 @@ public class ScorecardManagementService : IScorecardManagementService
             {
                 hs.hit_fairway = updatedStat.HoleStats.HitFairway ? true : updatedStat.HoleStats.MissedFairway ? false : null;
                 hs.hit_green = updatedStat.HoleStats.HitGreen ? true : updatedStat.HoleStats.MissedGreen ? false : null;
-            
+                
                 // If we hit, it should be null. If we miss it should have a value. If both are false, then it should be null.
                 hs.miss_fairway_type = updatedStat.HoleStats.HitFairway || !updatedStat.HoleStats.MissedFairway ? null : updatedStat.HoleStats.MissFairwayType;
                 hs.miss_green_type = updatedStat.HoleStats.HitGreen || !updatedStat.HoleStats.MissedGreen ? null : updatedStat.HoleStats.MissGreenType;
-
+                
                 hs.number_of_putts = updatedStat.HoleStats.NumberOfPutts;
                 hs.approach_yardage = updatedStat.HoleStats.YardageOut;
+
+                hs.tee_shot_ob = updatedStat.HoleStats.HitFairway ? null : updatedStat.HoleStats.TeeShotOb;
+                hs.approach_shot_ob = updatedStat.HoleStats.HitGreen ? null : updatedStat.HoleStats.ApproachShotOb;
+
                 
                 // Update the stat and add to the new list
                 updatedHoleStats.Add(EntityMetadataHelper.UpdateRecord(hs, userId));

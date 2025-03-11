@@ -104,6 +104,8 @@ public class ScorecardRepository(IConfiguration configuration, ILogger<IScorecar
 	                hs.approach_yardage,
 	                hs.miss_fairway_type,
 	                hs.miss_green_type,
+	                hs.tee_shot_ob,
+	                hs.approach_shot_ob,
                     mt_fairway.miss_type AS miss_fairway_type_string, 
                     mt_green.miss_type AS miss_green_type_string
                 FROM hole_stats AS hs
