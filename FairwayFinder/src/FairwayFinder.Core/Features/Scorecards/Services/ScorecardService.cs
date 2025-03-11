@@ -31,7 +31,7 @@ public class ScorecardService : IScorecardService
 {
     private readonly ILogger<ScorecardService> _logger;
     private readonly IScorecardRepository _scorecardRepository;
-    private readonly IStatRepository _statRepository;
+    private readonly IScorecardStatRepository _scorecardStatRepository;
     private readonly CourseLookupService _courseLookupService;
     private readonly TeeboxLookupService _teeboxLookupService;
     private readonly HoleLookupService _holeLookupService;
@@ -39,7 +39,7 @@ public class ScorecardService : IScorecardService
 
     private readonly IDistributedCache _cache;
 
-    public ScorecardService(ILogger<ScorecardService> logger, IScorecardRepository scorecardRepository, TeeboxLookupService teeboxLookupService, CourseLookupService courseLookupService, IUsernameRetriever usernameRetriever, HoleLookupService holeLookupService, IStatRepository statRepository, IDistributedCache cache)
+    public ScorecardService(ILogger<ScorecardService> logger, IScorecardRepository scorecardRepository, TeeboxLookupService teeboxLookupService, CourseLookupService courseLookupService, IUsernameRetriever usernameRetriever, HoleLookupService holeLookupService, IScorecardStatRepository scorecardStatRepository, IDistributedCache cache)
     {
         _logger = logger;
         _scorecardRepository = scorecardRepository;
@@ -47,7 +47,7 @@ public class ScorecardService : IScorecardService
         _courseLookupService = courseLookupService;
         _usernameRetriever = usernameRetriever;
         _holeLookupService = holeLookupService;
-        _statRepository = statRepository;
+        _scorecardStatRepository = scorecardStatRepository;
         _cache = cache;
     }
     
@@ -127,8 +127,8 @@ public class ScorecardService : IScorecardService
         var userId = _usernameRetriever.UserId;
         
         var stats = new ScorecardRoundStats();
-        var scorecard_round_stats = await _statRepository.GetScoreStatsByRoundIdAsync(roundId);
-        var average_score_by_par = await _statRepository.GetAverageScoresByParAsync(userId, new StatsRequest { RoundId = roundId });
+        var scorecard_round_stats = await _scorecardStatRepository.GetScoreStatsByRoundIdAsync(roundId);
+        var average_score_by_par = await _scorecardStatRepository.GetAverageScoresByParAsync(userId, new StatsRequest { RoundId = roundId });
         var hole_scores = await _scorecardRepository.GetHoleScoresByRoundIdAsync(roundId);
 
         stats.Par3ScoreToPar = GolfStatHelpers.ScoreToParStats(hole_scores, par: 3);
