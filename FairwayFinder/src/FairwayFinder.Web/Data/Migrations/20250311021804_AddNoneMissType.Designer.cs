@@ -3,6 +3,7 @@ using System;
 using FairwayFinder.Web.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FairwayFinder.Web.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250311021804_AddNoneMissType")]
+    partial class AddNoneMissType
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -37,7 +40,7 @@ namespace FairwayFinder.Web.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasDefaultValue(new DateTime(2025, 3, 11, 2, 28, 49, 47, DateTimeKind.Utc).AddTicks(6780));
+                        .HasDefaultValue(new DateTime(2025, 3, 11, 2, 18, 4, 37, DateTimeKind.Utc).AddTicks(5940));
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -86,7 +89,7 @@ namespace FairwayFinder.Web.Migrations
                     b.Property<DateTime>("UpdatedOn")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
-                        .HasDefaultValue(new DateTime(2025, 3, 11, 2, 28, 49, 47, DateTimeKind.Utc).AddTicks(7040));
+                        .HasDefaultValue(new DateTime(2025, 3, 11, 2, 18, 4, 37, DateTimeKind.Utc).AddTicks(6200));
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)

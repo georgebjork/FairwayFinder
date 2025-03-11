@@ -16,6 +16,7 @@ public class HoleStatsFormModel
     public long RoundId { get; set; }
     public bool MissedFairway { get; set; }
     public bool HitFairway { get; set; }
+    public bool TeeShotOb { get; set; }
 
     
     [RequiredIf(nameof(MissedFairway), true)]
@@ -25,16 +26,17 @@ public class HoleStatsFormModel
    
     public bool HitGreen { get; set; }
     public bool MissedGreen { get; set; }
+    public bool ApproachShotOb { get; set; }
     
     [RequiredIf(nameof(MissedGreen), true)]
     [Display(Name = "Missed Type")]
     public int? MissGreenType { get; set; }
     
     [Range(0, 10)]
-    [Display(Name = "Number of Putts")]
+    [Display(Name = "Putts")]
     public short? NumberOfPutts { get; set; }
     
-    [Display(Name = "Approach Yardage")]
+    [Display(Name = "APY")]
     public int? YardageOut { get; set; }
     
 }

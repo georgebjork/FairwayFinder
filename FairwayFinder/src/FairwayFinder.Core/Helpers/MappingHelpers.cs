@@ -142,7 +142,9 @@ public static class MappingHelpers
             HitGreen = hole.hit_green ?? false,
             MissGreenType = hole.miss_green_type,
             NumberOfPutts = hole.number_of_putts,
-            YardageOut = hole.approach_yardage
+            YardageOut = hole.approach_yardage,
+            TeeShotOb = hole.tee_shot_ob ?? false,
+            ApproachShotOb = hole.approach_shot_ob ?? false
         };
     }
 

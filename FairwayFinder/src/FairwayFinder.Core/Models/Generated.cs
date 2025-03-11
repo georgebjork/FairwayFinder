@@ -97,6 +97,8 @@ public class HoleStats : IEntityMetadata
     public int? miss_green_type { get; set; }
     public short? number_of_putts { get; set; }
     public int? approach_yardage { get; set; }
+    public bool? tee_shot_ob { get; set; }
+    public bool? approach_shot_ob { get; set; }
     public string created_by { get; set; } = "";
     public DateTime created_on { get; set; }
     public string updated_by { get; set; } = "";
