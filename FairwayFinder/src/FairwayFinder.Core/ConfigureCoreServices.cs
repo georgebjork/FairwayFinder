@@ -28,7 +28,8 @@ public static class ConfigureCoreServices
         services.AddTransient<IScorecardRepository, ScorecardRepository>();
         services.AddTransient<IScorecardManagementRepository, ScorecardManagementRepository>();
         services.AddTransient<ILookupRepository, LookupRepository>();
-        services.AddTransient<IStatRepository, StatRepository>();
+        services.AddTransient<IAggregatedStatRepository, AggregatedStatRepository>();
+        services.AddTransient<IScorecardStatRepository, ScorecardStatRepository>();
         
         // Services
         services.AddTransient<IUsernameRetriever, UsernameRetriever>();
