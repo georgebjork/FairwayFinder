@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace FairwayFinder.Web.Areas.UserManagement.Controllers;
 
 [Area("UserManagement")]
-public class BaseUserManagementController : BaseController
+public class BaseUserManagementController : BaseAuthorizedController
 {
     
 }

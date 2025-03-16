@@ -30,7 +30,8 @@
             </li>
             <li><hr class="dropdown-divider"></li>
 
-            @if (User.IsInRole(Roles.Admin)) {
+            @if (User.IsInRole(Roles.Admin)) 
+            {
                 <li>
                     <a class="dropdown-item" asp-area="UserManagement" asp-controller="UserManagement" asp-action="Index">
                         <i class="fa-solid fa-users pe-2"></i> Manage Users

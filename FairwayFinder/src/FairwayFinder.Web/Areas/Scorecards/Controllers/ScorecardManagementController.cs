@@ -149,7 +149,6 @@ public class ScorecardManagementController : BaseScorecardController
         if (!authResult.Succeeded)
         {
             _logger.LogError($"{_usernameRetriever.Email} tried to edit a scorecard they dont have access to.");
-            SetErrorMessage("Unable to edit Scorecard.");
             return Unauthorized();
         }
         

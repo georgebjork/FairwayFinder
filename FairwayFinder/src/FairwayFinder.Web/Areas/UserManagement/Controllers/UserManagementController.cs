@@ -1,14 +1,15 @@
 ﻿using FairwayFinder.Core.Features.UserManagement.Models.FormModels;
 using FairwayFinder.Core.Identity;
-using FairwayFinder.Core.Identity.Settings;
 using FairwayFinder.Core.Services;
 using FairwayFinder.Core.UserManagement.Models.ViewModels;
 using FairwayFinder.Core.UserManagement.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FairwayFinder.Web.Areas.UserManagement.Controllers;
 
+[Authorize(Roles = Roles.Admin)]
 public class UserManagementController : BaseUserManagementController
 {
 

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>@ViewData["Title"] - FairwayFinder</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/bootstrap-5.3.3-dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="~/FairwayFinder.Web.styles.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/lib/font-awesome/css/all.css" />
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    
+    @*THIS IS DONE INTENTIONALLY. https://github.com/bigskysoftware/htmx/issues/2000#issuecomment-1845618980*@
+    <script src="~/lib/bootstrap/bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js" defer="defer"></script>
+
+</head>
+<body>
+
+<main id="main-content" class="container-fluid">
+    @RenderBody()
+</main>
+
+
+<script src="~/js/htmx.min.js" asp-append-version="true"></script>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+
+@await RenderSectionAsync("Scripts", required: false)
+
+
+</body>
+</html>
