@@ -83,8 +83,8 @@
 
                     <script>
                         // Use window object to avoid re-declaration issues
-                        window.dates = @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Select(x => x.date_played.FormatDate())));
-                        window.scores = @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Select(x => x.score)));
+                        window.dates = @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Where(x => x.full_round).Select(x => x.date_played.FormatDate())));
+                        window.scores = @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Where(x => x.full_round).Select(x => x.score)));
                     </script>
                     
                     <canvas id="scoresChart" style="min-height: 300px"></canvas>
@@ -139,7 +139,6 @@
         
         function initLineChart()
         {
-            console.log('hello there');
         
             const ctxLine = document.getElementById('scoresChart').getContext('2d');
 
