@@ -15,9 +15,14 @@ public class HoleLookupService
         _holeLookupRepository = holeLookupRepository;
     }
 
-    public async Task<List<Hole>> GetHolesForTeeAsync(long teeboxId)
+    public async Task<List<Hole>> GetHolesForTeeAsync(long teeboxId, bool frontNine = false, bool backNine = false)
     {
-        return await _holeLookupRepository.GetHolesForTeeAsync(teeboxId);
+        var holes = await _holeLookupRepository.GetHolesForTeeAsync(teeboxId);
+        
+        if (frontNine) return holes.Where(x => x.hole_number <= 9).OrderBy(y => y.hole_number).ToList();
+        if (backNine) return holes.Where(x => x.hole_number > 9).OrderBy(y => y.hole_number).ToList();
+
+        return holes;
     }
 
     public async Task<List<Hole>> GetHolesForRoundByRoundIdAsync(long roundId)

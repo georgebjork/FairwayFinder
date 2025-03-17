@@ -81,6 +81,9 @@ public class Round : IEntityMetadata
     public string user_id { get; set; } = "";
     public bool using_hole_stats { get; set; }
     public bool exclude_from_stats { get; set; }
+    public bool full_round { get; set; }
+    public bool front_nine { get; set; }
+    public bool back_nine { get; set; }
 }
 
 [Table("hole_stats")]

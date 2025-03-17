@@ -13,4 +13,7 @@ public class RoundsQueryModel
     public int score_in { get; set; }
     public string user_id { get; set; } = "";
     public bool using_hole_stats { get; set; } 
+    public bool full_round { get; set; }
+    public bool front_nine { get; set; }
+    public bool back_nine { get; set; }
 }
