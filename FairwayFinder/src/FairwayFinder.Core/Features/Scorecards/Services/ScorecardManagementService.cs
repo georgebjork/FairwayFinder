@@ -116,10 +116,15 @@ public class ScorecardManagementService : IScorecardManagementService
         // Create our round model
         var round = form.RoundFormModel.ToModel();
         
+        round.full_round = form.FullRound;
+        round.front_nine = form.FrontNine;
+        round.back_nine = form.BackNine;
+        
         round.score = form.HoleScore.Sum(x => x.Score);
         round.score_out = form.HoleScore.Where(x => x.HoleNumber <= 9).Sum(x => x.Score);
         round.score_in = form.HoleScore.Where(x => x.HoleNumber > 9).Sum(x => x.Score);
-        round.user_id = _usernameRetriever.UserId; // TODO: Change this to be the userId passed in. Right now its just username passed in until all records are updated.
+        
+        round.user_id = _usernameRetriever.UserId;
         
         round = EntityMetadataHelper.NewRecord(round, userId);
         

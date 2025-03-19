@@ -1,3 +1,4 @@
+@using FairwayFinder.Core.Models
 @model FairwayFinder.Core.Features.CourseManagement.Models.ViewModels.TeeboxViewModel
 
 @{
@@ -7,7 +8,7 @@
 <div class="table-responsive">
     <table class="table table-bordered">
         <thead>
-        @await Html.PartialAsync("_ScorecardHeader", true)
+        @await Html.PartialAsync("_ScorecardHeader", new Round {full_round = true})
         </thead>
         <tbody>
         @*Par*@

@@ -83,8 +83,8 @@
 
                     <script>
                         // Use window object to avoid re-declaration issues
-                        window.dates = @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Select(x => x.date_played.FormatDate())));
-                        window.scores = @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Select(x => x.score)));
+                        window.dates = @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Where(x => x.full_round).Select(x => x.date_played.FormatDate())));
+                        window.scores = @Html.Raw(Json.Serialize(Model.Rounds.OrderBy(x => x.date_played).Where(x => x.full_round).Select(x => x.score)));
                     </script>
                     
                     <canvas id="scoresChart" style="min-height: 300px"></canvas>
@@ -120,10 +120,10 @@
                 stateSave: true,
                 responsive: true,
                 scrollX: true,
-                order: [[4, 'asc']],
+                order: [[5, 'asc']],
                 columnDefs: [
                     {
-                        targets: 4, // Date column
+                        targets: 5, // Date column
                         render: function (data, type, row) {
                             if (type === 'sort') {
                                 var parts = data.split('/');
@@ -139,7 +139,6 @@
         
         function initLineChart()
         {
-            console.log('hello there');
         
             const ctxLine = document.getElementById('scoresChart').getContext('2d');
 

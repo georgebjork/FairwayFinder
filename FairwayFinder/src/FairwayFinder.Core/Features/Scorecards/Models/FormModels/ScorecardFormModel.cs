@@ -8,6 +8,10 @@ public class ScorecardFormModel
     public RoundFormModel RoundFormModel { get; set; } = new();
     public List<HoleScoreFormModel> HoleScore { get; set; } = [];
 
+    public bool FullRound { get; set; } = true;
+    public bool FrontNine { get; set; }
+    public bool BackNine { get; set; }
+
     
     // Non form fields
     public Course Course { get; set; } = new();

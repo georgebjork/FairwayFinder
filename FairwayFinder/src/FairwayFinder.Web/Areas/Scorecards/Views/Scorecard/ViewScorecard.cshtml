@@ -56,7 +56,7 @@
     <table class="table border-start border-top border-end border-bottom">
         <thead>
         <tr>
-            @await Html.PartialAsync("_ScorecardHeader", true)
+            @await Html.PartialAsync("_ScorecardHeader", Model.Scorecard.Round)
         </tr>
         </thead>
         <tbody>
@@ -64,9 +64,6 @@
         </tbody>
     </table>
 </div>
-
-
-
 
 
 

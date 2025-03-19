@@ -91,7 +91,7 @@ public class ScorecardManagementController : BaseScorecardController
     // Step 3: We've selected a teebox we need all of the data that comes with the teebox data.
     [HttpGet]
     [Route("/scorecards/get-teebox-data/{teeboxId:long}")]
-    public async Task<IActionResult> GetTeeboxAndHoleDataHtmx(long teeboxId)
+    public async Task<IActionResult> GetTeeboxAndHoleDataHtmx(long teeboxId, bool fullRound, bool frontNine, bool backNine)
     {
         // Get our teebox data
         var teebox = await _teeboxLookupService.GetTeeByIdAsync(teeboxId);
@@ -100,19 +100,23 @@ public class ScorecardManagementController : BaseScorecardController
         var course = await _courseLookupService.GetCourseByIdAsync(teebox!.course_id) ?? new Course();
         
         // Get our holes for the desired teebox and create a form model for each hole and store the hole in each form model
-        var holes = await _holeLookupService.GetHolesForTeeAsync(teeboxId);
+        var holes = await _holeLookupService.GetHolesForTeeAsync(teeboxId, frontNine, backNine);
         var holeScoresForms = holes.Select(h => new HoleScoreFormModel { Par = h.par, Yardage = h.yardage, HoleNumber = h.hole_number, HoleId = h.hole_id}).ToList();
 
         var missTypes = await _lookupRepository.GetMissTypes();
         
-        // Combine into one scorecard model
         var form = new ScorecardFormModel
         {
             Course = course,
             Teebox = teebox,
             HoleScore = holeScoresForms,
-            MissTypeSelectList = missTypes
+            MissTypeSelectList = missTypes,
+            FullRound = (!frontNine && !backNine),
+            FrontNine = frontNine,
+            BackNine = backNine
         };
+
+
 
         return PartialView("Shared/_CreateRoundTeeboxData", form);
     }
@@ -189,7 +193,10 @@ public class ScorecardManagementController : BaseScorecardController
             Teebox = scorecard.Teebox,
             TeeboxSelectList = teebox_dropdown,
             MissTypeSelectList = miss_types_dropdown,
-            HoleScore = hole_score_form_list
+            HoleScore = hole_score_form_list,
+            FullRound = scorecard.Round.full_round,
+            BackNine = scorecard.Round.back_nine,
+            FrontNine = scorecard.Round.front_nine
         };
         
         // Cache the form, no need to do this all again on reload or failure.

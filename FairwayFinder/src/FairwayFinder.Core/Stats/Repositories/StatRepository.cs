@@ -33,7 +33,7 @@ public class AggregatedStatRepository(IConfiguration configuration, ILogger<Aggr
 
     public async Task<List<RoundsQueryModel>> GetRoundsByUserId(string userId, StatsRequest request)
     {
-        var sql = @"SELECT r.*, t.teebox_name, t.slope, t.rating, c.course_name
+        var sql = @"SELECT r.*, t.teebox_name, t.slope, t.rating, c.course_name, r.full_round, r.front_nine, r.back_nine
             FROM round as r
                 INNER JOIN course as c ON c.course_id = r.course_id
                 INNER JOIN teebox as t ON t.teebox_id = r.teebox_id 
