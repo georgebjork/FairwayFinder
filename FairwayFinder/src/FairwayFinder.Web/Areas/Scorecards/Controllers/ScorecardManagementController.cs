@@ -193,7 +193,10 @@ public class ScorecardManagementController : BaseScorecardController
             Teebox = scorecard.Teebox,
             TeeboxSelectList = teebox_dropdown,
             MissTypeSelectList = miss_types_dropdown,
-            HoleScore = hole_score_form_list
+            HoleScore = hole_score_form_list,
+            FullRound = scorecard.Round.full_round,
+            BackNine = scorecard.Round.back_nine,
+            FrontNine = scorecard.Round.front_nine
         };
         
         // Cache the form, no need to do this all again on reload or failure.
