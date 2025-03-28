@@ -67,7 +67,12 @@ public class AggregatedStatRepository(IConfiguration configuration, ILogger<Aggr
 
     public async Task<double> GetAverageScoreOfRoundsAsync(string userId, StatsRequest request)
     {
-        var sql = "SELECT avg(score) as round_avg FROM round WHERE is_deleted = False AND user_id = @userId AND exclude_from_stats = False";
+        var sql = @"SELECT avg(score) as round_avg 
+                    FROM round 
+                    WHERE is_deleted = False 
+                      AND user_id = @userId 
+                      AND exclude_from_stats = False
+                      AND full_round = @fullRound";
         
         if (request.Year is not null)
         {
@@ -75,13 +80,18 @@ public class AggregatedStatRepository(IConfiguration configuration, ILogger<Aggr
         }
 
         await using var conn = await GetNewOpenConnection();
-        var rv = await conn.ExecuteScalarAsync<double>(sql, new { userId, year = request.Year });
+        var rv = await conn.ExecuteScalarAsync<double>(sql, new { userId, year = request.Year, fullRound = !request.NineHole });
         return rv;
     }
 
     public async Task<int> GetLowScoreOfRoundsAsync(string userId, StatsRequest request)
     {
-        var sql = "SELECT min(score) as low_score FROM round WHERE is_deleted = False AND user_id = @userId AND exclude_from_stats = False";
+        var sql = @"SELECT min(score) as low_score 
+                    FROM round 
+                    WHERE is_deleted = False 
+                        AND user_id = @userId
+                        AND exclude_from_stats = False
+                        AND full_round = @fullRound";
         
         if (request.Year is not null)
         {
@@ -89,7 +99,7 @@ public class AggregatedStatRepository(IConfiguration configuration, ILogger<Aggr
         }
         
         await using var conn = await GetNewOpenConnection();
-        var rv = await conn.ExecuteScalarAsync<int>(sql, new { userId, year = request.Year });
+        var rv = await conn.ExecuteScalarAsync<int>(sql, new { userId, year = request.Year, fullRound = !request.NineHole });
         return rv;
     }
 }

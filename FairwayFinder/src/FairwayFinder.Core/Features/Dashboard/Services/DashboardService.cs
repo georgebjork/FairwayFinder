@@ -49,16 +49,25 @@ public class DashboardService
     
     public async Task<RoundScoresSummaryResponse> GetRoundScoresSummaryByUserId(string userId, StatsRequest request)
     {
-        var round_count = await _aggregatedStatRepository.GetNumberOfRoundsPlayedAsync(userId, request);
-        var avg_score = await _aggregatedStatRepository.GetAverageScoreOfRoundsAsync(userId, request);
-        var low_score = await _aggregatedStatRepository.GetLowScoreOfRoundsAsync(userId, request);
+        var roundCountTask = _aggregatedStatRepository.GetNumberOfRoundsPlayedAsync(userId, request);
+        var avgScoreTask = _aggregatedStatRepository.GetAverageScoreOfRoundsAsync(userId, request);
+        var lowScoreTask = _aggregatedStatRepository.GetLowScoreOfRoundsAsync(userId, request);
 
-        
+        // Set this to true to be used for the nine hole request
+        request.NineHole = true;
+        var avgScoreNineHoleTask = _aggregatedStatRepository.GetAverageScoreOfRoundsAsync(userId, request);
+        var lowScoreNineHoleTask = _aggregatedStatRepository.GetLowScoreOfRoundsAsync(userId, request);
+
+        await Task.WhenAll(roundCountTask, avgScoreTask, lowScoreTask, avgScoreNineHoleTask, lowScoreNineHoleTask);
+
         return new RoundScoresSummaryResponse
         {
-            AvgScore = Math.Round(avg_score, 2),
-            RoundsPlayed = round_count,
-            LowRound = low_score
+            RoundsPlayed = roundCountTask.Result,
+            AvgScore = Math.Round(avgScoreTask.Result, 2),
+            LowRound = lowScoreTask.Result,
+            AvgScoreNineHole = Math.Round(avgScoreNineHoleTask.Result, 2),
+            LowRoundNineHole = lowScoreNineHoleTask.Result
         };
     }
+
 }

@@ -5,4 +5,5 @@ public class StatsRequest
     public string UserId { get; set; } = "";
     public long? Year { get; set; } 
     public long? RoundId { get; set; }
+    public bool NineHole { get; set; }
 }

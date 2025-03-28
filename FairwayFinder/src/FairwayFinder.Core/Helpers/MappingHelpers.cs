@@ -99,12 +99,12 @@ public static class MappingHelpers
             round_id = form.RoundId,
             score_id = form.ScoreId,
             hole_id = form.HoleId,
-            hit_fairway = !form.MissedFairway,
+            hit_fairway = null,
             miss_fairway_type = form.MissFairwayType,
-            hit_green = !form.MissedGreen,
+            hit_green = null,
             miss_green_type = form.MissGreenType,
             number_of_putts = form.NumberOfPutts,
-            approach_yardage = form.YardageOut
+            approach_yardage = form.YardageOut, 
         };
     }
     

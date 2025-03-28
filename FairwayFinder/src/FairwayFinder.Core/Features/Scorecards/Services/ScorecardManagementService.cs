@@ -154,6 +154,7 @@ public class ScorecardManagementService : IScorecardManagementService
         foreach (var h in form.HoleScore)
         {
             var hole = h.HoleStats.ToModel();
+            hole = SetHoleStatsFromForm(h.HoleStats, hole);
 
             if (!form.RoundFormModel.UsingHoleStats)
             {
@@ -217,23 +218,12 @@ public class ScorecardManagementService : IScorecardManagementService
         var updatedHoleStats = new List<HoleStats>();
         foreach (var hs in holeStats)
         {
-            var updatedStat = form.HoleScore.FirstOrDefault(h => h.HoleStats.HoleStatsId == hs.hole_stats_id);
+            var updatedStatForm = form.HoleScore.FirstOrDefault(h => h.HoleStats.HoleStatsId == hs.hole_stats_id);
             
-            if (updatedStat is not null)
+            if (updatedStatForm is not null)
             {
-                hs.hit_fairway = updatedStat.HoleStats.HitFairway ? true : updatedStat.HoleStats.MissedFairway ? false : null;
-                hs.hit_green = updatedStat.HoleStats.HitGreen ? true : updatedStat.HoleStats.MissedGreen ? false : null;
-                
-                // If we hit, it should be null. If we miss it should have a value. If both are false, then it should be null.
-                hs.miss_fairway_type = updatedStat.HoleStats.HitFairway || !updatedStat.HoleStats.MissedFairway ? null : updatedStat.HoleStats.MissFairwayType;
-                hs.miss_green_type = updatedStat.HoleStats.HitGreen || !updatedStat.HoleStats.MissedGreen ? null : updatedStat.HoleStats.MissGreenType;
-                
-                hs.number_of_putts = updatedStat.HoleStats.NumberOfPutts;
-                hs.approach_yardage = updatedStat.HoleStats.YardageOut;
-
-                hs.tee_shot_ob = updatedStat.HoleStats.HitFairway ? null : updatedStat.HoleStats.TeeShotOb;
-                hs.approach_shot_ob = updatedStat.HoleStats.HitGreen ? null : updatedStat.HoleStats.ApproachShotOb;
-
+                // Bit uninutive but we are leveraging pass by reference here.
+                SetHoleStatsFromForm(updatedStatForm.HoleStats, hs);
                 
                 // Update the stat and add to the new list
                 updatedHoleStats.Add(EntityMetadataHelper.UpdateRecord(hs, userId));
@@ -241,6 +231,24 @@ public class ScorecardManagementService : IScorecardManagementService
         }
 
         return updatedHoleStats;
+    }
+
+    private HoleStats SetHoleStatsFromForm(HoleStatsFormModel form, HoleStats stats)
+    {
+        stats.hit_fairway = form.HitFairway ? true : form.MissedFairway ? false : null;
+        stats.hit_green = form.HitGreen ? true : form.MissedGreen ? false : null;
+                
+        // If we hit, it should be null. If we miss it should have a value. If both are false, then it should be null.
+        stats.miss_fairway_type = form.HitFairway || !form.MissedFairway ? null : form.MissFairwayType;
+        stats.miss_green_type = form.HitGreen || !form.MissedGreen ? null : form.MissGreenType;
+                
+        stats.number_of_putts = form.NumberOfPutts;
+        stats.approach_yardage = form.YardageOut;
+
+        stats.tee_shot_ob = form.HitFairway ? null : form.TeeShotOb;
+        stats.approach_shot_ob = form.HitGreen ? null : form.ApproachShotOb;
+
+        return stats;
     }
 
     private RoundStats UpdateRoundStats(RoundStats roundStats, ScorecardFormModel form, string userId)
