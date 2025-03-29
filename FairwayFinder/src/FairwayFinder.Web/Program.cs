@@ -5,17 +5,16 @@ using FairwayFinder.Web;
 using FairwayFinder.Web.Authorization.Profile;
 using FairwayFinder.Web.Authorization.ScorecardManagement;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using FairwayFinder.Web.Data;
 using FairwayFinder.Web.Data.Database;
+using Microsoft.AspNetCore.Authentication.Cookies;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-var connection_string = builder.Configuration.GetConnectionString("DbConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connection_string));
-
+// This will get the connection from the appsettings ConnectionStrings
+// https://learn.microsoft.com/en-us/dotnet/aspire/database/postgresql-integration?tabs=dotnet-cli
+builder.AddNpgsqlDbContext<ApplicationDbContext>("DbConnection");
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -40,7 +39,7 @@ builder.Services.ConfigureApplicationCookie(o => {
     o.LoginPath = "/login";
     o.LogoutPath = "/logout";
     o.AccessDeniedPath = "/401";
-    o.Events.OnSigningOut = ctx => {
+    o.Events.OnSigningOut = (CookieSigningOutContext ctx) => {
         try
         {
             ctx.HttpContext.Session.Clear();
@@ -129,11 +128,12 @@ using (var scope = app.Services.CreateScope())
 {
     var scopedProvider = scope.ServiceProvider;
 
-    var userInit = scopedProvider.GetRequiredService<SeedAspNetIdentity>();
-    await userInit.CreateRoles();
-
     var dbInit = scopedProvider.GetRequiredService<MigrationRunner>();
     await dbInit.RunMigrations();
+    
+    var userInit = scopedProvider.GetRequiredService<SeedAspNetIdentity>();
+    await userInit.CreateRoles();
+    
 }
 
 app.Run();

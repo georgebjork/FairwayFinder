@@ -10,8 +10,6 @@ using FairwayFinder.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.Memory;
-using SendGrid.Helpers.Mail.Model;
 
 namespace FairwayFinder.Web.Areas.Scorecards.Controllers;
 
