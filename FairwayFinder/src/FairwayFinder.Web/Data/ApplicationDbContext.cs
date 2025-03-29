@@ -16,7 +16,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             
         modelBuilder.Entity<ApplicationUser>().Property(e => e.FirstName).HasMaxLength(250);
         modelBuilder.Entity<ApplicationUser>().Property(e => e.LastName).HasMaxLength(250);
-        modelBuilder.Entity<ApplicationUser>().Property(e => e.CreatedOn).HasDefaultValue(DateTime.UtcNow);
-        modelBuilder.Entity<ApplicationUser>().Property(e => e.UpdatedOn).HasDefaultValue(DateTime.UtcNow);
+        modelBuilder.Entity<ApplicationUser>()
+            .Property(e => e.CreatedOn)
+            .HasDefaultValueSql("NOW()");
+
+        modelBuilder.Entity<ApplicationUser>()
+            .Property(e => e.UpdatedOn)
+            .HasDefaultValueSql("NOW()");
+
     }
 }
