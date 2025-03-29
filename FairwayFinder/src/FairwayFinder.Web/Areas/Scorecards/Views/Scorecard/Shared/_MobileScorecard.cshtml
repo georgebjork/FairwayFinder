@@ -1,0 +1,118 @@
+@using FairwayFinder.Core.Features.Scorecards.Models.QueryModels
+@using FairwayFinder.Core.Models
+@model FairwayFinder.Core.Features.Scorecards.Models.ViewModels.ScorecardViewModel
+
+@{
+    var round = Model.Scorecard.Round;
+    var teebox = Model.Scorecard.Teebox;
+
+    var holes = new List<Hole>();
+
+    if (round.front_nine)
+    {
+        holes = Model.Scorecard.HolesList.Where(x => x.hole_number <= 9).OrderBy(x => x.hole_number).ToList();
+    }
+    else if (round.back_nine)
+    {
+        holes = Model.Scorecard.HolesList.Where(x => x.hole_number > 9).OrderBy(x => x.hole_number).ToList();
+    }
+    else
+    {
+        holes = Model.Scorecard.HolesList;
+    }
+}
+
+<table class="table table-sm border-top border-bottom border-start border-end" style="font-size: 0.9rem;">
+    <thead>
+    <tr>
+        <td class="text-center">Hole</td>
+        <td class="text-center">YDG</td>
+        <td class="text-center">HDCP</td>
+        <td class="text-center">Par</td>
+        <td class="text-center">Score</td>
+        
+        @if (round.using_hole_stats)
+        {
+            <td class="text-center">FWY</td>
+            <td class="text-center">GIR</td>
+            <td class="text-center">Putts</td>
+        }
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var hole in holes)
+    {
+        var hole_stats = Model.Scorecard.HoleStatsList.First(x => x.hole_id == hole.hole_id);
+        var hole_score = Model.Scorecard.HoleScoresList.First(x => x.hole_id == hole.hole_id);
+        
+        <tr>
+            <td class="text-center"> @hole.hole_number </td>
+            <td class="text-center"> @hole.yardage </td>
+            <td class="text-center"> @hole.handicap </td>
+            <td class="text-center"> @hole.par </td>
+
+            <td class="text-center position-relative">
+                <span>@hole_score.hole_score</span>
+                @switch (hole_score.hole_score - hole.par)
+                {
+                    case <= -2:
+                        @await Html.PartialAsync("ScorecardStyling/_Eagle")
+                        break;
+                    case -1:
+                        @await Html.PartialAsync("ScorecardStyling/_Birdie")
+                        break;
+                    case 1:
+                        @await Html.PartialAsync("ScorecardStyling/_Bogey")
+                        break;
+                    case >= 2:
+                        @await Html.PartialAsync("ScorecardStyling/_DoubleBogey")
+                        break;
+                }
+            </td>
+            
+            @if (round.using_hole_stats)
+            {
+                <td class="text-center">
+                    @await Html.PartialAsync("Shared/_FairwayStatIcon", hole_stats)
+                </td>
+                
+                <td class="text-center">
+                    @await Html.PartialAsync("Shared/_GreenStatIcon", hole_stats)
+                </td>
+                
+                if (hole_stats.number_of_putts >= 3)
+                {
+                    <td class="text-center text-danger">@hole_stats.number_of_putts</td>
+                }
+                else
+                {
+                    <td class="text-center">@hole_stats.number_of_putts</td>
+                }
+            }
+        </tr>
+    }
+    
+    <tr>
+        <td class="text-center">Total</td>
+        @if (round.front_nine)
+        {
+            <td class="text-center">@Model.Scorecard.Teebox.yardage_out</td>
+        }
+        else if (round.back_nine)
+        {
+            <td class="text-center">@Model.Scorecard.Teebox.yardage_in</td>
+        }
+        else
+        {
+            <td class="text-center">@Model.Scorecard.Teebox.yardage_total</td>
+        }
+        
+        <td class="text-center">&nbsp;</td>
+        <td class="text-center">@holes.Sum(x => x.par)</td>
+        <td class="text-center">@round.score</td>
+        <td class="text-center">@Model.Scorecard.HoleStatsList.Count(x => x.hit_fairway == true) / @holes.Count(x => x.par >= 4)</td>
+        <td class="text-center">@Model.Scorecard.HoleStatsList.Count(x => x.hit_green == true) / @holes.Count</td>
+        <td class="text-center">@Model.Scorecard.HoleStatsList.Sum(x => x.number_of_putts)</td>
+    </tr>
+    </tbody>
+</table>

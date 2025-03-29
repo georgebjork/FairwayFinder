@@ -52,17 +52,14 @@
 </div>
 
 
-<div class="table-responsive">
-    <table class="table border-start border-top border-end border-bottom">
-        <thead>
-        <tr>
-            @await Html.PartialAsync("_ScorecardHeader", Model.Scorecard.Round)
-        </tr>
-        </thead>
-        <tbody>
-            @await Html.PartialAsync("Shared/_ScorecardBody", Model)
-        </tbody>
-    </table>
+<!-- Desktop Scorecard: visible on medium (md) and larger screens -->
+<div class="d-none d-lg-block">
+    @await Html.PartialAsync("Shared/_Scorecard", Model)
+</div>
+
+<!-- Mobile Scorecard: visible on small (sm) and smaller screens -->
+<div class="d-block d-lg-none">
+    @await Html.PartialAsync("Shared/_MobileScorecard", Model)
 </div>
 
 
