@@ -6,7 +6,7 @@
     var holes = Model.Scorecard.HoleScoresList;
     var holeStats = Model.Scorecard.HoleStatsList;
 
-// Determine whether front/back nine are selected (or full round is selected)
+    // Determine whether front/back nine are selected (or full round is selected)
     var front_nine = Model.Scorecard.Round.front_nine || Model.Scorecard.Round.full_round;
     var back_nine = Model.Scorecard.Round.back_nine || Model.Scorecard.Round.full_round;
 
@@ -55,7 +55,20 @@
             <td class="text-center" colspan="2">@teebox.yardage_in</td>
         }
 
-        <td class="text-center" colspan="2">@teebox.yardage_total</td>
+        <td class="text-center" colspan="2">
+            @if (front_nine && !back_nine)
+            {
+                @teebox.yardage_out
+            }
+            else if (back_nine && !front_nine)
+            {
+                @teebox.yardage_in
+            }
+            else
+            {
+                @teebox.yardage_total
+            }
+        </td>
     </tr>
 
     @*Handicap*@
