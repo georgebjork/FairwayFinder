@@ -1,0 +1,14 @@
+@model FairwayFinder.Core.Features.Scorecards.Models.ViewModels.ScorecardViewModel
+
+<div class="table-responsive">
+    <table class="table border-start border-top border-end border-bottom">
+        <thead>
+        <tr>
+            @await Html.PartialAsync("_ScorecardHeader", Model.Scorecard.Round)
+        </tr>
+        </thead>
+        <tbody>
+        @await Html.PartialAsync("Shared/_ScorecardBody", Model)
+        </tbody>
+    </table>
+</div>
