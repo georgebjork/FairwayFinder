@@ -42,8 +42,8 @@
     <tbody>
     @foreach (var hole in holes)
     {
-        var hole_stats = Model.Scorecard.HoleStatsList.First(x => x.hole_id == hole.hole_id);
-        var hole_score = Model.Scorecard.HoleScoresList.First(x => x.hole_id == hole.hole_id);
+        var hole_stats = Model.Scorecard.HoleStatsList.FirstOrDefault(x => x.hole_id == hole.hole_id);
+        var hole_score = Model.Scorecard.HoleScoresList.First(x => x.hole_id == hole.hole_id); 
         
         <tr>
             <td class="text-center"> @hole.hole_number </td>
