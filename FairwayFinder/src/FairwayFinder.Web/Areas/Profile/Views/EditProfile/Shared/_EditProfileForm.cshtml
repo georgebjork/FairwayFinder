@@ -1,0 +1,34 @@
+@model FairwayFinder.Core.Features.Profile.Models.FormModels.EditProfileFormModel
+
+<div class="col-12">
+    @await Html.PartialAsync("_MessageHtmxPartial")
+    <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+</div>
+
+<div class="col-6">
+    <div class="form-floating mb-3">
+        <input asp-for="FirstName" value="@Model.FirstName" type="text" class="form-control" autocomplete="off">
+        <label asp-for="FirstName"></label>
+        <span asp-validation-for="FirstName" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="col-6">
+    <div class="form-floating mb-3">
+        <input asp-for="LastName" value="@Model.LastName" type="text" class="form-control" autocomplete="off">
+        <label asp-for="LastName"></label>
+        <span asp-validation-for="LastName" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="col-6">
+    <div class="form-floating mb-3">
+        <input asp-for="Email" value="@Model.Email" type="text" class="form-control" autocomplete="off">
+        <label asp-for="Email"></label>
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="col-6" id="username">
+    @await Html.PartialAsync("Shared/_UsernameField", Model)
+</div>

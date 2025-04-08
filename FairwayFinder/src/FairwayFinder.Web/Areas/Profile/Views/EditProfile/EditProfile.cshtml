@@ -1,0 +1,19 @@
+@model FairwayFinder.Core.Features.Profile.Models.ViewModels.EditProfileViewModel
+
+
+<div>
+    
+    <form hx-post="@Url.Action("EditProfilePost", new { userId = Model.User.Id })"
+          hx-swap="innerHTML"
+          hx-target="#profile-form">
+        
+        
+        <div id="profile-form" class="row">
+            @await Html.PartialAsync("Shared/_EditProfileForm", Model.Form)
+        </div>
+
+        <div class="d-grid gap-2">
+            <button class="btn btn-primary" type="submit">Update</button>
+        </div>
+    </form>
+</div>

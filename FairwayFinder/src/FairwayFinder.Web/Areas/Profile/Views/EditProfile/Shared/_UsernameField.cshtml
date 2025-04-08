@@ -1,0 +1,30 @@
+@model FairwayFinder.Core.Features.Profile.Models.FormModels.EditProfileFormModel
+
+@if (Model.IsValidUsername is null)
+{
+    <div class="form-floating mb-3">
+        <input asp-for="Username" name="username" value="@Model.Username" type="text" class="form-control" autocomplete="off"
+               hx-get="@Url.Action("CheckUsername")"
+               hx-swap="innerHTML"
+               hx-target="#username"
+               hx-trigger="input delay:500ms">
+        <label asp-for="Username"></label>
+        <span asp-validation-for="Username" id="validation" class="text-danger"></span>
+    </div>
+}
+else 
+{
+    <div class="form-floating mb-3">
+        <input asp-for="Username" name="username" value="@Model.Username" type="text" class="form-control @(Model.IsValidUsername.Value ? "is-valid" : "is-invalid")" autocomplete="off"
+               hx-get="@Url.Action("CheckUsername")"
+               hx-swap="innerHTML"
+               hx-target="#username"
+               hx-trigger="input delay:500ms">
+        <label asp-for="Username"></label>
+        <span asp-validation-for="Username" id="validation" class="@(Model.IsValidUsername.Value ? "text-success" : "text-danger")"> @(Model.IsValidUsername.Value ? "Username is available!" : "Username is taken.")</span>
+    </div>
+
+}
+
+
+
