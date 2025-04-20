@@ -1,98 +1,134 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FairwayFinder.Core.HttpClients.UploadThing.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace FairwayFinder.Core.HttpClients.UploadThing;
-
-public class UploadThingHttpClient
+namespace FairwayFinder.Core.HttpClients.UploadThing
 {
-    private readonly HttpClient _httpClient;
-    private readonly ILogger<UploadThingHttpClient> _logger;
-
-    public UploadThingHttpClient(HttpClient httpClient, IConfiguration configuration, ILogger<UploadThingHttpClient> logger)
+    public class UploadThingHttpClient
     {
-        _httpClient = httpClient;
-        _logger = logger;
-        _httpClient.BaseAddress = new Uri("https://api.uploadthing.com/v7/");
-        
-        var apiKey = configuration["UploadThing:ApiKey"];
-        if (string.IsNullOrWhiteSpace(apiKey))
+        private readonly HttpClient _httpClient;
+        private readonly ILogger<UploadThingHttpClient> _logger;
+
+        public UploadThingHttpClient(HttpClient httpClient, IConfiguration configuration, ILogger<UploadThingHttpClient> logger)
         {
-            throw new InvalidOperationException("UploadThing API key is missing in configuration.");
+            _httpClient = httpClient;
+            _logger = logger;
+            _httpClient.BaseAddress = new Uri("https://api.uploadthing.com/v7/");
+            
+            var api_key = configuration["UploadThing:ApiKey"];
+            if (string.IsNullOrWhiteSpace(api_key))
+            {
+                throw new InvalidOperationException("UploadThing API key is missing in configuration.");
+            }
+
+            _httpClient.DefaultRequestHeaders.Add("x-uploadthing-api-key", api_key);
         }
 
-        _httpClient.DefaultRequestHeaders.Add("x-uploadthing-api-key", apiKey);
-    }
-    
-    public async Task<bool> Upload(Stream imageStream, string fileName, string fileType)
-    {
-        var request = new UploadThingRequest
+        public async Task<bool> Upload(Stream imageStream, string fileName, string fileType)
         {
-            FileName = fileName,
-            FileSize = imageStream.Length,
-            FileType = fileType,
-            Slug = "profile",
-            CustomId = Guid.NewGuid().ToString(),
-            Acl = "public-read",
-            ExpiresIn = 3600,
-            ContentDisposition = "inline"
-        };
-        
-        // Get the presigned URL
-        var presigned_url_response = await _httpClient.PostAsJsonAsync("prepareUpload", request);
+            var custom_id = Guid.NewGuid().ToString();
+            var request = new UploadThingRequest
+            {
+                FileName = fileName,
+                FileSize = imageStream.Length,
+                FileType = fileType,
+                Slug = "profile",
+                CustomId = custom_id,
+                Acl = "public-read",
+                ExpiresIn = 3600,
+                ContentDisposition = "inline"
+            };
+            
+            // Get the presigned URL
+            var presigned_url_response = await _httpClient.PostAsJsonAsync("prepareUpload", request);
 
-        if (!presigned_url_response.IsSuccessStatusCode)
+            if (!presigned_url_response.IsSuccessStatusCode)
+            {
+                _logger.LogError($"Failed to get presigned URL: {await presigned_url_response.Content.ReadAsStringAsync()}");
+                return false;
+            }
+
+            var presigned_url = await presigned_url_response.Content.ReadFromJsonAsync<UploadThingPresignedUrlResponse>();
+
+            if (string.IsNullOrEmpty(presigned_url.Url))
+            {
+                _logger.LogError("Presigned URL came back null.");
+                return false;
+            }
+
+            var metadata_set = await SetMetadataBeforeUpload(presigned_url);
+
+            if (!metadata_set)
+            {
+                return false;
+            }
+            
+            // Upload the file using the presigned URL
+            return await UploadFileToPresignedUrl(imageStream, fileName, presigned_url.Url);
+        }
+
+        private async Task<bool> SetMetadataBeforeUpload(UploadThingPresignedUrlResponse presignedUrl)
         {
-            _logger.LogError($"Failed to get presigned URL: {await presigned_url_response.Content.ReadAsStringAsync()}");
+            var ingest_uri = new Uri(presignedUrl.Url);
+            var host_segments = ingest_uri.Host.Split('.');
+            var region_alias = host_segments[0]; 
+
+            // Now build the route-metadata endpoint for that region
+            var metadata_endpoint = $"https://{region_alias}.ingest.uploadthing.com/route-metadata";
+
+            var metadata_request = new
+            {
+                fileKeys = new[] { presignedUrl.Key },
+                metadata = new { },
+                callbackUrl = "https://your-domain.com/api/uploadthing",
+                callbackSlug = "profile",
+                awaitServerData = false,
+                isDev = false
+            };
+
+            var register_response = await _httpClient.PostAsJsonAsync(metadata_endpoint, metadata_request);
+
+            if (register_response.IsSuccessStatusCode)
+            {
+                return true;
+            }
+
+            var response_body = await register_response.Content.ReadAsStringAsync();
+            _logger.LogError("UploadThing rejected it: {Body}", response_body);
             return false;
         }
 
-        var presigned_url = await presigned_url_response.Content.ReadFromJsonAsync<UploadThingPresignedUrlResponse>();
-
-        if (string.IsNullOrEmpty(presigned_url.Url))
+        private async Task<bool> UploadFileToPresignedUrl(Stream imageStream, string fileName, string presignedUrl)
         {
-            _logger.LogError("Presigned url came back null.");
-            return false;
-        }
-        
-        // Upload the file using the presigned URL
-        return await UploadFileToPresignedUrl(imageStream, fileName, presigned_url.Url);
-    }
+            try
+            {
+                using var form = new MultipartFormDataContent();
+                
+                imageStream.Position = 0;
+                
+                var file_content = new StreamContent(imageStream);
+                file_content.Headers.ContentType = new MediaTypeHeaderValue("application/json");  
+                form.Add(file_content, "file", fileName);
+                
+                var response = await _httpClient.PutAsync(presignedUrl, form);
 
-    private async Task<bool> UploadFileToPresignedUrl(Stream imageStream, string fileName, string presignedUrl)
-    {
-        try 
-        {
-            // Log before starting
-            Console.WriteLine("Starting upload...");
-        
-            // Use a new client
-            using var upload_client = new HttpClient();
-        
-            var file_content = new StreamContent(imageStream);
-            file_content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
-        
-            var multipart_content = new MultipartFormDataContent();
-            multipart_content.Add(file_content, "file", fileName);
-
-            Console.WriteLine("About to send request...");
-        
-            // Upload the file
-            var upload_response = await upload_client.PutAsync(presignedUrl, multipart_content);
-        
-            Console.WriteLine($"Response received: {upload_response.StatusCode}");
-        
-            if (upload_response.IsSuccessStatusCode) return true;
-        
-            _logger.LogError($"Failed to upload file: {await upload_response.Content.ReadAsStringAsync()}");
-            return false;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Exception occurred: {ex.Message}");
-            _logger.LogError($"Exception in UploadFileToPresignedUrl: {ex}");
-            return false;
+                if (response.IsSuccessStatusCode)
+                {
+                    return true;
+                }
+                
+                var response_body = await response.Content.ReadAsStringAsync();
+                _logger.LogError("UploadThing rejected it: {Body}", response_body);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Exception occurred: {ex.Message}");
+                _logger.LogError($"Exception in UploadFileToPresignedUrl: {ex}");
+                return false;
+            }
         }
     }
 }
