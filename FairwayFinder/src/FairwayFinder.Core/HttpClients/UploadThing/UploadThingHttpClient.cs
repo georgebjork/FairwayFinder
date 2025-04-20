@@ -82,7 +82,7 @@ namespace FairwayFinder.Core.HttpClients.UploadThing
             {
                 fileKeys = new[] { presignedUrl.Key },
                 metadata = new { },
-                callbackUrl = "https://your-domain.com/api/uploadthing",
+                callbackUrl = "",
                 callbackSlug = "profile",
                 awaitServerData = false,
                 isDev = false
