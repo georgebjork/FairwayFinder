@@ -1,4 +1,5 @@
 using FairwayFinder.Core;
+using FairwayFinder.Core.HttpClients;
 using FairwayFinder.Core.Identity;
 using FairwayFinder.Core.Identity.Settings;
 using FairwayFinder.Web;
@@ -72,6 +73,9 @@ builder.Services.AddControllersWithViews().AddRazorRuntimeCompilation();
 
 builder.Services.RegisterCoreServices(); // Register services in Core Lib
 builder.Services.RegisterWebServices(); // Register services for Web Lib
+
+// HttpClients
+builder.Services.AddHttpClient<UploadThingHttpClient>();
 
 var app = builder.Build();
 

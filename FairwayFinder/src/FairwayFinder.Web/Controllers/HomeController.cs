@@ -1,5 +1,6 @@
 using FairwayFinder.Core.Features.Dashboard.Models.ViewModel;
 using FairwayFinder.Core.Features.Dashboard.Services;
+using FairwayFinder.Core.HttpClients;
 using FairwayFinder.Core.Services;
 using FairwayFinder.Core.Stats;
 using Microsoft.AspNetCore.Mvc;
@@ -12,16 +13,21 @@ public class HomeController : BaseAuthorizedController
     private readonly ILogger<HomeController> _logger;
     private readonly DashboardService _dashboardService;
     private readonly IUsernameRetriever _usernameRetriever;
+    private readonly UploadThingHttpClient _httpClient;
 
-    public HomeController(ILogger<HomeController> logger, IUsernameRetriever usernameRetriever, DashboardService dashboardService)
+    public HomeController(ILogger<HomeController> logger, IUsernameRetriever usernameRetriever, DashboardService dashboardService, UploadThingHttpClient httpClient)
     {
         _logger = logger;
         _usernameRetriever = usernameRetriever;
         _dashboardService = dashboardService;
+        _httpClient = httpClient;
     }
 
     public async Task<IActionResult> Index([FromQuery] long? year = null)
     {
+        await _httpClient.ListFiles();
+        
+        
         var userId = _usernameRetriever.UserId;
         var username = _usernameRetriever.Username;
 
