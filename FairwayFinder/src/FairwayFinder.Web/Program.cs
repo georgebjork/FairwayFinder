@@ -1,5 +1,6 @@
 using FairwayFinder.Core;
 using FairwayFinder.Core.HttpClients;
+using FairwayFinder.Core.HttpClients.UploadThing;
 using FairwayFinder.Core.Identity;
 using FairwayFinder.Core.Identity.Settings;
 using FairwayFinder.Web;
