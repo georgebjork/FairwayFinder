@@ -9,6 +9,7 @@ using FairwayFinder.Core.Features.Scorecards.Services;
 using FairwayFinder.Core.Repositories;
 using FairwayFinder.Core.Repositories.Interfaces;
 using FairwayFinder.Core.Services;
+using FairwayFinder.Core.Services.Interfaces;
 using FairwayFinder.Core.Stats.Repositories;
 using FairwayFinder.Core.UserManagement.Respositories;
 using FairwayFinder.Core.UserManagement.Services;
@@ -31,10 +32,12 @@ public static class ConfigureCoreServices
         services.AddTransient<ILookupRepository, LookupRepository>();
         services.AddTransient<IAggregatedStatRepository, AggregatedStatRepository>();
         services.AddTransient<IScorecardStatRepository, ScorecardStatRepository>();
+        services.AddTransient<IDocumentRepository, DocumentRepository>();
         
         // Services
         services.AddTransient<IUsernameRetriever, UsernameRetriever>();
         services.AddTransient<IUserManagementService, UserManagementService>();
+        services.AddTransient<IFileUploadService, UploadThingService>();
         services.AddTransient<IProfileService, ProfileService>();
         services.AddTransient<CourseManagementService>();
         services.AddTransient<CourseLookupService>();
