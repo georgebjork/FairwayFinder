@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace FairwayFinder.Core.HttpClients.UploadThing.Models;
+namespace FairwayFinder.Core.HttpClients.UploadThing.Models.Responses;
 
 public record UploadThingPresignedUrlResponse
 {

@@ -1,8 +1,8 @@
 using FairwayFinder.Core.Features.Dashboard.Models.ViewModel;
 using FairwayFinder.Core.Features.Dashboard.Services;
-using FairwayFinder.Core.HttpClients;
 using FairwayFinder.Core.HttpClients.UploadThing;
 using FairwayFinder.Core.Services;
+using FairwayFinder.Core.Services.Interfaces;
 using FairwayFinder.Core.Stats;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,13 +13,13 @@ public class HomeController : BaseAuthorizedController
 {
     private readonly DashboardService _dashboardService;
     private readonly IUsernameRetriever _usernameRetriever;
-    private readonly UploadThingHttpClient _httpClient;
-    
-    public HomeController(ILogger<HomeController> logger, IUsernameRetriever usernameRetriever, DashboardService dashboardService, UploadThingHttpClient httpClient)
+    private readonly IFileUploadService _fileUploadService;
+
+    public HomeController(ILogger<HomeController> logger, IUsernameRetriever usernameRetriever, DashboardService dashboardService, UploadThingHttpClient httpClient, IFileUploadService fileUploadService)
     {
         _usernameRetriever = usernameRetriever;
         _dashboardService = dashboardService;
-        _httpClient = httpClient;
+        _fileUploadService = fileUploadService;
     }
 
     public async Task<IActionResult> Index([FromQuery] long? year = null)
@@ -64,7 +64,7 @@ public class HomeController : BaseAuthorizedController
     [HttpPost]
     public async Task<IActionResult> TestFileUpload(IFormFile file)
     {
-        await _httpClient.Upload(file.OpenReadStream(), file.FileName, file.ContentType);
+        var rv = await _fileUploadService.UploadProfilePicture(file, _usernameRetriever.UserId);
         return Redirect(nameof(TestFileUpload));
     }
 }

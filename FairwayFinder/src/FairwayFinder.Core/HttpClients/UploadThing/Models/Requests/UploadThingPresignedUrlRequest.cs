@@ -2,7 +2,7 @@
 
 namespace FairwayFinder.Core.HttpClients.UploadThing.Models;
 
-public record UploadThingRequest 
+public record UploadThingPresignedUrlRequest 
 {
     [JsonPropertyName("fileName")] 
     public string FileName { get; set; } = "";
