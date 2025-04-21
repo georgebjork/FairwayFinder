@@ -1,0 +1,23 @@
+﻿@model FileUploadViewModel
+
+<form asp-action="TestFileUpload"
+      asp-controller="Home"
+      method="post"
+      enctype="multipart/form-data">
+
+    <div class="mb-3">
+        <label asp-for="File" class="form-label">
+            Pick a file
+        </label>
+        <input asp-for="File"
+               class="form-control"
+               type="file" />
+        <span asp-validation-for="File"
+              class="text-danger"></span>
+    </div>
+
+    <button type="submit"
+            class="btn btn-primary">
+        Upload
+    </button>
+</form>
