@@ -3,6 +3,7 @@ using FairwayFinder.Core.Authorization.Repositories;
 using FairwayFinder.Core.Features.CourseManagement.Repositories;
 using FairwayFinder.Core.Features.CourseManagement.Services;
 using FairwayFinder.Core.Features.Dashboard.Services;
+using FairwayFinder.Core.Features.Profile.Services;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
 using FairwayFinder.Core.Features.Scorecards.Services;
 using FairwayFinder.Core.Repositories;
@@ -37,6 +38,7 @@ public static class ConfigureCoreServices
         services.AddTransient<IUsernameRetriever, UsernameRetriever>();
         services.AddTransient<IUserManagementService, UserManagementService>();
         services.AddTransient<IFileUploadService, UploadThingService>();
+        services.AddTransient<IProfileService, ProfileService>();
         services.AddTransient<CourseManagementService>();
         services.AddTransient<CourseLookupService>();
         services.AddTransient<TeeboxLookupService>();

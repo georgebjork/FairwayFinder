@@ -28,6 +28,28 @@ public class CanEditProfileHandler : AuthorizationHandler<CanEditProfileRequirem
         {
             context.Succeed(requirement); 
         }
+        
+        /*
+         // Ensure the Resource is an HttpContext. In many cases, this will be true when using endpoint routing.
+           if (context.Resource is HttpContext httpContext)
+           {
+               // Assume the user id is being passed as a route parameter named "userId"
+               RouteValueDictionary routeValues = httpContext.GetRouteData()?.Values;
+               if (routeValues != null && routeValues.TryGetValue("userId", out object routeUserId))
+               {
+                   string userIdFromRoute = routeUserId.ToString();
+
+                   // Retrieve the current user id from the claims
+                   string currentUserId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                   // If both IDs match, the requirement is fulfilled.
+                   if (!string.IsNullOrEmpty(currentUserId) && currentUserId.Equals(userIdFromRoute))
+                   {
+                       context.Succeed(requirement);
+                   }
+               }
+           }
+         */
 
         return Task.CompletedTask; 
     }
