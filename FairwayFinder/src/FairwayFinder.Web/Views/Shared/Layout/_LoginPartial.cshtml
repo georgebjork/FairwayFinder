@@ -1,24 +1,35 @@
-﻿@using FairwayFinder.Core.Identity
-@using FairwayFinder.Core.Identity.Settings
+﻿@using FairwayFinder.Core.Features.Profile.Services
+@using FairwayFinder.Core.Identity
 @using FairwayFinder.Core.Services
 @using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.Mvc.TagHelpers
+
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IUsernameRetriever _usernameRetriever;
+@inject IProfileService _profileService;
 
 @if (SignInManager.IsSignedIn(User))
 {
+    var profile_picture = await _profileService.GetProfilePictureRecordAsync(_usernameRetriever.UserId);
+    
+    
+    
     <div class="dropdown">
-        
+
         <button class="btn btn-link dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="text-decoration:none; color: inherit">
 
-            @if (User.IsInRole(Roles.Admin))
+            @if (profile_picture is not null)
             {
-                <span class="badge bg-info" title="Administrator">
-                    <i class="fa-solid fa-user-shield"></i>
-                </span>
+                <a class="p-0 text-decoration-none" href="@profile_picture.file_url">
+                    <img
+                        src="@profile_picture.file_url"
+                        alt="Profile"
+                        class="rounded-circle"
+                        width="25"
+                        height="25"
+                    />
+                </a>
             }
-            
+
             @User.Identity?.Name
         </button>
 
@@ -30,7 +41,7 @@
             </li>
             <li><hr class="dropdown-divider"></li>
 
-            @if (User.IsInRole(Roles.Admin)) 
+            @if (User.IsInRole(Roles.Admin))
             {
                 <li>
                     <a class="dropdown-item" asp-area="UserManagement" asp-controller="UserManagement" asp-action="Index">

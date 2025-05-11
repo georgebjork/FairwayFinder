@@ -2,18 +2,26 @@
 
 
 <div>
-    
     <form hx-post="@Url.Action("EditProfilePost", new { userId = Model.User.Id })"
-          hx-swap="innerHTML"
-          hx-target="#profile-form">
+        enctype="multipart/form-data"
+        hx-swap="innerHTML"
+        hx-target="#profile-form"
+        hx-on::before-request="let btn = document.getElementById('submit-btn');
+                                btn.disabled = true;
+                                btn.innerText = 'Updating…'"
         
+        hx-on::after-request="let btn = document.getElementById('submit-btn');
+                                btn.disabled = false;
+                                btn.innerText = 'Update';">
         
         <div id="profile-form" class="row">
             @await Html.PartialAsync("Shared/_EditProfileForm", Model.Form)
         </div>
 
         <div class="d-grid gap-2">
-            <button class="btn btn-primary" type="submit">Update</button>
+            <button class="btn btn-primary" type="submit" id="submit-btn">
+                Update
+            </button>
         </div>
     </form>
 </div>

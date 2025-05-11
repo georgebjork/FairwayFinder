@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using FairwayFinder.Core.Models;
+using Microsoft.AspNetCore.Http;
 
 namespace FairwayFinder.Core.Features.Profile.Models.FormModels;
 
@@ -24,6 +26,9 @@ public class EditProfileFormModel
     [Required(ErrorMessage = "Username is required.")]
     [StringLength(50, ErrorMessage = "Email cannot be longer than 50 characters.")]
     public string Username { get; set; } = "";
-
+    
+    [Display(Name = "Profile Picture")]
+    public IFormFile? ProfilePicture { get; set; }
     public bool? IsValidUsername { get; set; }
+    public List<ProfileDocument> ProfilePictures { get; set; } = [];
 }

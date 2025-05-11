@@ -13,13 +13,13 @@ namespace FairwayFinder.Web.Areas.Profile.Controllers;
 public class EditProfileController : BaseProfileController
 {
     private readonly ILogger<EditProfileController> _logger;
-    private readonly IProfileService _profile_service;
+    private readonly IProfileService _profileService;
     private readonly IUsernameRetriever _usernameRetriever;
     
     public EditProfileController(UserManager<ApplicationUser> userManager, ILogger<EditProfileController> logger, IProfileService profileService, IUsernameRetriever usernameRetriever)
     {
         _logger = logger;
-        _profile_service = profileService;
+        _profileService = profileService;
         _usernameRetriever = usernameRetriever;
     }
 
@@ -27,11 +27,12 @@ public class EditProfileController : BaseProfileController
     [Route("{userId}")]
     public async Task<IActionResult> EditProfile([FromRoute] string userId)
     {
-        var user = await _profile_service.GetProfile(userId);
+        var profile = await _profileService.GetProfile(userId);
+        var profile_documents = await _profileService.GetProfilePictureRecordsAsync(userId);
 
-        if (user is null)
+        if (profile is null)
         {
-            _logger.LogError("User with is {0} came back null", userId);
+            _logger.LogError("User with is {user} came back null", userId);
             SetErrorMessage("User does not exist");
 
             SetHtmxRedirect("/");
@@ -40,13 +41,14 @@ public class EditProfileController : BaseProfileController
 
         var vm = new EditProfileViewModel
         {
-            User = user,
+            User = profile,
             Form = new EditProfileFormModel
             {
-                FirstName = user.FirstName ?? "",
-                LastName = user.LastName ?? "",
-                Email = user.Email ?? "",
-                Username = user.UserName ?? ""
+                FirstName = profile.FirstName ?? "",
+                LastName = profile.LastName ?? "",
+                Email = profile.Email ?? "",
+                Username = profile.UserName ?? "",
+                ProfilePictures = profile_documents
             }
         };
         
@@ -63,9 +65,11 @@ public class EditProfileController : BaseProfileController
             return PartialView("Shared/_EditProfileForm", form);
         }
 
-        var rv = await _profile_service.UpdateProfile(userId, form);
+        var profile = await _profileService.UpdateProfile(userId, form);
+        var profile_pictures = await _profileService.GetProfilePictureRecordsAsync(userId);
 
-        if (!rv)
+        form.ProfilePictures = profile_pictures;        
+        if (!profile)
         {
             SetErrorMessageHtmx("An error occurred updating user. Please try again.");
             return PartialView("Shared/_EditProfileForm", form);
@@ -89,11 +93,19 @@ public class EditProfileController : BaseProfileController
             });
         }
         
-        var rv = await _profile_service.CheckUsername(username);
+        var rv = await _profileService.CheckUsername(username);
         return PartialView("Shared/_UsernameField", new EditProfileFormModel
         {
             Username = username,
             IsValidUsername = rv
         });
+    }
+
+    [HttpDelete]
+    [Route("delete-profile-picture/{documentId}")]
+    public async Task<IActionResult> DeleteProfilePicture([FromRoute] string documentId)
+    {
+        await _profileService.DeleteProfilePictureAsync(documentId);
+        return Ok();
     }
 }
