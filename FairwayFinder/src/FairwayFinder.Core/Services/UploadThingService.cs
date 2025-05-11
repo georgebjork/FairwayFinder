@@ -51,6 +51,7 @@ public class UploadThingService : IFileUploadService
             file_url = upload_thing_response.Url,
             user_id = userId,
             route = upload_thing_response.Slug.ToString().ToLower(),
+            file_name = file.FileName
         };
         db_record = EntityMetadataHelper.NewRecord(db_record, _usernameRetriever.UserId);
         

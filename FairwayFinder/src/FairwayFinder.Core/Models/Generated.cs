@@ -155,6 +155,7 @@ public class ProfileDocument : IEntityMetadata
     public string document_id { get; set; } = "";
     public string route { get; set; } = "";
     public string file_url { get; set; } = "";
+    public string file_name { get; set; } = "";
     public string user_id { get; set; } = "";
     public string created_by { get; set; } = "";
     public DateTime created_on { get; set; }

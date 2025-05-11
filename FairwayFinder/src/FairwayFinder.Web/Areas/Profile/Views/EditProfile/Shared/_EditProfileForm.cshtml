@@ -32,3 +32,50 @@
 <div class="col-6" id="username">
     @await Html.PartialAsync("Shared/_UsernameField", Model)
 </div>
+
+<div class="col-12">
+    <div class="mb-3">
+        <ul class="list-group">
+            @foreach (var document in Model.ProfilePictures)
+            {
+                <li class="list-group-item" id="picture-@document.id">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="@document.file_url" target="_blank" class="text-center">@document.file_name</a>
+                        <button class="btn btn-sm btn-danger"
+                                hx-delete="@Url.Action("DeleteProfilePicture", "EditProfile", new { documentId = document.document_id })"
+                                hx-confirm="Are you want to delete this picture?"
+                                hx-target="#picture-@document.id"
+                                hx-swap="outerHTML swap:250ms">
+                            <i class="fa-solid fa-trash-can pe-2"></i> Delete
+                        </button>
+                    </div>
+                </li>
+            }
+        </ul>
+    </div>
+
+
+    <div class="mb-3">
+        @* Only want to update if there are no current pictures*@
+        @if (Model.ProfilePictures.Count <= 0)
+        {
+            <label asp-for="ProfilePicture" class="form-label">
+                Upload Profile Picture
+            </label>
+            <input asp-for="ProfilePicture" class="form-control" type="file"/>
+            <span asp-validation-for="ProfilePicture" class="text-danger"></span>
+        }
+        else
+        {
+            <label class="form-label">
+                Upload Profile Picture
+            </label>
+            <input class="form-control" type="file" disabled/>
+            <span class="text-danger"></span>
+        }
+        
+        
+
+    </div>
+</div>
+

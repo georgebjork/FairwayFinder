@@ -132,7 +132,9 @@ public class UploadThingHttpClient
             {
                 return new UploadThingFileUploadResponse();
             }
-
+            
+            _logger.LogInformation("File uploaded to UploadThing: {FileId}", success_response.FileId);
+            
             success_response.IsSuccess = true;
             success_response.FileId = request.FileId;
             success_response.Slug = request.Slug;
