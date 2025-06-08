@@ -1,6 +1,6 @@
 using FairwayFinder.Core.Models;
 
-namespace FairwayFinder.Core.Features.CourseManagement.Models.ViewModels;
+namespace FairwayFinder.Core.Features.GolfCourse.Models.ViewModels;
 
 public class CourseManagementViewModel
 {

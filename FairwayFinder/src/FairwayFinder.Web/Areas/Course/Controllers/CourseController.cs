@@ -1,7 +1,6 @@
-﻿using FairwayFinder.Core.Features.CourseManagement.Models.FormModels;
-using FairwayFinder.Core.Features.CourseManagement.Models.ViewModels;
+﻿using FairwayFinder.Core.Features.GolfCourse.Models.FormModels;
+using FairwayFinder.Core.Features.GolfCourse.Models.ViewModels;
 using FairwayFinder.Core.Helpers;
-using FairwayFinder.Core.Services;
 using FairwayFinder.Core.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -26,7 +25,6 @@ public class CourseController : BaseCourseController
     public async Task<IActionResult> Index()
     {
         var courses = await _courseService.GetAllCoursesAsync();
-
         var vm = new CourseManagementViewModel
         {
             Courses = courses
@@ -154,9 +152,9 @@ public class CourseController : BaseCourseController
         // We are going to check if any teeboxes exist for this course. If so, we can reuse the par and handicap, only yardages will change.
         var teeboxes = await _teeboxService.GetTeesForCourseAsync(courseId);
 
-        var form = new TeeboxFormModel();
-        form.CourseId = courseId;
-        if (!teeboxes.Any())
+        var form = new TeeboxFormModel { CourseId = courseId };
+        
+        if (teeboxes.Count == 0)
         {
             form.Holes = Enumerable.Range(1, 18).Select(i => new HoleFormModel { HoleNumber = i }).ToList();
             return View(form);
@@ -197,7 +195,7 @@ public class CourseController : BaseCourseController
             return PartialView("_TeeboxForm", form);
         }
 
-        var rv = await _courseService.AddTeeAsync(courseId, form);
+        var rv = await _teeboxService.AddTeeAsync(courseId, form);
 
         if (rv <= 0)
         {
@@ -252,7 +250,7 @@ public class CourseController : BaseCourseController
             return PartialView("_TeeboxForm", form);
         }
         
-        var rv = await _courseService.UpdateTeeAsync(teeboxId, form);
+        var rv = await _teeboxService.UpdateTeeAsync(teeboxId, form);
 
         if (!rv)
         {

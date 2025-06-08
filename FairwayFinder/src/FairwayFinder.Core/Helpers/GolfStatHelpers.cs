@@ -1,5 +1,4 @@
-﻿using FairwayFinder.Core.Features.CourseManagement.Models.FormModels;
-using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
+﻿using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 using FairwayFinder.Core.Features.Scorecards.Models.QueryModels;
 using FairwayFinder.Core.Models;
 

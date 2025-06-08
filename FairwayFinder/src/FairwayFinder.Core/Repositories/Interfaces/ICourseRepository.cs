@@ -8,6 +8,4 @@ public interface ICourseRepository : IBaseRepository
     public Task<Course?> GetCourseByIdAsync(long courseId);
     public Task<List<Course>> SearchForCourseByNameAsync(string name);
     public Task<Course?> GetCourseByNameAsync(string name);
-    public Task<int> InsertNewTeeAsync(Teebox teebox, List<Hole> holes);
-    public Task<bool> UpdateTeeAsync(Teebox tee, List<Hole> holes);
 }

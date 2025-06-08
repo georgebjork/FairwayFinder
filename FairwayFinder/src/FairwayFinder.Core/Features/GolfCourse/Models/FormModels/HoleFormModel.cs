@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace FairwayFinder.Core.Features.CourseManagement.Models.FormModels;
+namespace FairwayFinder.Core.Features.GolfCourse.Models.FormModels;
 
 public class HoleFormModel
 {

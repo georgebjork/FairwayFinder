@@ -1,4 +1,4 @@
-﻿using FairwayFinder.Core.Features.CourseManagement.Models.FormModels;
+﻿using FairwayFinder.Core.Features.GolfCourse.Models.FormModels;
 using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Repositories.Interfaces;
@@ -10,20 +10,14 @@ namespace FairwayFinder.Core.Services;
 public class CourseService : ICourseService
 {
     private readonly ILogger<CourseService> _logger;
-    
     private readonly IUsernameRetriever _usernameRetriever;
-    private readonly ITeeboxService _teeboxService;
-    private readonly IHoleService _holeService;
-    
     private readonly ICourseRepository _courseRepository;
 
-    public CourseService(ILogger<CourseService> logger, ICourseRepository courseRepository, IUsernameRetriever usernameRetriever, IHoleService holeService, ITeeboxService teeboxService)
+    public CourseService(ILogger<CourseService> logger, ICourseRepository courseRepository, IUsernameRetriever usernameRetriever)
     {
         _logger = logger;
         _courseRepository = courseRepository;
         _usernameRetriever = usernameRetriever;
-        _holeService = holeService;
-        _teeboxService = teeboxService;
     }
     
     public async Task<List<Course>> GetAllCoursesAsync()
@@ -47,11 +41,11 @@ public class CourseService : ICourseService
     
     public async Task<int> AddCourseAsync(CourseFormModel form)
     {
-        var course_with_name = await GetCourseByNameAsync(form.name);
+        var course_with_name = await GetCourseByNameAsync(form.Name);
 
         if (course_with_name is not null)
         {
-            _logger.LogWarning("Course with name {0} already exists", form.name);
+            _logger.LogWarning("Course with name {0} already exists", form.Name);
             return -1;
         }
         
@@ -67,51 +61,11 @@ public class CourseService : ICourseService
         // should never happen here but here in case
         if (course == null) return false;
         
-        course.course_name = form.name;
-        course.address = form.address;
-        course.phone_number = form.phone_number;
+        course.course_name = form.Name;
+        course.address = form.Address;
+        course.phone_number = form.PhoneNumber;
         
         course = EntityMetadataHelper.UpdateRecord(course, _usernameRetriever.UserId);
         return await _courseRepository.Update(course);
-    }
-
-    public async Task<int> AddTeeAsync(long courseId, TeeboxFormModel form)
-    {
-        var course = await GetCourseByIdAsync(courseId);
-
-        if (course is null)
-        {
-            _logger.LogError("Invalid course id: {0} was used to create a Tee Box by user {1}", courseId, _usernameRetriever.Username);
-        }
-
-        var tee = form.ToModel(new Teebox());
-        var holes = form.Holes.Select(hole => EntityMetadataHelper.NewRecord(hole.ToModel(new Hole()), _usernameRetriever.UserId)).ToList();
-        tee = EntityMetadataHelper.NewRecord(tee, _usernameRetriever.UserId);
-        
-        return await _courseRepository.InsertNewTeeAsync(tee, holes);
-    }
-    
-    
-    public async Task<bool> UpdateTeeAsync(long teeboxId, TeeboxFormModel form)
-    {
-        var tee = await _teeboxService.GetTeeByIdAsync(teeboxId);
-
-        if (tee is null)
-        {
-            _logger.LogError("Invalid tee box id: {0} was used to update a Tee Box by user {1}", teeboxId, _usernameRetriever.Username);
-            return false;
-        }
-        
-        var holes = await _holeService.GetHolesForTeeAsync(teeboxId);
-
-        for (var i = 0; i < holes.Count; i++)
-        {
-            holes[i] = EntityMetadataHelper.UpdateRecord(form.Holes[i].ToModel(holes[i]), _usernameRetriever.UserId);
-        }
-        
-        tee = form.ToModel(tee);
-        tee = EntityMetadataHelper.UpdateRecord(tee, _usernameRetriever.UserId);
-        
-        return await _courseRepository.UpdateTeeAsync(tee, holes);
     }
 }
