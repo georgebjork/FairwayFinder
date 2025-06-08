@@ -2,7 +2,7 @@
 
 namespace FairwayFinder.Core.Repositories.Interfaces;
 
-public interface IHoleLookupRepository : IBaseRepository
+public interface IHoleRepository : IBaseRepository
 {
     public Task<List<Hole>> GetHolesForTeeAsync(long teeboxId);
 

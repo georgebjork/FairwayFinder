@@ -2,7 +2,7 @@
 
 namespace FairwayFinder.Core.Repositories.Interfaces;
 
-public interface ITeeboxLookupRepository : IBaseRepository
+public interface ITeeboxRepository : IBaseRepository
 {
     public Task<Teebox?> GetTeeByIdAsync(long teeboxId);
     public Task<List<Teebox>> GetTeesForCourseAsync(long courseId);

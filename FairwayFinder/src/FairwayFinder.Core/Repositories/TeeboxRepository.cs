@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace FairwayFinder.Core.Repositories;
 
-public class TeeboxLookupRepository(IConfiguration configuration) : BasePgRepository(configuration), ITeeboxLookupRepository
+public class TeeboxRepository(IConfiguration configuration) : BasePgRepository(configuration), ITeeboxRepository
 {
     public async Task<Teebox?> GetTeeByIdAsync(long teeboxId)
     {

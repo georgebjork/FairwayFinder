@@ -115,7 +115,7 @@ app.MapControllerRoute(
 );
 
 app.MapControllerRoute(
-    name : "CourseManagement",
+    name : "Course",
     pattern : "{area:exists}/{controller=Home}/{action=Index}/{id?}"
 );
 

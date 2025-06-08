@@ -1,23 +1,47 @@
-using Dapper;
+﻿using Dapper;
 using Dapper.Contrib.Extensions;
-using FairwayFinder.Core.Identity;
 using FairwayFinder.Core.Models;
-using FairwayFinder.Core.Repositories;
 using FairwayFinder.Core.Repositories.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace FairwayFinder.Core.Features.CourseManagement.Repositories;
+namespace FairwayFinder.Core.Repositories;
 
-public interface ICourseManagementRepository : IBaseRepository
+public class CourseRepository(IConfiguration configuration, ILogger<CourseRepository> repository) : BasePgRepository(configuration), ICourseRepository
 {
-    // Inserts
-    public Task<int> InsertNewTeeAsync(Teebox teebox, List<Hole> holes);
-    public Task<bool> UpdateTeeAsync(Teebox tee, List<Hole> holes);
-}
+    
+    public async Task<List<Course>> GetAllCoursesAsync()
+    {
+        var sql = "SELECT * FROM course WHERE is_deleted = false";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryAsync<Course>(sql);
+        return rv.ToList();
+    }
 
-public class CourseManagementRepository(IConfiguration configuration, ILogger<ICourseManagementRepository> logger) : BasePgRepository(configuration), ICourseManagementRepository 
-{
+    public async Task<Course?> GetCourseByIdAsync(long courseId)
+    {
+        var sql = "SELECT * FROM course WHERE is_deleted = false AND course_id = @id";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryFirstOrDefaultAsync<Course>(sql, new { Id = courseId });
+        return rv;
+    }
+    
+    public async Task<List<Course>> SearchForCourseByNameAsync(string name)
+    {
+        var sql = "SELECT * FROM course WHERE is_deleted = false AND course_name LIKE @name";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryAsync<Course>(sql, new { name = $"%{name}%" });        
+        return rv.ToList();
+    }
+
+    public async Task<Course?> GetCourseByNameAsync(string name)
+    {
+        var sql = "SELECT * FROM course WHERE is_deleted = false AND course_name = @name";
+        await using var conn = await GetNewOpenConnection();
+        var rv = await conn.QueryFirstOrDefaultAsync(sql, new { name });        
+        return rv;
+    }
+    
     public async Task<int> InsertNewTeeAsync(Teebox teebox, List<Hole> holes)
     {
         await using var conn = await GetNewOpenConnection();
@@ -43,7 +67,7 @@ public class CourseManagementRepository(IConfiguration configuration, ILogger<IC
             return -1;
         }
     }
-
+    
     public async Task<bool> UpdateTeeAsync(Teebox tee, List<Hole> holes)
     {
         await using var conn = await GetNewOpenConnection();

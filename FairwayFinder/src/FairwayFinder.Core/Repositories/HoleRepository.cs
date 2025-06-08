@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace FairwayFinder.Core.Repositories;
 
-public class HoleLookupRepository(IConfiguration configuration) : BasePgRepository(configuration), IHoleLookupRepository
+public class HoleRepository(IConfiguration configuration) : BasePgRepository(configuration), IHoleRepository
 {
     public async Task<List<Hole>> GetHolesForTeeAsync(long teeboxId)
     {

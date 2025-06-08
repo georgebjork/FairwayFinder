@@ -1,34 +1,31 @@
 ﻿using FairwayFinder.Core.Features.CourseManagement.Models.FormModels;
 using FairwayFinder.Core.Features.CourseManagement.Models.ViewModels;
-using FairwayFinder.Core.Features.CourseManagement.Services;
 using FairwayFinder.Core.Helpers;
 using FairwayFinder.Core.Services;
-using LanguageExt;
+using FairwayFinder.Core.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FairwayFinder.Web.Areas.CourseManagement.Controllers;
+namespace FairwayFinder.Web.Areas.Course.Controllers;
 
-public class CourseManagementController : BaseCourseManagementController
+public class CourseController : BaseCourseController
 {
-    private readonly ILogger<CourseManagementController> _logger;
-    private readonly CourseManagementService _courseManagementService;
-    private readonly CourseLookupService _courseLookupService;
-    private readonly TeeboxLookupService _teeboxLookupService;
-    private readonly HoleLookupService _holeLookupService;
+    private readonly ILogger<CourseController> _logger;
+    private readonly ICourseService _courseService;
+    private readonly ITeeboxService _teeboxService;
+    private readonly IHoleService _holeService;
 
-    public CourseManagementController(ILogger<CourseManagementController> logger, CourseManagementService courseManagementService, CourseLookupService courseLookupService, TeeboxLookupService teeboxLookupService, HoleLookupService holeLookupService)
+    public CourseController(ILogger<CourseController> logger, ICourseService courseService, ITeeboxService teeboxService, IHoleService holeService)
     {
         _logger = logger;
-        _courseManagementService = courseManagementService;
-        _courseLookupService = courseLookupService;
-        _teeboxLookupService = teeboxLookupService;
-        _holeLookupService = holeLookupService;
+        _courseService = courseService;
+        _teeboxService = teeboxService;
+        _holeService = holeService;
     }
 
     [Route("course-management")]
     public async Task<IActionResult> Index()
     {
-        var courses = await _courseLookupService.GetAllCoursesAsync();
+        var courses = await _courseService.GetAllCoursesAsync();
 
         var vm = new CourseManagementViewModel
         {
@@ -40,8 +37,8 @@ public class CourseManagementController : BaseCourseManagementController
     [Route("course-management/{courseId:long}")]
     public async Task<IActionResult> ViewCourse([FromRoute]long courseId)
     {
-        var course = await _courseLookupService.GetCourseByIdAsync(courseId);
-        var tees = await _teeboxLookupService.GetTeesForCourseAsync(courseId);
+        var course = await _courseService.GetCourseByIdAsync(courseId);
+        var tees = await _teeboxService.GetTeesForCourseAsync(courseId);
         
         if (course == null)
         {
@@ -74,7 +71,7 @@ public class CourseManagementController : BaseCourseManagementController
             return PartialView("_CourseForm", form);
         }
         
-        var rv = await _courseManagementService.AddCourseAsync(form);
+        var rv = await _courseService.AddCourseAsync(form);
 
         if (rv < 0)
         {
@@ -90,7 +87,7 @@ public class CourseManagementController : BaseCourseManagementController
     [Route("course-management/{courseId:long}/edit")]
     public async Task<IActionResult> EditCourse(long courseId)
     {
-        var course = await _courseLookupService.GetCourseByIdAsync(courseId);
+        var course = await _courseService.GetCourseByIdAsync(courseId);
 
         if (course is null)
         {
@@ -111,7 +108,7 @@ public class CourseManagementController : BaseCourseManagementController
             return PartialView("_CourseForm", form);
         }
         
-        var rv = await _courseManagementService.UpdateCourseAsync(courseId, form);
+        var rv = await _courseService.UpdateCourseAsync(courseId, form);
 
         if (!rv)
         {
@@ -127,7 +124,7 @@ public class CourseManagementController : BaseCourseManagementController
     [Route("course-management/{courseId:long}/teebox/{teeboxId:long}")]
     public async Task<IActionResult> ViewTeebox([FromRoute] long courseId, [FromRoute] long teeboxId)
     {
-        var tee = await _teeboxLookupService.GetTeeByIdAsync(teeboxId);
+        var tee = await _teeboxService.GetTeeByIdAsync(teeboxId);
         
 
         if (tee is null)
@@ -137,8 +134,8 @@ public class CourseManagementController : BaseCourseManagementController
             return Redirect(nameof(ViewCourse), new { courseId });
         }
         
-        var course = await _courseLookupService.GetCourseByIdAsync(courseId);
-        var holes = await _holeLookupService.GetHolesForTeeAsync(tee.teebox_id);
+        var course = await _courseService.GetCourseByIdAsync(courseId);
+        var holes = await _holeService.GetHolesForTeeAsync(tee.teebox_id);
         
         var vm = new TeeboxViewModel
         {
@@ -155,7 +152,7 @@ public class CourseManagementController : BaseCourseManagementController
     public async Task<IActionResult> AddTee([FromRoute] long courseId)
     {
         // We are going to check if any teeboxes exist for this course. If so, we can reuse the par and handicap, only yardages will change.
-        var teeboxes = await _teeboxLookupService.GetTeesForCourseAsync(courseId);
+        var teeboxes = await _teeboxService.GetTeesForCourseAsync(courseId);
 
         var form = new TeeboxFormModel();
         form.CourseId = courseId;
@@ -166,7 +163,7 @@ public class CourseManagementController : BaseCourseManagementController
         }
 
         form.Par = teeboxes.First().par;
-        var holes = await _holeLookupService.GetHolesForTeeAsync(teeboxes.First().teebox_id); // Doesnt matter which one, we will just take the first teebox
+        var holes = await _holeService.GetHolesForTeeAsync(teeboxes.First().teebox_id); // Doesnt matter which one, we will just take the first teebox
         
         foreach (var hole in holes)
         {
@@ -200,7 +197,7 @@ public class CourseManagementController : BaseCourseManagementController
             return PartialView("_TeeboxForm", form);
         }
 
-        var rv = await _courseManagementService.AddTeeAsync(courseId, form);
+        var rv = await _courseService.AddTeeAsync(courseId, form);
 
         if (rv <= 0)
         {
@@ -217,7 +214,7 @@ public class CourseManagementController : BaseCourseManagementController
     [Route("course-management/{courseId:long}/teebox/{teeboxId:long}/edit")]
     public async Task<IActionResult> EditTee([FromRoute] long courseId, [FromRoute] long teeboxId)
     {
-        var tee = await _teeboxLookupService.GetTeeByIdAsync(teeboxId);
+        var tee = await _teeboxService.GetTeeByIdAsync(teeboxId);
 
         if (tee is null)
         {
@@ -226,7 +223,7 @@ public class CourseManagementController : BaseCourseManagementController
         }
 
         var expected_holes_count = tee.is_nine_hole ? 9 : 18;
-        var holes = await _holeLookupService.GetHolesForTeeAsync(teeboxId);
+        var holes = await _holeService.GetHolesForTeeAsync(teeboxId);
         List<HoleFormModel> holes_form;
         
         if (holes.Count == expected_holes_count)
@@ -255,7 +252,7 @@ public class CourseManagementController : BaseCourseManagementController
             return PartialView("_TeeboxForm", form);
         }
         
-        var rv = await _courseManagementService.UpdateTeeAsync(teeboxId, form);
+        var rv = await _courseService.UpdateTeeAsync(teeboxId, form);
 
         if (!rv)
         {

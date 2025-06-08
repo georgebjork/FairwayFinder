@@ -7,6 +7,7 @@ using FairwayFinder.Core.Identity.Settings;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Repositories;
 using FairwayFinder.Core.Services;
+using FairwayFinder.Core.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
@@ -17,26 +18,24 @@ public class ScorecardManagementController : BaseScorecardController
 {
     private readonly ILogger<ScorecardManagementController> _logger;
     private readonly IUsernameRetriever _usernameRetriever;
-    private readonly CourseLookupService _courseLookupService;
-    private readonly TeeboxLookupService _teeboxLookupService;
-    private readonly HoleLookupService _holeLookupService;
-    private readonly ScorecardService _scorecardService;
-    private readonly ScorecardManagementService _scorecardManagementService;
+    private readonly ICourseService _courseService;
+    private readonly ITeeboxService _teeboxService;
+    private readonly IHoleService _holeService;
+    private readonly IScorecardService _scorecardService;
     private readonly ILookupRepository _lookupRepository;
     private readonly IAuthorizationService _authorizationService;
 
     private readonly IDistributedCache _cache;
     
-    public ScorecardManagementController(ILogger<ScorecardManagementController> logger, IUsernameRetriever usernameRetriever, CourseLookupService courseLookupService, TeeboxLookupService teeboxLookupService, HoleLookupService holeLookupService, ScorecardService scorecardService, ILookupRepository lookupRepository, ScorecardManagementService scorecardManagementService, IDistributedCache cache, IAuthorizationService authorizationService)
+    public ScorecardManagementController(ILogger<ScorecardManagementController> logger, IUsernameRetriever usernameRetriever, ICourseService courseService, ITeeboxService teeboxService, IHoleService holeService, IScorecardService scorecardService, ILookupRepository lookupRepository, IDistributedCache cache, IAuthorizationService authorizationService)
     {
         _logger = logger;
         _usernameRetriever = usernameRetriever;
-        _courseLookupService = courseLookupService;
-        _teeboxLookupService = teeboxLookupService;
-        _holeLookupService = holeLookupService;
+        _courseService = courseService;
+        _teeboxService = teeboxService;
+        _holeService = holeService;
         _scorecardService = scorecardService;
         _lookupRepository = lookupRepository;
-        _scorecardManagementService = scorecardManagementService;
         _cache = cache;
         _authorizationService = authorizationService;
     }
@@ -56,10 +55,10 @@ public class ScorecardManagementController : BaseScorecardController
     {
         if (course is null)
         {
-            return PartialView("Shared/_CreateRoundCourseSearchResults", new List<Course>());
+            return PartialView("Shared/_CreateRoundCourseSearchResults", new List<Core.Models.Course>());
         }
         
-        var course_results = await _courseLookupService.CourseSearchByName(course);
+        var course_results = await _courseService.CourseSearchByName(course);
         return PartialView("Shared/_CreateRoundCourseSearchResults", course_results);
     }
     
@@ -68,7 +67,7 @@ public class ScorecardManagementController : BaseScorecardController
     [Route("/scorecards/get-course-data/{courseId:long}")]
     public async Task<IActionResult> GetCourseDataHtmx(long courseId)
     {
-        var course = await _courseLookupService.GetCourseByIdAsync(courseId);
+        var course = await _courseService.GetCourseByIdAsync(courseId);
         var teebox_select = await _lookupRepository.GetTeesForCourseAsync(courseId);
         
         // Build form. Cache this. We want to reuse it across forms so less data retrival.
@@ -92,13 +91,13 @@ public class ScorecardManagementController : BaseScorecardController
     public async Task<IActionResult> GetTeeboxAndHoleDataHtmx(long teeboxId, bool fullRound, bool frontNine, bool backNine)
     {
         // Get our teebox data
-        var teebox = await _teeboxLookupService.GetTeeByIdAsync(teeboxId);
+        var teebox = await _teeboxService.GetTeeByIdAsync(teeboxId);
         
         // Get our course
-        var course = await _courseLookupService.GetCourseByIdAsync(teebox!.course_id) ?? new Course();
+        var course = await _courseService.GetCourseByIdAsync(teebox!.course_id) ?? new Core.Models.Course();
         
         // Get our holes for the desired teebox and create a form model for each hole and store the hole in each form model
-        var holes = await _holeLookupService.GetHolesForTeeAsync(teeboxId, frontNine, backNine);
+        var holes = await _holeService.GetHolesForTeeAsync(teeboxId, frontNine, backNine);
         var holeScoresForms = holes.Select(h => new HoleScoreFormModel { Par = h.par, Yardage = h.yardage, HoleNumber = h.hole_number, HoleId = h.hole_id}).ToList();
 
         var missTypes = await _lookupRepository.GetMissTypes();
@@ -129,7 +128,7 @@ public class ScorecardManagementController : BaseScorecardController
             return PartialView("Shared/_RoundForm", form);
         }
         
-        var result = await _scorecardManagementService.CreateNewScorecardAsync(form);
+        var result = await _scorecardService.CreateNewScorecardAsync(form);
 
         if (result <= 0)
         {
@@ -216,7 +215,7 @@ public class ScorecardManagementController : BaseScorecardController
             return PartialView("Shared/_RoundForm", updated_form);
         }
         
-        var result = await _scorecardManagementService.UpdateScorecardAsync(form);
+        var result = await _scorecardService.UpdateScorecardAsync(form);
 
         if (!result)
         {
@@ -246,8 +245,8 @@ public class ScorecardManagementController : BaseScorecardController
         }
         
         // Manually get the parts we need.
-        var course = await _courseLookupService.GetCourseByIdAsync(form.RoundFormModel.CourseId);
-        var teebox = await _teeboxLookupService.GetTeeByIdAsync(form.RoundFormModel.TeeboxId);
+        var course = await _courseService.GetCourseByIdAsync(form.RoundFormModel.CourseId);
+        var teebox = await _teeboxService.GetTeeByIdAsync(form.RoundFormModel.TeeboxId);
 
         if (course is null || teebox is null) return form; // Should not happen, but just in case
         
@@ -267,7 +266,7 @@ public class ScorecardManagementController : BaseScorecardController
     [Route("scorecards/{roundId:long}/edit/include")]
     public async Task<IActionResult> UpdateRoundExclusion([FromRoute] long roundId, [FromQuery] bool exclude)
     {
-        var result = await _scorecardManagementService.UpdateRoundExclusion(roundId, exclude);
+        var result = await _scorecardService.UpdateRoundExclusion(roundId, exclude);
 
         if (!result) return BadRequest(); // This failed for whatever reason
 
