@@ -1,0 +1,61 @@
+@model FairwayFinder.Core.Features.GolfCourse.Models.FormModels.TeeboxFormModel
+
+<div class="row">
+    
+    @for (int i = 0; i < Model.Holes.Count; i++)
+    {
+        <input type="hidden" asp-for="Holes[i].HoleNumber" value="@Model.Holes[i].HoleNumber" />
+        <input type="hidden" asp-for="Holes[i].CourseId" value="@Model.CourseId" />
+        <input type="hidden" asp-for="Holes[i].TeeboxId" value="@Model.TeeboxId" />
+        <input type="hidden" asp-for="Holes[i].HoleId" value="@Model.Holes[i].HoleId" />
+        <input type="hidden" asp-for="Holes[i].ParHandicapReadonly" value="@Model.Holes[i].ParHandicapReadonly" />
+
+        <div class="col-4 p-3">
+            <div class="card">
+                <div class="card-header">
+                    Hole @Model.Holes[i].HoleNumber
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="mb-3 col-12">
+                            <label class="form-label" asp-for="Holes[i].Yardage"></label>
+                            <input asp-for="Holes[i].Yardage" type="text" class="form-control" autocomplete="off"/>
+                            <span asp-validation-for="Holes[i].Yardage" class="text-danger"></span>
+                        </div>
+                        
+                        @if (Model.Holes[i].ParHandicapReadonly)
+                        {
+                            <div class="mb-3 col-6">
+                                <label class="form-label" asp-for="Holes[i].Handicap"></label>
+                                <input asp-for="Holes[i].Handicap" type="text" class="form-control" autocomplete="off" readonly tabindex="-1"/>
+                                <span asp-validation-for="Holes[i].Handicap" class="text-danger"></span>
+                            </div>
+
+                            <div class="mb-3 col-6">
+                                <label class="form-label" asp-for="Holes[i].Par"></label>
+                                <input asp-for="Holes[i].Par" type="text" class="form-control" autocomplete="off" readonly tabindex="-1"/>
+                                <span asp-validation-for="Holes[i].Par" class="text-danger"></span>
+                            </div>
+
+                        }
+                        else
+                        {
+                            <div class="mb-3 col-6">
+                                <label class="form-label" asp-for="Holes[i].Handicap"></label>
+                                <input asp-for="Holes[i].Handicap" type="text" class="form-control" autocomplete="off"/>
+                                <span asp-validation-for="Holes[i].Handicap" class="text-danger"></span>
+                            </div>
+
+                            <div class="mb-3 col-6">
+                                <label class="form-label" asp-for="Holes[i].Par"></label>
+                                <input asp-for="Holes[i].Par" type="text" class="form-control" autocomplete="off"/>
+                                <span asp-validation-for="Holes[i].Par" class="text-danger"></span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    
+</div>

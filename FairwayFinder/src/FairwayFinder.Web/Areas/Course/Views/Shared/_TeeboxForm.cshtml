@@ -1,0 +1,90 @@
+﻿@model FairwayFinder.Core.Features.GolfCourse.Models.FormModels.TeeboxFormModel
+
+@await Html.PartialAsync("_MessageHtmxPartial")
+
+<div class="row">
+    <div class="col-12">
+        <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+    </div>
+    
+    <div class="col-12">
+        <div class="form-floating mb-3">
+            <input asp-for="Name" type="text" class="form-control" autocomplete="off"/>
+            <label asp-for="Name"></label>
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-4">
+        <div class="form-floating mb-3">
+            <input asp-for="Par" type="text" class="form-control" placeholder="" autocomplete="off"/>
+            <label asp-for="Par"></label>
+            <span asp-validation-for="Par" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="col-4">
+        <div class="form-floating mb-3">
+            <input asp-for="Slope" type="text" class="form-control" placeholder="" autocomplete="off"/>
+            <label asp-for="Slope"></label>
+            <span asp-validation-for="Slope" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="col-4">
+        <div class="form-floating mb-3">
+            <input asp-for="Rating" type="text" class="form-control" placeholder="" autocomplete="off"/>
+            <label asp-for="Rating"></label>
+            <span asp-validation-for="Rating" class="text-danger"></span>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-4">
+        <div class="form-floating mb-3">
+            <input id="yardage-out" asp-for="YardageOut" type="text" class="form-control" placeholder="" autocomplete="off"/>
+            <label asp-for="YardageOut"></label>
+            <span asp-validation-for="YardageOut" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="col-4">
+        <div class="form-floating mb-3">
+            <input id="yardage-in" asp-for="YardageIn" type="text" class="form-control" placeholder="" autocomplete="off"/>
+            <label asp-for="YardageIn"></label>
+            <span asp-validation-for="YardageIn" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="col-4">
+        <div class="form-floating mb-3">
+            <input id="yardage" type="text" class="form-control" placeholder="" autocomplete="off" disabled />
+            <label for="yardage">Total Yardage</label>
+        </div>
+    </div>
+
+</div>
+
+<div class="row">
+    <div class="col-auto">
+        <div class="form-check mb-3">
+            <input asp-for="IsNineHoles" type="checkbox" class="form-check-input" placeholder="" autocomplete="off"/>
+            <label class="form-check-label" asp-for="IsNineHoles"></label>
+            <span asp-validation-for="IsNineHoles" class="text-danger"></span>
+        </div>
+    </div>
+
+    @*<div class="col-auto">
+        <div class="form-floating mb-3">
+            <input asp-for="IsWomenTees" type="text" class="form-control" placeholder="" autocomplete="off"/>
+            <label asp-for="IsWomenTees"></label>
+            <span asp-validation-for="IsWomenTees" class="text-danger"></span>
+        </div>
+    </div>*@
+</div>
+
+
+@await Html.PartialAsync("_HoleForm", Model)

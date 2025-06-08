@@ -14,11 +14,11 @@ namespace FairwayFinder.Web.Areas.Scorecards.Controllers;
 public class ScorecardController : BaseScorecardController
 {
     private readonly ILogger<ScorecardController> _logger;
-    private readonly ScorecardService _scorecardService;
+    private readonly IScorecardService _scorecardService;
     private readonly IUserManagementService _userManagementService;
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public ScorecardController(ILogger<ScorecardController> logger, ScorecardService scorecardService, IUserManagementService userManagementService, UserManager<ApplicationUser> userManager)
+    public ScorecardController(ILogger<ScorecardController> logger, IScorecardService scorecardService, IUserManagementService userManagementService, UserManager<ApplicationUser> userManager)
     {
         _logger = logger;
         _scorecardService = scorecardService;

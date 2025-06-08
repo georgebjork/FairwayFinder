@@ -1,0 +1,23 @@
+@model FairwayFinder.Core.Features.GolfCourse.Models.FormModels.CourseFormModel
+
+@{
+    ViewData["Title"] = "Add Course";
+}
+
+<div class="row d-flex justify-content-center">
+    <div class="col-xxl-9 col-xl-12">
+        <form
+            hx-post="@Url.Action("AddCoursePost")"
+            hx-swap="innerHTML"
+            hx-target="#course-form">
+            
+            <div id="course-form">
+                @await Html.PartialAsync("_CourseForm")
+            </div>
+
+            <div>
+                <button id="login-submit" type="submit" class="btn btn-lg btn-primary w-100">Create Course</button>
+            </div>
+        </form>
+    </div>
+</div>

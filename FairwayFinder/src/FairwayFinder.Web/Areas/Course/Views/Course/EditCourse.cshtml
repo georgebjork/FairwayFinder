@@ -1,0 +1,25 @@
+@model FairwayFinder.Core.Features.GolfCourse.Models.FormModels.CourseFormModel
+
+@{
+    ViewData["Title"] = "Edit Course";
+}
+
+<div class="row d-flex justify-content-center">
+    <div class="col-xxl-9 col-xl-12">
+        <form
+            hx-post="@Url.Action("EditCoursePost", new {courseId = Model.CourseId})"
+            hx-swap="innerHTML"
+            hx-target="#course-form">
+            
+            <input type="hidden" asp-for="CourseId" value="@Model.CourseId"/>
+            
+            <div id="course-form">
+                @await Html.PartialAsync("_CourseForm", Model)
+            </div>
+
+            <div>
+                <button id="login-submit" type="submit" class="btn btn-lg btn-primary w-100">Update Course</button>
+            </div>
+        </form>
+    </div>
+</div>

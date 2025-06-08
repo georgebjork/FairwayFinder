@@ -1,4 +1,4 @@
-﻿using FairwayFinder.Core.Features.CourseManagement.Models.FormModels;
+﻿using FairwayFinder.Core.Features.GolfCourse.Models.FormModels;
 using FairwayFinder.Core.Features.Scorecards.Models.FormModels;
 using FairwayFinder.Core.Features.Scorecards.Models.QueryModels;
 using FairwayFinder.Core.Models;
@@ -11,19 +11,19 @@ public static class MappingHelpers
     {
         return new CourseFormModel
         {
-            course_id = course.course_id,
-            name = course.course_name,
-            address = course.address,
-            phone_number = course.phone_number
+            CourseId = course.course_id,
+            Name = course.course_name,
+            Address = course.address,
+            PhoneNumber = course.phone_number
         };
     }
     
     public static Course ToModel(this CourseFormModel form, Course course)
     {
-        course.course_id = form.course_id ?? 0;
-        course.course_name = form.name;
-        course.address = form.address;
-        course.phone_number = form.phone_number;
+        course.course_id = form.CourseId ?? 0;
+        course.course_name = form.Name;
+        course.address = form.Address;
+        course.phone_number = form.PhoneNumber;
 
         return course;
     }
