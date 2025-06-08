@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FairwayFinder.Web.Areas.Course.Controllers;
 
+[Route("course")]
 public class CourseController : BaseCourseController
 {
     private readonly ILogger<CourseController> _logger;
@@ -21,7 +22,7 @@ public class CourseController : BaseCourseController
         _holeService = holeService;
     }
 
-    [Route("course-management")]
+    [Route("all")]
     public async Task<IActionResult> Index()
     {
         var courses = await _courseService.GetAllCoursesAsync();
@@ -32,7 +33,7 @@ public class CourseController : BaseCourseController
         return View(vm);
     }
     
-    [Route("course-management/{courseId:long}")]
+    [Route("{courseId:long}")]
     public async Task<IActionResult> ViewCourse([FromRoute]long courseId)
     {
         var course = await _courseService.GetCourseByIdAsync(courseId);
@@ -54,14 +55,14 @@ public class CourseController : BaseCourseController
     }
     
     [HttpGet]
-    [Route("course-management/add")]
+    [Route("add")]
     public IActionResult AddCourse()
     {
         return View();
     }
     
     [HttpPost]
-    [Route("course-management/add")]
+    [Route("add")]
     public async Task<IActionResult> AddCoursePost([FromForm] CourseFormModel form)
     {
         if (!ModelState.IsValid)
@@ -82,7 +83,7 @@ public class CourseController : BaseCourseController
     }
     
     [HttpGet]
-    [Route("course-management/{courseId:long}/edit")]
+    [Route("{courseId:long}/edit")]
     public async Task<IActionResult> EditCourse(long courseId)
     {
         var course = await _courseService.GetCourseByIdAsync(courseId);
@@ -98,7 +99,7 @@ public class CourseController : BaseCourseController
     }
     
     [HttpPost]
-    [Route("course-management/{courseId:long}/edit")]
+    [Route("{courseId:long}/edit")]
     public async Task<IActionResult> EditCoursePost([FromRoute]long courseId, [FromForm] CourseFormModel form)
     {
         if (!ModelState.IsValid)
@@ -119,7 +120,7 @@ public class CourseController : BaseCourseController
     }
     
     [HttpGet]
-    [Route("course-management/{courseId:long}/teebox/{teeboxId:long}")]
+    [Route("{courseId:long}/teebox/{teeboxId:long}")]
     public async Task<IActionResult> ViewTeebox([FromRoute] long courseId, [FromRoute] long teeboxId)
     {
         var tee = await _teeboxService.GetTeeByIdAsync(teeboxId);
@@ -146,7 +147,7 @@ public class CourseController : BaseCourseController
     
     
     [HttpGet]
-    [Route("course-management/{courseId:long}/teebox/add")]
+    [Route("{courseId:long}/teebox/add")]
     public async Task<IActionResult> AddTee([FromRoute] long courseId)
     {
         // We are going to check if any teeboxes exist for this course. If so, we can reuse the par and handicap, only yardages will change.
@@ -181,7 +182,7 @@ public class CourseController : BaseCourseController
     
     
     [HttpPost]
-    [Route("course-management/{courseId:long}/teebox/add")]
+    [Route("{courseId:long}/teebox/add")]
     public async Task<IActionResult> AddTeePost([FromRoute] long courseId, [FromForm] TeeboxFormModel form)
     {
         if (!ModelState.IsValid)
@@ -209,7 +210,7 @@ public class CourseController : BaseCourseController
     
     
     [HttpGet]
-    [Route("course-management/{courseId:long}/teebox/{teeboxId:long}/edit")]
+    [Route("{courseId:long}/teebox/{teeboxId:long}/edit")]
     public async Task<IActionResult> EditTee([FromRoute] long courseId, [FromRoute] long teeboxId)
     {
         var tee = await _teeboxService.GetTeeByIdAsync(teeboxId);
@@ -242,7 +243,7 @@ public class CourseController : BaseCourseController
     }
     
     [HttpPost]
-    [Route("course-management/{courseId:long}/teebox/{teeboxId:long}/edit")]
+    [Route("{courseId:long}/teebox/{teeboxId:long}/edit")]
     public async Task<IActionResult> EditTeePost([FromRoute] long courseId, [FromRoute] long teeboxId, [FromForm] TeeboxFormModel form)
     {
         if (!ModelState.IsValid)
