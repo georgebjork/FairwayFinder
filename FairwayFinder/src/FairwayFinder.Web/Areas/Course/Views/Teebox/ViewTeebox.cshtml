@@ -9,7 +9,7 @@
         <h1>@Model.Teebox.teebox_name</h1>
     </div>
     <div class="col-auto">
-        <a class="btn btn-link me-2" asp-action="ViewCourse" asp-route-courseId="@Model.Teebox.course_id">
+        <a class="btn btn-link me-2" asp-controller="Course" asp-action="ViewCourse" asp-route-courseId="@Model.Teebox.course_id">
             <i class="fa-solid fa-arrow-left"></i> Back to Course
         </a>
         <a class="btn btn-sm btn-secondary" asp-action="EditTee" asp-route-courseId="@Model.Teebox.course_id" asp-route-teeboxId="@Model.Teebox.teebox_id">

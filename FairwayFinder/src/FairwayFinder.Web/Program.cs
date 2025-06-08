@@ -9,6 +9,7 @@ using FairwayFinder.Web.Authorization.ScorecardManagement;
 using Microsoft.AspNetCore.Identity;
 using FairwayFinder.Web.Data;
 using FairwayFinder.Web.Data.Database;
+using FairwayFinder.Web.Middleware;
 using Microsoft.AspNetCore.Authentication.Cookies;
 
 
@@ -96,6 +97,8 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+app.UseMiddleware<HtmxRedirectMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
