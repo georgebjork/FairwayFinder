@@ -1,6 +1,9 @@
-﻿using FairwayFinder.Core.Features.GolfCourse.Models.FormModels;
+﻿using FairwayFinder.Core.Features.GolfCourse.Models;
+using FairwayFinder.Core.Features.GolfCourse.Models.FormModels;
 using FairwayFinder.Core.Features.GolfCourse.Models.ViewModels;
+using FairwayFinder.Core.Features.GolfCourse.Services.Interfaces;
 using FairwayFinder.Core.Helpers;
+using FairwayFinder.Core.Services;
 using FairwayFinder.Core.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,15 +14,17 @@ public class CourseController : BaseCourseController
 {
     private readonly ILogger<CourseController> _logger;
     private readonly ICourseService _courseService;
+    private readonly ICourseStatsService _courseStatsService;
     private readonly ITeeboxService _teeboxService;
-    private readonly IHoleService _holeService;
+    private readonly IUsernameRetriever _usernameRetriever;
 
-    public CourseController(ILogger<CourseController> logger, ICourseService courseService, ITeeboxService teeboxService, IHoleService holeService)
+    public CourseController(ILogger<CourseController> logger, ICourseService courseService, ITeeboxService teeboxService, ICourseStatsService courseStatsService, IUsernameRetriever usernameRetriever)
     {
         _logger = logger;
         _courseService = courseService;
         _teeboxService = teeboxService;
-        _holeService = holeService;
+        _courseStatsService = courseStatsService;
+        _usernameRetriever = usernameRetriever;
     }
 
     [Route("all")]
@@ -38,6 +43,7 @@ public class CourseController : BaseCourseController
     {
         var course = await _courseService.GetCourseByIdAsync(courseId);
         var tees = await _teeboxService.GetTeesForCourseAsync(courseId);
+        var course_stats = await _courseStatsService.GetAllCourseStatsAsync(new CourseStatsRequest { CourseId = courseId, UserId = _usernameRetriever.UserId });
         
         if (course == null)
         {
@@ -48,7 +54,8 @@ public class CourseController : BaseCourseController
         var vm = new CourseViewModel
         {
             Course = course,
-            Teeboxes = tees
+            Teeboxes = tees,
+            CourseStats = course_stats
         };
         
         return View(vm);

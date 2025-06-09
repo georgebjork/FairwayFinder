@@ -1,0 +1,19 @@
+@model FairwayFinder.Core.Features.GolfCourse.Models.ResponseModels.CourseStatsResponse
+
+<div class="row">
+    <div class="col-auto">
+        <h1>Statistics</h1>
+    </div>
+</div>
+
+<div class="row row-cols-4 g-2 my-3">
+    @await Html.PartialAsync("CourseStats/_RoundCounts", Model.RoundScores)
+</div>
+
+<div class="row row-cols-9 g-2 my-3">
+    @await Html.PartialAsync("CourseStats/_ScoreCounts", Model.ScoreCounts)
+</div>
+
+<div class="row row-cols-3 g-2 my-3">
+    @await Html.PartialAsync("CourseStats/_HoleStats", Model.HoleStats)
+</div>

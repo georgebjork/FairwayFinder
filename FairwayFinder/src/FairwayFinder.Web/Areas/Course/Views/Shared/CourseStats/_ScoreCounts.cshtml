@@ -1,0 +1,106 @@
+@using FairwayFinder.Core.Features.GolfCourse.Models.ResponseModels
+
+@model CourseStatsScoreCountsResponse
+
+@if (Model.HoleInOnes > 0)
+{
+    <div class="col">
+        <div class="card">
+            <div class="card-header text-center fw-bold">
+                Hole In One
+            </div>
+            <div class="card-body">
+                <p class="text-center card-text">@Model.HoleInOnes</p>
+            </div>
+        </div>
+    </div> 
+}
+
+@if (Model.Albatross > 0)
+{
+    <div class="col">
+        <div class="card">
+            <div class="card-header text-center fw-bold">
+                Albatross
+            </div>
+            <div class="card-body">
+                <p class="text-center card-text">@Model.Albatross</p>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="col">
+    <div class="card">
+        <div class="card-header text-center fw-bold">
+            Eagle
+        </div>
+        <div class="card-body">
+            <p class="text-center card-text">@Model.Eagle</p>
+        </div>
+    </div>
+</div>
+
+<div class="col">
+    <div class="card">
+        <div class="card-header text-center fw-bold">
+            Birdie
+        </div>
+        <div class="card-body">
+            <p class="text-center card-text">@Model.Birdie</p>
+        </div>
+    </div>
+</div>
+
+<div class="col">
+    <div class="card">
+        <div class="card-header text-center fw-bold">
+            Par
+        </div>
+        <div class="card-body">
+            <p class="text-center card-text">@Model.Par</p>
+        </div>
+    </div>
+</div>
+
+<div class="col">
+    <div class="card">
+        <div class="card-header text-center fw-bold">
+            Bogey
+        </div>
+        <div class="card-body">
+            <p class="text-center card-text">@Model.Bogey</p>
+        </div>
+    </div>
+</div>
+
+<div class="col">
+    <div class="card">
+        <div class="card-header text-center fw-bold">
+            Double Bogey
+        </div>
+        <div class="card-body">
+            <p class="text-center card-text">@Model.DoubleBogey</p>
+        </div>
+    </div>
+</div>
+
+<div class="col">
+    <div class="card">
+        <div class="card-header text-center fw-bold">
+            Worse
+        </div>
+        <div class="card-body">
+            <p class="text-center card-text">@Model.Worse</p>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,35 @@
+@using FairwayFinder.Core.Features.GolfCourse.Models.ResponseModels
+
+@model List<CourseStatsHoleStatsResponse>
+
+@foreach (var hole in Model)
+{
+    <div class="col">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <div><strong>Hole: @hole.HoleNumber</strong></div>
+                <div><strong>Par: @hole.Par</strong> | <strong>@hole.Handicap Hdcp</strong></div>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><strong>Average Score</strong></span>
+                        <span>@hole.AverageScore.ToString("0.00")</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><strong>Best Score</strong></span>
+                        <span>@hole.BestScore</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><strong>Worst Score</strong></span>
+                        <span>@hole.WorseScore</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><strong>Times Played</strong></span>
+                        <span>@hole.TimesPlayed</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+}
