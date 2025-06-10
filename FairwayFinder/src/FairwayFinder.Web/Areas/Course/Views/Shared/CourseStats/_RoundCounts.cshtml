@@ -1,0 +1,53 @@
+@using FairwayFinder.Core.Features.GolfCourse.Models.ResponseModels
+
+@model CourseStatsRoundsResponse
+
+<!-- Round Counts -->
+<div class="col">
+    <div class="card h-100">
+        <div class="card-header text-center fw-bold">
+            Round Counts (18 / 9)
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center">
+            <p class="card-text mb-0">@Model.RoundsCount / @Model.RoundsNineHoleCount</p>
+        </div>
+    </div>
+</div>
+
+<!-- Average Score -->
+<div class="col">
+    <div class="card h-100">
+        <div class="card-header text-center fw-bold">
+            Average Score (18 / 9)
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center">
+            <p class="card-text mb-0">
+                @Model.AvgScore.ToString("0.00") / @Model.AvgNineHoleScore.ToString("0.00")
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Best Round -->
+<div class="col">
+    <div class="card h-100">
+        <div class="card-header text-center fw-bold">
+            Best Round (18 / 9)
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center">
+            <p class="card-text mb-0">@Model.LowScore / @Model.LowNineHoleScore</p>
+        </div>
+    </div>
+</div>
+
+<!-- Worst Round -->
+<div class="col">
+    <div class="card h-100">
+        <div class="card-header text-center fw-bold">
+            Worst Round (18 / 9)
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center">
+            <p class="card-text mb-0">@Model.HighScore / @Model.HighNineHoleScore</p>
+        </div>
+    </div>
+</div>

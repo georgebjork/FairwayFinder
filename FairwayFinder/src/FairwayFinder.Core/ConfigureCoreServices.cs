@@ -1,6 +1,10 @@
 ﻿using FairwayFinder.Core.Authorization;
 using FairwayFinder.Core.Authorization.Repositories;
 using FairwayFinder.Core.Features.Dashboard.Services;
+using FairwayFinder.Core.Features.GolfCourse.Repository;
+using FairwayFinder.Core.Features.GolfCourse.Repository.Interfaces;
+using FairwayFinder.Core.Features.GolfCourse.Services;
+using FairwayFinder.Core.Features.GolfCourse.Services.Interfaces;
 using FairwayFinder.Core.Features.Profile.Services;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
 using FairwayFinder.Core.Features.Scorecards.Services;
@@ -22,6 +26,7 @@ public static class ConfigureCoreServices
         // Repositories
         services.AddTransient<IUserManagementRepository, UserManagementRepository>();
         services.AddTransient<ICourseRepository, CourseRepository>();
+        services.AddTransient<ICourseStatsRepository, CourseStatsRepository>();
         services.AddTransient<ITeeboxRepository, TeeboxRepository>();
         services.AddTransient<IHoleRepository, HoleRepository>();
         services.AddTransient<IScorecardRepository, ScorecardRepository>();
@@ -36,6 +41,7 @@ public static class ConfigureCoreServices
         services.AddTransient<IFileUploadService, UploadThingService>();
         services.AddTransient<IProfileService, ProfileService>();
         services.AddTransient<ICourseService, CourseService>();
+        services.AddTransient<ICourseStatsService, CourseStatsService>();
         services.AddTransient<ITeeboxService, TeeboxService>();
         services.AddTransient<IHoleService, HoleService>();
         services.AddTransient<IScorecardService, ScorecardService>();
