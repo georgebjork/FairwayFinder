@@ -36,18 +36,25 @@ public class CourseStatsService : ICourseStatsService
     {
         var rounds = await _repository.GetRoundsListAsync(request);
 
-        var response = new CourseStatsRoundsResponse
+        var response = new CourseStatsRoundsResponse();
+        
+        // Make sure we have 18 hole rounds
+        if (rounds.Any(x => x.FullRound))
         {
-            RoundsCount = rounds.Count(x => x.FullRound),
-            AvgScore = Math.Round(rounds.Where(x => x.FullRound).Average(x => x.Score), 2),
-            LowScore = rounds.Where(x => x.FullRound).Min(x => x.Score),
-            HighScore = rounds.Where(x => x.FullRound).Max(x => x.Score),
-            
-            RoundsNineHoleCount = rounds.Count(x => !x.FullRound),
-            AvgNineHoleScore = Math.Round(rounds.Where(x => !x.FullRound).Average(x => x.Score), 2),            
-            LowNineHoleScore = rounds.Where(x => !x.FullRound).Min(x => x.Score),
-            HighNineHoleScore = rounds.Where(x => !x.FullRound).Max(x => x.Score),
-        };
+            response.RoundsCount = rounds.Count(x => x.FullRound);
+            response.AvgScore = Math.Round(rounds.Where(x => x.FullRound).Average(x => x.Score), 2);
+            response.LowScore = rounds.Where(x => x.FullRound).Min(x => x.Score);
+            response.HighScore = rounds.Where(x => x.FullRound).Max(x => x.Score);
+        }
+        
+        // Make sure we have 9 hole rounds.
+        if (rounds.Any(x => !x.FullRound))
+        {
+            response.RoundsNineHoleCount = rounds.Count(x => !x.FullRound);
+            response.AvgNineHoleScore = Math.Round(rounds.Where(x => !x.FullRound).Average(x => x.Score), 2);
+            response.LowNineHoleScore = rounds.Where(x => !x.FullRound).Min(x => x.Score);
+            response.HighNineHoleScore = rounds.Where(x => !x.FullRound).Max(x => x.Score);
+        }
 
         return response;
     }
