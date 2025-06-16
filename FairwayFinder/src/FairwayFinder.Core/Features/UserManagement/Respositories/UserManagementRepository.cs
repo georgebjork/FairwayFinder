@@ -4,22 +4,21 @@ using FairwayFinder.Core.Repositories;
 using FairwayFinder.Core.Repositories.Interfaces;
 using FairwayFinder.Core.UserManagement.Models;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 
-namespace FairwayFinder.Core.UserManagement.Respositories;
+namespace FairwayFinder.Core.Features.UserManagement.Respositories;
 
 public interface IUserManagementRepository : IBaseRepository
 {
-    public Task<List<ApplicationUser>> GetAllUsers();
-    public Task<List<ApplicationUser>> GetAllConfirmedUsers();
-    public Task<List<ApplicationUser>> GetAllPendingUsers();
-    public Task<List<UserInvitation>> GetAllInvitedUsers();
-    public Task<List<string>> FindAllSimilarUsernames(string user_name);
+    Task<List<ApplicationUser>> GetAllUsers();
+    Task<List<ApplicationUser>> GetAllConfirmedUsers();
+    Task<List<ApplicationUser>> GetAllPendingUsers();
+    Task<List<UserInvitation>> GetAllInvitedUsers();
+    Task<List<string>> FindAllSimilarUsernames(string userName);
     Task<UserInvitation?> GetInvite(string inviteId);
     Task<string?> GetUserIdByUsername(string username);
 }
 
-public class UserManagementRepository(IConfiguration configuration, ILogger<UserManagementRepository> logger) : BasePgRepository(configuration), IUserManagementRepository
+public class UserManagementRepository(IConfiguration configuration) : BasePgRepository(configuration), IUserManagementRepository
 {
     public async Task<List<ApplicationUser>> GetAllUsers()
     {

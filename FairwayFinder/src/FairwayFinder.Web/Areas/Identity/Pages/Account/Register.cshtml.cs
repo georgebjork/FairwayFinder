@@ -16,15 +16,15 @@ public class Register : PageModel
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<Register> _logger;
 
-    public Register(IUserManagementService user_management_service, UserManager<ApplicationUser> user_manager, ILogger<Register> logger)
+    public Register(IUserManagementService userManagementService, UserManager<ApplicationUser> userManager, ILogger<Register> logger)
     {
-        _userManagementService = user_management_service;
-        _userManager = user_manager;
+        _userManagementService = userManagementService;
+        _userManager = userManager;
         _logger = logger;
     }
 
     [BindProperty]
-    public InputModel Input { get; set; }
+    public InputModel Input { get; set; } = new();
     
     public string? ReturnUrl { get; set; }
     

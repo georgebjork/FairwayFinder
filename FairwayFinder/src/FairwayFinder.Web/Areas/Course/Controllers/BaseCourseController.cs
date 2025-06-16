@@ -1,4 +1,5 @@
-﻿using FairwayFinder.Web.Controllers;
+﻿using FairwayFinder.Core.Identity.Settings;
+using FairwayFinder.Web.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

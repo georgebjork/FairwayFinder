@@ -1,5 +1,6 @@
 ﻿using FairwayFinder.Core.Features.UserManagement.Models.FormModels;
 using FairwayFinder.Core.Identity;
+using FairwayFinder.Core.Identity.Settings;
 using FairwayFinder.Core.Services;
 using FairwayFinder.Core.UserManagement.Models.ViewModels;
 using FairwayFinder.Core.UserManagement.Services;

@@ -75,6 +75,11 @@ public class ScorecardController : BaseScorecardController
             SetErrorMessage("No round was returned with that Id");
             return Redirect(nameof(Index), new { username });
         }
+
+        if (user == null)
+        {
+            throw new ArgumentNullException(nameof(user));
+        }
         
         var vm = new ScorecardViewModel
         {

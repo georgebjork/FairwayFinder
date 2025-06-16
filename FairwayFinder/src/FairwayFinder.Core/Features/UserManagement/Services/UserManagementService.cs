@@ -1,7 +1,7 @@
-﻿using FairwayFinder.Core.Identity;
+﻿using FairwayFinder.Core.Features.UserManagement.Respositories;
+using FairwayFinder.Core.Identity;
 using FairwayFinder.Core.Services;
 using FairwayFinder.Core.UserManagement.Models;
-using FairwayFinder.Core.UserManagement.Respositories;
 using Microsoft.AspNetCore.Identity;
 
 namespace FairwayFinder.Core.UserManagement.Services;

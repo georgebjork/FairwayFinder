@@ -69,8 +69,13 @@ public class ScorecardManagementController : BaseScorecardController
     {
         var course = await _courseService.GetCourseByIdAsync(courseId);
         var teebox_select = await _lookupRepository.GetTeesForCourseAsync(courseId);
+
+        if (course == null)
+        {
+            throw new ArgumentNullException(nameof(course));
+        }
         
-        // Build form. Cache this. We want to reuse it across forms so less data retrival.
+        // Build form. Cache this. We want to reuse it across forms so fewer data retrieval.
         var form = new ScorecardFormModel
         {
             Course = course,

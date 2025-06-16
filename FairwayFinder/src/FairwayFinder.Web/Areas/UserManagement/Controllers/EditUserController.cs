@@ -9,13 +9,11 @@ namespace FairwayFinder.Web.Areas.UserManagement.Controllers;
 
 public class EditUserController : BaseUserManagementController
 {
-    private readonly ILogger<EditUserController> _logger;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IAuthorizationService _authorizationService;
 
-    public EditUserController(ILogger<EditUserController> logger, UserManager<ApplicationUser> userManager, IAuthorizationService authorizationService)
+    public EditUserController(UserManager<ApplicationUser> userManager, IAuthorizationService authorizationService)
     {
-        _logger = logger;
         _userManager = userManager;
         _authorizationService = authorizationService;
     }
@@ -30,7 +28,7 @@ public class EditUserController : BaseUserManagementController
         
         var user = await _userManager.FindByIdAsync(userId);
 
-        // Dont want to edit a user that does not exist
+        // Don't want to edit a user that does not exist
         if (user is null)
         {
             SetErrorMessage("User was not found");
@@ -47,7 +45,7 @@ public class EditUserController : BaseUserManagementController
     {
         var user = await _userManager.FindByIdAsync(userId);
 
-        // Dont want to edit a user that does not exist
+        // Don't want to edit a user that does not exist
         if (user is null)
         {
             SetErrorMessage("User was not found");
@@ -82,14 +80,14 @@ public class EditUserController : BaseUserManagementController
         
         var user = await _userManager.FindByIdAsync(userId);
 
-        // Dont want to edit a user that does not exist
+        // Don't want to edit a user that does not exist
         if (user is null)
         {
             SetErrorMessageHtmx("The user you are updating was not found.");
             return PartialView("_EditUserRolesForm", form);
         }
 
-        var valid_role =  Roles.GetAllRoles().Contains(form.SelectRole!);
+        var valid_role =  Roles.GetAllRoles().Contains(form.SelectRole);
 
         if (!valid_role)
         {
@@ -97,7 +95,7 @@ public class EditUserController : BaseUserManagementController
             return PartialView("_EditUserRolesForm", form);
         }
         
-        var rv = await _userManager.AddToRoleAsync(user, form.SelectRole!);
+        var rv = await _userManager.AddToRoleAsync(user, form.SelectRole);
 
         if (!rv.Succeeded)
         {
@@ -129,14 +127,14 @@ public class EditUserController : BaseUserManagementController
         
         var user = await _userManager.FindByIdAsync(userId);
 
-        // Dont want to edit a user that does not exist
+        // Don't want to edit a user that does not exist
         if (user is null)
         {
             SetErrorMessageHtmx("The user you are updating was not found.");
             return PartialView("_EditUserRolesForm", form);
         }
 
-        var valid_role =  Roles.GetAllRoles().Contains(form.SelectRole!);
+        var valid_role =  Roles.GetAllRoles().Contains(form.SelectRole);
 
         if (!valid_role)
         {
@@ -144,7 +142,7 @@ public class EditUserController : BaseUserManagementController
             return PartialView("_EditUserRolesForm", form);
         }
         
-        var rv = await _userManager.RemoveFromRoleAsync(user, form.SelectRole!);
+        var rv = await _userManager.RemoveFromRoleAsync(user, form.SelectRole);
 
         if (!rv.Succeeded)
         {

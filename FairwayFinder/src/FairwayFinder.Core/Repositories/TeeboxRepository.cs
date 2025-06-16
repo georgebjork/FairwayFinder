@@ -3,10 +3,11 @@ using Dapper.Contrib.Extensions;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Repositories.Interfaces;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Core.Repositories;
 
-public class TeeboxRepository(IConfiguration configuration) : BasePgRepository(configuration), ITeeboxRepository
+public class TeeboxRepository(IConfiguration configuration, ILogger<TeeboxRepository> logger) : BasePgRepository(configuration), ITeeboxRepository
 {
     public async Task<Teebox?> GetTeeByIdAsync(long teeboxId)
     {
@@ -53,6 +54,8 @@ public class TeeboxRepository(IConfiguration configuration) : BasePgRepository(c
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "An error occurred creating tee.");
+            
             await trans.RollbackAsync();
             return -1;
         }
@@ -76,6 +79,8 @@ public class TeeboxRepository(IConfiguration configuration) : BasePgRepository(c
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "An error occurred updating tee.");
+            
             await trans.RollbackAsync();
             return false;
         }

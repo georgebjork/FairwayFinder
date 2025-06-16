@@ -1,11 +1,11 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace FairwayFinder.Core.HttpClients.UploadThing.Models;
+namespace FairwayFinder.Core.HttpClients.UploadThing.Models.Requests;
 
 public class UploadThingMetadataRequest
 {
     [JsonPropertyName("fileKeys")]
-    public string[] FileKeys { get; set; }
+    public string[] FileKeys { get; set; } = [];
 
     [JsonPropertyName("metadata")]
     public object Metadata { get; set; } = new { };

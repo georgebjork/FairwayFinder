@@ -1,4 +1,5 @@
-﻿using FairwayFinder.Core.Services;
+﻿using FairwayFinder.Core.Identity.Settings;
+using FairwayFinder.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace FairwayFinder.Web.Authorization.Profile;

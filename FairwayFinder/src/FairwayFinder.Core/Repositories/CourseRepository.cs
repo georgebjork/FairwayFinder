@@ -1,13 +1,11 @@
 ﻿using Dapper;
-using Dapper.Contrib.Extensions;
 using FairwayFinder.Core.Models;
 using FairwayFinder.Core.Repositories.Interfaces;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Core.Repositories;
 
-public class CourseRepository(IConfiguration configuration, ILogger<CourseRepository> repository) : BasePgRepository(configuration), ICourseRepository
+public class CourseRepository(IConfiguration configuration) : BasePgRepository(configuration), ICourseRepository
 {
     public async Task<List<Course>> GetAllCoursesAsync()
     {

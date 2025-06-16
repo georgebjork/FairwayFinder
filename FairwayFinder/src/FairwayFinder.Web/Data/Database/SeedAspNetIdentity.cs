@@ -1,4 +1,5 @@
 ﻿using FairwayFinder.Core.Identity;
+using FairwayFinder.Core.Identity.Settings;
 using Microsoft.AspNetCore.Identity;
 
 namespace FairwayFinder.Web.Data.Database;

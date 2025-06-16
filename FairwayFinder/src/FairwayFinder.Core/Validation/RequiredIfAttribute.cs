@@ -14,7 +14,7 @@ public class RequiredIfAttribute : ValidationAttribute
         _requiredValue = requiredValue;
     }
 
-    protected override ValidationResult IsValid(object currentValue, ValidationContext validationContext)
+    protected override ValidationResult? IsValid(object? currentValue, ValidationContext validationContext)
     {
         // Get the dependent property info
         var dependentProperty = validationContext.ObjectType.GetProperty(_dependentPropertyName);

@@ -48,7 +48,7 @@ builder.Services.ConfigureApplicationCookie(o => {
             ctx.HttpContext.Session.Clear();
             return Task.CompletedTask;
         }
-        catch(Exception ex)
+        catch(Exception)
         {
             return Task.CompletedTask;
         }

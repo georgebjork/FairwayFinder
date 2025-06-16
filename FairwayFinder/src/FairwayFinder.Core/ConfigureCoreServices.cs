@@ -8,12 +8,12 @@ using FairwayFinder.Core.Features.GolfCourse.Services.Interfaces;
 using FairwayFinder.Core.Features.Profile.Services;
 using FairwayFinder.Core.Features.Scorecards.Repositories;
 using FairwayFinder.Core.Features.Scorecards.Services;
+using FairwayFinder.Core.Features.UserManagement.Respositories;
 using FairwayFinder.Core.Repositories;
 using FairwayFinder.Core.Repositories.Interfaces;
 using FairwayFinder.Core.Services;
 using FairwayFinder.Core.Services.Interfaces;
 using FairwayFinder.Core.Stats.Repositories;
-using FairwayFinder.Core.UserManagement.Respositories;
 using FairwayFinder.Core.UserManagement.Services;
 using Microsoft.Extensions.DependencyInjection;
 

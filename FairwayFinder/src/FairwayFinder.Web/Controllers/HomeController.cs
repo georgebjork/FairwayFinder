@@ -54,13 +54,6 @@ public class HomeController : BaseAuthorizedController
     }
     
     [Route("file-test")]
-    [HttpGet]
-    public async Task<IActionResult> TestFileUpload()
-    {
-        return View();
-    }
-    
-    [Route("file-test")]
     [HttpPost]
     public async Task<IActionResult> TestFileUpload(IFormFile file)
     {

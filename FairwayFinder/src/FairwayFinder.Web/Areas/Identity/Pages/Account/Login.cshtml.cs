@@ -15,10 +15,10 @@ public class Login : PageModel
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<Login> _logger;
 
-    public Login(SignInManager<ApplicationUser> sign_in_manager, UserManager<ApplicationUser> user_manager, ILogger<Login> logger)
+    public Login(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager, ILogger<Login> logger)
     {
-        _signInManager = sign_in_manager;
-        _userManager = user_manager;
+        _signInManager = signInManager;
+        _userManager = userManager;
         _logger = logger;
     }
     
@@ -26,7 +26,7 @@ public class Login : PageModel
     public InputModel Input { get; set; } = new();
     
     [TempData]
-    public string ErrorMessage { get; set; }
+    public string ErrorMessage { get; set; } = string.Empty;
     
     public string? ReturnUrl { get; set; }
     

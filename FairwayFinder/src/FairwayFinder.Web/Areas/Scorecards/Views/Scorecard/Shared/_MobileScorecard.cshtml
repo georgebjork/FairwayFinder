@@ -80,7 +80,7 @@
                     @await Html.PartialAsync("Shared/_GreenStatIcon", hole_stats)
                 </td>
                 
-                if (hole_stats.number_of_putts >= 3)
+                if (hole_stats!.number_of_putts >= 3)
                 {
                     <td class="text-center text-danger">@hole_stats.number_of_putts</td>
                 }

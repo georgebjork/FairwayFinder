@@ -1,19 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+﻿using System.Reflection;
+namespace FairwayFinder.Core.Identity.Settings;
 
 public static class Roles
 {
     public const string Admin = "Admin";
     public const string User = "User";
 
+    private static readonly Lazy<List<string>> _all_roles = new(() =>
+    {
+        var roles = new List<string>();
+        var fields = typeof(Roles).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+
+        foreach (var field in fields)
+        {
+            if (field.IsLiteral && !field.IsInitOnly && field.FieldType == typeof(string))
+            {
+                if (field.GetValue(null) is string value)
+                {
+                    roles.Add(value);
+                }
+            }
+        }
+
+        return roles;
+    });
+
     public static List<string> GetAllRoles()
     {
-        return typeof(Roles)
-            .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
-            .Where(fi => fi.IsLiteral && !fi.IsInitOnly) // Ensure it's a constant
-            .Select(fi => fi.GetValue(null).ToString())
-            .ToList();
+        return _all_roles.Value;
     }
 }
