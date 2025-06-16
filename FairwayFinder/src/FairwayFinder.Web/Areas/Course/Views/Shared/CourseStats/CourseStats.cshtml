@@ -9,7 +9,7 @@
     <div class="row">
         <div class="col-auto">
             <label class="form-label"> Start Date </label>
-            <input class="form-control" type="date" value="@Model.StatsRequest.StartDate"
+            <input class="form-control" type="date" value="@(Model.StatsRequest.StartDate.HasValue ? Model.StatsRequest.StartDate.Value.ToString("yyyy-MM-dd") : "")"
                    name="StartDate"
                    hx-get="@Url.Action("GetCourseStats", "CourseStats", Model.StatsRequest)"
                    hx-target="#course-stats"
@@ -20,8 +20,8 @@
 
         <div class="col-auto">
             <label class="form-label"> End Date </label>
-            <input class="form-control" type="date" value="@Model.StatsRequest.EndDate"
-                    name="EndDate"
+            <input class="form-control" type="date" value="@(Model.StatsRequest.EndDate.HasValue ? Model.StatsRequest.EndDate.Value.ToString("yyyy-MM-dd") : "")"
+                   name="EndDate"
                     hx-get="@Url.Action("GetCourseStats", "CourseStats", Model.StatsRequest)"
                     hx-target="#course-stats"
                     hx-swap="outerHTML"

@@ -30,7 +30,12 @@ public class CourseStatsController : BaseCourseController
         {
             throw new ArgumentOutOfRangeException($"{nameof(request.CourseId)} must be non null and greater than 0");
         }
-        request.UserId = _usernameRetriever.UserId;
+
+        if (string.IsNullOrEmpty(request.UserId))
+        {
+            request.UserId = _usernameRetriever.UserId;
+        }
+        
         var course = await _courseService.GetCourseByIdAsync(request.CourseId);
 
         if (course == null)
