@@ -140,6 +140,7 @@ public class CourseStatsRepository(IConfiguration configuration) : BasePgReposit
             endDate = request.EndDate,
             userId = request.UserId
         });
+
         return rv.ToList();
     }
 }
