@@ -22,8 +22,31 @@ public class CourseStatsRepository(IConfiguration configuration) : BasePgReposit
             FROM round as r 
             WHERE r.course_id = @courseId AND r.is_deleted = false AND r.user_id = @userId
         ";
+        
+        if (request.TeeboxId is > 0)
+        {
+            sql += " AND r.teebox_id = @teeboxId";
+        }
+        
+        if (request.StartDate != null)
+        {
+            sql += " AND r.date_played >= @startDate";
+        }
+        
+        if (request.EndDate != null)
+        {
+            sql += " AND r.date_played <= @endDate";
+        }
+        
         await using var conn = await GetNewOpenConnection();
-        var rv = await conn.QueryAsync<CourseStatsRoundQueryModel>(sql, new { courseId = request.CourseId, userId = request.UserId });
+        var rv = await conn.QueryAsync<CourseStatsRoundQueryModel>(sql, new
+        {
+            courseId = request.CourseId, 
+            teeboxId = request.TeeboxId,
+            startDate = request.StartDate,
+            endDate = request.EndDate,
+            userId = request.UserId
+        });
         return rv.ToList();
     }
     
@@ -44,10 +67,34 @@ public class CourseStatsRepository(IConfiguration configuration) : BasePgReposit
             FROM hole AS h
             INNER JOIN score AS s ON s.hole_id = h.hole_id
             INNER JOIN round as r ON s.round_id = r.round_id
-            WHERE h.course_id = @courseId AND r.user_id = @userId AND r.is_deleted = false;
+            WHERE h.course_id = @courseId AND r.user_id = @userId AND r.is_deleted = false
         ";
+
+        if (request.TeeboxId is > 0)
+        {
+            sql += " AND h.teebox_id = @teeboxId";
+        }
+        
+        if (request.StartDate != null)
+        {
+            sql += " AND r.date_played >= @startDate";
+        }
+        
+        if (request.EndDate != null)
+        {
+            sql += " AND r.date_played <= @endDate";
+        }
+        
+        
         await using var conn = await GetNewOpenConnection();
-        var rv = await conn.QueryAsync<CourseStatsScoresQueryModel>(sql, new { courseId = request.CourseId, userId = request.UserId });
+        var rv = await conn.QueryAsync<CourseStatsScoresQueryModel>(sql, new
+        {
+            courseId = request.CourseId, 
+            teeboxId = request.TeeboxId,
+            startDate = request.StartDate,
+            endDate = request.EndDate,
+            userId = request.UserId
+        });
         return rv.ToList();
     }
 
@@ -64,10 +111,36 @@ public class CourseStatsRepository(IConfiguration configuration) : BasePgReposit
               INNER JOIN score as s ON s.round_id = r.round_id
               INNER JOIN hole as h ON h.hole_id = s.hole_id
             WHERE r.course_id = @courseId AND r.is_deleted = false AND r.user_id = @userId
-            GROUP BY h.hole_number, h.par, h.handicap
         ";
+
+        if (request.TeeboxId is > 0)
+        {
+            sql += " AND h.teebox_id = @teeboxId";
+        }
+        
+        if (request.StartDate != null)
+        {
+            sql += " AND r.date_played >= @startDate";
+        }
+        
+        if (request.EndDate != null)
+        {
+            sql += " AND r.date_played <= @endDate";
+        }
+        
+        // Query needs to end with a group by
+        sql += " GROUP BY h.hole_number, h.par, h.handicap";
+        
         await using var conn = await GetNewOpenConnection();
-        var rv = await conn.QueryAsync<CourseStatsHoleStatsResponse>(sql, new { courseId = request.CourseId, userId = request.UserId });
+        var rv = await conn.QueryAsync<CourseStatsHoleStatsResponse>(sql, new
+        {
+            courseId = request.CourseId, 
+            teeboxId = request.TeeboxId,
+            startDate = request.StartDate,
+            endDate = request.EndDate,
+            userId = request.UserId
+        });
+
         return rv.ToList();
     }
 }

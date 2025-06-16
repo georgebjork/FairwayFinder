@@ -50,7 +50,8 @@ public class CourseController : BaseCourseController
             SetErrorMessage("Course not found.");
             return RedirectToAction(nameof(Index));
         }
-        
+
+        course_stats.StatsRequest.CourseId = courseId;
         var vm = new CourseViewModel
         {
             Course = course,

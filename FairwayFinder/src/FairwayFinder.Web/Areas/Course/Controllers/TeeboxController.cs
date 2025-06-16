@@ -1,6 +1,9 @@
+using FairwayFinder.Core.Features.GolfCourse.Models;
 using FairwayFinder.Core.Features.GolfCourse.Models.FormModels;
 using FairwayFinder.Core.Features.GolfCourse.Models.ViewModels;
+using FairwayFinder.Core.Features.GolfCourse.Services.Interfaces;
 using FairwayFinder.Core.Helpers;
+using FairwayFinder.Core.Services;
 using FairwayFinder.Core.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,13 +17,17 @@ public class TeeboxController : BaseCourseController
     private readonly ICourseService _courseService;
     private readonly ITeeboxService _teeboxService;
     private readonly IHoleService _holeService;
+    private readonly ICourseStatsService _courseStatsService;
+    private readonly IUsernameRetriever _usernameRetriever;
 
-    public TeeboxController(ILogger<CourseController> logger, ICourseService courseService, ITeeboxService teeboxService, IHoleService holeService)
+    public TeeboxController(ILogger<CourseController> logger, ICourseService courseService, ITeeboxService teeboxService, IHoleService holeService, ICourseStatsService courseStatsService, IUsernameRetriever usernameRetriever)
     {
         _logger = logger;
         _courseService = courseService;
         _teeboxService = teeboxService;
         _holeService = holeService;
+        _courseStatsService = courseStatsService;
+        _usernameRetriever = usernameRetriever;
     }
     
     [HttpGet]
@@ -38,18 +45,27 @@ public class TeeboxController : BaseCourseController
         
         var course = await _courseService.GetCourseByIdAsync(courseId);
         var holes = await _holeService.GetHolesForTeeAsync(tee.teebox_id);
-
+        var teebox_stats = await _courseStatsService.GetAllCourseStatsAsync(new CourseStatsRequest
+        {
+            CourseId = courseId,
+            TeeboxId = teeboxId,
+            UserId = _usernameRetriever.UserId
+        });
+        
         if (course == null)
         {
             SetErrorMessageHtmx("Course does not exist.");
             return RedirectToAction(nameof(Index), "Course");
         }
         
+        teebox_stats.StatsRequest.CourseId = courseId;
+        teebox_stats.StatsRequest.TeeboxId = teeboxId;
         var vm = new TeeboxViewModel
         {
             Course = course,
             Teebox = tee,
-            Holes = holes
+            Holes = holes,
+            TeeboxStats = teebox_stats
         };
         return View(vm);
     }

@@ -1,3 +1,4 @@
+@using System.Globalization
 @using FairwayFinder.Core.Features.GolfCourse.Models.ResponseModels
 
 @model List<CourseStatsHoleStatsResponse>
@@ -14,7 +15,14 @@
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item d-flex justify-content-between">
                         <span><strong>Average Score</strong></span>
-                        <span>@hole.AverageScore.ToString("0.00")</span>
+                        <span>
+                            <span>
+                                @(hole.AverageScore - hole.Par >= 0 
+                                    ? "+" + (hole.AverageScore - hole.Par).ToString("F2") 
+                                    : (hole.AverageScore - hole.Par).ToString("F2"))
+                            </span>
+
+                        </span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between">
                         <span><strong>Best Score</strong></span>

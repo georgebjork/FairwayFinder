@@ -1,19 +1,44 @@
 @model FairwayFinder.Core.Features.GolfCourse.Models.ResponseModels.CourseStatsResponse
 
-<div class="row">
-    <div class="col-auto">
-        <h1>Statistics</h1>
+<div id="course-stats">
+    <div class="row">
+        <div class="col-auto">
+            <h1>Statistics</h1>
+        </div>
     </div>
-</div>
+    <div class="row">
+        <div class="col-auto">
+            <label class="form-label"> Start Date </label>
+            <input class="form-control" type="date" value="@(Model.StatsRequest.StartDate.HasValue ? Model.StatsRequest.StartDate.Value.ToString("yyyy-MM-dd") : "")"
+                   name="StartDate"
+                   hx-get="@Url.Action("GetCourseStats", "CourseStats", Model.StatsRequest)"
+                   hx-target="#course-stats"
+                   hx-swap="outerHTML"
+                   hx-trigger="change"
+                   hx-include="this"/>
+        </div>
 
-<div class="row row-cols-4 g-2 my-3">
-    @await Html.PartialAsync("CourseStats/_RoundCounts", Model.RoundScores)
-</div>
+        <div class="col-auto">
+            <label class="form-label"> End Date </label>
+            <input class="form-control" type="date" value="@(Model.StatsRequest.EndDate.HasValue ? Model.StatsRequest.EndDate.Value.ToString("yyyy-MM-dd") : "")"
+                   name="EndDate"
+                    hx-get="@Url.Action("GetCourseStats", "CourseStats", Model.StatsRequest)"
+                    hx-target="#course-stats"
+                    hx-swap="outerHTML"
+                    hx-trigger="change"
+                    hx-include="this"/>
+        </div>
+    </div>
 
-<div class="row row-cols-9 g-2 my-3">
-    @await Html.PartialAsync("CourseStats/_ScoreCounts", Model.ScoreCounts)
-</div>
+    <div class="row row-cols-4 g-2 my-3">
+        @await Html.PartialAsync("CourseStats/_RoundCounts", Model.RoundScores)
+    </div>
 
-<div class="row row-cols-3 g-2 my-3">
-    @await Html.PartialAsync("CourseStats/_HoleStats", Model.HoleStats)
+    <div class="row row-cols-9 g-2 my-3">
+        @await Html.PartialAsync("CourseStats/_ScoreCounts", Model.ScoreCounts)
+    </div>
+
+    <div class="row row-cols-3 g-2 my-3">
+        @await Html.PartialAsync("CourseStats/_HoleStats", Model.HoleStats)
+    </div>
 </div>
