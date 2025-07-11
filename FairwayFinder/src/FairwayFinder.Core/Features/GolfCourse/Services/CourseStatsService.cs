@@ -28,7 +28,7 @@ public class CourseStatsService : ICourseStatsService
         {
             ScoreCounts = score_counts,
             RoundScores = round_scores,
-            HoleStats = hole_stats
+            HoleStats = hole_stats.OrderBy(x => x.HoleNumber).ToList()
         };
     }
 
