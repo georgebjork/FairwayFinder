@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using FairwayFinder.Web.Components;
 using FairwayFinder.Web.Components.Account;
 using FairwayFinder.Web.Data;
-using Microsoft.FluentUI.AspNetCore.Components;
+using Radzen;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,7 +40,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
-builder.Services.AddFluentUIComponents();
+builder.Services.AddRadzenComponents();
 
 var app = builder.Build();
 
