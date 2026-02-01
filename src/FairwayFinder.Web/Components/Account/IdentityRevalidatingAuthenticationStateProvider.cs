@@ -1,9 +1,9 @@
 using System.Security.Claims;
+using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using FairwayFinder.Web.Data;
 
 namespace FairwayFinder.Web.Components.Account;
 
