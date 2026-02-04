@@ -1,18 +1,14 @@
 using FairwayFinder.Data;
-using FairwayFinder.Identity;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using FairwayFinder.Web.Components;
 using FairwayFinder.Web.Components.Account;
+using FairwayFinder.Web.Startup;
 using Radzen;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
-
+builder.Services.AddFairwayFinderAuthentication(builder.Configuration);
+builder.Services.AddFairwayFinderAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityRedirectManager>();
 
@@ -23,6 +19,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
 builder.Services.AddRadzenComponents();
 
 var app = builder.Build();
@@ -42,9 +40,12 @@ else
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseAntiforgery();
 
-app.MapStaticAssets();
+app.MapStaticAssets().AllowAnonymous();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

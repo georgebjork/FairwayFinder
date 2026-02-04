@@ -1,0 +1,182 @@
+@layout AuthenticationLayout
+@page "/register"
+@attribute [ExcludeFromInteractiveRouting]
+@attribute [AllowAnonymous]
+
+@using System.ComponentModel.DataAnnotations
+@using FairwayFinder.Identity
+@using FairwayFinder.Web.Components.Account
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<ApplicationUser> UserManager
+@inject IUserStore<ApplicationUser> UserStore
+@inject ILogger<Register> Logger
+@inject IdentityRedirectManager RedirectManager
+
+<RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 100%;">
+    <RadzenStack Gap="2rem" Style="width: 100%; max-width: 420px;">
+
+        <RadzenStack AlignItems="AlignItems.Center" Gap="1rem">
+            <RadzenImage Path="icon256x256.png" Style="width: 64px; height: 64px;" />
+            <RadzenText TextStyle="TextStyle.H3" Style="margin: 0;">Macula Blaze</RadzenText>
+        </RadzenStack>
+
+        <RadzenCard>
+            <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="register">
+                <DataAnnotationsValidator />
+                <RadzenStack Gap="1.5rem">
+                    <RadzenStack Gap="0.5rem">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                            <a href="/login" class="rz-button rz-button-sm rz-variant-filled rz-light rz-shade-default" style="min-width: 32px; padding: 4px; text-decoration: none; display: flex; align-items: center; justify-content: center;">
+                                <i class="rzi">arrow_back</i>
+                            </a>
+                            <RadzenText TextStyle="TextStyle.H5" Style="margin: 0;">Create an account</RadzenText>
+                        </RadzenStack>
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            Enter your information to get started
+                        </RadzenText>
+                    </RadzenStack>
+
+                    @if (_identity_errors is not null)
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter">
+                            Error: @string.Join(", ", _identity_errors.Select(error => error.Description))
+                        </RadzenAlert>
+                    }
+
+                    <RadzenRow Gap="1rem">
+                        <RadzenColumn Size="6">
+                            <RadzenFormField Text="First name" Variant="Variant.Outlined">
+                                <InputText @bind-Value="Input!.FirstName" class="rz-textbox" placeholder="John" />
+                                <ValidationMessage For="() => Input.FirstName" />
+                            </RadzenFormField>
+                        </RadzenColumn>
+                        <RadzenColumn Size="6">
+                            <RadzenFormField Text="Last name" Variant="Variant.Outlined">
+                                <InputText @bind-Value="Input!.LastName" class="rz-textbox" placeholder="Doe" />
+                                <ValidationMessage For="() => Input.LastName" />
+                            </RadzenFormField>
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                    <RadzenFormField Text="Email address" Variant="Variant.Outlined">
+                        <InputText @bind-Value="Input!.Email" class="rz-textbox" autocomplete="username" aria-required="true" placeholder="you@example.com" />
+                        <ValidationMessage For="() => Input.Email" />
+                    </RadzenFormField>
+
+                    <RadzenFormField Text="Password" Variant="Variant.Outlined">
+                        <InputText type="password" @bind-Value="Input!.Password" class="rz-textbox" autocomplete="new-password" aria-required="true" placeholder="Create a password" />
+                        <ValidationMessage For="() => Input.Password" />
+                    </RadzenFormField>
+
+                    <RadzenFormField Text="Confirm password" Variant="Variant.Outlined">
+                        <InputText type="password" @bind-Value="Input!.ConfirmPassword" class="rz-textbox" autocomplete="new-password" aria-required="true" placeholder="Confirm your password" />
+                        <ValidationMessage For="() => Input.ConfirmPassword" />
+                    </RadzenFormField>
+
+                    <RadzenButton
+                        ButtonType="ButtonType.Submit"
+                        Text="Create Account"
+                        Style="width: 100%;"
+                        ButtonStyle="ButtonStyle.Primary"
+                        Variant="Variant.Filled"
+                        Size="ButtonSize.Medium" />
+                    
+                    <RadzenStack AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            Already have an account? <RadzenLink Path="/login" Text="Sign in" />
+                        </RadzenText>
+                    </RadzenStack>
+                </RadzenStack>
+            </EditForm>
+        </RadzenCard>
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    private IEnumerable<IdentityError>? _identity_errors;
+
+    [SupplyParameterFromForm]
+    private InputModel? Input { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Input ??= new();
+    }
+
+    public async Task RegisterUser()
+    {
+        if (Input == null)
+        {
+            Logger.LogError("Input form in the register page came back null.");
+            return;
+        }
+
+        var user = CreateUser();
+        user.FirstName = Input.FirstName;
+        user.LastName = Input.LastName;
+        user.EmailConfirmed = true;
+        
+        await UserStore.SetUserNameAsync(user, Input!.Email, CancellationToken.None);
+        var emailStore = GetEmailStore();
+        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+        var result = await UserManager.CreateAsync(user, Input.Password);
+
+        if (!result.Succeeded)
+        {
+            _identity_errors = result.Errors;
+            return;
+        }
+
+        Logger.LogInformation("User {email} created a new account with password.", Input.Email);
+
+        // Redirect to confirmation page
+        RedirectManager.RedirectTo("/login");
+    }
+
+    private ApplicationUser CreateUser()
+    {
+        try
+        {
+            return Activator.CreateInstance<ApplicationUser>();
+        }
+        catch
+        {
+            throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'.");
+        }
+    }
+    
+    private IUserEmailStore<ApplicationUser> GetEmailStore()
+    {
+        if (!UserManager.SupportsUserEmail)
+        {
+            throw new NotSupportedException("The default UI requires a user store with email support.");
+        }
+        return (IUserEmailStore<ApplicationUser>)UserStore;
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        public string FirstName { get; set; } = "";
+
+        [Required]
+        public string LastName { get; set; } = "";
+
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+        
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
+}

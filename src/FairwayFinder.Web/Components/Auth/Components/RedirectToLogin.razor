@@ -1,0 +1,12 @@
+@inject NavigationManager NavigationManager
+
+@code {
+    protected override void OnInitialized()
+    {
+        var returnUrl = Uri.EscapeDataString(NavigationManager.Uri);
+        var loginUrl = $"/login?returnUrl={returnUrl}";
+        
+        // Use a full page redirect instead of Blazor navigation
+        NavigationManager.NavigateTo(loginUrl, forceLoad: true);
+    }
+}

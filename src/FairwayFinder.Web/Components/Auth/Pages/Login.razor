@@ -1,0 +1,146 @@
+@layout AuthenticationLayout
+@page "/login"
+@attribute [ExcludeFromInteractiveRouting]
+@attribute [AllowAnonymous]
+
+@using System.ComponentModel.DataAnnotations
+@using FairwayFinder.Identity
+@using FairwayFinder.Web.Components.Account
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject ILogger<Login> Logger
+@inject IdentityRedirectManager RedirectManager
+
+<RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 100%;">
+    <RadzenStack Gap="2rem" Style="width: 100%; max-width: 420px;">
+
+        <RadzenStack AlignItems="AlignItems.Center" Gap="1rem">
+            <RadzenText TextStyle="TextStyle.H3" Style="margin: 0;">FairwayFinder</RadzenText>
+        </RadzenStack>
+
+        <RadzenCard>
+            <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+                <DataAnnotationsValidator />
+                <RadzenStack Gap="1.5rem">
+                    <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Center">
+                        Sign in to your account to continue
+                    </RadzenText>
+
+                    @if (!string.IsNullOrEmpty(_error_message))
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter">
+                            @_error_message
+                        </RadzenAlert>
+                    }
+
+                    <RadzenFormField Text="Username" Variant="Variant.Outlined">
+                        <InputText @bind-Value="Input!.Email" class="rz-textbox" autocomplete="username" aria-required="true" placeholder="Enter your username" />
+                        <ValidationMessage For="() => Input.Email" />
+                    </RadzenFormField>
+
+                    <RadzenStack Gap="0.5rem">
+                        <RadzenFormField Text="Password" Variant="Variant.Outlined">
+                            <InputText type="password" @bind-Value="Input!.Password" class="rz-textbox" autocomplete="current-password" aria-required="true" placeholder="Enter your password" />
+                            <ValidationMessage For="() => Input.Password" />
+                        </RadzenFormField>
+                        <RadzenStack AlignItems="AlignItems.End">
+                            <RadzenLink Path="/forgot-password" Text="Forgot password?" />
+                        </RadzenStack>
+                    </RadzenStack>
+
+                    <RadzenButton
+                        ButtonType="ButtonType.Submit"
+                        Text="Sign in"
+                        Style="width: 100%;"
+                        ButtonStyle="ButtonStyle.Primary"
+                        Variant="Variant.Filled"
+                        Size="ButtonSize.Medium" />
+
+                    <RadzenStack AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.Body2">
+                            Don't have an account? <RadzenLink Path="/register" Text="Create account" />
+                        </RadzenText>
+                    </RadzenStack>
+                </RadzenStack>
+            </EditForm>
+        </RadzenCard>
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    private string? _error_message;
+
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    [SupplyParameterFromForm]
+    private InputModel? Input { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+
+        if (HttpContext is not null && HttpMethods.IsGet(HttpContext.Request.Method))
+        {
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+        }
+    }
+
+    public async Task LoginUser()
+    {
+        if (Input == null)
+        {
+            _error_message = "An error occurred signing you in.";
+            Logger.LogError("Input form in page Login came back null.");
+            return;
+        }
+
+        // Check if user exists and email is confirmed
+        var user = await UserManager.FindByEmailAsync(Input.Email);
+        if (user is not null && !await UserManager.IsEmailConfirmedAsync(user))
+        {
+            _error_message = "You must confirm your email before signing in. Please check your inbox.";
+            return;
+        }
+
+        var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, false, lockoutOnFailure: true);
+
+        if (result.Succeeded)
+        {
+            // Assign application role if user doesn't have one yet
+            if (user is not null)
+            {
+                var roles = await UserManager.GetRolesAsync(user);
+                if (roles.Count == 0)
+                {
+                    //await ApplicationRoleService.AssignRoleAsync(user, UserManager);
+                }
+                
+            }
+
+            Logger.LogInformation("User logged in.");
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else
+        {
+            _error_message = "Error: Invalid login attempt.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+    }
+}
