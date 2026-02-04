@@ -1,0 +1,10 @@
+<RadzenSidebar @bind-Expanded="Expanded">
+    <RadzenPanelMenu>
+        <RadzenPanelMenuItem Text="Home" Path="" Icon="home" />
+    </RadzenPanelMenu>
+</RadzenSidebar>
+
+@code {
+    [Parameter] public bool Expanded { get; set; } = true;
+    [Parameter] public EventCallback<bool> ExpandedChanged { get; set; }
+}
