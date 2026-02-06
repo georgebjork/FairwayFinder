@@ -1,0 +1,394 @@
+@using FairwayFinder.Features.Rounds
+@inject IRoundService RoundService
+
+@if (_loading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" class="rz-p-4">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (_scorecard is null)
+{
+    <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
+        No scorecard data available.
+    </RadzenAlert>
+}
+else
+{
+    <div class="scorecard-wrapper">
+        <table class="scorecard-table">
+            <thead>
+                <tr>
+                    <th colspan="2">Hole</th>
+                    @foreach (var hole in FrontNine)
+                    {
+                        <th class="hole-cell">@hole.HoleNumber</th>
+                    }
+                    <th class="total-cell" colspan="2">Out</th>
+                    @foreach (var hole in BackNine)
+                    {
+                        <th class="hole-cell">@hole.HoleNumber</th>
+                    }
+                    <th class="total-cell" colspan="2">In</th>
+                    <th class="total-cell" colspan="2">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Yardage Row -->
+                <tr>
+                    <th colspan="2">@_scorecard.TeeboxName</th>
+                    @foreach (var hole in FrontNine)
+                    {
+                        <td class="hole-cell">@hole.Yardage</td>
+                    }
+                    <td class="total-cell" colspan="2">@_scorecard.YardageOut</td>
+                    @foreach (var hole in BackNine)
+                    {
+                        <td class="hole-cell">@hole.Yardage</td>
+                    }
+                    <td class="total-cell" colspan="2">@_scorecard.YardageIn</td>
+                    <td class="total-cell" colspan="2">@_scorecard.YardageTotal</td>
+                </tr>
+
+                <!-- Handicap Row -->
+                <tr>
+                    <th colspan="2">Handicap</th>
+                    @foreach (var hole in FrontNine)
+                    {
+                        <td class="hole-cell">@hole.Handicap</td>
+                    }
+                    <td class="total-cell" colspan="2">&nbsp;</td>
+                    @foreach (var hole in BackNine)
+                    {
+                        <td class="hole-cell">@hole.Handicap</td>
+                    }
+                    <td class="total-cell" colspan="2">&nbsp;</td>
+                    <td class="total-cell" colspan="2">@_scorecard.Slope / @_scorecard.Rating</td>
+                </tr>
+
+                <!-- Par Row -->
+                <tr>
+                    <th colspan="2">Par</th>
+                    @foreach (var hole in FrontNine)
+                    {
+                        <td class="hole-cell">@hole.Par</td>
+                    }
+                    <td class="total-cell" colspan="2">@_scorecard.ParOut</td>
+                    @foreach (var hole in BackNine)
+                    {
+                        <td class="hole-cell">@hole.Par</td>
+                    }
+                    <td class="total-cell" colspan="2">@_scorecard.ParIn</td>
+                    <td class="total-cell" colspan="2">@_scorecard.TeeboxPar</td>
+                </tr>
+
+                <!-- Score Row -->
+                <tr class="score-row">
+                    <th colspan="2">Score</th>
+                    @foreach (var hole in FrontNine)
+                    {
+                        <td class="hole-cell score-cell">
+                            @if (hole.HoleScore.HasValue)
+                            {
+                                <span class="score-value">@hole.HoleScore</span>
+                                @GetScoreIndicatorSvg(hole.ScoreToPar)
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
+                        </td>
+                    }
+                    <td class="total-cell" colspan="2">@(_scorecard.ScoreOut > 0 ? _scorecard.ScoreOut : "-")</td>
+                    @foreach (var hole in BackNine)
+                    {
+                        <td class="hole-cell score-cell">
+                            @if (hole.HoleScore.HasValue)
+                            {
+                                <span class="score-value">@hole.HoleScore</span>
+                                @GetScoreIndicatorSvg(hole.ScoreToPar)
+                            }
+                            else
+                            {
+                                <span>-</span>
+                            }
+                        </td>
+                    }
+                    <td class="total-cell" colspan="2">@(_scorecard.ScoreIn > 0 ? _scorecard.ScoreIn : "-")</td>
+                    <td class="total-cell" colspan="2">@_scorecard.Score</td>
+                </tr>
+
+                @if (_scorecard.UsingHoleStats)
+                {
+                    <!-- Fairways Row -->
+                    <tr>
+                        <th colspan="2">Fairways</th>
+                        @foreach (var hole in FrontNine)
+                        {
+                            <td class="hole-cell">
+                                @if (hole.Par <= 3)
+                                {
+                                    <!-- Par 3 or less - no fairway -->
+                                }
+                                else if (hole.HitFairway == true)
+                                {
+                                    <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
+                                }
+                                else if (hole.HitFairway == false)
+                                {
+                                    @GetMissIcon(hole.MissFairwayType)
+                                }
+                            </td>
+                        }
+                        <td class="total-cell" colspan="2">@_scorecard.FairwaysHitOut</td>
+                        @foreach (var hole in BackNine)
+                        {
+                            <td class="hole-cell">
+                                @if (hole.Par <= 3)
+                                {
+                                    <!-- Par 3 or less - no fairway -->
+                                }
+                                else if (hole.HitFairway == true)
+                                {
+                                    <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
+                                }
+                                else if (hole.HitFairway == false)
+                                {
+                                    @GetMissIcon(hole.MissFairwayType)
+                                }
+                            </td>
+                        }
+                        <td class="total-cell" colspan="2">@_scorecard.FairwaysHitIn</td>
+                        <td class="total-cell" colspan="2">@_scorecard.FairwaysHit / @_scorecard.FairwaysTotal</td>
+                    </tr>
+
+                    <!-- GIR Row -->
+                    <tr>
+                        <th colspan="2">GIR</th>
+                        @foreach (var hole in FrontNine)
+                        {
+                            <td class="hole-cell">
+                                @if (hole.HitGreen == true)
+                                {
+                                    <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
+                                }
+                                else if (hole.HitGreen == false)
+                                {
+                                    @GetMissIcon(hole.MissGreenType)
+                                }
+                            </td>
+                        }
+                        <td class="total-cell" colspan="2">@_scorecard.GreensHitOut</td>
+                        @foreach (var hole in BackNine)
+                        {
+                            <td class="hole-cell">
+                                @if (hole.HitGreen == true)
+                                {
+                                    <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
+                                }
+                                else if (hole.HitGreen == false)
+                                {
+                                    @GetMissIcon(hole.MissGreenType)
+                                }
+                            </td>
+                        }
+                        <td class="total-cell" colspan="2">@_scorecard.GreensHitIn</td>
+                        <td class="total-cell" colspan="2">@_scorecard.GreensHit / @_scorecard.GreensTotal</td>
+                    </tr>
+
+                    <!-- Putts Row -->
+                    <tr>
+                        <th colspan="2">Putts</th>
+                        @foreach (var hole in FrontNine)
+                        {
+                            <td class="hole-cell">@(hole.NumberOfPutts?.ToString() ?? "")</td>
+                        }
+                        <td class="total-cell" colspan="2">@_scorecard.PuttsOut</td>
+                        @foreach (var hole in BackNine)
+                        {
+                            <td class="hole-cell">@(hole.NumberOfPutts?.ToString() ?? "")</td>
+                        }
+                        <td class="total-cell" colspan="2">@_scorecard.PuttsIn</td>
+                        <td class="total-cell" colspan="2">@_scorecard.TotalPutts</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<style>
+    .scorecard-wrapper {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .scorecard-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+        min-width: 900px;
+        border-top: 1px solid var(--rz-text-disabled-color);
+        border-bottom: 1px solid var(--rz-text-disabled-color);
+        border-left: 1px solid var(--rz-text-disabled-color);
+        border-right: 1px solid var(--rz-text-disabled-color);
+    }
+
+    .scorecard-table th,
+    .scorecard-table td {
+        padding: 0.5rem 0.25rem;
+        text-align: center;
+        border-top: 1px solid var(--rz-text-disabled-color);
+        border-bottom: 1px solid var(--rz-text-disabled-color);
+        border-left: none;
+        border-right: none;
+    }
+
+    .scorecard-table th:first-child,
+    .scorecard-table td:first-child {
+        border-left: 1px solid var(--rz-text-disabled-color);
+    }
+
+    .scorecard-table th:last-child,
+    .scorecard-table td:last-child {
+        border-right: 1px solid var(--rz-text-disabled-color);
+    }
+
+    .scorecard-table thead th {
+        background-color: var(--rz-base-background-color);
+        font-weight: 600;
+    }
+
+    .scorecard-table tbody th {
+        text-align: left;
+        padding-left: 0.5rem;
+        background-color: var(--rz-base-background-color);
+        font-weight: 600;
+        min-width: 80px;
+    }
+
+    .scorecard-table .hole-cell {
+        min-width: 36px;
+        width: 36px;
+    }
+
+    .scorecard-table .total-cell {
+        font-weight: 600;
+        background-color: var(--rz-base-background-color);
+        min-width: 45px;
+    }
+
+    .scorecard-table .score-row {
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .scorecard-table .score-cell {
+        position: relative;
+    }
+
+    .scorecard-table .score-value {
+        position: relative;
+        z-index: 1;
+    }
+
+    .scorecard-table .score-indicator {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 80%;
+        height: 80%;
+        pointer-events: none;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public long RoundId { get; set; }
+
+    private ScorecardDto? _scorecard;
+    private bool _loading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (RoundId > 0)
+        {
+            await LoadScorecardAsync();
+        }
+    }
+
+    private async Task LoadScorecardAsync()
+    {
+        _loading = true;
+        _scorecard = await RoundService.GetRoundScorecardAsync(RoundId);
+        _loading = false;
+    }
+
+    private IEnumerable<ScorecardHoleDto> FrontNine => _scorecard?.Holes.Where(h => h.HoleNumber <= 9) ?? Enumerable.Empty<ScorecardHoleDto>();
+    private IEnumerable<ScorecardHoleDto> BackNine => _scorecard?.Holes.Where(h => h.HoleNumber > 9) ?? Enumerable.Empty<ScorecardHoleDto>();
+
+    private MarkupString GetScoreIndicatorSvg(int? scoreToPar)
+    {
+        if (!scoreToPar.HasValue) return new MarkupString("");
+
+        var strokeColor = "var(--rz-text-color)";
+
+        if (scoreToPar.Value <= -2)
+        {
+            // Eagle or better - double circle
+            return new MarkupString($@"
+                <svg class=""score-indicator"" xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 100 100"">
+                    <circle cx=""50"" cy=""50"" r=""38"" stroke-width=""3"" fill=""none"" style=""stroke: {strokeColor};""/>
+                    <circle cx=""50"" cy=""50"" r=""28"" stroke-width=""2"" fill=""none"" style=""stroke: {strokeColor};""/>
+                </svg>");
+        }
+        else if (scoreToPar.Value == -1)
+        {
+            // Birdie - single circle
+            return new MarkupString($@"
+                <svg class=""score-indicator"" xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 100 100"">
+                    <circle cx=""50"" cy=""50"" r=""38"" stroke-width=""3"" fill=""none"" style=""stroke: {strokeColor};""/>
+                </svg>");
+        }
+        else if (scoreToPar.Value == 0)
+        {
+            // Par - no indicator
+            return new MarkupString("");
+        }
+        else if (scoreToPar.Value == 1)
+        {
+            // Bogey - single square
+            return new MarkupString($@"
+                <svg class=""score-indicator"" xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 100 100"">
+                    <rect x=""10"" y=""10"" width=""80"" height=""80"" stroke-width=""3"" fill=""none"" style=""stroke: {strokeColor};""/>
+                </svg>");
+        }
+        else
+        {
+            // Double bogey or worse - double square
+            return new MarkupString($@"
+                <svg class=""score-indicator"" xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 100 100"">
+                    <rect x=""10"" y=""10"" width=""80"" height=""80"" stroke-width=""3"" fill=""none"" style=""stroke: {strokeColor};""/>
+                    <rect x=""20"" y=""20"" width=""60"" height=""60"" stroke-width=""2"" fill=""none"" style=""stroke: {strokeColor};""/>
+                </svg>");
+        }
+    }
+
+    private RenderFragment GetMissIcon(int? missType) => builder =>
+    {
+        var icon = missType switch
+        {
+            1 => "arrow_circle_left",   // Left
+            2 => "arrow_circle_right",  // Right
+            3 => "arrow_circle_down",   // Short
+            4 => "arrow_circle_up",     // Long
+            _ => "cancel"               // Generic miss
+        };
+
+        builder.OpenComponent<RadzenIcon>(0);
+        builder.AddAttribute(1, "Icon", icon);
+        builder.AddAttribute(2, "Style", "color: var(--rz-danger);");
+        builder.CloseComponent();
+    };
+}

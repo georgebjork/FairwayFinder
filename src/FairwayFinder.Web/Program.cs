@@ -1,4 +1,5 @@
 using FairwayFinder.Data;
+using FairwayFinder.Features.Rounds;
 using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -24,6 +25,9 @@ builder.Services.AddFairwayFinderAuthentication(builder.Configuration);
 builder.Services.AddFairwayFinderAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityRedirectManager>();
+
+// Feature services
+builder.Services.AddScoped<IRoundService, RoundService>();
 
 var app = builder.Build();
 

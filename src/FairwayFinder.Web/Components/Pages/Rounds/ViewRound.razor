@@ -1,0 +1,70 @@
+@page "/round/{RoundId:long}"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using FairwayFinder.Features.Rounds
+@using FairwayFinder.Web.Components.Shared
+@inject IRoundService RoundService
+@inject NavigationManager NavigationManager
+
+<PageTitle>View Round</PageTitle>
+
+@if (_loading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" class="rz-p-8">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (_scorecard is null)
+{
+    <RadzenCard class="rz-p-5">
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
+            Round not found.
+        </RadzenAlert>
+        <RadzenButton Text="Back to Home" Icon="arrow_back" ButtonStyle="ButtonStyle.Secondary" 
+                      Click="@(() => NavigationManager.NavigateTo("/"))" class="rz-mt-4" />
+    </RadzenCard>
+}
+else
+{
+    <RadzenStack Gap="1rem">
+        <!-- Header -->
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Start">
+            <RadzenStack Gap="0.25rem">
+                <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">@_scorecard.CourseName</RadzenText>
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem">
+                    <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                        Tee Box: @_scorecard.TeeboxName
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                        Date: @_scorecard.DatePlayed.ToString("M/d/yy")
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenStack>
+            <RadzenButton Icon="arrow_back" Text="Back" Variant="Variant.Text" ButtonStyle="ButtonStyle.Secondary"
+                          Click="@(() => NavigationManager.NavigateTo("/"))" />
+        </RadzenStack>
+
+        <!-- Scorecard -->
+        <FairwayFinderScorecard RoundId="@RoundId" />
+    </RadzenStack>
+}
+
+@code {
+    [Parameter]
+    public long RoundId { get; set; }
+
+    private ScorecardDto? _scorecard;
+    private bool _loading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadScorecardAsync();
+    }
+
+    private async Task LoadScorecardAsync()
+    {
+        _loading = true;
+        _scorecard = await RoundService.GetRoundScorecardAsync(RoundId);
+        _loading = false;
+    }
+}

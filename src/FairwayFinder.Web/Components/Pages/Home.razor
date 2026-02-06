@@ -1,6 +1,32 @@
 @page "/"
+@rendermode InteractiveServer
 @layout MainLayout
+@using System.Security.Claims
+@using FairwayFinder.Web.Components.Shared
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Home</PageTitle>
 
-<RadzenText TextStyle="TextStyle.H3">Welcome to FairwayFinder</RadzenText>
+<RadzenStack Gap="1.5rem">
+    <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">Welcome to FairwayFinder</RadzenText>
+    
+    <RadzenCard>
+        <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">My Rounds</RadzenText>
+        <FairwayFinderRoundsList UserId="@_userId" />
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    private string? _userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        }
+    }
+}
