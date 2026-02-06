@@ -1,4 +1,5 @@
-@using FairwayFinder.Features.Rounds
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services
 @inject IRoundService RoundService
 @inject NavigationManager NavigationManager
 
@@ -23,7 +24,7 @@ else
                     AllowSorting="true"
                     AllowPaging="true"
                     PageSize="10"
-                    PagerHorizontalAlign="HorizontalAlign.Center"
+                    PagerHorizontalAlign="HorizontalAlign.Right"
                     ShowPagingSummary="true"
                     PagingSummaryFormat="Displaying page {0} of {1} (total {2} rounds)"
                     RowClick="@OnRowClick"

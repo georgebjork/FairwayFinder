@@ -1,23 +1,169 @@
 @page "/"
 @rendermode InteractiveServer
 @layout MainLayout
+@attribute [Authorize]
 @using System.Security.Claims
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services
 @using FairwayFinder.Web.Components.Shared
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IStatsService StatsService
+@inject NavigationManager NavigationManager
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Dashboard</PageTitle>
 
 <RadzenStack Gap="1.5rem">
-    <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">Welcome to FairwayFinder</RadzenText>
-    
-    <RadzenCard>
-        <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">My Rounds</RadzenText>
-        <FairwayFinderRoundsList UserId="@_userId" />
-    </RadzenCard>
+    <!-- Stats Cards -->
+    @if (_loading)
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+            <RadzenCard class="stats-card-loading">
+                <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+            </RadzenCard>
+            <RadzenCard class="stats-card-loading">
+                <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+            </RadzenCard>
+            <RadzenCard class="stats-card-loading">
+                <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+            </RadzenCard>
+        </RadzenStack>
+    }
+    else if (_stats is not null)
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+            <FairwayFinderStatsCard 
+                Label="Rounds Played" 
+                Value="@_stats.TotalRounds.ToString()" />
+            
+            <FairwayFinderStatsCard 
+                Label="Average Score" 
+                Value="@(_stats.AverageScore?.ToString("F1") ?? "-")" />
+            
+            @if (_stats.BestRound is not null)
+            {
+                <div @onclick="@(() => NavigateToBestRound())" style="cursor: pointer; flex: 1;">
+                    <FairwayFinderStatsCard 
+                        Label="Best Round" 
+                        Value="@_stats.BestRound.Score.ToString()"
+                        SubText="@_stats.BestRound.CourseName" />
+                </div>
+            }
+            else
+            {
+                <FairwayFinderStatsCard 
+                    Label="Best Round" 
+                    Value="-" />
+            }
+            
+            @if (_advancedStats?.RoundsWithStats > 0)
+            {
+                @if (_advancedStats.FirPercent.HasValue)
+                {
+                    <FairwayFinderStatsCard 
+                        Label="Fairways" 
+                        Value="@($"{_advancedStats.FirPercent:F1}%")"
+                        SubText="@($"{_advancedStats.RoundsWithStats} rounds")" />
+                }
+                
+                @if (_advancedStats.GirPercent.HasValue)
+                {
+                    <FairwayFinderStatsCard 
+                        Label="Greens" 
+                        Value="@($"{_advancedStats.GirPercent:F1}%")"
+                        SubText="@($"{_advancedStats.RoundsWithStats} rounds")" />
+                }
+                
+                @if (_advancedStats.AveragePutts.HasValue)
+                {
+                    <FairwayFinderStatsCard 
+                        Label="Avg Putts" 
+                        Value="@($"{_advancedStats.AveragePutts:F1}")"
+                        SubText="per round" />
+                }
+            }
+        </RadzenStack>
+        
+        <!-- Par Type Stats Row -->
+        @if (_parTypeStats is not null && (_parTypeStats.Par3Average.HasValue || _parTypeStats.Par4Average.HasValue || _parTypeStats.Par5Average.HasValue))
+        {
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+                @if (_parTypeStats.Par3Average.HasValue)
+                {
+                    <FairwayFinderStatsCard 
+                        Label="Par 3 Avg" 
+                        Value="@($"{_parTypeStats.Par3Average:F2}")"
+                        SubText="@($"{_parTypeStats.Par3Count} holes")" />
+                }
+                
+                @if (_parTypeStats.Par4Average.HasValue)
+                {
+                    <FairwayFinderStatsCard 
+                        Label="Par 4 Avg" 
+                        Value="@($"{_parTypeStats.Par4Average:F2}")"
+                        SubText="@($"{_parTypeStats.Par4Count} holes")" />
+                }
+                
+                @if (_parTypeStats.Par5Average.HasValue)
+                {
+                    <FairwayFinderStatsCard 
+                        Label="Par 5 Avg" 
+                        Value="@($"{_parTypeStats.Par5Average:F2}")"
+                        SubText="@($"{_parTypeStats.Par5Count} holes")" />
+                }
+            </RadzenStack>
+        }
+    }
+
+    <!-- Charts Row -->
+    <RadzenRow Gap="1rem">
+        <RadzenColumn Size="12" SizeLG="7">
+            <RadzenCard Style="height: 100%;">
+                <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Score Trend</RadzenText>
+                <FairwayFinderScoreTrendChart UserId="@_userId" Count="20" />
+            </RadzenCard>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeLG="5">
+            <RadzenCard Style="height: 100%;">
+                <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Scoring Distribution</RadzenText>
+                <FairwayFinderScoringDistributionChart UserId="@_userId" />
+            </RadzenCard>
+        </RadzenColumn>
+    </RadzenRow>
+
+    <!-- Recent Rounds & Most Played Courses -->
+    <RadzenRow Gap="1rem">
+        <RadzenColumn Size="12" SizeLG="8">
+            <RadzenCard Style="height: 100%;">
+                <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Recent Rounds</RadzenText>
+                <FairwayFinderRoundsList UserId="@_userId" />
+            </RadzenCard>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeLG="4">
+            <RadzenCard Style="height: 100%;">
+                <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Most Played Courses</RadzenText>
+                <FairwayFinderMostPlayedCourses UserId="@_userId" Count="5" />
+            </RadzenCard>
+        </RadzenColumn>
+    </RadzenRow>
 </RadzenStack>
+
+<style>
+    .stats-card-loading {
+        min-width: 150px;
+        min-height: 100px;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
 
 @code {
     private string? _userId;
+    private DashboardStatsDto? _stats;
+    private AdvancedStatsDto? _advancedStats;
+    private ParTypeScoringDto? _parTypeStats;
+    private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -27,6 +173,30 @@
         if (user.Identity?.IsAuthenticated == true)
         {
             _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
+            if (!string.IsNullOrEmpty(_userId))
+            {
+                // Load all stat sets in parallel
+                var statsTask = StatsService.GetDashboardStatsAsync(_userId);
+                var advancedStatsTask = StatsService.GetAdvancedStatsAsync(_userId);
+                var parTypeStatsTask = StatsService.GetParTypeScoringAsync(_userId);
+                
+                await Task.WhenAll(statsTask, advancedStatsTask, parTypeStatsTask);
+                
+                _stats = statsTask.Result;
+                _advancedStats = advancedStatsTask.Result;
+                _parTypeStats = parTypeStatsTask.Result;
+            }
+        }
+        
+        _loading = false;
+    }
+
+    private void NavigateToBestRound()
+    {
+        if (_stats?.BestRound is not null)
+        {
+            NavigationManager.NavigateTo($"/round/{_stats.BestRound.RoundId}");
         }
     }
 }

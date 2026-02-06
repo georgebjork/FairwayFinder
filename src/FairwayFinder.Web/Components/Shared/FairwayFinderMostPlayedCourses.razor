@@ -1,0 +1,96 @@
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services
+@inject IStatsService StatsService
+
+@if (_loading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" class="rz-p-4">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (_courses is null || _courses.Count == 0)
+{
+    <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+        No courses played yet.
+    </RadzenText>
+}
+else
+{
+    <RadzenStack Gap="0">
+        <!-- Header -->
+        <RadzenStack Orientation="Orientation.Horizontal" 
+                     JustifyContent="JustifyContent.SpaceBetween" 
+                     AlignItems="AlignItems.Center"
+                     class="course-header">
+            <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0; color: var(--rz-text-secondary-color); text-transform: uppercase; font-weight: 600;">
+                Course
+            </RadzenText>
+            <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0; color: var(--rz-text-secondary-color); text-transform: uppercase; font-weight: 600;">
+                Avg
+            </RadzenText>
+        </RadzenStack>
+        
+        <!-- Rows -->
+        @foreach (var course in _courses)
+        {
+            <RadzenStack Orientation="Orientation.Horizontal" 
+                         JustifyContent="JustifyContent.SpaceBetween" 
+                         AlignItems="AlignItems.Center"
+                         class="course-row">
+                <RadzenStack Gap="0">
+                    <RadzenText TextStyle="TextStyle.Body1" Style="margin: 0; font-weight: 500;">
+                        @course.CourseName
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0; color: var(--rz-text-secondary-color);">
+                        @course.RoundCount @(course.RoundCount == 1 ? "round" : "rounds")
+                    </RadzenText>
+                </RadzenStack>
+                <RadzenText TextStyle="TextStyle.Body1" Style="margin: 0; font-weight: 600;">
+                    @course.AverageScore.ToString("F1")
+                </RadzenText>
+            </RadzenStack>
+        }
+    </RadzenStack>
+}
+
+<style>
+    .course-header {
+        padding: 0 0 0.5rem 0;
+        border-bottom: 1px solid var(--rz-base-200);
+    }
+    
+    .course-row {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--rz-base-200);
+    }
+    
+    .course-row:last-child {
+        border-bottom: none;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string? UserId { get; set; }
+    
+    [Parameter]
+    public int Count { get; set; } = 5;
+
+    private List<MostPlayedCourseDto>? _courses;
+    private bool _loading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(UserId))
+        {
+            await LoadDataAsync();
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        _courses = await StatsService.GetMostPlayedCoursesAsync(UserId!, Count);
+        _loading = false;
+    }
+}

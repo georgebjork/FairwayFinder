@@ -1,5 +1,5 @@
 using FairwayFinder.Data;
-using FairwayFinder.Features.Rounds;
+using FairwayFinder.Features.Services;
 using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("fairwayfinder") ??
                        throw new InvalidOperationException("Connection string 'fairwayfinder' not found.");
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -27,7 +27,8 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityRedirectManager>();
 
 // Feature services
-builder.Services.AddScoped<IRoundService, RoundService>();
+builder.Services.AddTransient<IRoundService, RoundService>();
+builder.Services.AddTransient<IStatsService, StatsService>();
 
 var app = builder.Build();
 

@@ -1,4 +1,4 @@
-namespace FairwayFinder.Features.Rounds;
+namespace FairwayFinder.Features.Data;
 
 public class RoundDto
 {

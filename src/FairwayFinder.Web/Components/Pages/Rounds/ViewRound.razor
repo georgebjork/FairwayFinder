@@ -1,7 +1,8 @@
 @page "/round/{RoundId:long}"
 @rendermode InteractiveServer
 @attribute [Authorize]
-@using FairwayFinder.Features.Rounds
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services
 @using FairwayFinder.Web.Components.Shared
 @inject IRoundService RoundService
 @inject NavigationManager NavigationManager

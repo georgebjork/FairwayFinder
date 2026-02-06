@@ -1,23 +1,26 @@
 using FairwayFinder.Data;
+using FairwayFinder.Features.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace FairwayFinder.Features.Rounds;
+namespace FairwayFinder.Features.Services;
 
 public class RoundService : IRoundService
 {
-    private readonly ApplicationDbContext _dbContext;
+    private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
 
-    public RoundService(ApplicationDbContext dbContext)
+    public RoundService(IDbContextFactory<ApplicationDbContext> dbContextFactory)
     {
-        _dbContext = dbContext;
+        _dbContextFactory = dbContextFactory;
     }
 
     public async Task<List<RoundDto>> GetRoundsByUserIdAsync(string userId)
     {
-        var rounds = await _dbContext.Rounds
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        
+        var rounds = await dbContext.Rounds
             .Where(r => r.UserId == userId && !r.IsDeleted)
             .Join(
-                _dbContext.Courses,
+                dbContext.Courses,
                 round => round.CourseId,
                 course => course.CourseId,
                 (round, course) => new RoundDto
@@ -35,11 +38,13 @@ public class RoundService : IRoundService
 
     public async Task<ScorecardDto?> GetRoundScorecardAsync(long roundId)
     {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        
         // Get round with course and teebox info
         var roundData = await (
-            from round in _dbContext.Rounds
-            join course in _dbContext.Courses on round.CourseId equals course.CourseId
-            join teebox in _dbContext.Teeboxes on round.TeeboxId equals teebox.TeeboxId
+            from round in dbContext.Rounds
+            join course in dbContext.Courses on round.CourseId equals course.CourseId
+            join teebox in dbContext.Teeboxes on round.TeeboxId equals teebox.TeeboxId
             where round.RoundId == roundId && !round.IsDeleted
             select new
             {
@@ -54,18 +59,18 @@ public class RoundService : IRoundService
         }
 
         // Get holes for this teebox
-        var holes = await _dbContext.Holes
+        var holes = await dbContext.Holes
             .Where(h => h.TeeboxId == roundData.Teebox.TeeboxId && !h.IsDeleted)
             .OrderBy(h => h.HoleNumber)
             .ToListAsync();
 
         // Get scores for this round
-        var scores = await _dbContext.Scores
+        var scores = await dbContext.Scores
             .Where(s => s.RoundId == roundId && !s.IsDeleted)
             .ToListAsync();
 
         // Get hole stats for this round (if using advanced stats)
-        var holeStats = await _dbContext.HoleStats
+        var holeStats = await dbContext.HoleStats
             .Where(hs => hs.RoundId == roundId && !hs.IsDeleted)
             .ToListAsync();
 

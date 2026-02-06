@@ -1,0 +1,108 @@
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services
+@inject IStatsService StatsService
+
+@if (_loading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 300px;">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (_chartData is null || _chartData.Count == 0)
+{
+    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 300px;">
+        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+            No scoring data available yet.
+        </RadzenText>
+    </RadzenStack>
+}
+else
+{
+    <RadzenChart Style="height: 300px;">
+        <RadzenDonutSeries Data="@_chartData" 
+                           CategoryProperty="Category" 
+                           ValueProperty="Count"
+                           Fills="@_colors"
+                           Title="Scoring">
+            <TitleTemplate>
+                <div class="rz-donut-content">
+                    <div style="font-size: 1.5rem; font-weight: 600; line-height: 1.2;">@_distribution?.TotalHoles</div>
+                    <div style="font-size: 0.75rem; color: var(--rz-text-secondary-color);">holes</div>
+                </div>
+            </TitleTemplate>
+            <TooltipTemplate Context="data">
+                <div class="rz-p-2">
+                    <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-1">@data.Category</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">
+                        <strong>@data.Count</strong> holes (@(((double)data.Count / _distribution!.TotalHoles * 100).ToString("F1"))%)
+                    </RadzenText>
+                </div>
+            </TooltipTemplate>
+        </RadzenDonutSeries>
+        <RadzenLegend Position="LegendPosition.Right" />
+    </RadzenChart>
+}
+
+@code {
+    [Parameter]
+    public string? UserId { get; set; }
+
+    private ScoringDistributionDto? _distribution;
+    private List<ScoringChartItem>? _chartData;
+    private bool _loading = true;
+    
+    // Colors: Eagles (dark green), Birdies (green), Pars (blue), Bogeys (orange), Double+ (red)
+    private string[] _colors = new[]
+    {
+        "#1b5e20", // Eagles (dark green)
+        "#4caf50", // Birdies (green)
+        "#2196f3", // Pars (blue)
+        "#ff9800", // Bogeys (orange)
+        "#f44336", // Double Bogeys (red)
+        "#b71c1c"  // Triple+ (dark red)
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(UserId))
+        {
+            await LoadDataAsync();
+        }
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        
+        _distribution = await StatsService.GetScoringDistributionAsync(UserId!);
+        
+        if (_distribution.TotalHoles > 0)
+        {
+            // Build chart data - combine rare categories (hole-in-one, double eagle) with eagles
+            var eaglesTotal = _distribution.HolesInOne + _distribution.DoubleEagles + _distribution.Eagles;
+            
+            _chartData = new List<ScoringChartItem>();
+            
+            if (eaglesTotal > 0)
+                _chartData.Add(new ScoringChartItem { Category = "Eagles", Count = eaglesTotal });
+            if (_distribution.Birdies > 0)
+                _chartData.Add(new ScoringChartItem { Category = "Birdies", Count = _distribution.Birdies });
+            if (_distribution.Pars > 0)
+                _chartData.Add(new ScoringChartItem { Category = "Pars", Count = _distribution.Pars });
+            if (_distribution.Bogeys > 0)
+                _chartData.Add(new ScoringChartItem { Category = "Bogeys", Count = _distribution.Bogeys });
+            if (_distribution.DoubleBogeys > 0)
+                _chartData.Add(new ScoringChartItem { Category = "Double Bogeys", Count = _distribution.DoubleBogeys });
+            if (_distribution.TripleOrWorse > 0)
+                _chartData.Add(new ScoringChartItem { Category = "Triple+", Count = _distribution.TripleOrWorse });
+        }
+
+        _loading = false;
+    }
+
+    private class ScoringChartItem
+    {
+        public string Category { get; set; } = string.Empty;
+        public int Count { get; set; }
+    }
+}

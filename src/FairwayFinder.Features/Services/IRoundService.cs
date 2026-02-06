@@ -1,4 +1,6 @@
-namespace FairwayFinder.Features.Rounds;
+using FairwayFinder.Features.Data;
+
+namespace FairwayFinder.Features.Services;
 
 public interface IRoundService
 {

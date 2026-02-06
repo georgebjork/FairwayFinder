@@ -1,4 +1,4 @@
-namespace FairwayFinder.Features.Rounds;
+namespace FairwayFinder.Features.Data;
 
 /// <summary>
 /// Complete scorecard data for displaying a round

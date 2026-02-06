@@ -1,0 +1,35 @@
+<RadzenCard class="stats-card">
+    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+            @Label
+        </RadzenText>
+        <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">
+            @Value
+        </RadzenText>
+        @if (!string.IsNullOrEmpty(SubText))
+        {
+            <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                @SubText
+            </RadzenText>
+        }
+    </RadzenStack>
+</RadzenCard>
+
+<style>
+    .stats-card {
+        text-align: center;
+        min-width: 150px;
+        flex: 1;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Value { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? SubText { get; set; }
+}

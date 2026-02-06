@@ -1,0 +1,123 @@
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services
+@inject IStatsService StatsService
+@inject NavigationManager NavigationManager
+
+@if (_loading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 300px;">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (_trendData is null || _trendData.Count < 2)
+{
+    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 300px;">
+        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+            Not enough rounds to show trend. Play more rounds to see your score trend!
+        </RadzenText>
+    </RadzenStack>
+}
+else
+{
+    <RadzenChart Style="height: 300px;" SeriesClick="@OnSeriesClick">
+        <RadzenLineSeries Data="@_trendData" 
+                          CategoryProperty="DateLabel" 
+                          ValueProperty="Score" 
+                          Title="Score"
+                          Smooth="true">
+            <TooltipTemplate Context="data">
+                <div class="rz-p-2">
+                    <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-1">@data.CourseName</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">Score: <strong>@data.Score</strong></RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                        @data.DatePlayed.ToString("MMM d, yyyy")
+                    </RadzenText>
+                </div>
+            </TooltipTemplate>
+        </RadzenLineSeries>
+
+        <RadzenValueAxis Min="@_minScore" Max="@_maxScore" Step="@_step">
+            <RadzenGridLines Visible="true" />
+            <RadzenAxisTitle Text="Score" />
+        </RadzenValueAxis>
+        <RadzenLegend Visible="false" />
+    </RadzenChart>
+}
+
+@code {
+    [Parameter]
+    public string? UserId { get; set; }
+    
+    [Parameter]
+    public int Count { get; set; } = 20;
+
+    private List<ScoreTrendChartItem>? _trendData;
+    private bool _loading = true;
+    private int _minScore;
+    private int _maxScore;
+    private int _step = 5;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(UserId))
+        {
+            await LoadTrendDataAsync();
+        }
+    }
+
+    private async Task LoadTrendDataAsync()
+    {
+        _loading = true;
+        
+        var data = await StatsService.GetScoreTrendAsync(UserId!, Count);
+        
+        // Transform to chart items with formatted date label
+        _trendData = data.Select(d => new ScoreTrendChartItem
+        {
+            RoundId = d.RoundId,
+            DatePlayed = d.DatePlayed,
+            DateLabel = d.DatePlayed.ToString("M/d"),
+            Score = d.Score,
+            CourseName = d.CourseName
+        }).ToList();
+
+        // Calculate axis range with padding
+        if (_trendData.Count > 0)
+        {
+            var scores = _trendData.Select(d => d.Score).ToList();
+            var minScore = scores.Min();
+            var maxScore = scores.Max();
+            
+            // Round down/up to nearest 5 with padding
+            _minScore = (int)(Math.Floor((minScore - 3) / 5.0) * 5);
+            _maxScore = (int)(Math.Ceiling((maxScore + 3) / 5.0) * 5);
+            
+            // Ensure minimum range
+            if (_maxScore - _minScore < 10)
+            {
+                _minScore -= 5;
+                _maxScore += 5;
+            }
+        }
+
+        _loading = false;
+    }
+
+    private void OnSeriesClick(SeriesClickEventArgs args)
+    {
+        if (args.Data is ScoreTrendChartItem item)
+        {
+            NavigationManager.NavigateTo($"/round/{item.RoundId}");
+        }
+    }
+
+    // Internal class for chart binding with formatted date
+    private class ScoreTrendChartItem
+    {
+        public long RoundId { get; set; }
+        public DateOnly DatePlayed { get; set; }
+        public string DateLabel { get; set; } = string.Empty;
+        public int Score { get; set; }
+        public string CourseName { get; set; } = string.Empty;
+    }
+}
