@@ -1,16 +1,13 @@
 using FairwayFinder.Data;
+using FairwayFinder.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using FairwayFinder.Web.Components;
-using FairwayFinder.Web.Components.Account;
+using FairwayFinder.Web.Components.Auth;
 using FairwayFinder.Web.Startup;
 using Radzen;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddFairwayFinderAuthentication(builder.Configuration);
-builder.Services.AddFairwayFinderAuthorization();
-builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddScoped<IdentityRedirectManager>();
 
 var connectionString = builder.Configuration.GetConnectionString("fairwayfinder") ??
                        throw new InvalidOperationException("Connection string 'fairwayfinder' not found.");
@@ -22,6 +19,11 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddRadzenComponents();
+
+builder.Services.AddFairwayFinderAuthentication(builder.Configuration);
+builder.Services.AddFairwayFinderAuthorization();
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddScoped<IdentityRedirectManager>();
 
 var app = builder.Build();
 
@@ -49,7 +51,11 @@ app.MapStaticAssets().AllowAnonymous();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-// Add additional endpoints required by the Identity /Account Razor components.
-// app.MapAdditionalIdentityEndpoints();
+// Logout endpoint (GET for simple navigation from profile menu)
+app.MapGet("/authentication/logout", async (SignInManager<ApplicationUser> signInManager) =>
+{
+    await signInManager.SignOutAsync();
+    return Results.Redirect("/login");
+}).RequireAuthorization();
 
 app.Run();

@@ -2,7 +2,7 @@ using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
 
-namespace FairwayFinder.Web.Components.Account;
+namespace FairwayFinder.Web.Components.Auth;
 
 internal sealed class IdentityRedirectManager(NavigationManager navigationManager)
 {

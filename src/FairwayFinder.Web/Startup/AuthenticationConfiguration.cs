@@ -1,5 +1,6 @@
 using FairwayFinder.Data;
 using FairwayFinder.Identity;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 
 namespace FairwayFinder.Web.Startup;
@@ -36,7 +37,7 @@ public static class AuthenticationConfiguration
             options.LoginPath = "/login";
             options.LogoutPath = "/authentication/logout";
             options.AccessDeniedPath = "/access-denied";
-            options.Cookie.Name = "FairwayFinder.Auth";
+            options.Cookie.Name = "fairway.finder";
         });
 
         services.AddAuthentication();
