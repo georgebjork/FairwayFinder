@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "radezen-mcp": {
+      "type": "local",
+      "command": ["radzen.mcp"],
+      "enabled": true
+    }
+  }
+}

@@ -3,9 +3,13 @@
 
 <RadzenComponents />
 
+<RadzenDialog />
+<RadzenContextMenu />
+<RadzenNotification />
+
 <RadzenLayout>
     <AppHeader OnToggleSidebar="ToggleSidebar" />
-    <AppSidebar @bind-Expanded="sidebarExpanded" />
+    <AppSidebar @bind-Expanded="_sidebarExpanded" />
 
     <RadzenBody>
         @Body
@@ -21,10 +25,10 @@
 </div>
 
 @code {
-    bool sidebarExpanded = true;
+    bool _sidebarExpanded = true;
 
     void ToggleSidebar()
     {
-        sidebarExpanded = !sidebarExpanded;
+        _sidebarExpanded = !_sidebarExpanded;
     }
 }
