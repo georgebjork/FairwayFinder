@@ -22,12 +22,16 @@ public static class StatsCalculator
     /// Calculates the score trend (last 5 rounds avg - previous 5 rounds avg)
     /// Negative = improvement, Positive = regression
     /// </summary>
-    public static double? CalculateScoreTrend(IReadOnlyList<RoundResponse> rounds, int windowSize = 5)
+    public static double? CalculateScoreTrend(IReadOnlyList<RoundResponse> rounds, int windowSize = 5, bool fullRound = true)
     {
         if (rounds.Count < windowSize * 2) return null;
 
-        var last5Avg = rounds.Take(windowSize).Average(r => r.Score);
-        var previous5Avg = rounds.Skip(windowSize).Take(windowSize).Average(r => r.Score);
+        var filteredRounds = rounds.Where(x => x.FullRound == fullRound).ToList();
+        
+        if (filteredRounds.Count < windowSize * 2) return null;
+        
+        var last5Avg = filteredRounds.Take(windowSize).Average(r => r.Score);
+        var previous5Avg = filteredRounds.Skip(windowSize).Take(windowSize).Average(r => r.Score);
         
         return Math.Round(last5Avg - previous5Avg, 1);
     }
@@ -35,11 +39,11 @@ public static class StatsCalculator
     /// <summary>
     /// Finds the best (lowest score) round
     /// </summary>
-    public static BestRound? FindBestRound(IReadOnlyList<RoundResponse> rounds)
+    public static BestRound? FindBestRound(IReadOnlyList<RoundResponse> rounds, bool fullRound = true)
     {
         if (rounds.Count == 0) return null;
 
-        var best = rounds.OrderBy(r => r.Score).First();
+        var best = rounds.OrderBy(r => r.Score).First(x => x.FullRound == fullRound);
         return new BestRound
         {
             RoundId = best.RoundId,
@@ -52,9 +56,10 @@ public static class StatsCalculator
     /// <summary>
     /// Builds the score trend data for charting (oldest to newest)
     /// </summary>
-    public static List<ScoreTrendPoint> BuildScoreTrend(IReadOnlyList<RoundResponse> rounds, int count)
+    public static List<ScoreTrendPoint> BuildScoreTrend(IReadOnlyList<RoundResponse> rounds, int count, bool fullRound = true)
     {
-        return rounds
+        var filteredRounds = rounds.Where(x => x.FullRound == fullRound);
+        return filteredRounds
             .Take(count)
             .Reverse() // Oldest first for chart display
             .Select(r => new ScoreTrendPoint
@@ -162,13 +167,19 @@ public static class StatsCalculator
             return result;
         }
 
-        var allHoleStats = roundsWithHoleStats
+        var allHoleStats18Holes = roundsWithHoleStats.Where(x => x.FullRound)
             .SelectMany(r => r.Holes.Select(h => new { r.RoundId, Hole = h }))
             .Where(x => x.Hole.Stats != null)
             .ToList();
+        
+        var allHoleStats9Holes = roundsWithHoleStats.Where(x => !x.FullRound)
+            .SelectMany(r => r.Holes.Select(h => new { r.RoundId, Hole = h }))
+            .Where(x => x.Hole.Stats != null)
+            .ToList();
+        
 
         // FIR % (only par 4/5 holes)
-        var fairwayHoles = allHoleStats
+        var fairwayHoles = allHoleStats18Holes
             .Where(x => x.Hole.Par > 3 && x.Hole.Stats!.HitFairway.HasValue)
             .ToList();
         
@@ -179,7 +190,7 @@ public static class StatsCalculator
         }
 
         // GIR % (all holes)
-        var greenHoles = allHoleStats
+        var greenHoles = allHoleStats18Holes
             .Where(x => x.Hole.Stats!.HitGreen.HasValue)
             .ToList();
         
@@ -190,20 +201,37 @@ public static class StatsCalculator
         }
 
         // Average putts per round
-        var holesWithPutts = allHoleStats
+        var holesWithPutts18Holes = allHoleStats18Holes
             .Where(x => x.Hole.Stats!.NumberOfPutts.HasValue)
             .ToList();
         
-        if (holesWithPutts.Count > 0)
+        if (holesWithPutts18Holes.Count > 0)
         {
-            var puttsByRound = holesWithPutts
+            var puttsByRound18Holes = holesWithPutts18Holes
                 .GroupBy(x => x.RoundId)
                 .Select(g => g.Sum(x => x.Hole.Stats!.NumberOfPutts!.Value))
                 .ToList();
 
-            if (puttsByRound.Count > 0)
+            if (puttsByRound18Holes.Count > 0)
             {
-                result.AveragePutts = Math.Round(puttsByRound.Average(), 1);
+                result.Average18HolePutts = Math.Round(puttsByRound18Holes.Average(), 1);
+            }
+        }
+        
+        var holesWithPutts9Holes = allHoleStats9Holes
+            .Where(x => x.Hole.Stats!.NumberOfPutts.HasValue)
+            .ToList();
+        
+        if (holesWithPutts9Holes.Count > 0)
+        {
+            var puttsByRound9Holes = holesWithPutts9Holes
+                .GroupBy(x => x.RoundId)
+                .Select(g => g.Sum(x => x.Hole.Stats!.NumberOfPutts!.Value))
+                .ToList();
+
+            if (puttsByRound9Holes.Count > 0)
+            {
+                result.Average9HolePutts = Math.Round(puttsByRound9Holes.Average(), 1);
             }
         }
 
@@ -220,8 +248,17 @@ public static class StatsCalculator
         AdvancedStats result,
         List<RoundResponse> roundsWithHoleStats)
     {
-        var recent5RoundIds = roundsWithHoleStats.Take(5).Select(r => r.RoundId).ToHashSet();
-        var previous5RoundIds = roundsWithHoleStats.Skip(5).Take(5).Select(r => r.RoundId).ToHashSet();
+        // All rounds (for FIR/GIR)
+        var recent5Ids = roundsWithHoleStats.Take(5).Select(r => r.RoundId).ToHashSet();
+        var previous5Ids = roundsWithHoleStats.Skip(5).Take(5).Select(r => r.RoundId).ToHashSet();
+
+        // 18-hole rounds (for putting)
+        var recent5FullIds = roundsWithHoleStats.Where(x => x.FullRound).Take(5).Select(r => r.RoundId).ToHashSet();
+        var previous5FullIds = roundsWithHoleStats.Where(x => x.FullRound).Skip(5).Take(5).Select(r => r.RoundId).ToHashSet();
+
+        // 9-hole rounds (for putting)
+        var recent5NineIds = roundsWithHoleStats.Where(x => !x.FullRound).Take(5).Select(r => r.RoundId).ToHashSet();
+        var previous5NineIds = roundsWithHoleStats.Where(x => !x.FullRound).Skip(5).Take(5).Select(r => r.RoundId).ToHashSet();
 
         var holeStatsForTrends = roundsWithHoleStats
             .SelectMany(r => r.Holes.Select(h => new { r.RoundId, Hole = h }))
@@ -230,10 +267,10 @@ public static class StatsCalculator
 
         // FIR Trend
         var recent5FairwayHoles = holeStatsForTrends
-            .Where(x => recent5RoundIds.Contains(x.RoundId) && x.Hole.Par > 3 && x.Hole.Stats!.HitFairway.HasValue)
+            .Where(x => recent5Ids.Contains(x.RoundId) && x.Hole.Par > 3 && x.Hole.Stats!.HitFairway.HasValue)
             .ToList();
         var previous5FairwayHoles = holeStatsForTrends
-            .Where(x => previous5RoundIds.Contains(x.RoundId) && x.Hole.Par > 3 && x.Hole.Stats!.HitFairway.HasValue)
+            .Where(x => previous5Ids.Contains(x.RoundId) && x.Hole.Par > 3 && x.Hole.Stats!.HitFairway.HasValue)
             .ToList();
 
         if (recent5FairwayHoles.Count > 0 && previous5FairwayHoles.Count > 0)
@@ -245,10 +282,10 @@ public static class StatsCalculator
 
         // GIR Trend
         var recent5GreenHoles = holeStatsForTrends
-            .Where(x => recent5RoundIds.Contains(x.RoundId) && x.Hole.Stats!.HitGreen.HasValue)
+            .Where(x => recent5Ids.Contains(x.RoundId) && x.Hole.Stats!.HitGreen.HasValue)
             .ToList();
         var previous5GreenHoles = holeStatsForTrends
-            .Where(x => previous5RoundIds.Contains(x.RoundId) && x.Hole.Stats!.HitGreen.HasValue)
+            .Where(x => previous5Ids.Contains(x.RoundId) && x.Hole.Stats!.HitGreen.HasValue)
             .ToList();
 
         if (recent5GreenHoles.Count > 0 && previous5GreenHoles.Count > 0)
@@ -258,12 +295,12 @@ public static class StatsCalculator
             result.GirPercentTrend = Math.Round(recent5Gir - previous5Gir, 1);
         }
 
-        // Putts Trend
+        // Putts Trend 18 Hole
         var recent5PuttHoles = holeStatsForTrends
-            .Where(x => recent5RoundIds.Contains(x.RoundId) && x.Hole.Stats!.NumberOfPutts.HasValue)
+            .Where(x => recent5FullIds.Contains(x.RoundId) && x.Hole.Stats!.NumberOfPutts.HasValue)
             .ToList();
         var previous5PuttHoles = holeStatsForTrends
-            .Where(x => previous5RoundIds.Contains(x.RoundId) && x.Hole.Stats!.NumberOfPutts.HasValue)
+            .Where(x => previous5FullIds.Contains(x.RoundId) && x.Hole.Stats!.NumberOfPutts.HasValue)
             .ToList();
 
         if (recent5PuttHoles.Count > 0 && previous5PuttHoles.Count > 0)
@@ -281,7 +318,34 @@ public static class StatsCalculator
             {
                 var recent5AvgPutts = recent5PuttsByRound.Average();
                 var previous5AvgPutts = previous5PuttsByRound.Average();
-                result.AveragePuttsTrend = Math.Round(recent5AvgPutts - previous5AvgPutts, 1);
+                result.Average18HolePuttsTrend = Math.Round(recent5AvgPutts - previous5AvgPutts, 1);
+            }
+        }
+
+        // Putts Trend 9 Hole
+        var recent5Putt9Holes = holeStatsForTrends
+            .Where(x => recent5NineIds.Contains(x.RoundId) && x.Hole.Stats!.NumberOfPutts.HasValue)
+            .ToList();
+        var previous5Putt9Holes = holeStatsForTrends
+            .Where(x => previous5NineIds.Contains(x.RoundId) && x.Hole.Stats!.NumberOfPutts.HasValue)
+            .ToList();
+
+        if (recent5Putt9Holes.Count > 0 && previous5Putt9Holes.Count > 0)
+        {
+            var recent5PuttsByRound9Hole = recent5Putt9Holes
+                .GroupBy(x => x.RoundId)
+                .Select(g => g.Sum(x => x.Hole.Stats!.NumberOfPutts!.Value))
+                .ToList();
+            var previous5PuttsByRound9Hole = previous5Putt9Holes
+                .GroupBy(x => x.RoundId)
+                .Select(g => g.Sum(x => x.Hole.Stats!.NumberOfPutts!.Value))
+                .ToList();
+
+            if (recent5PuttsByRound9Hole.Count > 0 && previous5PuttsByRound9Hole.Count > 0)
+            {
+                var recent5AvgPutts = recent5PuttsByRound9Hole.Average();
+                var previous5AvgPutts = previous5PuttsByRound9Hole.Average();
+                result.Average9HolePuttsTrend = Math.Round(recent5AvgPutts - previous5AvgPutts, 1);
             }
         }
     }

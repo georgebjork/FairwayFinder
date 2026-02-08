@@ -6,7 +6,6 @@
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services
 @using FairwayFinder.Web.Components.Pages.Home.Components
-@using FairwayFinder.Web.Components.Shared
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IStatsService StatsService
 @inject NavigationManager NavigationManager
@@ -39,39 +38,53 @@
             <FairwayFinderStatsCard 
                 Label="Average Score" 
                 Value="@(_stats.AverageScore?.ToString("F1") ?? "-")">
-                @if (_stats.AverageScoreTrend.HasValue)
+                @if (_stats.Average18HoleScoreTrend.HasValue)
                 {
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
-                        @if (_stats.AverageScoreTrend < 0) {
+                        @if (_stats.Average18HoleScoreTrend < 0) {
                             <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Success"/>
                             <RadzenText TextStyle="TextStyle.Caption">
-                               @_stats.AverageScoreTrend.Value
+                               @_stats.Average18HoleScoreTrend.Value
                             </RadzenText>
                         }
                         else
                         {
                             <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Danger"/>
                             <RadzenText TextStyle="TextStyle.Caption">
-                               + @_stats.AverageScoreTrend.Value.ToString("F1")
+                               + @_stats.Average18HoleScoreTrend.Value.ToString("F1")
                             </RadzenText>
                         }
                     </RadzenStack>
                 }
             </FairwayFinderStatsCard>
             
-            @if (_stats.BestRound is not null)
+            @if (_stats.Best18HoleRound is not null)
             {
-                <div @onclick="@(() => NavigateToBestRound())" style="cursor: pointer; flex: 1;">
-                    <FairwayFinderStatsCard 
-                        Label="Best Round" 
-                        Value="@_stats.BestRound.Score.ToString()"
-                        SubText="@_stats.BestRound.CourseName" />
-                </div>
+                <FairwayFinderStatsCard 
+                    Label="Best Full Round" 
+                    Value="@_stats.Best18HoleRound.Score.ToString()"
+                    SubText="@_stats.Best18HoleRound.CourseName"
+                    OnClick="NavigateToBestFullRound"/>
             }
             else
             {
                 <FairwayFinderStatsCard 
-                    Label="Best Round" 
+                    Label="Best Full Round" 
+                    Value="-" />
+            }
+            
+            @if (_stats.Best9HoleRound is not null)
+            {
+                <FairwayFinderStatsCard 
+                    Label="Best Nine Hole Round" 
+                    Value="@_stats.Best9HoleRound.Score.ToString()"
+                    SubText="@_stats.Best9HoleRound.CourseName"
+                    OnClick="NavigateToNineHoleRound"/>
+            }
+            else
+            {
+                <FairwayFinderStatsCard 
+                    Label="Best Nine Hole Round" 
                     Value="-" />
             }
             
@@ -131,26 +144,26 @@
                     </FairwayFinderStatsCard>
                 }
                 
-                @if (_stats.AdvancedStats.AveragePutts.HasValue)
+                @if (_stats.AdvancedStats.Average18HolePutts.HasValue)
                 {
                     <FairwayFinderStatsCard 
                         Label="Avg Putts" 
-                        Value="@($"{_stats.AdvancedStats.AveragePutts:F1}")"
+                        Value="@($"{_stats.AdvancedStats.Average18HolePutts:F1}")"
                         SubText="per round">
-                        @if (_stats.AdvancedStats.AveragePuttsTrend.HasValue)
+                        @if (_stats.AdvancedStats.Average18HolePuttsTrend.HasValue)
                         {
                             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
-                                @if (_stats.AdvancedStats.AveragePuttsTrend < 0) {
+                                @if (_stats.AdvancedStats.Average18HolePuttsTrend < 0) {
                                     <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Success"/>
                                     <RadzenText TextStyle="TextStyle.Caption">
-                                       @_stats.AdvancedStats.AveragePuttsTrend.Value.ToString("F1")
+                                       @_stats.AdvancedStats.Average18HolePuttsTrend.Value.ToString("F1")
                                     </RadzenText>
                                 }
                                 else
                                 {
                                     <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Danger"/>
                                     <RadzenText TextStyle="TextStyle.Caption">
-                                       + @_stats.AdvancedStats.AveragePuttsTrend.Value.ToString("F1")
+                                       + @_stats.AdvancedStats.Average18HolePuttsTrend.Value.ToString("F1")
                                     </RadzenText>
                                 }
                             </RadzenStack>
@@ -161,9 +174,9 @@
         </RadzenStack>
         
         <!-- Par Type Stats Row -->
-        @if (_stats.ParTypeScoring.Par3Average.HasValue || _stats.ParTypeScoring.Par4Average.HasValue || _stats.ParTypeScoring.Par5Average.HasValue)
+        if (_stats.ParTypeScoring.Par3Average.HasValue || _stats.ParTypeScoring.Par4Average.HasValue || _stats.ParTypeScoring.Par5Average.HasValue)
         {
-<RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
             @if (_stats.ParTypeScoring.Par3Average.HasValue)
             {
                 <FairwayFinderStatsCard 
@@ -196,7 +209,7 @@
         <RadzenColumn Size="12" SizeLG="7">
             <RadzenCard Style="height: 100%;">
                 <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Score Trend</RadzenText>
-                <FairwayFinderScoreTrendChart TrendData="@_stats?.ScoreTrend" />
+                <FairwayFinderScoreTrendChart TrendData="@_stats?.ScoreTrend18Hole" />
             </RadzenCard>
         </RadzenColumn>
         <RadzenColumn Size="12" SizeLG="5">
@@ -258,11 +271,19 @@
         _loading = false;
     }
 
-    private void NavigateToBestRound()
+    private void NavigateToBestFullRound()
     {
-        if (_stats?.BestRound is not null)
+        if (_stats?.Best18HoleRound is not null)
         {
-            NavigationManager.NavigateTo($"/round/{_stats.BestRound.RoundId}");
+            NavigationManager.NavigateTo($"/round/{_stats.Best18HoleRound.RoundId}");
+        }
+    }
+    
+    private void NavigateToNineHoleRound()
+    {
+        if (_stats?.Best9HoleRound is not null)
+        {
+            NavigationManager.NavigateTo($"/round/{_stats.Best9HoleRound.RoundId}");
         }
     }
 }

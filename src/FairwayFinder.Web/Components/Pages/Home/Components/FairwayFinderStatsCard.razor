@@ -1,4 +1,10 @@
-<RadzenCard class="stats-card">
+@{
+    var isClickable = OnClick.HasDelegate;
+    var cursorStyle = isClickable ? "cursor: pointer;" : "";
+    var cardClass = isClickable ? "stats-card stats-card-clickable" : "stats-card";
+}
+
+<RadzenCard class="@cardClass" style="@cursorStyle" @onclick="HandleClick">
     <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
         <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
             @Label
@@ -39,4 +45,15 @@
     
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
+    
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+    
+    private async Task HandleClick()
+    {
+        if (OnClick.HasDelegate)
+        {
+            await OnClick.InvokeAsync();
+        }
+    }
 }

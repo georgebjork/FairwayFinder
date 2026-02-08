@@ -14,6 +14,7 @@ public class RoundResponse
     public int ScoreIn { get; set; }
     public bool UsingHoleStats { get; set; }
     public bool ExcludeFromStats { get; set; }
+    public bool FullRound { get; set; }
     
     // Course info
     public long CourseId { get; set; }
@@ -70,7 +71,8 @@ public class RoundResponse
             CourseName = course.CourseName,
             Teebox = RoundTeebox.From(teebox),
             Stats = roundStat != null ? RoundStats.From(roundStat) : null,
-            Holes = holes ?? new()
+            Holes = holes ?? new(),
+            FullRound = round.FullRound
         };
     }
 }

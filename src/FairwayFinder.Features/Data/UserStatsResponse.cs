@@ -8,8 +8,10 @@ public class UserStatsResponse
     // Basic stats
     public int TotalRounds { get; set; }
     public double? AverageScore { get; set; }
-    public double? AverageScoreTrend { get; set; }
-    public BestRound? BestRound { get; set; }
+    public double? Average18HoleScoreTrend { get; set; }
+    public double? Average9HoleScoreTrend { get; set; }
+    public BestRound? Best18HoleRound { get; set; }
+    public BestRound? Best9HoleRound { get; set; }
     
     // Advanced stats (FIR, GIR, putts)
     public AdvancedStats AdvancedStats { get; set; } = new();
@@ -18,7 +20,8 @@ public class UserStatsResponse
     public ParTypeScoring ParTypeScoring { get; set; } = new();
     
     // Trend/chart data
-    public List<ScoreTrendPoint> ScoreTrend { get; set; } = new();
+    public List<ScoreTrendPoint> ScoreTrend18Hole { get; set; } = new();
+    public List<ScoreTrendPoint> ScoreTrend9Hole { get; set; } = new();
     public ScoringDistribution ScoringDistribution { get; set; } = new();
     public List<CourseStats> MostPlayedCourses { get; set; } = new();
 }
@@ -73,12 +76,14 @@ public class AdvancedStats
     /// <summary>
     /// Average putts per round
     /// </summary>
-    public double? AveragePutts { get; set; }
+    public double? Average18HolePutts { get; set; }
+    public double? Average9HolePutts { get; set; }
     
     /// <summary>
     /// Average putts trend (last 5 rounds vs previous 5 rounds). Negative = improvement.
     /// </summary>
-    public double? AveragePuttsTrend { get; set; }
+    public double? Average18HolePuttsTrend { get; set; }
+    public double? Average9HolePuttsTrend { get; set; }
     
     /// <summary>
     /// Number of rounds that have advanced stats tracked
