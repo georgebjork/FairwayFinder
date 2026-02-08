@@ -1,9 +1,11 @@
 using FairwayFinder.Features.Data;
 
-namespace FairwayFinder.Features.Services;
+namespace FairwayFinder.Features.Services.Interfaces;
 
 public interface IRoundService
 {
-    Task<List<RoundDto>> GetRoundsByUserIdAsync(string userId);
+    Task<List<RoundResponse>> GetRoundsByUserIdAsync(string userId);
+    
+    
     Task<ScorecardDto?> GetRoundScorecardAsync(long roundId);
 }

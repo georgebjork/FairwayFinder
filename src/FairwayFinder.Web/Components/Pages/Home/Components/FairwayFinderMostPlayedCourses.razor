@@ -1,14 +1,6 @@
 @using FairwayFinder.Features.Data
-@using FairwayFinder.Features.Services
-@inject IStatsService StatsService
 
-@if (_loading)
-{
-    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" class="rz-p-4">
-        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-    </RadzenStack>
-}
-else if (_courses is null || _courses.Count == 0)
+@if (Courses is null || Courses.Count == 0)
 {
     <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
         No courses played yet.
@@ -31,7 +23,7 @@ else
         </RadzenStack>
         
         <!-- Rows -->
-        @foreach (var course in _courses)
+        @foreach (var course in Courses)
         {
             <RadzenStack Orientation="Orientation.Horizontal" 
                          JustifyContent="JustifyContent.SpaceBetween" 
@@ -71,26 +63,5 @@ else
 
 @code {
     [Parameter]
-    public string? UserId { get; set; }
-    
-    [Parameter]
-    public int Count { get; set; } = 5;
-
-    private List<MostPlayedCourseDto>? _courses;
-    private bool _loading = true;
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (!string.IsNullOrEmpty(UserId))
-        {
-            await LoadDataAsync();
-        }
-    }
-
-    private async Task LoadDataAsync()
-    {
-        _loading = true;
-        _courses = await StatsService.GetMostPlayedCoursesAsync(UserId!, Count);
-        _loading = false;
-    }
+    public List<CourseStats>? Courses { get; set; }
 }

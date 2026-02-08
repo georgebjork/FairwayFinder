@@ -1,5 +1,6 @@
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services
+@using FairwayFinder.Features.Services.Interfaces
 @inject IRoundService RoundService
 @inject NavigationManager NavigationManager
 
@@ -18,7 +19,7 @@ else if (_rounds is null || !_rounds.Any())
 else
 {
     <RadzenDataGrid Data="@_rounds" 
-                    TItem="RoundDto"
+                    TItem="RoundResponse"
                     AllowFiltering="true"
                     FilterMode="FilterMode.Advanced"
                     AllowSorting="true"
@@ -30,13 +31,13 @@ else
                     RowClick="@OnRowClick"
                     Style="cursor: pointer;">
         <Columns>
-            <RadzenDataGridColumn TItem="RoundDto" Property="DatePlayed" Title="Date Played" Width="150px">
+            <RadzenDataGridColumn TItem="RoundResponse" Property="DatePlayed" Title="Date Played" Width="150px">
                 <Template Context="round">
                     @round.DatePlayed.ToString("MMM dd, yyyy")
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="RoundDto" Property="CourseName" Title="Course" />
-            <RadzenDataGridColumn TItem="RoundDto" Property="Score" Title="Score" Width="100px" TextAlign="TextAlign.Center" />
+            <RadzenDataGridColumn TItem="RoundResponse" Property="CourseName" Title="Course" />
+            <RadzenDataGridColumn TItem="RoundResponse" Property="Score" Title="Score" Width="100px" TextAlign="TextAlign.Center" />
         </Columns>
     </RadzenDataGrid>
 }
@@ -45,7 +46,7 @@ else
     [Parameter]
     public string? UserId { get; set; }
 
-    private List<RoundDto>? _rounds;
+    private List<RoundResponse>? _rounds;
     private bool _loading = true;
 
     protected override async Task OnParametersSetAsync()
@@ -68,7 +69,7 @@ else
         _loading = false;
     }
 
-    private void OnRowClick(DataGridRowMouseEventArgs<RoundDto> args)
+    private void OnRowClick(DataGridRowMouseEventArgs<RoundResponse> args)
     {
         if (args.Data is not null)
         {

@@ -1,15 +1,7 @@
 @using FairwayFinder.Features.Data
-@using FairwayFinder.Features.Services
-@inject IStatsService StatsService
 @inject NavigationManager NavigationManager
 
-@if (_loading)
-{
-    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 300px;">
-        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-    </RadzenStack>
-}
-else if (_trendData is null || _trendData.Count < 2)
+@if (TrendData is null || TrendData.Count < 2)
 {
     <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 300px;">
         <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
@@ -20,7 +12,7 @@ else if (_trendData is null || _trendData.Count < 2)
 else
 {
     <RadzenChart Style="height: 300px;" SeriesClick="@OnSeriesClick">
-        <RadzenLineSeries Data="@_trendData" 
+        <RadzenLineSeries Data="@_chartData" 
                           CategoryProperty="DateLabel" 
                           ValueProperty="Score" 
                           Title="Score"
@@ -46,52 +38,36 @@ else
 
 @code {
     [Parameter]
-    public string? UserId { get; set; }
-    
-    [Parameter]
-    public int Count { get; set; } = 20;
+    public List<ScoreTrendPoint>? TrendData { get; set; }
 
-    private List<ScoreTrendChartItem>? _trendData;
-    private bool _loading = true;
+    private List<ScoreTrendChartItem>? _chartData;
     private int _minScore;
     private int _maxScore;
     private int _step = 5;
 
-    protected override async Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
-        if (!string.IsNullOrEmpty(UserId))
+        if (TrendData is not null && TrendData.Count >= 2)
         {
-            await LoadTrendDataAsync();
-        }
-    }
+            // Transform to chart items with formatted date label
+            _chartData = TrendData.Select(d => new ScoreTrendChartItem
+            {
+                RoundId = d.RoundId,
+                DatePlayed = d.DatePlayed,
+                DateLabel = d.DatePlayed.ToString("M/d"),
+                Score = d.Score,
+                CourseName = d.CourseName
+            }).ToList();
 
-    private async Task LoadTrendDataAsync()
-    {
-        _loading = true;
-        
-        var data = await StatsService.GetScoreTrendAsync(UserId!, Count);
-        
-        // Transform to chart items with formatted date label
-        _trendData = data.Select(d => new ScoreTrendChartItem
-        {
-            RoundId = d.RoundId,
-            DatePlayed = d.DatePlayed,
-            DateLabel = d.DatePlayed.ToString("M/d"),
-            Score = d.Score,
-            CourseName = d.CourseName
-        }).ToList();
-
-        // Calculate axis range with padding
-        if (_trendData.Count > 0)
-        {
-            var scores = _trendData.Select(d => d.Score).ToList();
+            // Calculate axis range with padding
+            var scores = _chartData.Select(d => d.Score).ToList();
             var minScore = scores.Min();
             var maxScore = scores.Max();
-            
+
             // Round down/up to nearest 5 with padding
             _minScore = (int)(Math.Floor((minScore - 3) / 5.0) * 5);
             _maxScore = (int)(Math.Ceiling((maxScore + 3) / 5.0) * 5);
-            
+
             // Ensure minimum range
             if (_maxScore - _minScore < 10)
             {
@@ -99,8 +75,6 @@ else
                 _maxScore += 5;
             }
         }
-
-        _loading = false;
     }
 
     private void OnSeriesClick(SeriesClickEventArgs args)

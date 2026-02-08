@@ -1,5 +1,6 @@
 using FairwayFinder.Data;
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace FairwayFinder.Features.Services;
@@ -13,7 +14,7 @@ public class RoundService : IRoundService
         _dbContextFactory = dbContextFactory;
     }
 
-    public async Task<List<RoundDto>> GetRoundsByUserIdAsync(string userId)
+    public async Task<List<RoundResponse>> GetRoundsByUserIdAsync(string userId)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
         
@@ -23,7 +24,7 @@ public class RoundService : IRoundService
                 dbContext.Courses,
                 round => round.CourseId,
                 course => course.CourseId,
-                (round, course) => new RoundDto
+                (round, course) => new RoundResponse
                 {
                     RoundId = round.RoundId,
                     DatePlayed = round.DatePlayed,

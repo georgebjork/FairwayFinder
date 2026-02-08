@@ -1,20 +1,32 @@
 namespace FairwayFinder.Features.Data;
 
 /// <summary>
-/// Quick stats for the dashboard header
+/// Complete user stats aggregated across all rounds.
 /// </summary>
-public class DashboardStatsDto
+public class UserStatsResponse
 {
+    // Basic stats
     public int TotalRounds { get; set; }
     public double? AverageScore { get; set; }
     public double? AverageScoreTrend { get; set; }
-    public BestRoundDto? BestRound { get; set; }
+    public BestRound? BestRound { get; set; }
+    
+    // Advanced stats (FIR, GIR, putts)
+    public AdvancedStats AdvancedStats { get; set; } = new();
+    
+    // Par type averages
+    public ParTypeScoring ParTypeScoring { get; set; } = new();
+    
+    // Trend/chart data
+    public List<ScoreTrendPoint> ScoreTrend { get; set; } = new();
+    public ScoringDistribution ScoringDistribution { get; set; } = new();
+    public List<CourseStats> MostPlayedCourses { get; set; } = new();
 }
 
 /// <summary>
 /// Best round information
 /// </summary>
-public class BestRoundDto
+public class BestRound
 {
     public long RoundId { get; set; }
     public int Score { get; set; }
@@ -23,9 +35,9 @@ public class BestRoundDto
 }
 
 /// <summary>
-/// A single data point for the score trend chart
+/// A single data point for score trend
 /// </summary>
-public class ScoreTrendPointDto
+public class ScoreTrendPoint
 {
     public long RoundId { get; set; }
     public DateOnly DatePlayed { get; set; }
@@ -34,9 +46,9 @@ public class ScoreTrendPointDto
 }
 
 /// <summary>
-/// Advanced stats (FIR, GIR, Putting) aggregated across rounds with hole-by-hole tracking
+/// Advanced stats (FIR, GIR, Putting) aggregated across rounds
 /// </summary>
-public class AdvancedStatsDto
+public class AdvancedStats
 {
     /// <summary>
     /// Fairways In Regulation percentage (par 4/5 holes only)
@@ -75,9 +87,9 @@ public class AdvancedStatsDto
 }
 
 /// <summary>
-/// Scoring distribution aggregated across all rounds (from RoundStat table)
+/// Scoring distribution aggregated across all rounds
 /// </summary>
-public class ScoringDistributionDto
+public class ScoringDistribution
 {
     public int HolesInOne { get; set; }
     public int DoubleEagles { get; set; }
@@ -100,9 +112,9 @@ public class ScoringDistributionDto
 }
 
 /// <summary>
-/// Course with round count and average score for "Most Played Courses" list
+/// Stats for a specific course
 /// </summary>
-public class MostPlayedCourseDto
+public class CourseStats
 {
     public long CourseId { get; set; }
     public string CourseName { get; set; } = string.Empty;
@@ -113,7 +125,7 @@ public class MostPlayedCourseDto
 /// <summary>
 /// Average scoring by par type (Par 3, Par 4, Par 5)
 /// </summary>
-public class ParTypeScoringDto
+public class ParTypeScoring
 {
     public double? Par3Average { get; set; }
     public double? Par4Average { get; set; }

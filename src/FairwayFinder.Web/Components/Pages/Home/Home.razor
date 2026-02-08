@@ -75,28 +75,28 @@
                     Value="-" />
             }
             
-            @if (_advancedStats?.RoundsWithStats > 0)
+            @if (_stats.AdvancedStats.RoundsWithStats > 0)
             {
-                @if (_advancedStats.FirPercent.HasValue)
+                @if (_stats.AdvancedStats.FirPercent.HasValue)
                 {
                     <FairwayFinderStatsCard 
                         Label="Fairways" 
-                        Value="@($"{_advancedStats.FirPercent:F1}%")"
-                        SubText="@($"{_advancedStats.RoundsWithStats} rounds")">
-                        @if (_advancedStats.FirPercentTrend.HasValue)
+                        Value="@($"{_stats.AdvancedStats.FirPercent:F1}%")"
+                        SubText="@($"{_stats.AdvancedStats.RoundsWithStats} rounds")">
+                        @if (_stats.AdvancedStats.FirPercentTrend.HasValue)
                         {
                             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
-                                @if (_advancedStats.FirPercentTrend > 0) {
+                                @if (_stats.AdvancedStats.FirPercentTrend > 0) {
                                     <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Success"/>
                                     <RadzenText TextStyle="TextStyle.Caption">
-                                       + @_advancedStats.FirPercentTrend.Value.ToString("F1")%
+                                       + @_stats.AdvancedStats.FirPercentTrend.Value.ToString("F1")%
                                     </RadzenText>
                                 }
                                 else
                                 {
                                     <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Danger"/>
                                     <RadzenText TextStyle="TextStyle.Caption">
-                                       @_advancedStats.FirPercentTrend.Value.ToString("F1")%
+                                       @_stats.AdvancedStats.FirPercentTrend.Value.ToString("F1")%
                                     </RadzenText>
                                 }
                             </RadzenStack>
@@ -104,26 +104,26 @@
                     </FairwayFinderStatsCard>
                 }
                 
-                @if (_advancedStats.GirPercent.HasValue)
+                @if (_stats.AdvancedStats.GirPercent.HasValue)
                 {
                     <FairwayFinderStatsCard 
                         Label="Greens" 
-                        Value="@($"{_advancedStats.GirPercent:F1}%")"
-                        SubText="@($"{_advancedStats.RoundsWithStats} rounds")">
-                        @if (_advancedStats.GirPercentTrend.HasValue)
+                        Value="@($"{_stats.AdvancedStats.GirPercent:F1}%")"
+                        SubText="@($"{_stats.AdvancedStats.RoundsWithStats} rounds")">
+                        @if (_stats.AdvancedStats.GirPercentTrend.HasValue)
                         {
                             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
-                                @if (_advancedStats.GirPercentTrend > 0) {
+                                @if (_stats.AdvancedStats.GirPercentTrend > 0) {
                                     <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Success"/>
                                     <RadzenText TextStyle="TextStyle.Caption">
-                                       + @_advancedStats.GirPercentTrend.Value.ToString("F1")%
+                                       + @_stats.AdvancedStats.GirPercentTrend.Value.ToString("F1")%
                                     </RadzenText>
                                 }
                                 else
                                 {
                                     <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Danger"/>
                                     <RadzenText TextStyle="TextStyle.Caption">
-                                       @_advancedStats.GirPercentTrend.Value.ToString("F1")%
+                                       @_stats.AdvancedStats.GirPercentTrend.Value.ToString("F1")%
                                     </RadzenText>
                                 }
                             </RadzenStack>
@@ -131,26 +131,26 @@
                     </FairwayFinderStatsCard>
                 }
                 
-                @if (_advancedStats.AveragePutts.HasValue)
+                @if (_stats.AdvancedStats.AveragePutts.HasValue)
                 {
                     <FairwayFinderStatsCard 
                         Label="Avg Putts" 
-                        Value="@($"{_advancedStats.AveragePutts:F1}")"
+                        Value="@($"{_stats.AdvancedStats.AveragePutts:F1}")"
                         SubText="per round">
-                        @if (_advancedStats.AveragePuttsTrend.HasValue)
+                        @if (_stats.AdvancedStats.AveragePuttsTrend.HasValue)
                         {
                             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
-                                @if (_advancedStats.AveragePuttsTrend < 0) {
+                                @if (_stats.AdvancedStats.AveragePuttsTrend < 0) {
                                     <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Success"/>
                                     <RadzenText TextStyle="TextStyle.Caption">
-                                       @_advancedStats.AveragePuttsTrend.Value.ToString("F1")
+                                       @_stats.AdvancedStats.AveragePuttsTrend.Value.ToString("F1")
                                     </RadzenText>
                                 }
                                 else
                                 {
                                     <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Danger"/>
                                     <RadzenText TextStyle="TextStyle.Caption">
-                                       + @_advancedStats.AveragePuttsTrend.Value.ToString("F1")
+                                       + @_stats.AdvancedStats.AveragePuttsTrend.Value.ToString("F1")
                                     </RadzenText>
                                 }
                             </RadzenStack>
@@ -161,33 +161,33 @@
         </RadzenStack>
         
         <!-- Par Type Stats Row -->
-        @if (_parTypeStats is not null && (_parTypeStats.Par3Average.HasValue || _parTypeStats.Par4Average.HasValue || _parTypeStats.Par5Average.HasValue))
+        @if (_stats.ParTypeScoring.Par3Average.HasValue || _stats.ParTypeScoring.Par4Average.HasValue || _stats.ParTypeScoring.Par5Average.HasValue)
         {
 <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
-                @if (_parTypeStats.Par3Average.HasValue)
-                {
-                    <FairwayFinderStatsCard 
-                        Label="Par 3 Avg" 
-                        Value="@($"{_parTypeStats.Par3Average:F2}")"
-                        SubText="@($"{_parTypeStats.Par3Count} holes")" />
-                }
-                
-                @if (_parTypeStats.Par4Average.HasValue)
-                {
-                    <FairwayFinderStatsCard 
-                        Label="Par 4 Avg" 
-                        Value="@($"{_parTypeStats.Par4Average:F2}")"
-                        SubText="@($"{_parTypeStats.Par4Count} holes")" />
-                }
-                
-                @if (_parTypeStats.Par5Average.HasValue)
-                {
-                    <FairwayFinderStatsCard 
-                        Label="Par 5 Avg" 
-                        Value="@($"{_parTypeStats.Par5Average:F2}")"
-                        SubText="@($"{_parTypeStats.Par5Count} holes")" />
-                }
-            </RadzenStack>
+            @if (_stats.ParTypeScoring.Par3Average.HasValue)
+            {
+                <FairwayFinderStatsCard 
+                    Label="Par 3 Avg" 
+                    Value="@($"{_stats.ParTypeScoring.Par3Average:F2}")"
+                    SubText="@($"{_stats.ParTypeScoring.Par3Count} holes")" />
+            }
+            
+            @if (_stats.ParTypeScoring.Par4Average.HasValue)
+            {
+                <FairwayFinderStatsCard 
+                    Label="Par 4 Avg" 
+                    Value="@($"{_stats.ParTypeScoring.Par4Average:F2}")"
+                    SubText="@($"{_stats.ParTypeScoring.Par4Count} holes")" />
+            }
+            
+            @if (_stats.ParTypeScoring.Par5Average.HasValue)
+            {
+                <FairwayFinderStatsCard 
+                    Label="Par 5 Avg" 
+                    Value="@($"{_stats.ParTypeScoring.Par5Average:F2}")"
+                    SubText="@($"{_stats.ParTypeScoring.Par5Count} holes")" />
+            }
+        </RadzenStack>
         }
     }
 
@@ -196,13 +196,13 @@
         <RadzenColumn Size="12" SizeLG="7">
             <RadzenCard Style="height: 100%;">
                 <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Score Trend</RadzenText>
-                <FairwayFinderScoreTrendChart UserId="@_userId" Count="20" />
+                <FairwayFinderScoreTrendChart TrendData="@_stats?.ScoreTrend" />
             </RadzenCard>
         </RadzenColumn>
         <RadzenColumn Size="12" SizeLG="5">
             <RadzenCard Style="height: 100%;">
                 <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Scoring Distribution</RadzenText>
-                <FairwayFinderScoringDistributionChart UserId="@_userId" />
+                <FairwayFinderScoringDistributionChart Distribution="@_stats?.ScoringDistribution" />
             </RadzenCard>
         </RadzenColumn>
     </RadzenRow>
@@ -218,7 +218,7 @@
         <RadzenColumn Size="12" SizeLG="4">
             <RadzenCard Style="height: 100%;">
                 <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Most Played Courses</RadzenText>
-                <FairwayFinderMostPlayedCourses UserId="@_userId" Count="5" />
+                <FairwayFinderMostPlayedCourses Courses="@_stats?.MostPlayedCourses" />
             </RadzenCard>
         </RadzenColumn>
     </RadzenRow>
@@ -237,9 +237,7 @@
 
 @code {
     private string? _userId;
-    private DashboardStatsDto? _stats;
-    private AdvancedStatsDto? _advancedStats;
-    private ParTypeScoringDto? _parTypeStats;
+    private UserStatsResponse? _stats;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
@@ -253,16 +251,7 @@
             
             if (!string.IsNullOrEmpty(_userId))
             {
-                // Load all stat sets in parallel
-                var statsTask = StatsService.GetDashboardStatsAsync(_userId);
-                var advancedStatsTask = StatsService.GetAdvancedStatsAsync(_userId);
-                var parTypeStatsTask = StatsService.GetParTypeScoringAsync(_userId);
-                
-                await Task.WhenAll(statsTask, advancedStatsTask, parTypeStatsTask);
-                
-                _stats = statsTask.Result;
-                _advancedStats = advancedStatsTask.Result;
-                _parTypeStats = parTypeStatsTask.Result;
+                _stats = await StatsService.GetUserStatsAsync(_userId);
             }
         }
         
