@@ -1,15 +1,6 @@
 @using FairwayFinder.Features.Data
-@using FairwayFinder.Features.Services
-@using FairwayFinder.Features.Services.Interfaces
-@inject IRoundService RoundService
 
-@if (_loading)
-{
-    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" class="rz-p-4">
-        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-    </RadzenStack>
-}
-else if (_scorecard is null)
+@if (Round is null)
 {
     <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
         No scorecard data available.
@@ -38,18 +29,18 @@ else
             <tbody>
                 <!-- Yardage Row -->
                 <tr>
-                    <th colspan="2">@_scorecard.TeeboxName</th>
+                    <th colspan="2">@Round.Teebox.TeeboxName</th>
                     @foreach (var hole in FrontNine)
                     {
                         <td class="hole-cell">@hole.Yardage</td>
                     }
-                    <td class="total-cell" colspan="2">@_scorecard.YardageOut</td>
+                    <td class="total-cell" colspan="2">@Round.Teebox.YardageOut</td>
                     @foreach (var hole in BackNine)
                     {
                         <td class="hole-cell">@hole.Yardage</td>
                     }
-                    <td class="total-cell" colspan="2">@_scorecard.YardageIn</td>
-                    <td class="total-cell" colspan="2">@_scorecard.YardageTotal</td>
+                    <td class="total-cell" colspan="2">@Round.Teebox.YardageIn</td>
+                    <td class="total-cell" colspan="2">@Round.Teebox.YardageTotal</td>
                 </tr>
 
                 <!-- Handicap Row -->
@@ -65,7 +56,7 @@ else
                         <td class="hole-cell">@hole.Handicap</td>
                     }
                     <td class="total-cell" colspan="2">&nbsp;</td>
-                    <td class="total-cell" colspan="2">@_scorecard.Slope / @_scorecard.Rating</td>
+                    <td class="total-cell" colspan="2">@Round.Teebox.Slope / @Round.Teebox.Rating</td>
                 </tr>
 
                 <!-- Par Row -->
@@ -75,13 +66,13 @@ else
                     {
                         <td class="hole-cell">@hole.Par</td>
                     }
-                    <td class="total-cell" colspan="2">@_scorecard.ParOut</td>
+                    <td class="total-cell" colspan="2">@Round.ParOut</td>
                     @foreach (var hole in BackNine)
                     {
                         <td class="hole-cell">@hole.Par</td>
                     }
-                    <td class="total-cell" colspan="2">@_scorecard.ParIn</td>
-                    <td class="total-cell" colspan="2">@_scorecard.TeeboxPar</td>
+                    <td class="total-cell" colspan="2">@Round.ParIn</td>
+                    <td class="total-cell" colspan="2">@Round.Teebox.Par</td>
                 </tr>
 
                 <!-- Score Row -->
@@ -90,9 +81,9 @@ else
                     @foreach (var hole in FrontNine)
                     {
                         <td class="hole-cell score-cell">
-                            @if (hole.HoleScore.HasValue)
+                            @if (hole.Score.HasValue)
                             {
-                                <span class="score-value">@hole.HoleScore</span>
+                                <span class="score-value">@hole.Score</span>
                                 @GetScoreIndicatorSvg(hole.ScoreToPar)
                             }
                             else
@@ -101,13 +92,13 @@ else
                             }
                         </td>
                     }
-                    <td class="total-cell" colspan="2">@(_scorecard.ScoreOut > 0 ? _scorecard.ScoreOut : "-")</td>
+                    <td class="total-cell" colspan="2">@(Round.ScoreOut > 0 ? Round.ScoreOut : "-")</td>
                     @foreach (var hole in BackNine)
                     {
                         <td class="hole-cell score-cell">
-                            @if (hole.HoleScore.HasValue)
+                            @if (hole.Score.HasValue)
                             {
-                                <span class="score-value">@hole.HoleScore</span>
+                                <span class="score-value">@hole.Score</span>
                                 @GetScoreIndicatorSvg(hole.ScoreToPar)
                             }
                             else
@@ -116,11 +107,11 @@ else
                             }
                         </td>
                     }
-                    <td class="total-cell" colspan="2">@(_scorecard.ScoreIn > 0 ? _scorecard.ScoreIn : "-")</td>
-                    <td class="total-cell" colspan="2">@_scorecard.Score</td>
+                    <td class="total-cell" colspan="2">@(Round.ScoreIn > 0 ? Round.ScoreIn : "-")</td>
+                    <td class="total-cell" colspan="2">@Round.Score</td>
                 </tr>
 
-                @if (_scorecard.UsingHoleStats)
+                @if (Round.UsingHoleStats)
                 {
                     <!-- Fairways Row -->
                     <tr>
@@ -132,17 +123,17 @@ else
                                 {
                                     <!-- Par 3 or less - no fairway -->
                                 }
-                                else if (hole.HitFairway == true)
+                                else if (hole.Stats?.HitFairway == true)
                                 {
                                     <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
                                 }
-                                else if (hole.HitFairway == false)
+                                else if (hole.Stats?.HitFairway == false)
                                 {
-                                    @GetMissIcon(hole.MissFairwayType)
+                                    @GetMissIcon(hole.Stats?.MissFairwayType)
                                 }
                             </td>
                         }
-                        <td class="total-cell" colspan="2">@_scorecard.FairwaysHitOut</td>
+                        <td class="total-cell" colspan="2">@Round.FairwaysHitOut</td>
                         @foreach (var hole in BackNine)
                         {
                             <td class="hole-cell">
@@ -150,18 +141,18 @@ else
                                 {
                                     <!-- Par 3 or less - no fairway -->
                                 }
-                                else if (hole.HitFairway == true)
+                                else if (hole.Stats?.HitFairway == true)
                                 {
                                     <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
                                 }
-                                else if (hole.HitFairway == false)
+                                else if (hole.Stats?.HitFairway == false)
                                 {
-                                    @GetMissIcon(hole.MissFairwayType)
+                                    @GetMissIcon(hole.Stats?.MissFairwayType)
                                 }
                             </td>
                         }
-                        <td class="total-cell" colspan="2">@_scorecard.FairwaysHitIn</td>
-                        <td class="total-cell" colspan="2">@_scorecard.FairwaysHit / @_scorecard.FairwaysTotal</td>
+                        <td class="total-cell" colspan="2">@Round.FairwaysHitIn</td>
+                        <td class="total-cell" colspan="2">@Round.FairwaysHit / @Round.FairwaysTotal</td>
                     </tr>
 
                     <!-- GIR Row -->
@@ -170,32 +161,32 @@ else
                         @foreach (var hole in FrontNine)
                         {
                             <td class="hole-cell">
-                                @if (hole.HitGreen == true)
+                                @if (hole.Stats?.HitGreen == true)
                                 {
                                     <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
                                 }
-                                else if (hole.HitGreen == false)
+                                else if (hole.Stats?.HitGreen == false)
                                 {
-                                    @GetMissIcon(hole.MissGreenType)
+                                    @GetMissIcon(hole.Stats?.MissGreenType)
                                 }
                             </td>
                         }
-                        <td class="total-cell" colspan="2">@_scorecard.GreensHitOut</td>
+                        <td class="total-cell" colspan="2">@Round.GreensHitOut</td>
                         @foreach (var hole in BackNine)
                         {
                             <td class="hole-cell">
-                                @if (hole.HitGreen == true)
+                                @if (hole.Stats?.HitGreen == true)
                                 {
                                     <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
                                 }
-                                else if (hole.HitGreen == false)
+                                else if (hole.Stats?.HitGreen == false)
                                 {
-                                    @GetMissIcon(hole.MissGreenType)
+                                    @GetMissIcon(hole.Stats?.MissGreenType)
                                 }
                             </td>
                         }
-                        <td class="total-cell" colspan="2">@_scorecard.GreensHitIn</td>
-                        <td class="total-cell" colspan="2">@_scorecard.GreensHit / @_scorecard.GreensTotal</td>
+                        <td class="total-cell" colspan="2">@Round.GreensHitIn</td>
+                        <td class="total-cell" colspan="2">@Round.GreensHit / @Round.GreensTotal</td>
                     </tr>
 
                     <!-- Putts Row -->
@@ -203,15 +194,15 @@ else
                         <th colspan="2">Putts</th>
                         @foreach (var hole in FrontNine)
                         {
-                            <td class="hole-cell">@(hole.NumberOfPutts?.ToString() ?? "")</td>
+                            <td class="hole-cell">@(hole.Stats?.NumberOfPutts?.ToString() ?? "")</td>
                         }
-                        <td class="total-cell" colspan="2">@_scorecard.PuttsOut</td>
+                        <td class="total-cell" colspan="2">@Round.PuttsOut</td>
                         @foreach (var hole in BackNine)
                         {
-                            <td class="hole-cell">@(hole.NumberOfPutts?.ToString() ?? "")</td>
+                            <td class="hole-cell">@(hole.Stats?.NumberOfPutts?.ToString() ?? "")</td>
                         }
-                        <td class="total-cell" colspan="2">@_scorecard.PuttsIn</td>
-                        <td class="total-cell" colspan="2">@_scorecard.TotalPutts</td>
+                        <td class="total-cell" colspan="2">@Round.PuttsIn</td>
+                        <td class="total-cell" colspan="2">@Round.TotalPutts</td>
                     </tr>
                 }
             </tbody>
@@ -307,28 +298,10 @@ else
 
 @code {
     [Parameter]
-    public long RoundId { get; set; }
+    public RoundResponse? Round { get; set; }
 
-    private ScorecardDto? _scorecard;
-    private bool _loading = true;
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (RoundId > 0)
-        {
-            await LoadScorecardAsync();
-        }
-    }
-
-    private async Task LoadScorecardAsync()
-    {
-        _loading = true;
-        _scorecard = await RoundService.GetRoundScorecardAsync(RoundId);
-        _loading = false;
-    }
-
-    private IEnumerable<ScorecardHoleDto> FrontNine => _scorecard?.Holes.Where(h => h.HoleNumber <= 9) ?? Enumerable.Empty<ScorecardHoleDto>();
-    private IEnumerable<ScorecardHoleDto> BackNine => _scorecard?.Holes.Where(h => h.HoleNumber > 9) ?? Enumerable.Empty<ScorecardHoleDto>();
+    private IEnumerable<RoundHole> FrontNine => Round?.Holes.Where(h => h.HoleNumber <= 9) ?? Enumerable.Empty<RoundHole>();
+    private IEnumerable<RoundHole> BackNine => Round?.Holes.Where(h => h.HoleNumber > 9) ?? Enumerable.Empty<RoundHole>();
 
     private MarkupString GetScoreIndicatorSvg(int? scoreToPar)
     {

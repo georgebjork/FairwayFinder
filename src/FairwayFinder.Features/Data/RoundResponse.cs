@@ -28,6 +28,28 @@ public class RoundResponse
     // Individual hole data
     public List<RoundHole> Holes { get; set; } = new();
 
+    // Computed properties - Par
+    public int ParOut => Holes.Where(h => h.HoleNumber <= 9).Sum(h => h.Par);
+    public int ParIn => Holes.Where(h => h.HoleNumber > 9).Sum(h => h.Par);
+    public int ScoreToPar => Score - (int)Teebox.Par;
+
+    // Computed properties - Fairways (only par 4/5 holes have fairways)
+    public int FairwaysHitOut => Holes.Count(h => h.HoleNumber <= 9 && h.Stats?.HitFairway == true);
+    public int FairwaysHitIn => Holes.Count(h => h.HoleNumber > 9 && h.Stats?.HitFairway == true);
+    public int FairwaysHit => FairwaysHitOut + FairwaysHitIn;
+    public int FairwaysTotal => Holes.Count(h => h.Par > 3);
+
+    // Computed properties - Greens in Regulation
+    public int GreensHitOut => Holes.Count(h => h.HoleNumber <= 9 && h.Stats?.HitGreen == true);
+    public int GreensHitIn => Holes.Count(h => h.HoleNumber > 9 && h.Stats?.HitGreen == true);
+    public int GreensHit => GreensHitOut + GreensHitIn;
+    public int GreensTotal => Holes.Count;
+
+    // Computed properties - Putts
+    public int PuttsOut => Holes.Where(h => h.HoleNumber <= 9 && h.Stats?.NumberOfPutts.HasValue == true).Sum(h => h.Stats!.NumberOfPutts!.Value);
+    public int PuttsIn => Holes.Where(h => h.HoleNumber > 9 && h.Stats?.NumberOfPutts.HasValue == true).Sum(h => h.Stats!.NumberOfPutts!.Value);
+    public int TotalPutts => PuttsOut + PuttsIn;
+
     public static RoundResponse From(
         Round round,
         Course course,
@@ -101,6 +123,9 @@ public class RoundHole
     
     // Advanced stats (null if not tracking)
     public RoundHoleStat? Stats { get; set; }
+
+    // Computed property for score relative to par
+    public int? ScoreToPar => Score.HasValue ? Score.Value - Par : null;
 
     public static RoundHole From(Hole hole, Score? score, HoleStat? holeStat)
     {

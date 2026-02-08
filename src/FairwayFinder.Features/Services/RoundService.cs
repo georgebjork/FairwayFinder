@@ -103,11 +103,11 @@ public class RoundService : IRoundService
         }).ToList();
     }
 
-    public async Task<ScorecardDto?> GetRoundScorecardAsync(long roundId)
+    public async Task<RoundResponse?> GetRoundByIdAsync(long roundId)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
-        // Get round with course and teebox
+        // 1. Get round with course and teebox
         var roundData = await dbContext.Rounds
             .Where(r => r.RoundId == roundId && !r.IsDeleted)
             .Join(dbContext.Courses, r => r.CourseId, c => c.CourseId, (r, c) => new { Round = r, Course = c })
@@ -119,55 +119,46 @@ public class RoundService : IRoundService
             return null;
         }
 
-        // Get holes for this teebox
-        var holes = await dbContext.Holes
-            .Where(h => h.TeeboxId == roundData.Teebox.TeeboxId && !h.IsDeleted)
-            .OrderBy(h => h.HoleNumber)
-            .ToListAsync();
+        // 2. Get round stats
+        var roundStat = await dbContext.RoundStats
+            .Where(rs => rs.RoundId == roundId && !rs.IsDeleted)
+            .FirstOrDefaultAsync();
 
-        // Get scores for this round
+        // 3. Get scores
         var scores = await dbContext.Scores
             .Where(s => s.RoundId == roundId && !s.IsDeleted)
             .ToListAsync();
 
-        // Get hole stats for this round
+        // 4. Get holes for all scores
+        var holeIds = scores.Select(s => s.HoleId).Distinct().ToList();
+        var holes = await dbContext.Holes
+            .Where(h => holeIds.Contains(h.HoleId) && !h.IsDeleted)
+            .ToDictionaryAsync(h => h.HoleId);
+
+        // 5. Get hole stats
         var holeStats = await dbContext.HoleStats
             .Where(hs => hs.RoundId == roundId && !hs.IsDeleted)
             .ToDictionaryAsync(hs => hs.HoleId);
 
-        var scoresByHole = scores.ToDictionary(s => s.HoleId);
-
-        // Build scorecard DTO
-        return new ScorecardDto
-        {
-            RoundId = roundData.Round.RoundId,
-            DatePlayed = roundData.Round.DatePlayed,
-            CourseName = roundData.Course.CourseName,
-            TeeboxName = roundData.Teebox.TeeboxName,
-            TeeboxPar = roundData.Teebox.Par,
-            Rating = roundData.Teebox.Rating,
-            Slope = roundData.Teebox.Slope,
-            YardageOut = roundData.Teebox.YardageOut,
-            YardageIn = roundData.Teebox.YardageIn,
-            YardageTotal = roundData.Teebox.YardageTotal,
-            Score = roundData.Round.Score,
-            ScoreOut = roundData.Round.ScoreOut,
-            ScoreIn = roundData.Round.ScoreIn,
-            UsingHoleStats = roundData.Round.UsingHoleStats,
-            Holes = holes.Select(h => new ScorecardHoleDto
+        // Build hole list
+        var roundHoles = scores
+            .Select(s => holes.GetValueOrDefault(s.HoleId))
+            .Where(h => h != null)
+            .OrderBy(h => h!.HoleNumber)
+            .Select(h =>
             {
-                HoleId = h.HoleId,
-                HoleNumber = h.HoleNumber,
-                Par = h.Par,
-                Yardage = h.Yardage,
-                Handicap = h.Handicap,
-                HoleScore = scoresByHole.GetValueOrDefault(h.HoleId)?.HoleScore,
-                HitFairway = holeStats.GetValueOrDefault(h.HoleId)?.HitFairway,
-                MissFairwayType = holeStats.GetValueOrDefault(h.HoleId)?.MissFairwayType,
-                HitGreen = holeStats.GetValueOrDefault(h.HoleId)?.HitGreen,
-                MissGreenType = holeStats.GetValueOrDefault(h.HoleId)?.MissGreenType,
-                NumberOfPutts = holeStats.GetValueOrDefault(h.HoleId)?.NumberOfPutts
-            }).ToList()
-        };
+                var score = scores.FirstOrDefault(s => s.HoleId == h!.HoleId);
+                var holeStat = holeStats.GetValueOrDefault(h!.HoleId);
+                return RoundHole.From(h, score, holeStat);
+            })
+            .ToList();
+
+        return RoundResponse.From(
+            roundData.Round,
+            roundData.Course,
+            roundData.Teebox,
+            roundStat,
+            roundHoles
+        );
     }
 }

@@ -14,5 +14,8 @@ public interface IRoundService
     /// </summary>
     Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId);
     
-    Task<ScorecardDto?> GetRoundScorecardAsync(long roundId);
+    /// <summary>
+    /// Gets a single round with all related data (holes, scores, stats)
+    /// </summary>
+    Task<RoundResponse?> GetRoundByIdAsync(long roundId);
 }

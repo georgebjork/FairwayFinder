@@ -2,10 +2,8 @@
 @rendermode InteractiveServer
 @attribute [Authorize]
 @using FairwayFinder.Features.Data
-@using FairwayFinder.Features.Services
 @using FairwayFinder.Features.Services.Interfaces
 @using FairwayFinder.Web.Components.Pages.Rounds.Components
-@using FairwayFinder.Web.Components.Shared
 @inject IRoundService RoundService
 @inject NavigationManager NavigationManager
 
@@ -17,7 +15,7 @@
         <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
     </RadzenStack>
 }
-else if (_scorecard is null)
+else if (_round is null)
 {
     <RadzenCard class="rz-p-5">
         <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
@@ -33,13 +31,13 @@ else
         <!-- Header -->
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Start">
             <RadzenStack Gap="0.25rem">
-                <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">@_scorecard.CourseName</RadzenText>
+                <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">@_round.CourseName</RadzenText>
                 <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem">
                     <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
-                        Tee Box: @_scorecard.TeeboxName
+                        Tee Box: @_round.Teebox.TeeboxName
                     </RadzenText>
                     <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
-                        Date: @_scorecard.DatePlayed.ToString("M/d/yy")
+                        Date: @_round.DatePlayed.ToString("M/d/yy")
                     </RadzenText>
                 </RadzenStack>
             </RadzenStack>
@@ -48,7 +46,7 @@ else
         </RadzenStack>
 
         <!-- Scorecard -->
-        <FairwayFinderScorecard RoundId="@RoundId" />
+        <FairwayFinderScorecard Round="@_round" />
     </RadzenStack>
 }
 
@@ -56,18 +54,13 @@ else
     [Parameter]
     public long RoundId { get; set; }
 
-    private ScorecardDto? _scorecard;
+    private RoundResponse? _round;
     private bool _loading = true;
 
     protected override async Task OnParametersSetAsync()
     {
-        await LoadScorecardAsync();
-    }
-
-    private async Task LoadScorecardAsync()
-    {
         _loading = true;
-        _scorecard = await RoundService.GetRoundScorecardAsync(RoundId);
+        _round = await RoundService.GetRoundByIdAsync(RoundId);
         _loading = false;
     }
 }
