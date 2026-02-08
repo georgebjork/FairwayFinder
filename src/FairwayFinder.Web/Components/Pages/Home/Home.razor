@@ -9,6 +9,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IStatsService StatsService
 @inject NavigationManager NavigationManager
+@inject DialogService DialogService
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -37,7 +38,7 @@
             
             <FairwayFinderStatsCard 
                 Label="Average Score" 
-                Value="@(_stats.AverageScore?.ToString("F1") ?? "-")"
+                Value="@(_stats.Average18HoleScore?.ToString("F1") ?? "-")"
                 SubText="@(_stats.TotalRounds + " rounds")">  
                 @if (_stats.Average18HoleScoreTrend.HasValue)
                 {
@@ -96,7 +97,8 @@
                     <FairwayFinderStatsCard 
                         Label="Fairways" 
                         Value="@($"{_stats.AdvancedStats.FirPercent:F1}%")"
-                        SubText="@($"{_stats.AdvancedStats.RoundsWithStats} rounds")">
+                        SubText="@($"{_stats.AdvancedStats.RoundsWithStats} rounds")"
+                        OnClick="ShowFirTrendDialog">
                         @if (_stats.AdvancedStats.FirPercentTrend.HasValue)
                         {
                             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
@@ -123,7 +125,8 @@
                     <FairwayFinderStatsCard 
                         Label="Greens" 
                         Value="@($"{_stats.AdvancedStats.GirPercent:F1}%")"
-                        SubText="@($"{_stats.AdvancedStats.RoundsWithStats} rounds")">
+                        SubText="@($"{_stats.AdvancedStats.RoundsWithStats} rounds")"
+                        OnClick="ShowGirTrendDialog">
                         @if (_stats.AdvancedStats.GirPercentTrend.HasValue)
                         {
                             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
@@ -150,7 +153,8 @@
                     <FairwayFinderStatsCard 
                         Label="Avg Putts" 
                         Value="@($"{_stats.AdvancedStats.Average18HolePutts:F1}")"
-                        SubText="per round">
+                        SubText="per round"
+                        OnClick="ShowPuttsTrendDialog">
                         @if (_stats.AdvancedStats.Average18HolePuttsTrend.HasValue)
                         {
                             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
@@ -286,5 +290,65 @@
         {
             NavigationManager.NavigateTo($"/round/{_stats.Best9HoleRound.RoundId}");
         }
+    }
+    
+    private async Task ShowPuttsTrendDialog()
+    {
+        if (_stats?.PuttsTrend18Hole is null || _stats.PuttsTrend18Hole.Count < 2)
+        {
+            return;
+        }
+        
+        await DialogService.OpenAsync<PuttsTrendDialog>("Putting Trend (18-Hole Rounds)",
+            new Dictionary<string, object>
+            {
+                { "TrendData", _stats.PuttsTrend18Hole }
+            },
+            new DialogOptions
+            {
+                Width = "700px",
+                CloseDialogOnOverlayClick = true,
+                CloseDialogOnEsc = true
+            });
+    }
+    
+    private async Task ShowFirTrendDialog()
+    {
+        if (_stats?.FirTrend is null || _stats.FirTrend.Count < 2)
+        {
+            return;
+        }
+        
+        await DialogService.OpenAsync<FirTrendDialog>("Fairways In Regulation Trend",
+            new Dictionary<string, object>
+            {
+                { "TrendData", _stats.FirTrend }
+            },
+            new DialogOptions
+            {
+                Width = "700px",
+                CloseDialogOnOverlayClick = true,
+                CloseDialogOnEsc = true
+            });
+    }
+    
+    private async Task ShowGirTrendDialog()
+    {
+        if (_stats?.GirTrend is null || _stats.GirTrend.Count < 2)
+        {
+            return;
+        }
+        
+        await DialogService.OpenAsync<GirTrendDialog>("Greens In Regulation Trend",
+            new Dictionary<string, object>
+            {
+                { "TrendData", _stats.GirTrend }
+            },
+            new DialogOptions
+            {
+                Width = "700px",
+                CloseDialogOnOverlayClick = true,
+                CloseDialogOnEsc = true
+            });
     }
 }

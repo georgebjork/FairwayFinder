@@ -12,10 +12,10 @@ public static class StatsCalculator
     /// <summary>
     /// Calculates the average score across all rounds
     /// </summary>
-    public static double? CalculateAverageScore(IReadOnlyList<RoundResponse> rounds)
+    public static double? CalculateAverageScore(IReadOnlyList<RoundResponse> rounds, bool fullRound = true)
     {
         if (rounds.Count == 0) return null;
-        return Math.Round(rounds.Average(r => r.Score), 1);
+        return Math.Round(rounds.Where(x => x.FullRound == fullRound).Average(r => r.Score), 1);
     }
 
     /// <summary>
@@ -70,6 +70,106 @@ public static class StatsCalculator
                 CourseName = r.CourseName
             })
             .ToList();
+    }
+
+    /// <summary>
+    /// Builds the putts trend data for charting (oldest to newest)
+    /// Only includes rounds that have hole stats with putt data
+    /// </summary>
+    public static List<PuttsTrendPoint> BuildPuttsTrend(IReadOnlyList<RoundResponse> rounds, int count, bool fullRound = true)
+    {
+        var filteredRounds = rounds
+            .Where(x => x.FullRound == fullRound && x.UsingHoleStats && x.TotalPutts > 0);
+        
+        return filteredRounds
+            .Take(count)
+            .Reverse() // Oldest first for chart display
+            .Select(r => new PuttsTrendPoint
+            {
+                RoundId = r.RoundId,
+                DatePlayed = r.DatePlayed,
+                Putts = r.TotalPutts,
+                CourseName = r.CourseName
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Builds the FIR% trend data for charting (oldest to newest)
+    /// Only includes rounds that have hole stats with fairway data (par 4/5 holes)
+    /// </summary>
+    public static List<FirTrendPoint> BuildFirTrend(IReadOnlyList<RoundResponse> rounds, int count)
+    {
+        var result = new List<FirTrendPoint>();
+        
+        var roundsWithStats = rounds
+            .Where(x => x.UsingHoleStats)
+            .Take(count)
+            .ToList();
+        
+        foreach (var round in roundsWithStats)
+        {
+            var fairwayHoles = round.Holes
+                .Where(h => h.Par > 3 && h.Stats?.HitFairway.HasValue == true)
+                .ToList();
+            
+            if (fairwayHoles.Count > 0)
+            {
+                var fairwaysHit = fairwayHoles.Count(h => h.Stats!.HitFairway == true);
+                result.Add(new FirTrendPoint
+                {
+                    RoundId = round.RoundId,
+                    DatePlayed = round.DatePlayed,
+                    FirPercent = Math.Round((double)fairwaysHit / fairwayHoles.Count * 100, 1),
+                    FairwaysHit = fairwaysHit,
+                    FairwayAttempts = fairwayHoles.Count,
+                    CourseName = round.CourseName
+                });
+            }
+        }
+        
+        // Reverse to get oldest first for chart display
+        result.Reverse();
+        return result;
+    }
+
+    /// <summary>
+    /// Builds the GIR% trend data for charting (oldest to newest)
+    /// Only includes rounds that have hole stats with green data
+    /// </summary>
+    public static List<GirTrendPoint> BuildGirTrend(IReadOnlyList<RoundResponse> rounds, int count)
+    {
+        var result = new List<GirTrendPoint>();
+        
+        var roundsWithStats = rounds
+            .Where(x => x.UsingHoleStats)
+            .Take(count)
+            .ToList();
+        
+        foreach (var round in roundsWithStats)
+        {
+            var greenHoles = round.Holes
+                .Where(h => h.Stats?.HitGreen.HasValue == true)
+                .ToList();
+            
+            if (greenHoles.Count > 0)
+            {
+                var greensHit = greenHoles.Count(h => h.Stats!.HitGreen == true);
+                result.Add(new GirTrendPoint
+                {
+                    RoundId = round.RoundId,
+                    DatePlayed = round.DatePlayed,
+                    GirPercent = Math.Round((double)greensHit / greenHoles.Count * 100, 1),
+                    GreensHit = greensHit,
+                    GreenAttempts = greenHoles.Count,
+                    CourseName = round.CourseName
+                });
+            }
+        }
+        
+        // Reverse to get oldest first for chart display
+        result.Reverse();
+        return result;
     }
 
     /// <summary>

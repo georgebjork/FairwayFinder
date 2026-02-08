@@ -1,0 +1,94 @@
+@using FairwayFinder.Features.Data
+@inject NavigationManager NavigationManager
+
+<RadzenStack Gap="1rem">
+    @if (TrendData is null || TrendData.Count < 2)
+    {
+        <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 300px;">
+            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                Not enough rounds with green data to show trend.
+            </RadzenText>
+        </RadzenStack>
+    }
+    else
+    {
+        <RadzenChart Style="height: 300px;" SeriesClick="@OnSeriesClick">
+            <RadzenLineSeries Data="@_chartData" 
+                              CategoryProperty="DateLabel" 
+                              ValueProperty="GirPercent" 
+                              Title="GIR%"
+                              Smooth="true">
+                <TooltipTemplate Context="data">
+                    <div class="rz-p-2">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-1">@data.CourseName</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">GIR: <strong>@data.GirPercent.ToString("F1")%</strong></RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                            @data.GreensHit / @data.GreenAttempts greens
+                        </RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                            @data.DatePlayed.ToString("MMM d, yyyy")
+                        </RadzenText>
+                    </div>
+                </TooltipTemplate>
+            </RadzenLineSeries>
+
+            <RadzenValueAxis Min="0" Max="100" Step="20">
+                <RadzenGridLines Visible="true" />
+                <RadzenAxisTitle Text="GIR %" />
+            </RadzenValueAxis>
+            <RadzenLegend Visible="false" />
+        </RadzenChart>
+    }
+    
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+        <RadzenButton Text="Close" 
+                      ButtonStyle="ButtonStyle.Light" 
+                      Click="@(() => DialogService.Close())" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter]
+    public List<GirTrendPoint>? TrendData { get; set; }
+    
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
+
+    private List<GirTrendChartItem>? _chartData;
+
+    protected override void OnParametersSet()
+    {
+        if (TrendData is not null && TrendData.Count >= 2)
+        {
+            _chartData = TrendData.Select(d => new GirTrendChartItem
+            {
+                RoundId = d.RoundId,
+                DatePlayed = d.DatePlayed,
+                DateLabel = d.DatePlayed.ToString("M/d"),
+                GirPercent = d.GirPercent,
+                GreensHit = d.GreensHit,
+                GreenAttempts = d.GreenAttempts,
+                CourseName = d.CourseName
+            }).ToList();
+        }
+    }
+
+    private void OnSeriesClick(SeriesClickEventArgs args)
+    {
+        if (args.Data is GirTrendChartItem item)
+        {
+            NavigationManager.NavigateTo($"/round/{item.RoundId}");
+        }
+    }
+
+    private class GirTrendChartItem
+    {
+        public long RoundId { get; set; }
+        public DateOnly DatePlayed { get; set; }
+        public string DateLabel { get; set; } = string.Empty;
+        public double GirPercent { get; set; }
+        public int GreensHit { get; set; }
+        public int GreenAttempts { get; set; }
+        public string CourseName { get; set; } = string.Empty;
+    }
+}

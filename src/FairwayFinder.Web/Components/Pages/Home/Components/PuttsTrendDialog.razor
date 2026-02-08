@@ -1,0 +1,100 @@
+@using FairwayFinder.Features.Data
+@inject NavigationManager NavigationManager
+
+<RadzenStack Gap="1rem">
+    @if (TrendData is null || TrendData.Count < 2)
+    {
+        <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 300px;">
+            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                Not enough rounds with putting data to show trend.
+            </RadzenText>
+        </RadzenStack>
+    }
+    else
+    {
+        <RadzenChart Style="height: 300px;" SeriesClick="@OnSeriesClick">
+            <RadzenLineSeries Data="@_chartData" 
+                              CategoryProperty="DateLabel" 
+                              ValueProperty="Putts" 
+                              Title="Putts"
+                              Smooth="true">
+                <TooltipTemplate Context="data">
+                    <div class="rz-p-2">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-1">@data.CourseName</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">Putts: <strong>@data.Putts</strong></RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                            @data.DatePlayed.ToString("MMM d, yyyy")
+                        </RadzenText>
+                    </div>
+                </TooltipTemplate>
+            </RadzenLineSeries>
+
+            <RadzenValueAxis Min="@_minPutts" Max="@_maxPutts" Step="@_step">
+                <RadzenGridLines Visible="true" />
+                <RadzenAxisTitle Text="Putts" />
+            </RadzenValueAxis>
+            <RadzenLegend Visible="false" />
+        </RadzenChart>
+    }
+    
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+        <RadzenButton Text="Close" 
+                      ButtonStyle="ButtonStyle.Light" 
+                      Click="@(() => DialogService.Close())" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter]
+    public List<PuttsTrendPoint>? TrendData { get; set; }
+    
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
+
+    private List<PuttsTrendChartItem>? _chartData;
+    private int _minPutts;
+    private int _maxPutts;
+    private int _step = 2;
+
+    protected override void OnParametersSet()
+    {
+        if (TrendData is not null && TrendData.Count >= 2)
+        {
+            _chartData = TrendData.Select(d => new PuttsTrendChartItem
+            {
+                RoundId = d.RoundId,
+                DatePlayed = d.DatePlayed,
+                DateLabel = d.DatePlayed.ToString("M/d"),
+                Putts = d.Putts,
+                CourseName = d.CourseName
+            }).ToList();
+
+            var putts = _chartData.Select(d => d.Putts).ToList();
+            var minPutts = putts.Min();
+            var maxPutts = putts.Max();
+
+            _minPutts = (int)(Math.Floor((minPutts - 2) / 2.0) * 2);
+            _maxPutts = (int)(Math.Ceiling((maxPutts + 2) / 2.0) * 2);
+
+            if (_minPutts < 0) _minPutts = 0;
+            if (_maxPutts - _minPutts < 6) _maxPutts = _minPutts + 6;
+        }
+    }
+
+    private void OnSeriesClick(SeriesClickEventArgs args)
+    {
+        if (args.Data is PuttsTrendChartItem item)
+        {
+            NavigationManager.NavigateTo($"/round/{item.RoundId}");
+        }
+    }
+
+    private class PuttsTrendChartItem
+    {
+        public long RoundId { get; set; }
+        public DateOnly DatePlayed { get; set; }
+        public string DateLabel { get; set; } = string.Empty;
+        public int Putts { get; set; }
+        public string CourseName { get; set; } = string.Empty;
+    }
+}

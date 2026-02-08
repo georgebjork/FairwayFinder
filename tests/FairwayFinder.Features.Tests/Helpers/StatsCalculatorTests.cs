@@ -158,6 +158,34 @@ public class StatsCalculatorTests
         Assert.Equal(81.0, result);
     }
 
+    [Fact]
+    public void CalculateAverageScore_SingleRound_ReturnsThatScore_NineHole()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 85, fullRound: false)
+        };
+
+        var result = StatsCalculator.CalculateAverageScore(rounds, false);
+
+        Assert.Equal(85.0, result);
+    }
+
+    [Fact]
+    public void CalculateAverageScore_MultipleRounds_ReturnsCorrectAverage_NineHole()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, fullRound: false),
+            CreateRound(2, 85, fullRound: false),
+            CreateRound(3, 90, fullRound: false)
+        };
+
+        var result = StatsCalculator.CalculateAverageScore(rounds, false);
+
+        Assert.Equal(85.0, result);
+    }
+
     #endregion
 
     #region CalculateScoreTrend Tests
@@ -672,6 +700,184 @@ public class StatsCalculatorTests
         // Takes first 5 full rounds [1,2,3,4,5], then reverses
         Assert.Equal(5, result[0].RoundId);
         Assert.Equal(1, result[4].RoundId);
+    }
+
+    #endregion
+
+    #region BuildPuttsTrend Tests
+
+    [Fact]
+    public void BuildPuttsTrend_EmptyList_ReturnsEmptyList()
+    {
+        var rounds = new List<RoundResponse>();
+
+        var result = StatsCalculator.BuildPuttsTrend(rounds, 10);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildPuttsTrend_NoRoundsWithPuttData_ReturnsEmptyList()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, fullRound: true, usingHoleStats: false),
+            CreateRound(2, 82, fullRound: true, usingHoleStats: false)
+        };
+
+        var result = StatsCalculator.BuildPuttsTrend(rounds, 10);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildPuttsTrend_RoundsWithPutts_ReturnsCorrectData()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, "Course A", fullRound: true, usingHoleStats: true, 
+                datePlayed: new DateOnly(2024, 6, 3),
+                holes: new List<RoundHole>
+                {
+                    CreateHole(1, 4, numberOfPutts: 2),
+                    CreateHole(2, 4, numberOfPutts: 2),
+                    CreateHole(3, 4, numberOfPutts: 1)
+                }),
+            CreateRound(2, 82, "Course B", fullRound: true, usingHoleStats: true, 
+                datePlayed: new DateOnly(2024, 6, 2),
+                holes: new List<RoundHole>
+                {
+                    CreateHole(1, 4, numberOfPutts: 3),
+                    CreateHole(2, 4, numberOfPutts: 2),
+                    CreateHole(3, 4, numberOfPutts: 2)
+                }),
+            CreateRound(3, 84, "Course C", fullRound: true, usingHoleStats: true, 
+                datePlayed: new DateOnly(2024, 6, 1),
+                holes: new List<RoundHole>
+                {
+                    CreateHole(1, 4, numberOfPutts: 2),
+                    CreateHole(2, 4, numberOfPutts: 2),
+                    CreateHole(3, 4, numberOfPutts: 2)
+                })
+        };
+
+        var result = StatsCalculator.BuildPuttsTrend(rounds, 10);
+
+        Assert.Equal(3, result.Count);
+        // Should be reversed (oldest first)
+        Assert.Equal(3, result[0].RoundId);
+        Assert.Equal(6, result[0].Putts); // 2+2+2
+        Assert.Equal("Course C", result[0].CourseName);
+        
+        Assert.Equal(2, result[1].RoundId);
+        Assert.Equal(7, result[1].Putts); // 3+2+2
+        
+        Assert.Equal(1, result[2].RoundId);
+        Assert.Equal(5, result[2].Putts); // 2+2+1
+    }
+
+    [Fact]
+    public void BuildPuttsTrend_DefaultsToFullRound()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, fullRound: true, usingHoleStats: true, 
+                holes: new List<RoundHole> { CreateHole(1, 4, numberOfPutts: 2) }),
+            CreateRound(2, 40, fullRound: false, usingHoleStats: true, 
+                holes: new List<RoundHole> { CreateHole(1, 4, numberOfPutts: 1) }), // Should be excluded
+            CreateRound(3, 82, fullRound: true, usingHoleStats: true, 
+                holes: new List<RoundHole> { CreateHole(1, 4, numberOfPutts: 3) })
+        };
+
+        var result = StatsCalculator.BuildPuttsTrend(rounds, 10);
+
+        Assert.Equal(2, result.Count);
+        // Only full rounds
+        Assert.Equal(3, result[0].RoundId);
+        Assert.Equal(1, result[1].RoundId);
+    }
+
+    [Fact]
+    public void BuildPuttsTrend_NineHoleRounds_FiltersCorrectly()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, fullRound: true, usingHoleStats: true, 
+                holes: new List<RoundHole> { CreateHole(1, 4, numberOfPutts: 2) }), // Should be excluded
+            CreateRound(2, 40, fullRound: false, usingHoleStats: true, 
+                holes: new List<RoundHole> { CreateHole(1, 4, numberOfPutts: 1) }),
+            CreateRound(3, 42, fullRound: false, usingHoleStats: true, 
+                holes: new List<RoundHole> { CreateHole(1, 4, numberOfPutts: 2) })
+        };
+
+        var result = StatsCalculator.BuildPuttsTrend(rounds, 10, fullRound: false);
+
+        Assert.Equal(2, result.Count);
+        // Only 9-hole rounds, reversed
+        Assert.Equal(3, result[0].RoundId);
+        Assert.Equal(2, result[1].RoundId);
+    }
+
+    [Fact]
+    public void BuildPuttsTrend_ExcludesRoundsWithZeroPutts()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, fullRound: true, usingHoleStats: true, 
+                holes: new List<RoundHole> { CreateHole(1, 4, numberOfPutts: 2) }),
+            CreateRound(2, 82, fullRound: true, usingHoleStats: true, 
+                holes: new List<RoundHole> { CreateHole(1, 4, numberOfPutts: null) }), // No putt data
+            CreateRound(3, 84, fullRound: true, usingHoleStats: true, 
+                holes: new List<RoundHole> { CreateHole(1, 4, numberOfPutts: 3) })
+        };
+
+        var result = StatsCalculator.BuildPuttsTrend(rounds, 10);
+
+        Assert.Equal(2, result.Count);
+        // Round 2 excluded (0 putts from null)
+        Assert.Equal(3, result[0].RoundId);
+        Assert.Equal(1, result[1].RoundId);
+    }
+
+    [Fact]
+    public void BuildPuttsTrend_LimitsToCount()
+    {
+        var rounds = new List<RoundResponse>();
+        for (int i = 1; i <= 10; i++)
+        {
+            rounds.Add(CreateRound(i, 80, fullRound: true, usingHoleStats: true,
+                holes: new List<RoundHole> { CreateHole(1, 4, numberOfPutts: 2) }));
+        }
+
+        var result = StatsCalculator.BuildPuttsTrend(rounds, 5);
+
+        Assert.Equal(5, result.Count);
+        // Takes first 5, then reverses
+        Assert.Equal(5, result[0].RoundId);
+        Assert.Equal(1, result[4].RoundId);
+    }
+
+    [Fact]
+    public void BuildPuttsTrend_MapsAllProperties()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(42, 78, "Augusta National", fullRound: true, usingHoleStats: true,
+                datePlayed: new DateOnly(2024, 4, 14),
+                holes: new List<RoundHole>
+                {
+                    CreateHole(1, 4, numberOfPutts: 1),
+                    CreateHole(2, 4, numberOfPutts: 2)
+                })
+        };
+
+        var result = StatsCalculator.BuildPuttsTrend(rounds, 10);
+
+        Assert.Single(result);
+        Assert.Equal(42, result[0].RoundId);
+        Assert.Equal(3, result[0].Putts);
+        Assert.Equal("Augusta National", result[0].CourseName);
+        Assert.Equal(new DateOnly(2024, 4, 14), result[0].DatePlayed);
     }
 
     #endregion
@@ -1368,6 +1574,396 @@ public class StatsCalculatorTests
         Assert.Null(result.GirPercent);
         // But 9-hole putts should be calculated
         Assert.Equal(2.5, result.Average9HolePutts);
+    }
+
+    #endregion
+
+    #region BuildFirTrend Tests
+
+    [Fact]
+    public void BuildFirTrend_EmptyList_ReturnsEmptyList()
+    {
+        var rounds = new List<RoundResponse>();
+
+        var result = StatsCalculator.BuildFirTrend(rounds, 10);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildFirTrend_NoRoundsWithHoleStats_ReturnsEmptyList()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: false),
+            CreateRound(2, 82, usingHoleStats: false)
+        };
+
+        var result = StatsCalculator.BuildFirTrend(rounds, 10);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildFirTrend_NoFairwayData_ReturnsEmptyList()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitFairway: null), // No fairway data
+                CreateHole(2, 3, hitFairway: null)  // Par 3, excluded anyway
+            })
+        };
+
+        var result = StatsCalculator.BuildFirTrend(rounds, 10);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildFirTrend_ExcludesPar3Holes()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, "Course A", usingHoleStats: true, 
+                datePlayed: new DateOnly(2024, 6, 3),
+                holes: new List<RoundHole>
+                {
+                    CreateHole(1, 3, hitFairway: true),  // Par 3 - excluded
+                    CreateHole(2, 4, hitFairway: true),  // Par 4 - included
+                    CreateHole(3, 5, hitFairway: false), // Par 5 - included
+                    CreateHole(4, 4, hitFairway: true)   // Par 4 - included
+                })
+        };
+
+        var result = StatsCalculator.BuildFirTrend(rounds, 10);
+
+        Assert.Single(result);
+        // 2 out of 3 par 4/5 holes = 66.7%
+        Assert.Equal(66.7, result[0].FirPercent);
+        Assert.Equal(2, result[0].FairwaysHit);
+        Assert.Equal(3, result[0].FairwayAttempts);
+    }
+
+    [Fact]
+    public void BuildFirTrend_MultipleRounds_ReturnsCorrectDataReversed()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, "Course A", usingHoleStats: true, 
+                datePlayed: new DateOnly(2024, 6, 3),
+                holes: new List<RoundHole>
+                {
+                    CreateHole(1, 4, hitFairway: true),
+                    CreateHole(2, 4, hitFairway: true)
+                }),
+            CreateRound(2, 82, "Course B", usingHoleStats: true, 
+                datePlayed: new DateOnly(2024, 6, 2),
+                holes: new List<RoundHole>
+                {
+                    CreateHole(1, 4, hitFairway: true),
+                    CreateHole(2, 4, hitFairway: false)
+                }),
+            CreateRound(3, 84, "Course C", usingHoleStats: true, 
+                datePlayed: new DateOnly(2024, 6, 1),
+                holes: new List<RoundHole>
+                {
+                    CreateHole(1, 4, hitFairway: false),
+                    CreateHole(2, 4, hitFairway: false)
+                })
+        };
+
+        var result = StatsCalculator.BuildFirTrend(rounds, 10);
+
+        Assert.Equal(3, result.Count);
+        // Should be reversed (oldest first)
+        Assert.Equal(3, result[0].RoundId);
+        Assert.Equal(0.0, result[0].FirPercent); // 0/2
+        
+        Assert.Equal(2, result[1].RoundId);
+        Assert.Equal(50.0, result[1].FirPercent); // 1/2
+        
+        Assert.Equal(1, result[2].RoundId);
+        Assert.Equal(100.0, result[2].FirPercent); // 2/2
+    }
+
+    [Fact]
+    public void BuildFirTrend_MapsAllProperties()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(42, 78, "Augusta National", usingHoleStats: true,
+                datePlayed: new DateOnly(2024, 4, 14),
+                holes: new List<RoundHole>
+                {
+                    CreateHole(1, 4, hitFairway: true),
+                    CreateHole(2, 5, hitFairway: true),
+                    CreateHole(3, 4, hitFairway: false)
+                })
+        };
+
+        var result = StatsCalculator.BuildFirTrend(rounds, 10);
+
+        Assert.Single(result);
+        Assert.Equal(42, result[0].RoundId);
+        Assert.Equal(66.7, result[0].FirPercent);
+        Assert.Equal(2, result[0].FairwaysHit);
+        Assert.Equal(3, result[0].FairwayAttempts);
+        Assert.Equal("Augusta National", result[0].CourseName);
+        Assert.Equal(new DateOnly(2024, 4, 14), result[0].DatePlayed);
+    }
+
+    [Fact]
+    public void BuildFirTrend_LimitsToCount()
+    {
+        var rounds = new List<RoundResponse>();
+        for (int i = 1; i <= 10; i++)
+        {
+            rounds.Add(CreateRound(i, 80, usingHoleStats: true,
+                holes: new List<RoundHole> { CreateHole(1, 4, hitFairway: true) }));
+        }
+
+        var result = StatsCalculator.BuildFirTrend(rounds, 5);
+
+        Assert.Equal(5, result.Count);
+        // Takes first 5, then reverses
+        Assert.Equal(5, result[0].RoundId);
+        Assert.Equal(1, result[4].RoundId);
+    }
+
+    [Fact]
+    public void BuildFirTrend_MixedRoundsWithAndWithoutData_OnlyIncludesRoundsWithData()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitFairway: true)
+            }),
+            CreateRound(2, 82, usingHoleStats: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitFairway: null) // No fairway data
+            }),
+            CreateRound(3, 84, usingHoleStats: false), // No hole stats
+            CreateRound(4, 86, usingHoleStats: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitFairway: false)
+            })
+        };
+
+        var result = StatsCalculator.BuildFirTrend(rounds, 10);
+
+        Assert.Equal(2, result.Count);
+        // Only rounds 1 and 4 have FIR data
+        Assert.Equal(4, result[0].RoundId);
+        Assert.Equal(1, result[1].RoundId);
+    }
+
+    #endregion
+
+    #region BuildGirTrend Tests
+
+    [Fact]
+    public void BuildGirTrend_EmptyList_ReturnsEmptyList()
+    {
+        var rounds = new List<RoundResponse>();
+
+        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildGirTrend_NoRoundsWithHoleStats_ReturnsEmptyList()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: false),
+            CreateRound(2, 82, usingHoleStats: false)
+        };
+
+        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildGirTrend_NoGreenData_ReturnsEmptyList()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitGreen: null),
+                CreateHole(2, 3, hitGreen: null)
+            })
+        };
+
+        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildGirTrend_IncludesAllParTypes()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, "Course A", usingHoleStats: true, 
+                datePlayed: new DateOnly(2024, 6, 3),
+                holes: new List<RoundHole>
+                {
+                    CreateHole(1, 3, hitGreen: true),  // Par 3 - included
+                    CreateHole(2, 4, hitGreen: true),  // Par 4 - included
+                    CreateHole(3, 5, hitGreen: false), // Par 5 - included
+                    CreateHole(4, 4, hitGreen: false)  // Par 4 - included
+                })
+        };
+
+        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+
+        Assert.Single(result);
+        // 2 out of 4 = 50%
+        Assert.Equal(50.0, result[0].GirPercent);
+        Assert.Equal(2, result[0].GreensHit);
+        Assert.Equal(4, result[0].GreenAttempts);
+    }
+
+    [Fact]
+    public void BuildGirTrend_MultipleRounds_ReturnsCorrectDataReversed()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, "Course A", usingHoleStats: true, 
+                datePlayed: new DateOnly(2024, 6, 3),
+                holes: new List<RoundHole>
+                {
+                    CreateHole(1, 4, hitGreen: true),
+                    CreateHole(2, 4, hitGreen: true)
+                }),
+            CreateRound(2, 82, "Course B", usingHoleStats: true, 
+                datePlayed: new DateOnly(2024, 6, 2),
+                holes: new List<RoundHole>
+                {
+                    CreateHole(1, 4, hitGreen: true),
+                    CreateHole(2, 4, hitGreen: false)
+                }),
+            CreateRound(3, 84, "Course C", usingHoleStats: true, 
+                datePlayed: new DateOnly(2024, 6, 1),
+                holes: new List<RoundHole>
+                {
+                    CreateHole(1, 4, hitGreen: false),
+                    CreateHole(2, 4, hitGreen: false)
+                })
+        };
+
+        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+
+        Assert.Equal(3, result.Count);
+        // Should be reversed (oldest first)
+        Assert.Equal(3, result[0].RoundId);
+        Assert.Equal(0.0, result[0].GirPercent); // 0/2
+        
+        Assert.Equal(2, result[1].RoundId);
+        Assert.Equal(50.0, result[1].GirPercent); // 1/2
+        
+        Assert.Equal(1, result[2].RoundId);
+        Assert.Equal(100.0, result[2].GirPercent); // 2/2
+    }
+
+    [Fact]
+    public void BuildGirTrend_MapsAllProperties()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(42, 78, "Augusta National", usingHoleStats: true,
+                datePlayed: new DateOnly(2024, 4, 14),
+                holes: new List<RoundHole>
+                {
+                    CreateHole(1, 4, hitGreen: true),
+                    CreateHole(2, 5, hitGreen: true),
+                    CreateHole(3, 3, hitGreen: false)
+                })
+        };
+
+        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+
+        Assert.Single(result);
+        Assert.Equal(42, result[0].RoundId);
+        Assert.Equal(66.7, result[0].GirPercent);
+        Assert.Equal(2, result[0].GreensHit);
+        Assert.Equal(3, result[0].GreenAttempts);
+        Assert.Equal("Augusta National", result[0].CourseName);
+        Assert.Equal(new DateOnly(2024, 4, 14), result[0].DatePlayed);
+    }
+
+    [Fact]
+    public void BuildGirTrend_LimitsToCount()
+    {
+        var rounds = new List<RoundResponse>();
+        for (int i = 1; i <= 10; i++)
+        {
+            rounds.Add(CreateRound(i, 80, usingHoleStats: true,
+                holes: new List<RoundHole> { CreateHole(1, 4, hitGreen: true) }));
+        }
+
+        var result = StatsCalculator.BuildGirTrend(rounds, 5);
+
+        Assert.Equal(5, result.Count);
+        // Takes first 5, then reverses
+        Assert.Equal(5, result[0].RoundId);
+        Assert.Equal(1, result[4].RoundId);
+    }
+
+    [Fact]
+    public void BuildGirTrend_MixedRoundsWithAndWithoutData_OnlyIncludesRoundsWithData()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitGreen: true)
+            }),
+            CreateRound(2, 82, usingHoleStats: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitGreen: null) // No green data
+            }),
+            CreateRound(3, 84, usingHoleStats: false), // No hole stats
+            CreateRound(4, 86, usingHoleStats: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitGreen: false)
+            })
+        };
+
+        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+
+        Assert.Equal(2, result.Count);
+        // Only rounds 1 and 4 have GIR data
+        Assert.Equal(4, result[0].RoundId);
+        Assert.Equal(1, result[1].RoundId);
+    }
+
+    [Fact]
+    public void BuildGirTrend_PerfectGir_Returns100Percent()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 72, usingHoleStats: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitGreen: true),
+                CreateHole(2, 3, hitGreen: true),
+                CreateHole(3, 5, hitGreen: true),
+                CreateHole(4, 4, hitGreen: true)
+            })
+        };
+
+        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+
+        Assert.Single(result);
+        Assert.Equal(100.0, result[0].GirPercent);
+        Assert.Equal(4, result[0].GreensHit);
+        Assert.Equal(4, result[0].GreenAttempts);
     }
 
     #endregion

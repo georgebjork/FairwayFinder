@@ -7,7 +7,10 @@ public class UserStatsResponse
 {
     // Basic stats
     public int TotalRounds { get; set; }
-    public double? AverageScore { get; set; }
+    public int Total18HoleRounds { get; set; }
+    public int Total9HoleRounds { get; set; }
+    public double? Average18HoleScore { get; set; }
+    public double? Average9HoleScore { get; set; }
     public double? Average18HoleScoreTrend { get; set; }
     public double? Average9HoleScoreTrend { get; set; }
     public BestRound? Best18HoleRound { get; set; }
@@ -22,6 +25,9 @@ public class UserStatsResponse
     // Trend/chart data
     public List<ScoreTrendPoint> ScoreTrend18Hole { get; set; } = new();
     public List<ScoreTrendPoint> ScoreTrend9Hole { get; set; } = new();
+    public List<PuttsTrendPoint> PuttsTrend18Hole { get; set; } = new();
+    public List<FirTrendPoint> FirTrend { get; set; } = new();
+    public List<GirTrendPoint> GirTrend { get; set; } = new();
     public ScoringDistribution ScoringDistribution { get; set; } = new();
     public List<CourseStats> MostPlayedCourses { get; set; } = new();
 }
@@ -45,6 +51,43 @@ public class ScoreTrendPoint
     public long RoundId { get; set; }
     public DateOnly DatePlayed { get; set; }
     public int Score { get; set; }
+    public string CourseName { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// A single data point for putts trend
+/// </summary>
+public class PuttsTrendPoint
+{
+    public long RoundId { get; set; }
+    public DateOnly DatePlayed { get; set; }
+    public int Putts { get; set; }
+    public string CourseName { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// A single data point for FIR% trend
+/// </summary>
+public class FirTrendPoint
+{
+    public long RoundId { get; set; }
+    public DateOnly DatePlayed { get; set; }
+    public double FirPercent { get; set; }
+    public int FairwaysHit { get; set; }
+    public int FairwayAttempts { get; set; }
+    public string CourseName { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// A single data point for GIR% trend
+/// </summary>
+public class GirTrendPoint
+{
+    public long RoundId { get; set; }
+    public DateOnly DatePlayed { get; set; }
+    public double GirPercent { get; set; }
+    public int GreensHit { get; set; }
+    public int GreenAttempts { get; set; }
     public string CourseName { get; set; } = string.Empty;
 }
 
