@@ -1,5 +1,6 @@
 using FairwayFinder.Data;
 using FairwayFinder.Features.Services;
+using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
