@@ -1,6 +1,6 @@
 using FairwayFinder.Features.Data;
 
-namespace FairwayFinder.Features.Services;
+namespace FairwayFinder.Features.Helpers;
 
 /// <summary>
 /// Pure static functions for calculating stats from round data.
@@ -8,35 +8,6 @@ namespace FairwayFinder.Features.Services;
 /// </summary>
 public static class StatsCalculator
 {
-    /// <summary>
-    /// Calculates all user stats from a list of rounds
-    /// </summary>
-    public static UserStatsResponse Calculate(
-        IReadOnlyList<RoundResponse> rounds,
-        int trendCount = 20,
-        int coursesCount = 5)
-    {
-        // Filter to only rounds included in stats
-        var statsRounds = rounds.Where(r => !r.ExcludeFromStats).ToList();
-        
-        if (statsRounds.Count == 0)
-        {
-            return new UserStatsResponse();
-        }
-
-        return new UserStatsResponse
-        {
-            TotalRounds = statsRounds.Count,
-            AverageScore = CalculateAverageScore(statsRounds),
-            AverageScoreTrend = CalculateScoreTrend(statsRounds),
-            BestRound = FindBestRound(statsRounds),
-            ScoreTrend = BuildScoreTrend(statsRounds, trendCount),
-            MostPlayedCourses = CalculateCourseStats(statsRounds, coursesCount),
-            ScoringDistribution = AggregateScoringDistribution(statsRounds),
-            ParTypeScoring = CalculateParTypeScoring(statsRounds),
-            AdvancedStats = CalculateAdvancedStats(statsRounds)
-        };
-    }
 
     /// <summary>
     /// Calculates the average score across all rounds

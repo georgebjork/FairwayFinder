@@ -1,4 +1,5 @@
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Helpers;
 using FairwayFinder.Features.Services.Interfaces;
 
 namespace FairwayFinder.Features.Services;
@@ -16,6 +17,24 @@ public class StatsService : IStatsService
     {
         var rounds = await _roundService.GetRoundsWithDetailsAsync(userId);
         
-        return StatsCalculator.Calculate(rounds, trendCount, coursesCount);
+        var statsRounds = rounds.Where(r => !r.ExcludeFromStats).ToList();
+        
+        if (statsRounds.Count == 0)
+        {
+            return new UserStatsResponse();
+        }
+
+        return new UserStatsResponse
+        {
+            TotalRounds = statsRounds.Count,
+            AverageScore = StatsCalculator.CalculateAverageScore(statsRounds),
+            AverageScoreTrend = StatsCalculator.CalculateScoreTrend(statsRounds),
+            BestRound = StatsCalculator.FindBestRound(statsRounds),
+            ScoreTrend = StatsCalculator.BuildScoreTrend(statsRounds, trendCount),
+            MostPlayedCourses = StatsCalculator.CalculateCourseStats(statsRounds, coursesCount),
+            ScoringDistribution = StatsCalculator.AggregateScoringDistribution(statsRounds),
+            ParTypeScoring = StatsCalculator.CalculateParTypeScoring(statsRounds),
+            AdvancedStats = StatsCalculator.CalculateAdvancedStats(statsRounds)
+        };
     }
 }
