@@ -12,6 +12,10 @@
                 @SubText
             </RadzenText>
         }
+        @if (ChildContent is not null)
+        {
+            @ChildContent
+        }
     </RadzenStack>
 </RadzenCard>
 
@@ -32,4 +36,7 @@
 
     [Parameter]
     public string? SubText { get; set; }
+    
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
 }

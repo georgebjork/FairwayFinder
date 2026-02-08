@@ -7,6 +7,7 @@ public class DashboardStatsDto
 {
     public int TotalRounds { get; set; }
     public double? AverageScore { get; set; }
+    public double? AverageScoreTrend { get; set; }
     public BestRoundDto? BestRound { get; set; }
 }
 
@@ -43,14 +44,29 @@ public class AdvancedStatsDto
     public double? FirPercent { get; set; }
     
     /// <summary>
+    /// FIR% trend (last 5 rounds vs previous 5 rounds). Positive = improvement.
+    /// </summary>
+    public double? FirPercentTrend { get; set; }
+    
+    /// <summary>
     /// Greens In Regulation percentage (all holes)
     /// </summary>
     public double? GirPercent { get; set; }
     
     /// <summary>
+    /// GIR% trend (last 5 rounds vs previous 5 rounds). Positive = improvement.
+    /// </summary>
+    public double? GirPercentTrend { get; set; }
+    
+    /// <summary>
     /// Average putts per round
     /// </summary>
     public double? AveragePutts { get; set; }
+    
+    /// <summary>
+    /// Average putts trend (last 5 rounds vs previous 5 rounds). Negative = improvement.
+    /// </summary>
+    public double? AveragePuttsTrend { get; set; }
     
     /// <summary>
     /// Number of rounds that have advanced stats tracked

@@ -31,6 +31,13 @@ public class StatsService : IStatsService
         {
             stats.AverageScore = Math.Round(rounds.Average(r => r.Score), 1);
 
+            if (rounds.Count > 10)
+            {
+                var previous5Average = Math.Round(rounds.Skip(10).Take(5).Average(r => r.Score), 1);
+                var last5Average = Math.Round(rounds.Skip(15).Take(5).Average(r => r.Score), 1);
+                stats.AverageScoreTrend = Math.Round(last5Average - previous5Average, 1);
+            }
+
             var bestRound = rounds.OrderBy(r => r.Score).First();
             
             var course = await dbContext.Courses
@@ -79,9 +86,10 @@ public class StatsService : IStatsService
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
         
-        // Get all rounds with advanced stats for this user
+        // Get all rounds with advanced stats for this user, ordered by date descending
         var roundsWithStats = await dbContext.Rounds
             .Where(r => r.UserId == userId && !r.IsDeleted && !r.ExcludeFromStats && r.UsingHoleStats)
+            .OrderByDescending(r => r.DatePlayed)
             .Select(r => r.RoundId)
             .ToListAsync();
 
@@ -139,6 +147,52 @@ public class StatsService : IStatsService
             if (puttsByRound.Count > 0)
             {
                 result.AveragePutts = Math.Round(puttsByRound.Average(), 1);
+            }
+        }
+
+        // Calculate trends if we have at least 10 rounds
+        if (roundsWithStats.Count >= 10)
+        {
+            var recent5RoundIds = roundsWithStats.Take(5).ToList();
+            var previous5RoundIds = roundsWithStats.Skip(5).Take(5).ToList();
+            
+            // FIR Trend
+            var recent5FairwayHoles = holeStatsWithPar.Where(h => recent5RoundIds.Contains(h.RoundId) && h.Par > 3 && h.HitFairway.HasValue).ToList();
+            var previous5FairwayHoles = holeStatsWithPar.Where(h => previous5RoundIds.Contains(h.RoundId) && h.Par > 3 && h.HitFairway.HasValue).ToList();
+            
+            if (recent5FairwayHoles.Count > 0 && previous5FairwayHoles.Count > 0)
+            {
+                var recent5Fir = (double)recent5FairwayHoles.Count(h => h.HitFairway == true) / recent5FairwayHoles.Count * 100;
+                var previous5Fir = (double)previous5FairwayHoles.Count(h => h.HitFairway == true) / previous5FairwayHoles.Count * 100;
+                result.FirPercentTrend = Math.Round(recent5Fir - previous5Fir, 1);
+            }
+            
+            // GIR Trend
+            var recent5GreenHoles = holeStatsWithPar.Where(h => recent5RoundIds.Contains(h.RoundId) && h.HitGreen.HasValue).ToList();
+            var previous5GreenHoles = holeStatsWithPar.Where(h => previous5RoundIds.Contains(h.RoundId) && h.HitGreen.HasValue).ToList();
+            
+            if (recent5GreenHoles.Count > 0 && previous5GreenHoles.Count > 0)
+            {
+                var recent5Gir = (double)recent5GreenHoles.Count(h => h.HitGreen == true) / recent5GreenHoles.Count * 100;
+                var previous5Gir = (double)previous5GreenHoles.Count(h => h.HitGreen == true) / previous5GreenHoles.Count * 100;
+                result.GirPercentTrend = Math.Round(recent5Gir - previous5Gir, 1);
+            }
+            
+            // Putts Trend
+            var recent5PuttHoles = holeStatsWithPar.Where(h => recent5RoundIds.Contains(h.RoundId) && h.NumberOfPutts.HasValue).ToList();
+            var previous5PuttHoles = holeStatsWithPar.Where(h => previous5RoundIds.Contains(h.RoundId) && h.NumberOfPutts.HasValue).ToList();
+            
+            if (recent5PuttHoles.Count > 0 && previous5PuttHoles.Count > 0)
+            {
+                var recent5PuttsByRound = recent5PuttHoles.GroupBy(h => h.RoundId).Select(g => g.Sum(h => h.NumberOfPutts!.Value)).ToList();
+                var previous5PuttsByRound = previous5PuttHoles.GroupBy(h => h.RoundId).Select(g => g.Sum(h => h.NumberOfPutts!.Value)).ToList();
+                
+                if (recent5PuttsByRound.Count > 0 && previous5PuttsByRound.Count > 0)
+                {
+                    var recent5AvgPutts = recent5PuttsByRound.Average();
+                    var previous5AvgPutts = previous5PuttsByRound.Average();
+                    result.AveragePuttsTrend = Math.Round(recent5AvgPutts - previous5AvgPutts, 1);
+                }
             }
         }
 
