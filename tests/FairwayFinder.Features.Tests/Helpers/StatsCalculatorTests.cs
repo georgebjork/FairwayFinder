@@ -1006,6 +1006,7 @@ public class StatsCalculatorTests
         Assert.Null(result.FirPercent);
         Assert.Null(result.GirPercent);
         Assert.Null(result.Average18HolePutts);
+        Assert.Null(result.Average9HolePutts);
     }
 
     [Fact]
@@ -1023,61 +1024,73 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_FirPercentage_CalculatesCorrectly()
+    public void CalculateAdvancedStats_FirPercentage_CalculatesFrom18HoleRoundsOnly()
     {
         var rounds = new List<RoundResponse>
         {
-            CreateRound(1, 80, usingHoleStats: true, holes: new List<RoundHole>
+            // 18-hole round with FIR data
+            CreateRound(1, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
             {
-                // Par 4/5 with fairway data
                 CreateHole(1, 4, hitFairway: true),
                 CreateHole(2, 4, hitFairway: true),
                 CreateHole(3, 5, hitFairway: false),
                 CreateHole(4, 4, hitFairway: false),
-                // Par 3 - excluded from FIR
-                CreateHole(5, 3, hitFairway: null)
+                CreateHole(5, 3, hitFairway: null) // Par 3 - excluded from FIR
+            }),
+            // 9-hole round - should be excluded from FIR calculation
+            CreateRound(2, 40, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitFairway: true),
+                CreateHole(2, 4, hitFairway: true)
             })
         };
 
         var result = StatsCalculator.CalculateAdvancedStats(rounds);
 
-        // 2 out of 4 = 50%
+        // Only 18-hole: 2 out of 4 = 50%
         Assert.Equal(50.0, result.FirPercent);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_GirPercentage_CalculatesCorrectly()
+    public void CalculateAdvancedStats_GirPercentage_CalculatesFrom18HoleRoundsOnly()
     {
         var rounds = new List<RoundResponse>
         {
-            CreateRound(1, 80, usingHoleStats: true, holes: new List<RoundHole>
+            // 18-hole round
+            CreateRound(1, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
             {
                 CreateHole(1, 4, hitGreen: true),
                 CreateHole(2, 4, hitGreen: true),
                 CreateHole(3, 4, hitGreen: true),
                 CreateHole(4, 4, hitGreen: false),
                 CreateHole(5, 3, hitGreen: false)
+            }),
+            // 9-hole round - should be excluded from GIR calculation
+            CreateRound(2, 40, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitGreen: true),
+                CreateHole(2, 4, hitGreen: true)
             })
         };
 
         var result = StatsCalculator.CalculateAdvancedStats(rounds);
 
-        // 3 out of 5 = 60%
+        // Only 18-hole: 3 out of 5 = 60%
         Assert.Equal(60.0, result.GirPercent);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_AveragePutts_CalculatesPerRound()
+    public void CalculateAdvancedStats_Average18HolePutts_CalculatesCorrectly()
     {
         var rounds = new List<RoundResponse>
         {
-            CreateRound(1, 80, usingHoleStats: true, holes: new List<RoundHole>
+            CreateRound(1, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
             {
                 CreateHole(1, 4, numberOfPutts: 2),
                 CreateHole(2, 4, numberOfPutts: 2),
                 CreateHole(3, 4, numberOfPutts: 1)
             }),
-            CreateRound(2, 82, usingHoleStats: true, holes: new List<RoundHole>
+            CreateRound(2, 82, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
             {
                 CreateHole(1, 4, numberOfPutts: 3),
                 CreateHole(2, 4, numberOfPutts: 2),
@@ -1089,6 +1102,70 @@ public class StatsCalculatorTests
 
         // Round 1: 5 putts, Round 2: 7 putts, avg = 6.0
         Assert.Equal(6.0, result.Average18HolePutts);
+        Assert.Null(result.Average9HolePutts); // No 9-hole rounds
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_Average9HolePutts_CalculatesCorrectly()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 40, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 2),
+                CreateHole(2, 4, numberOfPutts: 1),
+                CreateHole(3, 4, numberOfPutts: 2)
+            }),
+            CreateRound(2, 42, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 2),
+                CreateHole(2, 4, numberOfPutts: 2),
+                CreateHole(3, 4, numberOfPutts: 2)
+            })
+        };
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // Round 1: 5 putts, Round 2: 6 putts, avg = 5.5
+        Assert.Equal(5.5, result.Average9HolePutts);
+        Assert.Null(result.Average18HolePutts); // No 18-hole rounds
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_MixedRoundTypes_CalculatesPuttsSeparately()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            // 18-hole rounds
+            CreateRound(1, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 2),
+                CreateHole(2, 4, numberOfPutts: 2)
+            }),
+            CreateRound(2, 82, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 3),
+                CreateHole(2, 4, numberOfPutts: 3)
+            }),
+            // 9-hole rounds
+            CreateRound(3, 40, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 1),
+                CreateHole(2, 4, numberOfPutts: 1)
+            }),
+            CreateRound(4, 42, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 2),
+                CreateHole(2, 4, numberOfPutts: 2)
+            })
+        };
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // 18-hole: Round 1 = 4, Round 2 = 6, avg = 5.0
+        Assert.Equal(5.0, result.Average18HolePutts);
+        // 9-hole: Round 3 = 2, Round 4 = 4, avg = 3.0
+        Assert.Equal(3.0, result.Average9HolePutts);
     }
 
     [Fact]
@@ -1097,7 +1174,7 @@ public class StatsCalculatorTests
         var rounds = new List<RoundResponse>();
         for (int i = 1; i <= 9; i++)
         {
-            rounds.Add(CreateRound(i, 80, usingHoleStats: true, holes: new List<RoundHole>
+            rounds.Add(CreateRound(i, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
             {
                 CreateHole(1, 4, hitFairway: true, hitGreen: true, numberOfPutts: 2)
             }));
@@ -1108,26 +1185,27 @@ public class StatsCalculatorTests
         Assert.Null(result.FirPercentTrend);
         Assert.Null(result.GirPercentTrend);
         Assert.Null(result.Average18HolePuttsTrend);
+        Assert.Null(result.Average9HolePuttsTrend);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_10OrMoreRounds_CalculatesTrends()
+    public void CalculateAdvancedStats_10OrMoreRounds_CalculatesFirGirTrends()
     {
         var rounds = new List<RoundResponse>();
 
-        // Recent 5 rounds: 100% FIR
+        // Recent 5 rounds: 100% FIR/GIR
         for (int i = 1; i <= 5; i++)
         {
-            rounds.Add(CreateRound(i, 80, usingHoleStats: true, holes: new List<RoundHole>
+            rounds.Add(CreateRound(i, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
             {
                 CreateHole(1, 4, hitFairway: true, hitGreen: true, numberOfPutts: 1)
             }));
         }
 
-        // Previous 5 rounds: 0% FIR
+        // Previous 5 rounds: 0% FIR/GIR
         for (int i = 6; i <= 10; i++)
         {
-            rounds.Add(CreateRound(i, 85, usingHoleStats: true, holes: new List<RoundHole>
+            rounds.Add(CreateRound(i, 85, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
             {
                 CreateHole(1, 4, hitFairway: false, hitGreen: false, numberOfPutts: 3)
             }));
@@ -1139,8 +1217,110 @@ public class StatsCalculatorTests
         Assert.Equal(100.0, result.FirPercentTrend);
         // GIR trend: 100% - 0% = +100
         Assert.Equal(100.0, result.GirPercentTrend);
-        // Putts trend: 1 - 3 = -2 (improvement = negative)
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_10OrMore18HoleRounds_Calculates18HolePuttsTrend()
+    {
+        var rounds = new List<RoundResponse>();
+
+        // Recent 5 18-hole rounds: 1 putt per hole
+        for (int i = 1; i <= 5; i++)
+        {
+            rounds.Add(CreateRound(i, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitFairway: true, hitGreen: true, numberOfPutts: 1)
+            }));
+        }
+
+        // Previous 5 18-hole rounds: 3 putts per hole
+        for (int i = 6; i <= 10; i++)
+        {
+            rounds.Add(CreateRound(i, 85, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitFairway: false, hitGreen: false, numberOfPutts: 3)
+            }));
+        }
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // 18-hole putts trend: 1 - 3 = -2 (improvement = negative)
         Assert.Equal(-2.0, result.Average18HolePuttsTrend);
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_10OrMore9HoleRounds_Calculates9HolePuttsTrend()
+    {
+        var rounds = new List<RoundResponse>();
+
+        // Recent 5 9-hole rounds: 1 putt per hole
+        for (int i = 1; i <= 5; i++)
+        {
+            rounds.Add(CreateRound(i, 40, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 1)
+            }));
+        }
+
+        // Previous 5 9-hole rounds: 3 putts per hole
+        for (int i = 6; i <= 10; i++)
+        {
+            rounds.Add(CreateRound(i, 45, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 3)
+            }));
+        }
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // 9-hole putts trend: 1 - 3 = -2 (improvement = negative)
+        Assert.Equal(-2.0, result.Average9HolePuttsTrend);
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_MixedRoundTypes_CalculatesTrendsSeparately()
+    {
+        var rounds = new List<RoundResponse>();
+
+        // Recent 5 18-hole rounds: 1 putt
+        for (int i = 1; i <= 5; i++)
+        {
+            rounds.Add(CreateRound(i, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitFairway: true, hitGreen: true, numberOfPutts: 1)
+            }));
+        }
+        // Previous 5 18-hole rounds: 3 putts
+        for (int i = 6; i <= 10; i++)
+        {
+            rounds.Add(CreateRound(i, 85, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitFairway: false, hitGreen: false, numberOfPutts: 3)
+            }));
+        }
+        // Recent 5 9-hole rounds: 2 putts
+        for (int i = 11; i <= 15; i++)
+        {
+            rounds.Add(CreateRound(i, 40, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 2)
+            }));
+        }
+        // Previous 5 9-hole rounds: 1 putt
+        for (int i = 16; i <= 20; i++)
+        {
+            rounds.Add(CreateRound(i, 38, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 1)
+            }));
+        }
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // 18-hole putts trend: 1 - 3 = -2 (improvement)
+        Assert.Equal(-2.0, result.Average18HolePuttsTrend);
+        // 9-hole putts trend: 2 - 1 = +1 (regression)
+        Assert.Equal(1.0, result.Average9HolePuttsTrend);
     }
 
     [Fact]
@@ -1148,12 +1328,12 @@ public class StatsCalculatorTests
     {
         var rounds = new List<RoundResponse>
         {
-            CreateRound(1, 80, usingHoleStats: true, holes: new List<RoundHole>
+            CreateRound(1, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
             {
                 CreateHole(1, 4, hitGreen: true)
             }),
             CreateRound(2, 82, usingHoleStats: false), // Should be excluded
-            CreateRound(3, 84, usingHoleStats: true, holes: new List<RoundHole>
+            CreateRound(3, 84, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
             {
                 CreateHole(1, 4, hitGreen: false)
             })
@@ -1164,6 +1344,30 @@ public class StatsCalculatorTests
         Assert.Equal(2, result.RoundsWithStats);
         // 1 out of 2 = 50%
         Assert.Equal(50.0, result.GirPercent);
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_Only9HoleRounds_NoFirGirStats()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 40, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitFairway: true, hitGreen: true, numberOfPutts: 2)
+            }),
+            CreateRound(2, 42, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitFairway: false, hitGreen: false, numberOfPutts: 3)
+            })
+        };
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // FIR/GIR only calculated from 18-hole rounds
+        Assert.Null(result.FirPercent);
+        Assert.Null(result.GirPercent);
+        // But 9-hole putts should be calculated
+        Assert.Equal(2.5, result.Average9HolePutts);
     }
 
     #endregion
