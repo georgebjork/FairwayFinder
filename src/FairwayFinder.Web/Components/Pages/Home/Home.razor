@@ -37,7 +37,8 @@
             
             <FairwayFinderStatsCard 
                 Label="Average Score" 
-                Value="@(_stats.AverageScore?.ToString("F1") ?? "-")">
+                Value="@(_stats.AverageScore?.ToString("F1") ?? "-")"
+                SubText="@(_stats.TotalRounds + " rounds")">  
                 @if (_stats.Average18HoleScoreTrend.HasValue)
                 {
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
