@@ -167,7 +167,8 @@ public class CourseStats
     public long CourseId { get; set; }
     public string CourseName { get; set; } = string.Empty;
     public int RoundCount { get; set; }
-    public double AverageScore { get; set; }
+    public double? Average18HoleScore { get; set; }
+    public double? Average9HoleScore { get; set; }
 }
 
 /// <summary>

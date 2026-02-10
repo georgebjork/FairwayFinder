@@ -910,7 +910,7 @@ public class StatsCalculatorTests
         Assert.Equal(1, result[0].CourseId);
         Assert.Equal("Home Course", result[0].CourseName);
         Assert.Equal(3, result[0].RoundCount);
-        Assert.Equal(85.0, result[0].AverageScore);
+        Assert.Equal(85.0, result[0].Average18HoleScore);
     }
 
     [Fact]
@@ -974,8 +974,8 @@ public class StatsCalculatorTests
         var easy = result.First(c => c.CourseName == "Easy Course");
         var hard = result.First(c => c.CourseName == "Hard Course");
 
-        Assert.Equal(71.0, easy.AverageScore);
-        Assert.Equal(92.5, hard.AverageScore);
+        Assert.Equal(71.0, easy.Average18HoleScore);
+        Assert.Equal(92.5, hard.Average18HoleScore);
     }
 
     #endregion

@@ -28,8 +28,9 @@ else
                     PagerHorizontalAlign="HorizontalAlign.Right"
                     ShowPagingSummary="true"
                     PagingSummaryFormat="Displaying page {0} of {1} (total {2} rounds)"
-                    RowClick="@OnRowClick"
-                    Style="cursor: pointer;">
+                    Style="cursor: pointer;"
+                    @bind-Value=@_selectedRound
+                    RowClick="@OnRowClick">
         <Columns>
             <RadzenDataGridColumn TItem="RoundResponse" Property="DatePlayed" Title="Date Played" Width="150px">
                 <Template Context="round">
@@ -37,6 +38,17 @@ else
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="RoundResponse" Property="CourseName" Title="Course" />
+            <RadzenDataGridColumn TItem="RoundResponse" Property="Teebox.TeeboxName" Title="Teebox" />
+            <RadzenDataGridColumn TItem="RoundResponse" Property="Teebox.Slope" Title="Slope/Rating" Width="120px" TextAlign="TextAlign.Center">
+                <Template Context="round">
+                    @round.Teebox.Slope / @round.Teebox.Rating
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="RoundResponse" Property="FullRound" Title="Holes" Width="80px" TextAlign="TextAlign.Center">
+                <Template Context="round">
+                    @(round.FullRound ? "18" : "9")
+                </Template>
+            </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="RoundResponse" Property="Score" Title="Score" Width="100px" TextAlign="TextAlign.Center" />
         </Columns>
     </RadzenDataGrid>
@@ -47,6 +59,8 @@ else
     public string? UserId { get; set; }
 
     private List<RoundResponse>? _rounds;
+    private IList<RoundResponse> _selectedRound = [];
+
     private bool _loading = true;
 
     protected override async Task OnParametersSetAsync()

@@ -181,12 +181,19 @@ public static class StatsCalculator
             .GroupBy(r => new { r.CourseId, r.CourseName })
             .OrderByDescending(g => g.Count())
             .Take(count)
-            .Select(g => new CourseStats
+            .Select(g =>
             {
-                CourseId = g.Key.CourseId,
-                CourseName = g.Key.CourseName,
-                RoundCount = g.Count(),
-                AverageScore = Math.Round(g.Average(r => (double)r.Score), 1)
+                var fullRounds = g.Where(x => x.FullRound).Select(r => (double)r.Score).ToArray();
+                var nineHoleRounds = g.Where(x => !x.FullRound).Select(r => (double)r.Score).ToArray();
+
+                return new CourseStats
+                {
+                    CourseId = g.Key.CourseId,
+                    CourseName = g.Key.CourseName,
+                    RoundCount = g.Count(),
+                    Average18HoleScore = fullRounds.Any() ? Math.Round(fullRounds.Average(), 1) : null,
+                    Average9HoleScore = nineHoleRounds.Any() ? Math.Round(nineHoleRounds.Average(), 1) : null
+                };
             })
             .ToList();
     }

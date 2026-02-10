@@ -30,15 +30,17 @@ else
                          AlignItems="AlignItems.Center"
                          class="course-row">
                 <RadzenStack Gap="0">
-                    <RadzenText TextStyle="TextStyle.Body1" Style="margin: 0; font-weight: 500;">
-                        @course.CourseName
+                    <RadzenText TextStyle="TextStyle.Body1" Style="margin:0; font-weight:500;">
+                        <RadzenLink Path="@($"/course/{course.CourseId}")">
+                            @course.CourseName
+                        </RadzenLink>
                     </RadzenText>
                     <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0; color: var(--rz-text-secondary-color);">
                         @course.RoundCount @(course.RoundCount == 1 ? "round" : "rounds")
                     </RadzenText>
                 </RadzenStack>
                 <RadzenText TextStyle="TextStyle.Body1" Style="margin: 0; font-weight: 600;">
-                    @course.AverageScore.ToString("F1")
+                    @(course.Average18HoleScore.ToString() ?? "-")
                 </RadzenText>
             </RadzenStack>
         }

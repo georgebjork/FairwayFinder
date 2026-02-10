@@ -1,0 +1,8 @@
+@page "/course/{CourseId:long}"
+
+<h3>CourseStats for id: @CourseId</h3>
+
+@code {
+    [Parameter]
+    public long CourseId { get; set; }
+}
