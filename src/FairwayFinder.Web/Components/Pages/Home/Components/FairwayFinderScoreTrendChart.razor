@@ -21,7 +21,7 @@ else
     @if (showToggle)
     {
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" class="rz-mb-2">
-            <RadzenSelectBar @bind-Value="_selectedRoundType" TValue="string" Size="ButtonSize.ExtraSmall" Change="@OnRoundTypeChanged">
+            <RadzenSelectBar @bind-Value="_selectedRoundType" TValue="string" Size="ButtonSize.Medium" Change="@OnRoundTypeChanged">
                 <Items>
                     <RadzenSelectBarItem Text="18 Hole" Value="@("18")" />
                     <RadzenSelectBarItem Text="9 Hole" Value="@("9")" />
