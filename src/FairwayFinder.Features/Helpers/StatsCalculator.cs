@@ -274,6 +274,12 @@ public static class StatsCalculator
             return result;
         }
 
+        // All hole stats (for FIR/GIR - these are per-hole percentages, so combine all rounds)
+        var allHoleStats = roundsWithHoleStats
+            .SelectMany(r => r.Holes.Select(h => new { r.RoundId, Hole = h }))
+            .Where(x => x.Hole.Stats != null)
+            .ToList();
+        
         var allHoleStats18Holes = roundsWithHoleStats.Where(x => x.FullRound)
             .SelectMany(r => r.Holes.Select(h => new { r.RoundId, Hole = h }))
             .Where(x => x.Hole.Stats != null)
@@ -285,8 +291,8 @@ public static class StatsCalculator
             .ToList();
         
 
-        // FIR % (only par 4/5 holes)
-        var fairwayHoles = allHoleStats18Holes
+        // FIR % (only par 4/5 holes) - uses all rounds
+        var fairwayHoles = allHoleStats
             .Where(x => x.Hole.Par > 3 && x.Hole.Stats!.HitFairway.HasValue)
             .ToList();
         
@@ -296,8 +302,8 @@ public static class StatsCalculator
             result.FirPercent = Math.Round((double)fairwaysHit / fairwayHoles.Count * 100, 1);
         }
 
-        // GIR % (all holes)
-        var greenHoles = allHoleStats18Holes
+        // GIR % (all holes) - uses all rounds
+        var greenHoles = allHoleStats
             .Where(x => x.Hole.Stats!.HitGreen.HasValue)
             .ToList();
         

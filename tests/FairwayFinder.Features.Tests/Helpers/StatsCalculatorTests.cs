@@ -1232,7 +1232,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_FirPercentage_CalculatesFrom18HoleRoundsOnly()
+    public void CalculateAdvancedStats_FirPercentage_CalculatesFromAllRounds()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1245,7 +1245,7 @@ public class StatsCalculatorTests
                 CreateHole(4, 4, hitFairway: false),
                 CreateHole(5, 3, hitFairway: null) // Par 3 - excluded from FIR
             }),
-            // 9-hole round - should be excluded from FIR calculation
+            // 9-hole round - now included in FIR calculation
             CreateRound(2, 40, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
             {
                 CreateHole(1, 4, hitFairway: true),
@@ -1255,12 +1255,12 @@ public class StatsCalculatorTests
 
         var result = StatsCalculator.CalculateAdvancedStats(rounds);
 
-        // Only 18-hole: 2 out of 4 = 50%
-        Assert.Equal(50.0, result.FirPercent);
+        // All rounds: 4 out of 6 = 66.7%
+        Assert.Equal(66.7, result.FirPercent);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_GirPercentage_CalculatesFrom18HoleRoundsOnly()
+    public void CalculateAdvancedStats_GirPercentage_CalculatesFromAllRounds()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1273,7 +1273,7 @@ public class StatsCalculatorTests
                 CreateHole(4, 4, hitGreen: false),
                 CreateHole(5, 3, hitGreen: false)
             }),
-            // 9-hole round - should be excluded from GIR calculation
+            // 9-hole round - now included in GIR calculation
             CreateRound(2, 40, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
             {
                 CreateHole(1, 4, hitGreen: true),
@@ -1283,8 +1283,8 @@ public class StatsCalculatorTests
 
         var result = StatsCalculator.CalculateAdvancedStats(rounds);
 
-        // Only 18-hole: 3 out of 5 = 60%
-        Assert.Equal(60.0, result.GirPercent);
+        // All rounds: 5 out of 7 = 71.4%
+        Assert.Equal(71.4, result.GirPercent);
     }
 
     [Fact]
@@ -1555,7 +1555,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_Only9HoleRounds_NoFirGirStats()
+    public void CalculateAdvancedStats_Only9HoleRounds_CalculatesFirGirStats()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1571,10 +1571,10 @@ public class StatsCalculatorTests
 
         var result = StatsCalculator.CalculateAdvancedStats(rounds);
 
-        // FIR/GIR only calculated from 18-hole rounds
-        Assert.Null(result.FirPercent);
-        Assert.Null(result.GirPercent);
-        // But 9-hole putts should be calculated
+        // FIR/GIR now calculated from all rounds including 9-hole
+        Assert.Equal(50.0, result.FirPercent); // 1 out of 2
+        Assert.Equal(50.0, result.GirPercent); // 1 out of 2
+        // 9-hole putts should be calculated
         Assert.Equal(2.5, result.Average9HolePutts);
     }
 

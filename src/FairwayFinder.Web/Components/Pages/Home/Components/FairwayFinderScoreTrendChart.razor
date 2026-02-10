@@ -1,7 +1,14 @@
 @using FairwayFinder.Features.Data
 @inject NavigationManager NavigationManager
 
-@if (TrendData is null || TrendData.Count < 2)
+@{
+    var hasData18 = TrendData18Hole is not null && TrendData18Hole.Count >= 2;
+    var hasData9 = TrendData9Hole is not null && TrendData9Hole.Count >= 2;
+    var showToggle = hasData18 && hasData9;
+    var hasAnyData = hasData18 || hasData9;
+}
+
+@if (!hasAnyData)
 {
     <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 300px;">
         <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
@@ -11,35 +18,62 @@
 }
 else
 {
-    <RadzenChart Style="height: 300px;" SeriesClick="@OnSeriesClick">
-        <RadzenLineSeries Data="@_chartData" 
-                          CategoryProperty="DateLabel" 
-                          ValueProperty="Score" 
-                          Title="Score"
-                          Smooth="true">
-            <TooltipTemplate Context="data">
-                <div class="rz-p-2">
-                    <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-1">@data.CourseName</RadzenText>
-                    <RadzenText TextStyle="TextStyle.Body2">Score: <strong>@data.Score</strong></RadzenText>
-                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
-                        @data.DatePlayed.ToString("MMM d, yyyy")
-                    </RadzenText>
-                </div>
-            </TooltipTemplate>
-        </RadzenLineSeries>
+    @if (showToggle)
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" class="rz-mb-2">
+            <RadzenSelectBar @bind-Value="_selectedRoundType" TValue="string" Size="ButtonSize.ExtraSmall" Change="@OnRoundTypeChanged">
+                <Items>
+                    <RadzenSelectBarItem Text="18 Hole" Value="@("18")" />
+                    <RadzenSelectBarItem Text="9 Hole" Value="@("9")" />
+                </Items>
+            </RadzenSelectBar>
+        </RadzenStack>
+    }
+    
+    @if (_chartData is not null && _chartData.Count >= 2)
+    {
+        <RadzenChart Style="height: 300px;" SeriesClick="@OnSeriesClick">
+            <RadzenLineSeries Data="@_chartData" 
+                              CategoryProperty="DateLabel" 
+                              ValueProperty="Score" 
+                              Title="Score"
+                              Smooth="true">
+                <TooltipTemplate Context="data">
+                    <div class="rz-p-2">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-1">@data.CourseName</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">Score: <strong>@data.Score</strong></RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                            @data.DatePlayed.ToString("MMM d, yyyy")
+                        </RadzenText>
+                    </div>
+                </TooltipTemplate>
+            </RadzenLineSeries>
 
-        <RadzenValueAxis Min="@_minScore" Max="@_maxScore" Step="@_step">
-            <RadzenGridLines Visible="true" />
-            <RadzenAxisTitle Text="Score" />
-        </RadzenValueAxis>
-        <RadzenLegend Visible="false" />
-    </RadzenChart>
+            <RadzenValueAxis Min="@_minScore" Max="@_maxScore" Step="@_step">
+                <RadzenGridLines Visible="true" />
+                <RadzenAxisTitle Text="Score" />
+            </RadzenValueAxis>
+            <RadzenLegend Visible="false" />
+        </RadzenChart>
+    }
+    else
+    {
+        <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 300px;">
+            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                Not enough @(_selectedRoundType == "18" ? "18-hole" : "9-hole") rounds to show trend.
+            </RadzenText>
+        </RadzenStack>
+    }
 }
 
 @code {
     [Parameter]
-    public List<ScoreTrendPoint>? TrendData { get; set; }
+    public List<ScoreTrendPoint>? TrendData18Hole { get; set; }
+    
+    [Parameter]
+    public List<ScoreTrendPoint>? TrendData9Hole { get; set; }
 
+    private string _selectedRoundType = "18";
     private List<ScoreTrendChartItem>? _chartData;
     private int _minScore;
     private int _maxScore;
@@ -47,10 +81,30 @@ else
 
     protected override void OnParametersSet()
     {
-        if (TrendData is not null && TrendData.Count >= 2)
+        // If only one type has data, default to that type
+        var hasData18 = TrendData18Hole is not null && TrendData18Hole.Count >= 2;
+        var hasData9 = TrendData9Hole is not null && TrendData9Hole.Count >= 2;
+        
+        if (!hasData18 && hasData9)
+        {
+            _selectedRoundType = "9";
+        }
+        else if (hasData18 && !hasData9)
+        {
+            _selectedRoundType = "18";
+        }
+        
+        UpdateChartData();
+    }
+
+    private void UpdateChartData()
+    {
+        var trendData = _selectedRoundType == "18" ? TrendData18Hole : TrendData9Hole;
+        
+        if (trendData is not null && trendData.Count >= 2)
         {
             // Transform to chart items with formatted date label
-            _chartData = TrendData.Select(d => new ScoreTrendChartItem
+            _chartData = trendData.Select(d => new ScoreTrendChartItem
             {
                 RoundId = d.RoundId,
                 DatePlayed = d.DatePlayed,
@@ -75,6 +129,15 @@ else
                 _maxScore += 5;
             }
         }
+        else
+        {
+            _chartData = null;
+        }
+    }
+
+    private void OnRoundTypeChanged()
+    {
+        UpdateChartData();
     }
 
     private void OnSeriesClick(SeriesClickEventArgs args)

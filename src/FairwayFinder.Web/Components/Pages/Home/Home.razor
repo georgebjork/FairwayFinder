@@ -52,8 +52,8 @@
             @if (_hasActiveFilters)
             {
                 <RadzenButton Text="Clear Filters" 
-                              ButtonStyle="ButtonStyle.Light" 
-                              Size="ButtonSize.Small"
+                              ButtonStyle="ButtonStyle.Primary" 
+                              Size="ButtonSize.Medium"
                               Click="@ClearFilters" />
             }
         </RadzenStack>
@@ -84,7 +84,7 @@
             @if (_stats.Average18HoleScore.HasValue)
             {
                 <FairwayFinderStatsCard 
-                    Label="Average 18 Hole Score" 
+                    Label="Avg Score (18)" 
                     Value="@(_stats.Average18HoleScore?.ToString("F1") ?? "-")"
                     SubText="@(_stats.Total18HoleRounds + " rounds")">  
                     @if (_stats.Average18HoleScoreTrend.HasValue)
@@ -111,7 +111,7 @@
             @if (_stats.Average9HoleScore.HasValue)
             {
                 <FairwayFinderStatsCard 
-                    Label="Average 9 Hole Score" 
+                    Label="Avg Score (9)" 
                     Value="@(_stats.Average9HoleScore?.ToString("F1") ?? "-")"
                     SubText="@(_stats.Total9HoleRounds + " rounds")">  
                     @if (_stats.Average9HoleScoreTrend.HasValue)
@@ -139,7 +139,7 @@
             @if (_stats.Best18HoleRound is not null)
             {
                 <FairwayFinderStatsCard 
-                    Label="Best Full Round" 
+                    Label="Best Round (18)" 
                     Value="@_stats.Best18HoleRound.Score.ToString()"
                     SubText="@_stats.Best18HoleRound.CourseName"
                     OnClick="NavigateToBestFullRound"/>
@@ -148,7 +148,7 @@
             @if (_stats.Best9HoleRound is not null)
             {
                 <FairwayFinderStatsCard 
-                    Label="Best Nine Hole Round" 
+                    Label="Best Round (9)" 
                     Value="@_stats.Best9HoleRound.Score.ToString()"
                     SubText="@_stats.Best9HoleRound.CourseName"
                     OnClick="NavigateToNineHoleRound"/>
@@ -215,10 +215,10 @@
                 @if (_stats.AdvancedStats.Average18HolePutts.HasValue)
                 {
                     <FairwayFinderStatsCard 
-                        Label="Avg Putts" 
+                        Label="Avg Putts (18)" 
                         Value="@($"{_stats.AdvancedStats.Average18HolePutts:F1}")"
                         SubText="per round"
-                        OnClick="ShowPuttsTrendDialog">
+                        OnClick="ShowPuttsTrendDialog18Hole">
                         @if (_stats.AdvancedStats.Average18HolePuttsTrend.HasValue)
                         {
                             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
@@ -233,6 +233,34 @@
                                     <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Danger"/>
                                     <RadzenText TextStyle="TextStyle.Caption">
                                        + @_stats.AdvancedStats.Average18HolePuttsTrend.Value.ToString("F1")
+                                    </RadzenText>
+                                }
+                            </RadzenStack>
+                        }
+                    </FairwayFinderStatsCard>
+                }
+                
+                @if (_stats.AdvancedStats.Average9HolePutts.HasValue)
+                {
+                    <FairwayFinderStatsCard 
+                        Label="Avg Putts (9)" 
+                        Value="@($"{_stats.AdvancedStats.Average9HolePutts:F1}")"
+                        SubText="per round"
+                        OnClick="ShowPuttsTrendDialog9Hole">
+                        @if (_stats.AdvancedStats.Average9HolePuttsTrend.HasValue)
+                        {
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
+                                @if (_stats.AdvancedStats.Average9HolePuttsTrend < 0) {
+                                    <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Success"/>
+                                    <RadzenText TextStyle="TextStyle.Caption">
+                                       @_stats.AdvancedStats.Average9HolePuttsTrend.Value.ToString("F1")
+                                    </RadzenText>
+                                }
+                                else
+                                {
+                                    <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Danger"/>
+                                    <RadzenText TextStyle="TextStyle.Caption">
+                                       + @_stats.AdvancedStats.Average9HolePuttsTrend.Value.ToString("F1")
                                     </RadzenText>
                                 }
                             </RadzenStack>
@@ -278,7 +306,7 @@
         <RadzenColumn Size="12" SizeLG="7">
             <RadzenCard Style="height: 100%;">
                 <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Score Trend</RadzenText>
-                <FairwayFinderScoreTrendChart TrendData="@_stats?.ScoreTrend18Hole" />
+                <FairwayFinderScoreTrendChart TrendData18Hole="@_stats?.ScoreTrend18Hole" TrendData9Hole="@_stats?.ScoreTrend9Hole" />
             </RadzenCard>
         </RadzenColumn>
         <RadzenColumn Size="12" SizeLG="5">
@@ -467,7 +495,7 @@
         }
     }
     
-    private async Task ShowPuttsTrendDialog()
+    private async Task ShowPuttsTrendDialog18Hole()
     {
         if (_stats?.PuttsTrend18Hole is null || _stats.PuttsTrend18Hole.Count < 2)
         {
@@ -478,6 +506,26 @@
             new Dictionary<string, object>
             {
                 { "TrendData", _stats.PuttsTrend18Hole }
+            },
+            new DialogOptions
+            {
+                Width = "700px",
+                CloseDialogOnOverlayClick = true,
+                CloseDialogOnEsc = true
+            });
+    }
+    
+    private async Task ShowPuttsTrendDialog9Hole()
+    {
+        if (_stats?.PuttsTrend9Hole is null || _stats.PuttsTrend9Hole.Count < 2)
+        {
+            return;
+        }
+        
+        await DialogService.OpenAsync<PuttsTrendDialog>("Putting Trend (9-Hole Rounds)",
+            new Dictionary<string, object>
+            {
+                { "TrendData", _stats.PuttsTrend9Hole }
             },
             new DialogOptions
             {

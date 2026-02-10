@@ -26,6 +26,7 @@ public class UserStatsResponse
     public List<ScoreTrendPoint> ScoreTrend18Hole { get; set; } = new();
     public List<ScoreTrendPoint> ScoreTrend9Hole { get; set; } = new();
     public List<PuttsTrendPoint> PuttsTrend18Hole { get; set; } = new();
+    public List<PuttsTrendPoint> PuttsTrend9Hole { get; set; } = new();
     public List<FirTrendPoint> FirTrend { get; set; } = new();
     public List<GirTrendPoint> GirTrend { get; set; } = new();
     public ScoringDistribution ScoringDistribution { get; set; } = new();

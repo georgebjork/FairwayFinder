@@ -41,6 +41,7 @@ public class StatsService : IStatsService
             ScoreTrend18Hole = StatsCalculator.BuildScoreTrend(statsRounds, trendCount),
             ScoreTrend9Hole = StatsCalculator.BuildScoreTrend(statsRounds, trendCount, fullRound: false),
             PuttsTrend18Hole = StatsCalculator.BuildPuttsTrend(statsRounds, trendCount),
+            PuttsTrend9Hole = StatsCalculator.BuildPuttsTrend(statsRounds, trendCount, fullRound: false),
             FirTrend = StatsCalculator.BuildFirTrend(statsRounds, trendCount),
             GirTrend = StatsCalculator.BuildGirTrend(statsRounds, trendCount),
             MostPlayedCourses = StatsCalculator.CalculateCourseStats(statsRounds, coursesCount),
