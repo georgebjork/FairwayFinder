@@ -14,7 +14,7 @@ public static class StatsCalculator
     /// </summary>
     public static double? CalculateAverageScore(IReadOnlyList<RoundResponse> rounds, bool fullRound = true)
     {
-        if (rounds.Count == 0) return null;
+        if (rounds.Count(x => x.FullRound == fullRound) == 0) return null;
         return Math.Round(rounds.Where(x => x.FullRound == fullRound).Average(r => r.Score), 1);
     }
 
@@ -24,7 +24,7 @@ public static class StatsCalculator
     /// </summary>
     public static double? CalculateScoreTrend(IReadOnlyList<RoundResponse> rounds, int windowSize = 5, bool fullRound = true)
     {
-        if (rounds.Count < windowSize * 2) return null;
+        if (rounds.Count(x => x.FullRound == fullRound) < windowSize * 2) return null;
 
         var filteredRounds = rounds.Where(x => x.FullRound == fullRound).ToList();
         
@@ -41,7 +41,7 @@ public static class StatsCalculator
     /// </summary>
     public static BestRound? FindBestRound(IReadOnlyList<RoundResponse> rounds, bool fullRound = true)
     {
-        if (rounds.Count == 0) return null;
+        if (rounds.Count(x => x.FullRound == fullRound) == 0) return null;
 
         var best = rounds.OrderBy(r => r.Score).First(x => x.FullRound == fullRound);
         return new BestRound

@@ -1,16 +1,7 @@
 @using FairwayFinder.Features.Data
-@using FairwayFinder.Features.Services
-@using FairwayFinder.Features.Services.Interfaces
-@inject IRoundService RoundService
 @inject NavigationManager NavigationManager
 
-@if (_loading)
-{
-    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" class="rz-p-4">
-        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-    </RadzenStack>
-}
-else if (_rounds is null || !_rounds.Any())
+@if (Rounds is null || !Rounds.Any())
 {
     <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
         You haven't recorded any rounds yet.
@@ -18,7 +9,7 @@ else if (_rounds is null || !_rounds.Any())
 }
 else
 {
-    <RadzenDataGrid Data="@_rounds" 
+    <RadzenDataGrid Data="@Rounds" 
                     TItem="RoundResponse"
                     AllowFiltering="true"
                     FilterMode="FilterMode.Advanced"
@@ -56,32 +47,9 @@ else
 
 @code {
     [Parameter]
-    public string? UserId { get; set; }
+    public List<RoundResponse>? Rounds { get; set; }
 
-    private List<RoundResponse>? _rounds;
     private IList<RoundResponse> _selectedRound = [];
-
-    private bool _loading = true;
-
-    protected override async Task OnParametersSetAsync()
-    {
-        if (!string.IsNullOrEmpty(UserId))
-        {
-            await LoadRoundsAsync();
-        }
-    }
-
-    private async Task LoadRoundsAsync()
-    {
-        _loading = true;
-        
-        if (!string.IsNullOrEmpty(UserId))
-        {
-            _rounds = await RoundService.GetRoundsByUserIdAsync(UserId);
-        }
-        
-        _loading = false;
-    }
 
     private void OnRowClick(DataGridRowMouseEventArgs<RoundResponse> args)
     {

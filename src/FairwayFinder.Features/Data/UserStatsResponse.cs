@@ -30,6 +30,12 @@ public class UserStatsResponse
     public List<GirTrendPoint> GirTrend { get; set; } = new();
     public ScoringDistribution ScoringDistribution { get; set; } = new();
     public List<CourseStats> MostPlayedCourses { get; set; } = new();
+    
+    /// <summary>
+    /// The filtered rounds used to calculate these stats.
+    /// Useful for displaying a rounds list alongside stats with matching filters.
+    /// </summary>
+    public List<RoundResponse> Rounds { get; set; } = new();
 }
 
 /// <summary>

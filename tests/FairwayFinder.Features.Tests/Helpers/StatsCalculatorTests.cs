@@ -506,7 +506,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void FindBestRound_NoMatchingRoundType_ThrowsException()
+    public void FindBestRound_NoMatchingRoundType_ReturnsNull()
     {
         var rounds = new List<RoundResponse>
         {
@@ -514,8 +514,10 @@ public class StatsCalculatorTests
             CreateRound(2, 42, "Nine Hole Course", fullRound: false)
         };
 
-        // Searching for full rounds when none exist should throw
-        Assert.Throws<InvalidOperationException>(() => StatsCalculator.FindBestRound(rounds, fullRound: true));
+        // Searching for full rounds when none exist should return null
+        var result = StatsCalculator.FindBestRound(rounds, fullRound: true);
+        
+        Assert.Null(result);
     }
 
     [Fact]

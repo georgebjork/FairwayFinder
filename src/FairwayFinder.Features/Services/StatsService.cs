@@ -13,11 +13,14 @@ public class StatsService : IStatsService
         _roundService = roundService;
     }
 
-    public async Task<UserStatsResponse> GetUserStatsAsync(string userId, int trendCount = 20, int coursesCount = 5)
+    public async Task<UserStatsResponse> GetUserStatsAsync(string userId, StatsFilter? filter = null, int trendCount = 20, int coursesCount = 5)
     {
         var rounds = await _roundService.GetRoundsWithDetailsAsync(userId);
         
         var statsRounds = rounds.Where(r => !r.ExcludeFromStats).ToList();
+        
+        // Apply filters
+        statsRounds = ApplyFilters(statsRounds, filter);
         
         if (statsRounds.Count == 0)
         {
@@ -43,7 +46,48 @@ public class StatsService : IStatsService
             MostPlayedCourses = StatsCalculator.CalculateCourseStats(statsRounds, coursesCount),
             ScoringDistribution = StatsCalculator.AggregateScoringDistribution(statsRounds),
             ParTypeScoring = StatsCalculator.CalculateParTypeScoring(statsRounds),
-            AdvancedStats = StatsCalculator.CalculateAdvancedStats(statsRounds)
+            AdvancedStats = StatsCalculator.CalculateAdvancedStats(statsRounds),
+            Rounds = statsRounds
         };
+    }
+    
+    public async Task<List<int>> GetAvailableYearsAsync(string userId)
+    {
+        var rounds = await _roundService.GetRoundsByUserIdAsync(userId);
+        
+        return rounds
+            .Select(r => r.DatePlayed.Year)
+            .Distinct()
+            .OrderByDescending(y => y)
+            .ToList();
+    }
+    
+    private static List<RoundResponse> ApplyFilters(List<RoundResponse> rounds, StatsFilter? filter)
+    {
+        if (filter is null || !filter.HasFilters)
+        {
+            return rounds;
+        }
+        
+        var result = rounds.AsEnumerable();
+        
+        // Filter by round type (9 or 18 hole)
+        if (filter.FullRoundOnly.HasValue)
+        {
+            result = result.Where(r => r.FullRound == filter.FullRoundOnly.Value);
+        }
+        
+        // Filter by date range
+        if (filter.StartDate.HasValue)
+        {
+            result = result.Where(r => r.DatePlayed >= filter.StartDate.Value);
+        }
+        
+        if (filter.EndDate.HasValue)
+        {
+            result = result.Where(r => r.DatePlayed <= filter.EndDate.Value);
+        }
+        
+        return result.ToList();
     }
 }
