@@ -1,6 +1,6 @@
 using FairwayFinder.Features.Data;
 
-namespace FairwayFinder.Features.Services;
+namespace FairwayFinder.Features.Services.Interfaces;
 
 public interface IStatsService
 {
