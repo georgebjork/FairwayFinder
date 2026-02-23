@@ -1,4 +1,5 @@
 @using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Helpers
 @inject NavigationManager NavigationManager
 
 <RadzenStack Gap="1rem">
@@ -32,11 +33,31 @@
                 </TooltipTemplate>
             </RadzenLineSeries>
 
+            @if (_trendLineData is not null && _trendLineData.Count >= 2)
+            {
+                <RadzenLineSeries Data="@_trendLineData"
+                                  CategoryProperty="DateLabel"
+                                  ValueProperty="Value"
+                                  Title="Trend"
+                                  LineType="LineType.Dashed"
+                                  Smooth="false"
+                                  StrokeWidth="2">
+                    <ChildContent>
+                        <RadzenMarkers Visible="false" />
+                    </ChildContent>
+                    <TooltipTemplate Context="data">
+                        <div class="rz-p-2">
+                            <RadzenText TextStyle="TextStyle.Body2">Trend: <strong>@data.Value.ToString("F1")%</strong></RadzenText>
+                        </div>
+                    </TooltipTemplate>
+                </RadzenLineSeries>
+            }
+
             <RadzenValueAxis Min="0" Max="100" Step="20">
                 <RadzenGridLines Visible="true" />
                 <RadzenAxisTitle Text="FIR %" />
             </RadzenValueAxis>
-            <RadzenLegend Visible="false" />
+            <RadzenLegend Visible="true" />
         </RadzenChart>
     }
     
@@ -55,21 +76,18 @@
     public DialogService DialogService { get; set; } = default!;
 
     private List<FirTrendChartItem>? _chartData;
+    private List<TrendLinePoint>? _trendLineData;
+
+    private const int MaxVisibleLabels = 6;
 
     protected override void OnParametersSet()
     {
         if (TrendData is not null && TrendData.Count >= 2)
         {
-            _chartData = TrendData.Select(d => new FirTrendChartItem
-            {
-                RoundId = d.RoundId,
-                DatePlayed = d.DatePlayed,
-                DateLabel = d.DatePlayed.ToString("M/d"),
-                FirPercent = d.FirPercent,
-                FairwaysHit = d.FairwaysHit,
-                FairwayAttempts = d.FairwayAttempts,
-                CourseName = d.CourseName
-            }).ToList();
+            _chartData = GenerateUniqueLabels(TrendData);
+
+            var labels = _chartData.Select(d => d.DateLabel).ToList();
+            _trendLineData = StatsCalculator.BuildFirTrendLine(TrendData, labels);
         }
     }
 
@@ -79,6 +97,65 @@
         {
             NavigationManager.NavigateTo($"/round/{item.RoundId}");
         }
+    }
+
+    private static List<FirTrendChartItem> GenerateUniqueLabels(List<FirTrendPoint> trendData)
+    {
+        var n = trendData.Count;
+        var visibleIndices = new HashSet<int>();
+        if (n <= MaxVisibleLabels)
+        {
+            for (int i = 0; i < n; i++) visibleIndices.Add(i);
+        }
+        else
+        {
+            visibleIndices.Add(0);
+            visibleIndices.Add(n - 1);
+            var step = (double)(n - 1) / (MaxVisibleLabels - 1);
+            for (int i = 1; i < MaxVisibleLabels - 1; i++)
+                visibleIndices.Add((int)Math.Round(step * i));
+        }
+
+        var result = new List<FirTrendChartItem>();
+        var labelCounts = new Dictionary<string, int>();
+
+        for (int i = 0; i < n; i++)
+        {
+            var d = trendData[i];
+            string label;
+
+            if (visibleIndices.Contains(i))
+            {
+                var baseLabel = d.DatePlayed.ToString("M/d");
+                if (labelCounts.TryGetValue(baseLabel, out var count))
+                {
+                    labelCounts[baseLabel] = count + 1;
+                    label = $"{baseLabel} ({count + 1})";
+                }
+                else
+                {
+                    labelCounts[baseLabel] = 1;
+                    label = baseLabel;
+                }
+            }
+            else
+            {
+                label = new string('\u00A0', i);
+            }
+
+            result.Add(new FirTrendChartItem
+            {
+                RoundId = d.RoundId,
+                DatePlayed = d.DatePlayed,
+                DateLabel = label,
+                FirPercent = d.FirPercent,
+                FairwaysHit = d.FairwaysHit,
+                FairwayAttempts = d.FairwayAttempts,
+                CourseName = d.CourseName
+            });
+        }
+
+        return result;
     }
 
     private class FirTrendChartItem

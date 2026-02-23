@@ -1,4 +1,5 @@
 @using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Helpers
 @inject NavigationManager NavigationManager
 
 <RadzenStack Gap="1rem">
@@ -29,11 +30,31 @@
                 </TooltipTemplate>
             </RadzenLineSeries>
 
+            @if (_trendLineData is not null && _trendLineData.Count >= 2)
+            {
+                <RadzenLineSeries Data="@_trendLineData"
+                                  CategoryProperty="DateLabel"
+                                  ValueProperty="Value"
+                                  Title="Trend"
+                                  LineType="LineType.Dashed"
+                                  Smooth="false"
+                                  StrokeWidth="2">
+                    <ChildContent>
+                        <RadzenMarkers Visible="false" />
+                    </ChildContent>
+                    <TooltipTemplate Context="data">
+                        <div class="rz-p-2">
+                            <RadzenText TextStyle="TextStyle.Body2">Trend: <strong>@data.Value</strong></RadzenText>
+                        </div>
+                    </TooltipTemplate>
+                </RadzenLineSeries>
+            }
+
             <RadzenValueAxis Min="@_minPutts" Max="@_maxPutts" Step="@_step">
                 <RadzenGridLines Visible="true" />
                 <RadzenAxisTitle Text="Putts" />
             </RadzenValueAxis>
-            <RadzenLegend Visible="false" />
+            <RadzenLegend Visible="true" />
         </RadzenChart>
     }
     
@@ -52,24 +73,27 @@
     public DialogService DialogService { get; set; } = default!;
 
     private List<PuttsTrendChartItem>? _chartData;
+    private List<TrendLinePoint>? _trendLineData;
     private int _minPutts;
     private int _maxPutts;
     private int _step = 2;
+
+    private const int MaxVisibleLabels = 6;
 
     protected override void OnParametersSet()
     {
         if (TrendData is not null && TrendData.Count >= 2)
         {
-            _chartData = TrendData.Select(d => new PuttsTrendChartItem
-            {
-                RoundId = d.RoundId,
-                DatePlayed = d.DatePlayed,
-                DateLabel = d.DatePlayed.ToString("M/d"),
-                Putts = d.Putts,
-                CourseName = d.CourseName
-            }).ToList();
+            _chartData = GenerateUniqueLabels(TrendData);
 
-            var putts = _chartData.Select(d => d.Putts).ToList();
+            var labels = _chartData.Select(d => d.DateLabel).ToList();
+            _trendLineData = StatsCalculator.BuildPuttsTrendLine(TrendData, labels);
+
+            var putts = _chartData.Select(d => (double)d.Putts).ToList();
+            if (_trendLineData.Count >= 2)
+            {
+                putts.AddRange(_trendLineData.Select(d => d.Value));
+            }
             var minPutts = putts.Min();
             var maxPutts = putts.Max();
 
@@ -87,6 +111,63 @@
         {
             NavigationManager.NavigateTo($"/round/{item.RoundId}");
         }
+    }
+
+    private static List<PuttsTrendChartItem> GenerateUniqueLabels(List<PuttsTrendPoint> trendData)
+    {
+        var n = trendData.Count;
+        var visibleIndices = new HashSet<int>();
+        if (n <= MaxVisibleLabels)
+        {
+            for (int i = 0; i < n; i++) visibleIndices.Add(i);
+        }
+        else
+        {
+            visibleIndices.Add(0);
+            visibleIndices.Add(n - 1);
+            var step = (double)(n - 1) / (MaxVisibleLabels - 1);
+            for (int i = 1; i < MaxVisibleLabels - 1; i++)
+                visibleIndices.Add((int)Math.Round(step * i));
+        }
+
+        var result = new List<PuttsTrendChartItem>();
+        var labelCounts = new Dictionary<string, int>();
+
+        for (int i = 0; i < n; i++)
+        {
+            var d = trendData[i];
+            string label;
+
+            if (visibleIndices.Contains(i))
+            {
+                var baseLabel = d.DatePlayed.ToString("M/d");
+                if (labelCounts.TryGetValue(baseLabel, out var count))
+                {
+                    labelCounts[baseLabel] = count + 1;
+                    label = $"{baseLabel} ({count + 1})";
+                }
+                else
+                {
+                    labelCounts[baseLabel] = 1;
+                    label = baseLabel;
+                }
+            }
+            else
+            {
+                label = new string('\u00A0', i);
+            }
+
+            result.Add(new PuttsTrendChartItem
+            {
+                RoundId = d.RoundId,
+                DatePlayed = d.DatePlayed,
+                DateLabel = label,
+                Putts = d.Putts,
+                CourseName = d.CourseName
+            });
+        }
+
+        return result;
     }
 
     private class PuttsTrendChartItem

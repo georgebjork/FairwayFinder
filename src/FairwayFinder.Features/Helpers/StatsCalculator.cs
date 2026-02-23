@@ -19,21 +19,21 @@ public static class StatsCalculator
     }
 
     /// <summary>
-    /// Calculates the score trend (last 5 rounds avg - previous 5 rounds avg)
-    /// Negative = improvement, Positive = regression
+    /// Calculates the score trend using linear regression slope across all filtered rounds.
+    /// Returns the slope (strokes per round change). Negative = improvement, Positive = regression.
+    /// Rounds are expected most-recent-first; they are reversed internally so x=0 is the oldest round.
     /// </summary>
-    public static double? CalculateScoreTrend(IReadOnlyList<RoundResponse> rounds, int windowSize = 5, bool fullRound = true)
+    public static double? CalculateScoreTrend(IReadOnlyList<RoundResponse> rounds, bool fullRound = true)
     {
-        if (rounds.Count(x => x.FullRound == fullRound) < windowSize * 2) return null;
-
         var filteredRounds = rounds.Where(x => x.FullRound == fullRound).ToList();
         
-        if (filteredRounds.Count < windowSize * 2) return null;
+        if (filteredRounds.Count < 2) return null;
+
+        // Reverse so oldest = x:0, newest = x:n-1
+        var scores = filteredRounds.AsEnumerable().Reverse().Select(r => (double)r.Score).ToList();
+        var (slope, _) = CalculateLinearRegression(scores);
         
-        var last5Avg = filteredRounds.Take(windowSize).Average(r => r.Score);
-        var previous5Avg = filteredRounds.Skip(windowSize).Take(windowSize).Average(r => r.Score);
-        
-        return Math.Round(last5Avg - previous5Avg, 1);
+        return Math.Round(slope, 2);
     }
 
     /// <summary>
@@ -56,11 +56,10 @@ public static class StatsCalculator
     /// <summary>
     /// Builds the score trend data for charting (oldest to newest)
     /// </summary>
-    public static List<ScoreTrendPoint> BuildScoreTrend(IReadOnlyList<RoundResponse> rounds, int count, bool fullRound = true)
+    public static List<ScoreTrendPoint> BuildScoreTrend(IReadOnlyList<RoundResponse> rounds, bool fullRound = true)
     {
         var filteredRounds = rounds.Where(x => x.FullRound == fullRound);
         return filteredRounds
-            .Take(count)
             .Reverse() // Oldest first for chart display
             .Select(r => new ScoreTrendPoint
             {
@@ -76,13 +75,12 @@ public static class StatsCalculator
     /// Builds the putts trend data for charting (oldest to newest)
     /// Only includes rounds that have hole stats with putt data
     /// </summary>
-    public static List<PuttsTrendPoint> BuildPuttsTrend(IReadOnlyList<RoundResponse> rounds, int count, bool fullRound = true)
+    public static List<PuttsTrendPoint> BuildPuttsTrend(IReadOnlyList<RoundResponse> rounds, bool fullRound = true)
     {
         var filteredRounds = rounds
             .Where(x => x.FullRound == fullRound && x.UsingHoleStats && x.TotalPutts > 0);
         
         return filteredRounds
-            .Take(count)
             .Reverse() // Oldest first for chart display
             .Select(r => new PuttsTrendPoint
             {
@@ -98,13 +96,12 @@ public static class StatsCalculator
     /// Builds the FIR% trend data for charting (oldest to newest)
     /// Only includes rounds that have hole stats with fairway data (par 4/5 holes)
     /// </summary>
-    public static List<FirTrendPoint> BuildFirTrend(IReadOnlyList<RoundResponse> rounds, int count)
+    public static List<FirTrendPoint> BuildFirTrend(IReadOnlyList<RoundResponse> rounds)
     {
         var result = new List<FirTrendPoint>();
         
         var roundsWithStats = rounds
             .Where(x => x.UsingHoleStats)
-            .Take(count)
             .ToList();
         
         foreach (var round in roundsWithStats)
@@ -137,13 +134,12 @@ public static class StatsCalculator
     /// Builds the GIR% trend data for charting (oldest to newest)
     /// Only includes rounds that have hole stats with green data
     /// </summary>
-    public static List<GirTrendPoint> BuildGirTrend(IReadOnlyList<RoundResponse> rounds, int count)
+    public static List<GirTrendPoint> BuildGirTrend(IReadOnlyList<RoundResponse> rounds)
     {
         var result = new List<GirTrendPoint>();
         
         var roundsWithStats = rounds
             .Where(x => x.UsingHoleStats)
-            .Take(count)
             .ToList();
         
         foreach (var round in roundsWithStats)
@@ -348,8 +344,8 @@ public static class StatsCalculator
             }
         }
 
-        // Calculate trends if we have at least 10 rounds with stats
-        if (roundsWithHoleStats.Count >= 10)
+        // Calculate trends using linear regression (need at least 2 rounds)
+        if (roundsWithHoleStats.Count >= 2)
         {
             CalculateAdvancedStatsTrends(result, roundsWithHoleStats);
         }
@@ -357,109 +353,180 @@ public static class StatsCalculator
         return result;
     }
 
+    /// <summary>
+    /// Computes the linear regression (least-squares) for a list of y-values
+    /// where x-values are sequential indices (0, 1, 2, ...).
+    /// Returns (slope, intercept) for y = slope * x + intercept.
+    /// </summary>
+    internal static (double Slope, double Intercept) CalculateLinearRegression(IReadOnlyList<double> yValues)
+    {
+        var n = yValues.Count;
+        if (n < 2) return (0, yValues.Count == 1 ? yValues[0] : 0);
+
+        double sumX = 0, sumY = 0, sumXy = 0, sumX2 = 0;
+        for (int i = 0; i < n; i++)
+        {
+            sumX += i;
+            sumY += yValues[i];
+            sumXy += i * yValues[i];
+            sumX2 += (double)i * i;
+        }
+
+        var denominator = n * sumX2 - sumX * sumX;
+        if (denominator == 0) return (0, sumY / n);
+
+        var slope = (n * sumXy - sumX * sumY) / denominator;
+        var intercept = (sumY - slope * sumX) / n;
+
+        return (slope, intercept);
+    }
+
+    /// <summary>
+    /// Generic trend line builder. Takes a list of y-values and date labels,
+    /// computes linear regression, and returns TrendLinePoints.
+    /// </summary>
+    private static List<TrendLinePoint> BuildTrendLine(IReadOnlyList<double> values, IReadOnlyList<string> labels)
+    {
+        if (values.Count < 2) return new List<TrendLinePoint>();
+
+        var (slope, intercept) = CalculateLinearRegression(values);
+
+        var result = new List<TrendLinePoint>();
+        for (int i = 0; i < values.Count; i++)
+        {
+            result.Add(new TrendLinePoint
+            {
+                DateLabel = i < labels.Count ? labels[i] : string.Empty,
+                Value = Math.Round(slope * i + intercept, 1)
+            });
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Builds trend line for score chart. Input should be oldest-to-newest.
+    /// Labels are used as-is for each point's DateLabel (to handle duplicate dates).
+    /// </summary>
+    public static List<TrendLinePoint> BuildScoreTrendLine(IReadOnlyList<ScoreTrendPoint> trendPoints, IReadOnlyList<string>? labels = null)
+    {
+        if (trendPoints.Count < 2) return new List<TrendLinePoint>();
+        var values = trendPoints.Select(p => (double)p.Score).ToList();
+        var defaultLabels = labels ?? trendPoints.Select(p => p.DatePlayed.ToString("M/d")).ToList();
+        return BuildTrendLine(values, defaultLabels);
+    }
+
+    /// <summary>
+    /// Builds trend line for putts chart. Input should be oldest-to-newest.
+    /// </summary>
+    public static List<TrendLinePoint> BuildPuttsTrendLine(IReadOnlyList<PuttsTrendPoint> trendPoints, IReadOnlyList<string>? labels = null)
+    {
+        if (trendPoints.Count < 2) return new List<TrendLinePoint>();
+        var values = trendPoints.Select(p => (double)p.Putts).ToList();
+        var defaultLabels = labels ?? trendPoints.Select(p => p.DatePlayed.ToString("M/d")).ToList();
+        return BuildTrendLine(values, defaultLabels);
+    }
+
+    /// <summary>
+    /// Builds trend line for FIR% chart. Input should be oldest-to-newest.
+    /// </summary>
+    public static List<TrendLinePoint> BuildFirTrendLine(IReadOnlyList<FirTrendPoint> trendPoints, IReadOnlyList<string>? labels = null)
+    {
+        if (trendPoints.Count < 2) return new List<TrendLinePoint>();
+        var values = trendPoints.Select(p => p.FirPercent).ToList();
+        var defaultLabels = labels ?? trendPoints.Select(p => p.DatePlayed.ToString("M/d")).ToList();
+        return BuildTrendLine(values, defaultLabels);
+    }
+
+    /// <summary>
+    /// Builds trend line for GIR% chart. Input should be oldest-to-newest.
+    /// </summary>
+    public static List<TrendLinePoint> BuildGirTrendLine(IReadOnlyList<GirTrendPoint> trendPoints, IReadOnlyList<string>? labels = null)
+    {
+        if (trendPoints.Count < 2) return new List<TrendLinePoint>();
+        var values = trendPoints.Select(p => p.GirPercent).ToList();
+        var defaultLabels = labels ?? trendPoints.Select(p => p.DatePlayed.ToString("M/d")).ToList();
+        return BuildTrendLine(values, defaultLabels);
+    }
+
     private static void CalculateAdvancedStatsTrends(
         AdvancedStats result,
         List<RoundResponse> roundsWithHoleStats)
     {
-        // All rounds (for FIR/GIR)
-        var recent5Ids = roundsWithHoleStats.Take(5).Select(r => r.RoundId).ToHashSet();
-        var previous5Ids = roundsWithHoleStats.Skip(5).Take(5).Select(r => r.RoundId).ToHashSet();
-
-        // 18-hole rounds (for putting)
-        var recent5FullIds = roundsWithHoleStats.Where(x => x.FullRound).Take(5).Select(r => r.RoundId).ToHashSet();
-        var previous5FullIds = roundsWithHoleStats.Where(x => x.FullRound).Skip(5).Take(5).Select(r => r.RoundId).ToHashSet();
-
-        // 9-hole rounds (for putting)
-        var recent5NineIds = roundsWithHoleStats.Where(x => !x.FullRound).Take(5).Select(r => r.RoundId).ToHashSet();
-        var previous5NineIds = roundsWithHoleStats.Where(x => !x.FullRound).Skip(5).Take(5).Select(r => r.RoundId).ToHashSet();
-
-        var holeStatsForTrends = roundsWithHoleStats
-            .SelectMany(r => r.Holes.Select(h => new { r.RoundId, Hole = h }))
-            .Where(x => x.Hole.Stats != null)
-            .ToList();
-
-        // FIR Trend
-        var recent5FairwayHoles = holeStatsForTrends
-            .Where(x => recent5Ids.Contains(x.RoundId) && x.Hole.Par > 3 && x.Hole.Stats!.HitFairway.HasValue)
-            .ToList();
-        var previous5FairwayHoles = holeStatsForTrends
-            .Where(x => previous5Ids.Contains(x.RoundId) && x.Hole.Par > 3 && x.Hole.Stats!.HitFairway.HasValue)
-            .ToList();
-
-        if (recent5FairwayHoles.Count > 0 && previous5FairwayHoles.Count > 0)
-        {
-            var recent5Fir = (double)recent5FairwayHoles.Count(x => x.Hole.Stats!.HitFairway == true) / recent5FairwayHoles.Count * 100;
-            var previous5Fir = (double)previous5FairwayHoles.Count(x => x.Hole.Stats!.HitFairway == true) / previous5FairwayHoles.Count * 100;
-            result.FirPercentTrend = Math.Round(recent5Fir - previous5Fir, 1);
-        }
-
-        // GIR Trend
-        var recent5GreenHoles = holeStatsForTrends
-            .Where(x => recent5Ids.Contains(x.RoundId) && x.Hole.Stats!.HitGreen.HasValue)
-            .ToList();
-        var previous5GreenHoles = holeStatsForTrends
-            .Where(x => previous5Ids.Contains(x.RoundId) && x.Hole.Stats!.HitGreen.HasValue)
-            .ToList();
-
-        if (recent5GreenHoles.Count > 0 && previous5GreenHoles.Count > 0)
-        {
-            var recent5Gir = (double)recent5GreenHoles.Count(x => x.Hole.Stats!.HitGreen == true) / recent5GreenHoles.Count * 100;
-            var previous5Gir = (double)previous5GreenHoles.Count(x => x.Hole.Stats!.HitGreen == true) / previous5GreenHoles.Count * 100;
-            result.GirPercentTrend = Math.Round(recent5Gir - previous5Gir, 1);
-        }
-
-        // Putts Trend 18 Hole
-        var recent5PuttHoles = holeStatsForTrends
-            .Where(x => recent5FullIds.Contains(x.RoundId) && x.Hole.Stats!.NumberOfPutts.HasValue)
-            .ToList();
-        var previous5PuttHoles = holeStatsForTrends
-            .Where(x => previous5FullIds.Contains(x.RoundId) && x.Hole.Stats!.NumberOfPutts.HasValue)
-            .ToList();
-
-        if (recent5PuttHoles.Count > 0 && previous5PuttHoles.Count > 0)
-        {
-            var recent5PuttsByRound = recent5PuttHoles
-                .GroupBy(x => x.RoundId)
-                .Select(g => g.Sum(x => x.Hole.Stats!.NumberOfPutts!.Value))
-                .ToList();
-            var previous5PuttsByRound = previous5PuttHoles
-                .GroupBy(x => x.RoundId)
-                .Select(g => g.Sum(x => x.Hole.Stats!.NumberOfPutts!.Value))
-                .ToList();
-
-            if (recent5PuttsByRound.Count > 0 && previous5PuttsByRound.Count > 0)
+        // FIR% Trend — compute per-round FIR%, then regress (oldest first)
+        var firPerRound = roundsWithHoleStats
+            .AsEnumerable().Reverse() // oldest first
+            .Select(r =>
             {
-                var recent5AvgPutts = recent5PuttsByRound.Average();
-                var previous5AvgPutts = previous5PuttsByRound.Average();
-                result.Average18HolePuttsTrend = Math.Round(recent5AvgPutts - previous5AvgPutts, 1);
-            }
+                var fairwayHoles = r.Holes.Where(h => h.Par > 3 && h.Stats?.HitFairway.HasValue == true).ToList();
+                if (fairwayHoles.Count == 0) return (double?)null;
+                return (double)fairwayHoles.Count(h => h.Stats!.HitFairway == true) / fairwayHoles.Count * 100;
+            })
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .ToList();
+
+        if (firPerRound.Count >= 2)
+        {
+            var (slope, _) = CalculateLinearRegression(firPerRound);
+            result.FirPercentTrend = Math.Round(slope, 2);
         }
 
-        // Putts Trend 9 Hole
-        var recent5Putt9Holes = holeStatsForTrends
-            .Where(x => recent5NineIds.Contains(x.RoundId) && x.Hole.Stats!.NumberOfPutts.HasValue)
-            .ToList();
-        var previous5Putt9Holes = holeStatsForTrends
-            .Where(x => previous5NineIds.Contains(x.RoundId) && x.Hole.Stats!.NumberOfPutts.HasValue)
-            .ToList();
-
-        if (recent5Putt9Holes.Count > 0 && previous5Putt9Holes.Count > 0)
-        {
-            var recent5PuttsByRound9Hole = recent5Putt9Holes
-                .GroupBy(x => x.RoundId)
-                .Select(g => g.Sum(x => x.Hole.Stats!.NumberOfPutts!.Value))
-                .ToList();
-            var previous5PuttsByRound9Hole = previous5Putt9Holes
-                .GroupBy(x => x.RoundId)
-                .Select(g => g.Sum(x => x.Hole.Stats!.NumberOfPutts!.Value))
-                .ToList();
-
-            if (recent5PuttsByRound9Hole.Count > 0 && previous5PuttsByRound9Hole.Count > 0)
+        // GIR% Trend — compute per-round GIR%, then regress (oldest first)
+        var girPerRound = roundsWithHoleStats
+            .AsEnumerable().Reverse()
+            .Select(r =>
             {
-                var recent5AvgPutts = recent5PuttsByRound9Hole.Average();
-                var previous5AvgPutts = previous5PuttsByRound9Hole.Average();
-                result.Average9HolePuttsTrend = Math.Round(recent5AvgPutts - previous5AvgPutts, 1);
-            }
+                var greenHoles = r.Holes.Where(h => h.Stats?.HitGreen.HasValue == true).ToList();
+                if (greenHoles.Count == 0) return (double?)null;
+                return (double)greenHoles.Count(h => h.Stats!.HitGreen == true) / greenHoles.Count * 100;
+            })
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .ToList();
+
+        if (girPerRound.Count >= 2)
+        {
+            var (slope, _) = CalculateLinearRegression(girPerRound);
+            result.GirPercentTrend = Math.Round(slope, 2);
+        }
+
+        // Putts Trend 18 Hole — total putts per round, then regress (oldest first)
+        var putts18PerRound = roundsWithHoleStats
+            .Where(x => x.FullRound)
+            .AsEnumerable().Reverse()
+            .Select(r =>
+            {
+                var putts = r.Holes.Where(h => h.Stats?.NumberOfPutts.HasValue == true).Sum(h => h.Stats!.NumberOfPutts!.Value);
+                return putts > 0 ? (double?)putts : null;
+            })
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .ToList();
+
+        if (putts18PerRound.Count >= 2)
+        {
+            var (slope, _) = CalculateLinearRegression(putts18PerRound);
+            result.Average18HolePuttsTrend = Math.Round(slope, 2);
+        }
+
+        // Putts Trend 9 Hole — total putts per round, then regress (oldest first)
+        var putts9PerRound = roundsWithHoleStats
+            .Where(x => !x.FullRound)
+            .AsEnumerable().Reverse()
+            .Select(r =>
+            {
+                var putts = r.Holes.Where(h => h.Stats?.NumberOfPutts.HasValue == true).Sum(h => h.Stats!.NumberOfPutts!.Value);
+                return putts > 0 ? (double?)putts : null;
+            })
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .ToList();
+
+        if (putts9PerRound.Count >= 2)
+        {
+            var (slope, _) = CalculateLinearRegression(putts9PerRound);
+            result.Average9HolePuttsTrend = Math.Round(slope, 2);
         }
     }
 }

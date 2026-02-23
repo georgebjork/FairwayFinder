@@ -62,6 +62,16 @@ public class ScoreTrendPoint
 }
 
 /// <summary>
+/// A single data point for a trend line (linear regression).
+/// Reusable across score, putts, FIR%, GIR%, etc.
+/// </summary>
+public class TrendLinePoint
+{
+    public string DateLabel { get; set; } = string.Empty;
+    public double Value { get; set; }
+}
+
+/// <summary>
 /// A single data point for putts trend
 /// </summary>
 public class PuttsTrendPoint
@@ -109,7 +119,7 @@ public class AdvancedStats
     public double? FirPercent { get; set; }
     
     /// <summary>
-    /// FIR% trend (last 5 rounds vs previous 5 rounds). Positive = improvement.
+    /// FIR% trend (linear regression slope). Positive = improvement.
     /// </summary>
     public double? FirPercentTrend { get; set; }
     
@@ -119,7 +129,7 @@ public class AdvancedStats
     public double? GirPercent { get; set; }
     
     /// <summary>
-    /// GIR% trend (last 5 rounds vs previous 5 rounds). Positive = improvement.
+    /// GIR% trend (linear regression slope). Positive = improvement.
     /// </summary>
     public double? GirPercentTrend { get; set; }
     
@@ -130,7 +140,7 @@ public class AdvancedStats
     public double? Average9HolePutts { get; set; }
     
     /// <summary>
-    /// Average putts trend (last 5 rounds vs previous 5 rounds). Negative = improvement.
+    /// Average putts trend (linear regression slope). Negative = improvement.
     /// </summary>
     public double? Average18HolePuttsTrend { get; set; }
     public double? Average9HolePuttsTrend { get; set; }

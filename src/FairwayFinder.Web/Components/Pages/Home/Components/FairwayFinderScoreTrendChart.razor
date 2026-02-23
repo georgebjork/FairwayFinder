@@ -1,4 +1,5 @@
 @using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Helpers
 @inject NavigationManager NavigationManager
 
 @{
@@ -49,11 +50,31 @@ else
                 </TooltipTemplate>
             </RadzenLineSeries>
 
+            @if (_trendLineData is not null && _trendLineData.Count >= 2)
+            {
+                <RadzenLineSeries Data="@_trendLineData"
+                                  CategoryProperty="DateLabel"
+                                  ValueProperty="Value"
+                                  Title="Trend"
+                                  LineType="LineType.Dashed"
+                                  Smooth="false"
+                                  StrokeWidth="2">
+                    <ChildContent>
+                        <RadzenMarkers Visible="false" />
+                    </ChildContent>
+                    <TooltipTemplate Context="data">
+                        <div class="rz-p-2">
+                            <RadzenText TextStyle="TextStyle.Body2">Trend: <strong>@data.Value</strong></RadzenText>
+                        </div>
+                    </TooltipTemplate>
+                </RadzenLineSeries>
+            }
+
             <RadzenValueAxis Min="@_minScore" Max="@_maxScore" Step="@_step">
                 <RadzenGridLines Visible="true" />
                 <RadzenAxisTitle Text="Score" />
             </RadzenValueAxis>
-            <RadzenLegend Visible="false" />
+            <RadzenLegend Visible="true" />
         </RadzenChart>
     }
     else
@@ -75,6 +96,7 @@ else
 
     private string _selectedRoundType = "18";
     private List<ScoreTrendChartItem>? _chartData;
+    private List<TrendLinePoint>? _trendLineData;
     private int _minScore;
     private int _maxScore;
     private int _step = 5;
@@ -103,18 +125,19 @@ else
         
         if (trendData is not null && trendData.Count >= 2)
         {
-            // Transform to chart items with formatted date label
-            _chartData = trendData.Select(d => new ScoreTrendChartItem
-            {
-                RoundId = d.RoundId,
-                DatePlayed = d.DatePlayed,
-                DateLabel = d.DatePlayed.ToString("M/d"),
-                Score = d.Score,
-                CourseName = d.CourseName
-            }).ToList();
+            // Transform to chart items with unique date labels (handle same-day rounds)
+            _chartData = GenerateUniqueLabels(trendData);
 
-            // Calculate axis range with padding
-            var scores = _chartData.Select(d => d.Score).ToList();
+            // Build trend line using the same unique labels so both series align
+            var labels = _chartData.Select(d => d.DateLabel).ToList();
+            _trendLineData = StatsCalculator.BuildScoreTrendLine(trendData, labels);
+
+            // Calculate axis range with padding (include trend line values)
+            var scores = _chartData.Select(d => (double)d.Score).ToList();
+            if (_trendLineData.Count >= 2)
+            {
+                scores.AddRange(_trendLineData.Select(d => d.Value));
+            }
             var minScore = scores.Min();
             var maxScore = scores.Max();
 
@@ -132,6 +155,7 @@ else
         else
         {
             _chartData = null;
+            _trendLineData = null;
         }
     }
 
@@ -146,6 +170,78 @@ else
         {
             NavigationManager.NavigateTo($"/round/{item.RoundId}");
         }
+    }
+
+    private const int MaxVisibleLabels = 6;
+
+    /// <summary>
+    /// Generates chart items with unique labels for each data point.
+    /// To avoid x-axis clutter, only ~MaxVisibleLabels evenly-spaced points get a visible date label;
+    /// the rest get a unique but invisible label (a single space + index) so data points still render
+    /// at their own x position. Duplicate dates get a "(2)" suffix when visible.
+    /// </summary>
+    private static List<ScoreTrendChartItem> GenerateUniqueLabels(List<ScoreTrendPoint> trendData)
+    {
+        var n = trendData.Count;
+
+        // Determine which indices get a visible label
+        var visibleIndices = new HashSet<int>();
+        if (n <= MaxVisibleLabels)
+        {
+            // Few enough points — show them all
+            for (int i = 0; i < n; i++) visibleIndices.Add(i);
+        }
+        else
+        {
+            // Always show first and last, then evenly space the rest
+            visibleIndices.Add(0);
+            visibleIndices.Add(n - 1);
+            var step = (double)(n - 1) / (MaxVisibleLabels - 1);
+            for (int i = 1; i < MaxVisibleLabels - 1; i++)
+            {
+                visibleIndices.Add((int)Math.Round(step * i));
+            }
+        }
+
+        var result = new List<ScoreTrendChartItem>();
+        var labelCounts = new Dictionary<string, int>();
+
+        for (int i = 0; i < n; i++)
+        {
+            var d = trendData[i];
+            string label;
+
+            if (visibleIndices.Contains(i))
+            {
+                var baseLabel = d.DatePlayed.ToString("M/d");
+                if (labelCounts.TryGetValue(baseLabel, out var count))
+                {
+                    labelCounts[baseLabel] = count + 1;
+                    label = $"{baseLabel} ({count + 1})";
+                }
+                else
+                {
+                    labelCounts[baseLabel] = 1;
+                    label = baseLabel;
+                }
+            }
+            else
+            {
+                // Visually blank but unique — repeat a non-breaking space i times so each label is distinct
+                label = new string('\u00A0', i);
+            }
+
+            result.Add(new ScoreTrendChartItem
+            {
+                RoundId = d.RoundId,
+                DatePlayed = d.DatePlayed,
+                DateLabel = label,
+                Score = d.Score,
+                CourseName = d.CourseName
+            });
+        }
+
+        return result;
     }
 
     // Internal class for chart binding with formatted date

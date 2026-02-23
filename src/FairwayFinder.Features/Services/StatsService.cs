@@ -13,7 +13,7 @@ public class StatsService : IStatsService
         _roundService = roundService;
     }
 
-    public async Task<UserStatsResponse> GetUserStatsAsync(string userId, StatsFilter? filter = null, int trendCount = 20, int coursesCount = 5)
+    public async Task<UserStatsResponse> GetUserStatsAsync(string userId, StatsFilter? filter = null, int coursesCount = 5)
     {
         var rounds = await _roundService.GetRoundsWithDetailsAsync(userId);
         
@@ -38,12 +38,12 @@ public class StatsService : IStatsService
             Average9HoleScoreTrend = StatsCalculator.CalculateScoreTrend(statsRounds, fullRound: false),
             Best18HoleRound = StatsCalculator.FindBestRound(statsRounds),
             Best9HoleRound = StatsCalculator.FindBestRound(statsRounds, false),
-            ScoreTrend18Hole = StatsCalculator.BuildScoreTrend(statsRounds, trendCount),
-            ScoreTrend9Hole = StatsCalculator.BuildScoreTrend(statsRounds, trendCount, fullRound: false),
-            PuttsTrend18Hole = StatsCalculator.BuildPuttsTrend(statsRounds, trendCount),
-            PuttsTrend9Hole = StatsCalculator.BuildPuttsTrend(statsRounds, trendCount, fullRound: false),
-            FirTrend = StatsCalculator.BuildFirTrend(statsRounds, trendCount),
-            GirTrend = StatsCalculator.BuildGirTrend(statsRounds, trendCount),
+            ScoreTrend18Hole = StatsCalculator.BuildScoreTrend(statsRounds),
+            ScoreTrend9Hole = StatsCalculator.BuildScoreTrend(statsRounds, fullRound: false),
+            PuttsTrend18Hole = StatsCalculator.BuildPuttsTrend(statsRounds),
+            PuttsTrend9Hole = StatsCalculator.BuildPuttsTrend(statsRounds, fullRound: false),
+            FirTrend = StatsCalculator.BuildFirTrend(statsRounds),
+            GirTrend = StatsCalculator.BuildGirTrend(statsRounds),
             MostPlayedCourses = StatsCalculator.CalculateCourseStats(statsRounds, coursesCount),
             ScoringDistribution = StatsCalculator.AggregateScoringDistribution(statsRounds),
             ParTypeScoring = StatsCalculator.CalculateParTypeScoring(statsRounds),
