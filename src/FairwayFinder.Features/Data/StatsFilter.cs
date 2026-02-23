@@ -21,7 +21,21 @@ public class StatsFilter
     public DateOnly? EndDate { get; set; }
     
     /// <summary>
+    /// Filter by course. Null = all courses.
+    /// </summary>
+    public long? CourseId { get; set; }
+    
+    /// <summary>
     /// Returns true if any filter is applied.
     /// </summary>
-    public bool HasFilters => FullRoundOnly.HasValue || StartDate.HasValue || EndDate.HasValue;
+    public bool HasFilters => FullRoundOnly.HasValue || StartDate.HasValue || EndDate.HasValue || CourseId.HasValue;
+}
+
+/// <summary>
+/// Lightweight DTO for populating a course dropdown filter.
+/// </summary>
+public class CourseOption
+{
+    public long CourseId { get; set; }
+    public string CourseName { get; set; } = string.Empty;
 }

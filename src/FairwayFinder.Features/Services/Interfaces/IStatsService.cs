@@ -19,4 +19,11 @@ public interface IStatsService
     /// <param name="userId">User ID</param>
     /// <returns>List of years in descending order</returns>
     Task<List<int>> GetAvailableYearsAsync(string userId);
+    
+    /// <summary>
+    /// Gets the distinct courses a user has played, for populating a filter dropdown.
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <returns>List of course options sorted by name</returns>
+    Task<List<CourseOption>> GetUserCoursesAsync(string userId);
 }

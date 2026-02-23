@@ -31,6 +31,20 @@
             </RadzenStack>
             
             <RadzenStack Gap="0.25rem">
+                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Course</RadzenText>
+                <RadzenDropDown TValue="long?" 
+                                Data="@_courseOptions" 
+                                TextProperty="CourseName" 
+                                ValueProperty="CourseId"
+                                @bind-Value="_selectedCourseId"
+                                Placeholder="All Courses"
+                                AllowClear="true"
+                                AllowFiltering="true"
+                                Style="width: 200px;"
+                                Change="@OnFilterChanged" />
+            </RadzenStack>
+            
+            <RadzenStack Gap="0.25rem">
                 <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">From</RadzenText>
                 <RadzenDatePicker TValue="DateOnly?" 
                                   @bind-Value="_startDate" 
@@ -353,10 +367,12 @@
     
     // Filter state
     private string _selectedRoundType = "all";
+    private long? _selectedCourseId;
     private DateOnly? _startDate;
     private DateOnly? _endDate;
+    private List<CourseOption> _courseOptions = new();
     
-    private bool _hasActiveFilters => _selectedRoundType != "all" || _startDate.HasValue || _endDate.HasValue;
+    private bool _hasActiveFilters => _selectedRoundType != "all" || _selectedCourseId.HasValue || _startDate.HasValue || _endDate.HasValue;
     
     private readonly List<object> _roundTypeOptions = new()
     {
@@ -376,6 +392,9 @@
             
             if (!string.IsNullOrEmpty(_userId))
             {
+                // Load course options for the filter dropdown
+                _courseOptions = await StatsService.GetUserCoursesAsync(_userId);
+                
                 // Parse URL query parameters
                 ParseQueryParameters();
                 
@@ -400,6 +419,11 @@
             }
         }
         
+        if (query.TryGetValue("course", out var courseValue) && long.TryParse(courseValue.ToString(), out var courseId))
+        {
+            _selectedCourseId = courseId;
+        }
+        
         if (query.TryGetValue("from", out var fromValue) && DateOnly.TryParse(fromValue.ToString(), out var startDate))
         {
             _startDate = startDate;
@@ -418,6 +442,11 @@
         if (_selectedRoundType != "all")
         {
             queryParams["type"] = _selectedRoundType;
+        }
+        
+        if (_selectedCourseId.HasValue)
+        {
+            queryParams["course"] = _selectedCourseId.Value.ToString();
         }
         
         if (_startDate.HasValue)
@@ -447,6 +476,7 @@
                 "9" => false,
                 _ => null
             },
+            CourseId = _selectedCourseId,
             StartDate = _startDate,
             EndDate = _endDate
         };
@@ -474,6 +504,7 @@
     private async Task ClearFilters()
     {
         _selectedRoundType = "all";
+        _selectedCourseId = null;
         _startDate = null;
         _endDate = null;
         

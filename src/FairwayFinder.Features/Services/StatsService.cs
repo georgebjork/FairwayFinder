@@ -63,6 +63,19 @@ public class StatsService : IStatsService
             .ToList();
     }
     
+    public async Task<List<CourseOption>> GetUserCoursesAsync(string userId)
+    {
+        var rounds = await _roundService.GetRoundsByUserIdAsync(userId);
+        
+        return rounds
+            .Where(r => !r.ExcludeFromStats)
+            .Select(r => new { r.CourseId, r.CourseName })
+            .Distinct()
+            .OrderBy(c => c.CourseName)
+            .Select(c => new CourseOption { CourseId = c.CourseId, CourseName = c.CourseName })
+            .ToList();
+    }
+    
     private static List<RoundResponse> ApplyFilters(List<RoundResponse> rounds, StatsFilter? filter)
     {
         if (filter is null || !filter.HasFilters)
@@ -87,6 +100,12 @@ public class StatsService : IStatsService
         if (filter.EndDate.HasValue)
         {
             result = result.Where(r => r.DatePlayed <= filter.EndDate.Value);
+        }
+        
+        // Filter by course
+        if (filter.CourseId.HasValue)
+        {
+            result = result.Where(r => r.CourseId == filter.CourseId.Value);
         }
         
         return result.ToList();
