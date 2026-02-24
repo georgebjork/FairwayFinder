@@ -7,6 +7,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="FairwayFinder.Features.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
       <ProjectReference Include="..\FairwayFinder.Data\FairwayFinder.Data.csproj" />
     </ItemGroup>
 

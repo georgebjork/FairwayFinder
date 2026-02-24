@@ -1,0 +1,98 @@
+@using FairwayFinder.Features.Data
+
+@if (Round?.Stats is null)
+{
+    return;
+}
+
+<RadzenStack Gap="0.5rem">
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+        @foreach (var score in ScoringBreakdown)
+        {
+            <span class="score-pill @score.CssClass">
+                <span class="score-pill-count">@score.Count</span>
+                <span class="score-pill-label">@score.Label</span>
+            </span>
+        }
+    </RadzenStack>
+</RadzenStack>
+
+<style>
+    .score-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        background-color: var(--rz-base-background-color);
+        border: 1px solid var(--rz-border-color);
+    }
+
+    .score-pill-count {
+        font-weight: 700;
+    }
+
+    .score-pill-label {
+        color: var(--rz-text-secondary-color);
+    }
+
+    .score-pill.score-excellent {
+        background-color: color-mix(in srgb, var(--rz-success) 15%, transparent);
+        border-color: var(--rz-success);
+    }
+    .score-pill.score-excellent .score-pill-count {
+        color: var(--rz-success);
+    }
+
+    .score-pill.score-par {
+        background-color: color-mix(in srgb, var(--rz-info) 15%, transparent);
+        border-color: var(--rz-info);
+    }
+    .score-pill.score-par .score-pill-count {
+        color: var(--rz-info);
+    }
+
+    .score-pill.score-bogey {
+        background-color: color-mix(in srgb, var(--rz-warning) 15%, transparent);
+        border-color: var(--rz-warning);
+    }
+    .score-pill.score-bogey .score-pill-count {
+        color: var(--rz-warning);
+    }
+
+    .score-pill.score-bad {
+        background-color: color-mix(in srgb, var(--rz-danger) 15%, transparent);
+        border-color: var(--rz-danger);
+    }
+    .score-pill.score-bad .score-pill-count {
+        color: var(--rz-danger);
+    }
+</style>
+
+@code {
+    [Parameter]
+    public RoundResponse? Round { get; set; }
+
+    private IEnumerable<(string Label, int Count, string CssClass)> ScoringBreakdown
+    {
+        get
+        {
+            if (Round?.Stats is null) return [];
+
+            var scores = new List<(string Label, int Count, string CssClass)>
+            {
+                ("Hole in One", Round.Stats.HolesInOne, "score-excellent"),
+                ("Double Eagles", Round.Stats.DoubleEagles, "score-excellent"),
+                ("Eagles", Round.Stats.Eagles, "score-excellent"),
+                ("Birdies", Round.Stats.Birdies, "score-excellent"),
+                ("Pars", Round.Stats.Pars, "score-par"),
+                ("Bogeys", Round.Stats.Bogeys, "score-bogey"),
+                ("Double Bogeys", Round.Stats.DoubleBogeys, "score-bad"),
+                ("Triple+", Round.Stats.TripleOrWorse, "score-bad")
+            };
+
+            return scores.Where(s => s.Count > 0);
+        }
+    }
+}

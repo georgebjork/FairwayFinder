@@ -18,4 +18,9 @@ public interface IRoundService
     /// Gets a single round with all related data (holes, scores, stats)
     /// </summary>
     Task<RoundResponse?> GetRoundByIdAsync(long roundId);
+
+    /// <summary>
+    /// Gets a list of all courses that a user has played
+    /// </summary>
+    Task<List<CourseResponse>> GetPlayedCoursesByUserId(string userId, bool? statRounds = null);
 }

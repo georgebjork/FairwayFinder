@@ -27,7 +27,7 @@ else if (_round is null)
 }
 else
 {
-    <RadzenStack Gap="1rem">
+    <RadzenStack Gap="1.5rem">
         <!-- Header -->
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Start">
             <RadzenStack Gap="0.25rem">
@@ -44,9 +44,18 @@ else
             <RadzenButton Icon="arrow_back" Text="Back" Variant="Variant.Text" ButtonStyle="ButtonStyle.Secondary"
                           Click="@(() => NavigationManager.NavigateTo("/"))" />
         </RadzenStack>
+        
+        
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Start">
+            <!-- Round Stats -->
+            <RoundScoringPills Round="@_round" />
+        </RadzenStack>
+        
 
         <!-- Scorecard -->
         <FairwayFinderScorecard Round="@_round" />
+
+        
     </RadzenStack>
 }
 

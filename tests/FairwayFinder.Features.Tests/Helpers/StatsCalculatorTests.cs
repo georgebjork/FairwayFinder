@@ -188,16 +188,12 @@ public class StatsCalculatorTests
 
     #endregion
 
-    #region CalculateScoreTrend Tests
+    #region CalculateScoreTrend Tests (Linear Regression)
 
     [Fact]
-    public void CalculateScoreTrend_LessThan10Rounds_ReturnsNull()
+    public void CalculateScoreTrend_EmptyList_ReturnsNull()
     {
         var rounds = new List<RoundResponse>();
-        for (int i = 1; i <= 9; i++)
-        {
-            rounds.Add(CreateRound(i, 80, fullRound: true));
-        }
 
         var result = StatsCalculator.CalculateScoreTrend(rounds);
 
@@ -205,165 +201,164 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateScoreTrend_Exactly10Rounds_ReturnsValue()
+    public void CalculateScoreTrend_SingleRound_ReturnsNull()
     {
-        var rounds = new List<RoundResponse>();
-        // Last 5 rounds (indices 0-4) avg 80
-        for (int i = 1; i <= 5; i++)
+        var rounds = new List<RoundResponse>
         {
-            rounds.Add(CreateRound(i, 80, fullRound: true));
-        }
-        // Previous 5 rounds (indices 5-9) avg 85
-        for (int i = 6; i <= 10; i++)
-        {
-            rounds.Add(CreateRound(i, 85, fullRound: true));
-        }
+            CreateRound(1, 80, fullRound: true)
+        };
 
         var result = StatsCalculator.CalculateScoreTrend(rounds);
 
-        // 80 - 85 = -5 (improvement)
-        Assert.Equal(-5.0, result);
+        Assert.Null(result);
     }
 
     [Fact]
-    public void CalculateScoreTrend_ImprovingScores_ReturnsNegative()
+    public void CalculateScoreTrend_TwoRounds_ReturnsSlope()
     {
-        var rounds = new List<RoundResponse>();
-        // Recent rounds scoring better (lower)
-        for (int i = 1; i <= 5; i++)
+        // Rounds come in most-recent-first. RoundId higher = older (further back in time).
+        var rounds = new List<RoundResponse>
         {
-            rounds.Add(CreateRound(i, 75, fullRound: true));
-        }
-        // Previous rounds scoring worse (higher)
-        for (int i = 6; i <= 10; i++)
-        {
-            rounds.Add(CreateRound(i, 85, fullRound: true));
-        }
+            CreateRound(1, 78, datePlayed: new DateOnly(2024, 6, 2), fullRound: true),  // Most recent
+            CreateRound(2, 82, datePlayed: new DateOnly(2024, 6, 1), fullRound: true)   // Oldest
+        };
 
         var result = StatsCalculator.CalculateScoreTrend(rounds);
 
-        // 75 - 85 = -10 (big improvement)
-        Assert.Equal(-10.0, result);
+        // Reversed internally: x=0 -> 82, x=1 -> 78. Slope = (78 - 82) / (1 - 0) = -4
+        Assert.Equal(-4.0, result);
     }
 
     [Fact]
-    public void CalculateScoreTrend_DecliningScores_ReturnsPositive()
+    public void CalculateScoreTrend_FlatScores_ReturnsZero()
     {
         var rounds = new List<RoundResponse>();
-        // Recent rounds scoring worse (higher)
-        for (int i = 1; i <= 5; i++)
-        {
-            rounds.Add(CreateRound(i, 90, fullRound: true));
-        }
-        // Previous rounds scoring better (lower)
-        for (int i = 6; i <= 10; i++)
+        for (int i = 1; i <= 10; i++)
         {
             rounds.Add(CreateRound(i, 80, fullRound: true));
         }
 
         var result = StatsCalculator.CalculateScoreTrend(rounds);
 
-        // 90 - 80 = 10 (regression)
-        Assert.Equal(10.0, result);
+        Assert.Equal(0.0, result);
     }
 
     [Fact]
-    public void CalculateScoreTrend_CustomWindowSize_UsesCorrectWindow()
+    public void CalculateScoreTrend_ImprovingScores_ReturnsNegativeSlope()
     {
-        var rounds = new List<RoundResponse>();
-        // 3 recent rounds avg 80
-        for (int i = 1; i <= 3; i++)
+        // Rounds most-recent-first. Recent rounds have lower scores (improvement).
+        // Scores from oldest to newest: 90, 88, 86, 84, 82 (decreasing by 2 per round)
+        var rounds = new List<RoundResponse>
         {
-            rounds.Add(CreateRound(i, 80, fullRound: true));
-        }
-        // 3 previous rounds avg 85
-        for (int i = 4; i <= 6; i++)
+            CreateRound(1, 82, datePlayed: new DateOnly(2024, 6, 5), fullRound: true),
+            CreateRound(2, 84, datePlayed: new DateOnly(2024, 6, 4), fullRound: true),
+            CreateRound(3, 86, datePlayed: new DateOnly(2024, 6, 3), fullRound: true),
+            CreateRound(4, 88, datePlayed: new DateOnly(2024, 6, 2), fullRound: true),
+            CreateRound(5, 90, datePlayed: new DateOnly(2024, 6, 1), fullRound: true)
+        };
+
+        var result = StatsCalculator.CalculateScoreTrend(rounds);
+
+        // Perfect linear: slope = -2.0 strokes/round
+        Assert.Equal(-2.0, result);
+    }
+
+    [Fact]
+    public void CalculateScoreTrend_DecliningScores_ReturnsPositiveSlope()
+    {
+        // Scores from oldest to newest: 80, 82, 84, 86, 88 (increasing by 2 per round)
+        var rounds = new List<RoundResponse>
         {
-            rounds.Add(CreateRound(i, 85, fullRound: true));
-        }
+            CreateRound(1, 88, datePlayed: new DateOnly(2024, 6, 5), fullRound: true),
+            CreateRound(2, 86, datePlayed: new DateOnly(2024, 6, 4), fullRound: true),
+            CreateRound(3, 84, datePlayed: new DateOnly(2024, 6, 3), fullRound: true),
+            CreateRound(4, 82, datePlayed: new DateOnly(2024, 6, 2), fullRound: true),
+            CreateRound(5, 80, datePlayed: new DateOnly(2024, 6, 1), fullRound: true)
+        };
 
-        var result = StatsCalculator.CalculateScoreTrend(rounds, windowSize: 3);
+        var result = StatsCalculator.CalculateScoreTrend(rounds);
 
-        Assert.Equal(-5.0, result);
+        // Perfect linear: slope = +2.0 strokes/round
+        Assert.Equal(2.0, result);
     }
 
     [Fact]
     public void CalculateScoreTrend_DefaultsToFullRound()
     {
-        var rounds = new List<RoundResponse>();
-        // 5 recent full rounds avg 80
-        for (int i = 1; i <= 5; i++)
+        // Improving 18-hole scores, with 9-hole rounds mixed in that should be ignored
+        var rounds = new List<RoundResponse>
         {
-            rounds.Add(CreateRound(i, 80, fullRound: true));
-        }
-        // 5 previous full rounds avg 85
-        for (int i = 6; i <= 10; i++)
-        {
-            rounds.Add(CreateRound(i, 85, fullRound: true));
-        }
-        // Add some 9-hole rounds that should be ignored by default
-        for (int i = 11; i <= 15; i++)
-        {
-            rounds.Add(CreateRound(i, 40, fullRound: false));
-        }
+            CreateRound(1, 82, datePlayed: new DateOnly(2024, 6, 5), fullRound: true),
+            CreateRound(2, 40, datePlayed: new DateOnly(2024, 6, 4), fullRound: false), // Ignored
+            CreateRound(3, 84, datePlayed: new DateOnly(2024, 6, 3), fullRound: true),
+            CreateRound(4, 86, datePlayed: new DateOnly(2024, 6, 2), fullRound: true),
+            CreateRound(5, 88, datePlayed: new DateOnly(2024, 6, 1), fullRound: true)
+        };
 
         var result = StatsCalculator.CalculateScoreTrend(rounds);
 
-        // Should use full rounds only: 80 - 85 = -5
-        Assert.Equal(-5.0, result);
+        // Full rounds oldest-to-newest: [88, 86, 84, 82]. Slope = -2.0
+        Assert.Equal(-2.0, result);
     }
 
     [Fact]
     public void CalculateScoreTrend_NineHoleRounds_FiltersCorrectly()
     {
-        var rounds = new List<RoundResponse>();
-        // 5 recent 9-hole rounds avg 38
-        for (int i = 1; i <= 5; i++)
+        // Improving 9-hole scores
+        var rounds = new List<RoundResponse>
         {
-            rounds.Add(CreateRound(i, 38, fullRound: false));
-        }
-        // 5 previous 9-hole rounds avg 42
-        for (int i = 6; i <= 10; i++)
-        {
-            rounds.Add(CreateRound(i, 42, fullRound: false));
-        }
-        // Add some full rounds that should be ignored
-        for (int i = 11; i <= 15; i++)
-        {
-            rounds.Add(CreateRound(i, 80, fullRound: true));
-        }
+            CreateRound(1, 40, datePlayed: new DateOnly(2024, 6, 4), fullRound: false),
+            CreateRound(2, 80, datePlayed: new DateOnly(2024, 6, 3), fullRound: true), // Ignored
+            CreateRound(3, 42, datePlayed: new DateOnly(2024, 6, 2), fullRound: false),
+            CreateRound(4, 44, datePlayed: new DateOnly(2024, 6, 1), fullRound: false)
+        };
 
         var result = StatsCalculator.CalculateScoreTrend(rounds, fullRound: false);
 
-        // Should use 9-hole rounds only: 38 - 42 = -4
-        Assert.Equal(-4.0, result);
+        // 9-hole rounds oldest-to-newest: [44, 42, 40]. Slope = -2.0
+        Assert.Equal(-2.0, result);
     }
 
     [Fact]
     public void CalculateScoreTrend_MixedRounds_FiltersToFullRoundsOnly()
     {
-        var rounds = new List<RoundResponse>();
-        // Mix of full and 9-hole rounds
-        rounds.Add(CreateRound(1, 78, fullRound: true));
-        rounds.Add(CreateRound(2, 35, fullRound: false)); // Should be ignored
-        rounds.Add(CreateRound(3, 80, fullRound: true));
-        rounds.Add(CreateRound(4, 82, fullRound: true));
-        rounds.Add(CreateRound(5, 38, fullRound: false)); // Should be ignored
-        rounds.Add(CreateRound(6, 79, fullRound: true));
-        rounds.Add(CreateRound(7, 81, fullRound: true));
-        // Previous 5 full rounds
-        rounds.Add(CreateRound(8, 85, fullRound: true));
-        rounds.Add(CreateRound(9, 40, fullRound: false)); // Should be ignored
-        rounds.Add(CreateRound(10, 86, fullRound: true));
-        rounds.Add(CreateRound(11, 84, fullRound: true));
-        rounds.Add(CreateRound(12, 87, fullRound: true));
-        rounds.Add(CreateRound(13, 88, fullRound: true));
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 78, datePlayed: new DateOnly(2024, 6, 6), fullRound: true),
+            CreateRound(2, 35, datePlayed: new DateOnly(2024, 6, 5), fullRound: false), // Ignored
+            CreateRound(3, 80, datePlayed: new DateOnly(2024, 6, 4), fullRound: true),
+            CreateRound(4, 82, datePlayed: new DateOnly(2024, 6, 3), fullRound: true),
+            CreateRound(5, 38, datePlayed: new DateOnly(2024, 6, 2), fullRound: false), // Ignored
+            CreateRound(6, 84, datePlayed: new DateOnly(2024, 6, 1), fullRound: true)
+        };
 
-        var result = StatsCalculator.CalculateScoreTrend(rounds, fullRound: true);
+        var result = StatsCalculator.CalculateScoreTrend(rounds);
 
-        // Full rounds: [78, 80, 82, 79, 81] avg = 80, [85, 86, 84, 87, 88] avg = 86
-        // 80 - 86 = -6
-        Assert.Equal(-6.0, result);
+        // Full rounds oldest-to-newest: [84, 82, 80, 78]. Slope = -2.0
+        Assert.Equal(-2.0, result);
+    }
+
+    [Fact]
+    public void CalculateScoreTrend_NonLinearData_ReturnsRoundedSlope()
+    {
+        // Non-perfect linear data — regression should find best fit
+        // Oldest to newest: 90, 85, 88, 82, 80
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, datePlayed: new DateOnly(2024, 6, 5), fullRound: true),
+            CreateRound(2, 82, datePlayed: new DateOnly(2024, 6, 4), fullRound: true),
+            CreateRound(3, 88, datePlayed: new DateOnly(2024, 6, 3), fullRound: true),
+            CreateRound(4, 85, datePlayed: new DateOnly(2024, 6, 2), fullRound: true),
+            CreateRound(5, 90, datePlayed: new DateOnly(2024, 6, 1), fullRound: true)
+        };
+
+        var result = StatsCalculator.CalculateScoreTrend(rounds);
+
+        // Regression on [90, 85, 88, 82, 80]:
+        // n=5, sumX=10, sumY=425, sumXY=827, sumX2=30
+        // slope = (5*827 - 10*425) / (5*30 - 100) = (4135-4250)/(150-100) = -115/50 = -2.3
+        Assert.NotNull(result);
+        Assert.Equal(-2.3, result);
     }
 
     #endregion
@@ -506,7 +501,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void FindBestRound_NoMatchingRoundType_ThrowsException()
+    public void FindBestRound_NoMatchingRoundType_ReturnsNull()
     {
         var rounds = new List<RoundResponse>
         {
@@ -514,8 +509,10 @@ public class StatsCalculatorTests
             CreateRound(2, 42, "Nine Hole Course", fullRound: false)
         };
 
-        // Searching for full rounds when none exist should throw
-        Assert.Throws<InvalidOperationException>(() => StatsCalculator.FindBestRound(rounds, fullRound: true));
+        // Searching for full rounds when none exist should return null
+        var result = StatsCalculator.FindBestRound(rounds, fullRound: true);
+        
+        Assert.Null(result);
     }
 
     [Fact]
@@ -543,7 +540,7 @@ public class StatsCalculatorTests
     {
         var rounds = new List<RoundResponse>();
 
-        var result = StatsCalculator.BuildScoreTrend(rounds, 10);
+        var result = StatsCalculator.BuildScoreTrend(rounds);
 
         Assert.Empty(result);
     }
@@ -558,30 +555,13 @@ public class StatsCalculatorTests
             CreateRound(3, 90, datePlayed: new DateOnly(2024, 6, 1), fullRound: true)
         };
 
-        var result = StatsCalculator.BuildScoreTrend(rounds, 10);
+        var result = StatsCalculator.BuildScoreTrend(rounds);
 
         Assert.Equal(3, result.Count);
         // Should be reversed (oldest first)
         Assert.Equal(3, result[0].RoundId);
         Assert.Equal(2, result[1].RoundId);
         Assert.Equal(1, result[2].RoundId);
-    }
-
-    [Fact]
-    public void BuildScoreTrend_MoreThanCount_TakesOnlyCount()
-    {
-        var rounds = new List<RoundResponse>();
-        for (int i = 1; i <= 10; i++)
-        {
-            rounds.Add(CreateRound(i, 80 + i, fullRound: true));
-        }
-
-        var result = StatsCalculator.BuildScoreTrend(rounds, 5);
-
-        Assert.Equal(5, result.Count);
-        // Takes first 5, then reverses
-        Assert.Equal(5, result[0].RoundId);
-        Assert.Equal(1, result[4].RoundId);
     }
 
     [Fact]
@@ -592,7 +572,7 @@ public class StatsCalculatorTests
             CreateRound(42, 78, "Augusta National", datePlayed: new DateOnly(2024, 4, 14), fullRound: true)
         };
 
-        var result = StatsCalculator.BuildScoreTrend(rounds, 10);
+        var result = StatsCalculator.BuildScoreTrend(rounds);
 
         Assert.Single(result);
         Assert.Equal(42, result[0].RoundId);
@@ -611,7 +591,7 @@ public class StatsCalculatorTests
             CreateRound(3, 85, "Full Course B", datePlayed: new DateOnly(2024, 6, 1), fullRound: true)
         };
 
-        var result = StatsCalculator.BuildScoreTrend(rounds, 10);
+        var result = StatsCalculator.BuildScoreTrend(rounds);
 
         Assert.Equal(2, result.Count);
         // Should only include full rounds, reversed
@@ -629,7 +609,7 @@ public class StatsCalculatorTests
             CreateRound(3, 42, "Nine Hole B", datePlayed: new DateOnly(2024, 6, 1), fullRound: false)
         };
 
-        var result = StatsCalculator.BuildScoreTrend(rounds, 10, fullRound: false);
+        var result = StatsCalculator.BuildScoreTrend(rounds, fullRound: false);
 
         Assert.Equal(2, result.Count);
         // Should only include 9-hole rounds, reversed
@@ -649,7 +629,7 @@ public class StatsCalculatorTests
             CreateRound(5, 82, "Course C", fullRound: true)
         };
 
-        var result = StatsCalculator.BuildScoreTrend(rounds, 10, fullRound: true);
+        var result = StatsCalculator.BuildScoreTrend(rounds, fullRound: true);
 
         Assert.Equal(3, result.Count);
         // Should only include full rounds [1, 3, 5], reversed to [5, 3, 1]
@@ -670,7 +650,7 @@ public class StatsCalculatorTests
             CreateRound(5, 82, "Course C", fullRound: true)
         };
 
-        var result = StatsCalculator.BuildScoreTrend(rounds, 10, fullRound: false);
+        var result = StatsCalculator.BuildScoreTrend(rounds, fullRound: false);
 
         Assert.Equal(2, result.Count);
         // Should only include 9-hole rounds [2, 4], reversed to [4, 2]
@@ -679,7 +659,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void BuildScoreTrend_CountLimitsAfterFiltering()
+    public void BuildScoreTrend_FiltersToRoundType()
     {
         var rounds = new List<RoundResponse>();
         // Add 10 full rounds
@@ -693,13 +673,177 @@ public class StatsCalculatorTests
             rounds.Add(CreateRound(i, 40, fullRound: false));
         }
 
-        var result = StatsCalculator.BuildScoreTrend(rounds, 5, fullRound: true);
+        var result = StatsCalculator.BuildScoreTrend(rounds, fullRound: true);
 
-        // Should filter to full rounds first, then take 5
+        // Should include all 10 full rounds, reversed (oldest first)
+        Assert.Equal(10, result.Count);
+        Assert.Equal(10, result[0].RoundId);
+        Assert.Equal(1, result[9].RoundId);
+    }
+
+    #endregion
+
+    #region CalculateLinearRegression Tests
+
+    [Fact]
+    public void CalculateLinearRegression_TwoPoints_ReturnsExactLine()
+    {
+        var yValues = new List<double> { 90, 80 };
+
+        var (slope, intercept) = StatsCalculator.CalculateLinearRegression(yValues);
+
+        // x=0 -> 90, x=1 -> 80. slope=-10, intercept=90
+        Assert.Equal(-10.0, slope);
+        Assert.Equal(90.0, intercept);
+    }
+
+    [Fact]
+    public void CalculateLinearRegression_PerfectLinear_ReturnsExactFit()
+    {
+        var yValues = new List<double> { 100, 95, 90, 85, 80 };
+
+        var (slope, intercept) = StatsCalculator.CalculateLinearRegression(yValues);
+
+        Assert.Equal(-5.0, slope);
+        Assert.Equal(100.0, intercept);
+    }
+
+    [Fact]
+    public void CalculateLinearRegression_FlatLine_ReturnsZeroSlope()
+    {
+        var yValues = new List<double> { 80, 80, 80, 80 };
+
+        var (slope, intercept) = StatsCalculator.CalculateLinearRegression(yValues);
+
+        Assert.Equal(0.0, slope);
+        Assert.Equal(80.0, intercept);
+    }
+
+    [Fact]
+    public void CalculateLinearRegression_SinglePoint_ReturnsZeroSlopeAndValue()
+    {
+        var yValues = new List<double> { 85 };
+
+        var (slope, intercept) = StatsCalculator.CalculateLinearRegression(yValues);
+
+        Assert.Equal(0.0, slope);
+        Assert.Equal(85.0, intercept);
+    }
+
+    [Fact]
+    public void CalculateLinearRegression_IncreasingValues_ReturnsPositiveSlope()
+    {
+        var yValues = new List<double> { 80, 82, 84, 86, 88 };
+
+        var (slope, intercept) = StatsCalculator.CalculateLinearRegression(yValues);
+
+        Assert.Equal(2.0, slope);
+        Assert.Equal(80.0, intercept);
+    }
+
+    #endregion
+
+    #region BuildScoreTrendLine Tests
+
+    [Fact]
+    public void BuildScoreTrendLine_EmptyList_ReturnsEmptyList()
+    {
+        var trendPoints = new List<ScoreTrendPoint>();
+
+        var result = StatsCalculator.BuildScoreTrendLine(trendPoints);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildScoreTrendLine_SinglePoint_ReturnsEmptyList()
+    {
+        var trendPoints = new List<ScoreTrendPoint>
+        {
+            new() { RoundId = 1, DatePlayed = new DateOnly(2024, 6, 1), Score = 80, CourseName = "Test" }
+        };
+
+        var result = StatsCalculator.BuildScoreTrendLine(trendPoints);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildScoreTrendLine_TwoPoints_ReturnsTwoPointLine()
+    {
+        var trendPoints = new List<ScoreTrendPoint>
+        {
+            new() { RoundId = 2, DatePlayed = new DateOnly(2024, 6, 1), Score = 90, CourseName = "A" },
+            new() { RoundId = 1, DatePlayed = new DateOnly(2024, 6, 2), Score = 80, CourseName = "B" }
+        };
+
+        var result = StatsCalculator.BuildScoreTrendLine(trendPoints);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal("6/1", result[0].DateLabel);
+        Assert.Equal(90.0, result[0].Value);
+        Assert.Equal("6/2", result[1].DateLabel);
+        Assert.Equal(80.0, result[1].Value);
+    }
+
+    [Fact]
+    public void BuildScoreTrendLine_PerfectLinear_MatchesExactly()
+    {
+        // Scores decreasing linearly: 90, 85, 80
+        var trendPoints = new List<ScoreTrendPoint>
+        {
+            new() { RoundId = 3, DatePlayed = new DateOnly(2024, 6, 1), Score = 90, CourseName = "A" },
+            new() { RoundId = 2, DatePlayed = new DateOnly(2024, 6, 2), Score = 85, CourseName = "B" },
+            new() { RoundId = 1, DatePlayed = new DateOnly(2024, 6, 3), Score = 80, CourseName = "C" }
+        };
+
+        var result = StatsCalculator.BuildScoreTrendLine(trendPoints);
+
+        Assert.Equal(3, result.Count);
+        Assert.Equal(90.0, result[0].Value);
+        Assert.Equal(85.0, result[1].Value);
+        Assert.Equal(80.0, result[2].Value);
+    }
+
+    [Fact]
+    public void BuildScoreTrendLine_NonLinear_ReturnsRegressionLine()
+    {
+        // Scores: 90, 85, 88, 82, 80 (noisy but trending down)
+        var trendPoints = new List<ScoreTrendPoint>
+        {
+            new() { RoundId = 5, DatePlayed = new DateOnly(2024, 6, 1), Score = 90, CourseName = "A" },
+            new() { RoundId = 4, DatePlayed = new DateOnly(2024, 6, 2), Score = 85, CourseName = "B" },
+            new() { RoundId = 3, DatePlayed = new DateOnly(2024, 6, 3), Score = 88, CourseName = "C" },
+            new() { RoundId = 2, DatePlayed = new DateOnly(2024, 6, 4), Score = 82, CourseName = "D" },
+            new() { RoundId = 1, DatePlayed = new DateOnly(2024, 6, 5), Score = 80, CourseName = "E" }
+        };
+
+        var result = StatsCalculator.BuildScoreTrendLine(trendPoints);
+
         Assert.Equal(5, result.Count);
-        // Takes first 5 full rounds [1,2,3,4,5], then reverses
-        Assert.Equal(5, result[0].RoundId);
-        Assert.Equal(1, result[4].RoundId);
+        // slope = -2.3, intercept = 89.6 (computed from regression)
+        // x=0: 89.6, x=1: 87.3, x=2: 85.0, x=3: 82.7, x=4: 80.4
+        Assert.Equal(89.6, result[0].Value);
+        Assert.Equal(87.3, result[1].Value);
+        Assert.Equal(85.0, result[2].Value);
+        Assert.Equal(82.7, result[3].Value);
+        Assert.Equal(80.4, result[4].Value);
+    }
+
+    [Fact]
+    public void BuildScoreTrendLine_UsesDateLabelsFromInput()
+    {
+        var trendPoints = new List<ScoreTrendPoint>
+        {
+            new() { RoundId = 2, DatePlayed = new DateOnly(2024, 4, 14), Score = 82, CourseName = "A" },
+            new() { RoundId = 1, DatePlayed = new DateOnly(2024, 7, 20), Score = 78, CourseName = "B" }
+        };
+
+        var result = StatsCalculator.BuildScoreTrendLine(trendPoints);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal("4/14", result[0].DateLabel);
+        Assert.Equal("7/20", result[1].DateLabel);
     }
 
     #endregion
@@ -711,7 +855,7 @@ public class StatsCalculatorTests
     {
         var rounds = new List<RoundResponse>();
 
-        var result = StatsCalculator.BuildPuttsTrend(rounds, 10);
+        var result = StatsCalculator.BuildPuttsTrend(rounds);
 
         Assert.Empty(result);
     }
@@ -725,7 +869,7 @@ public class StatsCalculatorTests
             CreateRound(2, 82, fullRound: true, usingHoleStats: false)
         };
 
-        var result = StatsCalculator.BuildPuttsTrend(rounds, 10);
+        var result = StatsCalculator.BuildPuttsTrend(rounds);
 
         Assert.Empty(result);
     }
@@ -761,7 +905,7 @@ public class StatsCalculatorTests
                 })
         };
 
-        var result = StatsCalculator.BuildPuttsTrend(rounds, 10);
+        var result = StatsCalculator.BuildPuttsTrend(rounds);
 
         Assert.Equal(3, result.Count);
         // Should be reversed (oldest first)
@@ -789,7 +933,7 @@ public class StatsCalculatorTests
                 holes: new List<RoundHole> { CreateHole(1, 4, numberOfPutts: 3) })
         };
 
-        var result = StatsCalculator.BuildPuttsTrend(rounds, 10);
+        var result = StatsCalculator.BuildPuttsTrend(rounds);
 
         Assert.Equal(2, result.Count);
         // Only full rounds
@@ -810,7 +954,7 @@ public class StatsCalculatorTests
                 holes: new List<RoundHole> { CreateHole(1, 4, numberOfPutts: 2) })
         };
 
-        var result = StatsCalculator.BuildPuttsTrend(rounds, 10, fullRound: false);
+        var result = StatsCalculator.BuildPuttsTrend(rounds, fullRound: false);
 
         Assert.Equal(2, result.Count);
         // Only 9-hole rounds, reversed
@@ -831,30 +975,12 @@ public class StatsCalculatorTests
                 holes: new List<RoundHole> { CreateHole(1, 4, numberOfPutts: 3) })
         };
 
-        var result = StatsCalculator.BuildPuttsTrend(rounds, 10);
+        var result = StatsCalculator.BuildPuttsTrend(rounds);
 
         Assert.Equal(2, result.Count);
         // Round 2 excluded (0 putts from null)
         Assert.Equal(3, result[0].RoundId);
         Assert.Equal(1, result[1].RoundId);
-    }
-
-    [Fact]
-    public void BuildPuttsTrend_LimitsToCount()
-    {
-        var rounds = new List<RoundResponse>();
-        for (int i = 1; i <= 10; i++)
-        {
-            rounds.Add(CreateRound(i, 80, fullRound: true, usingHoleStats: true,
-                holes: new List<RoundHole> { CreateHole(1, 4, numberOfPutts: 2) }));
-        }
-
-        var result = StatsCalculator.BuildPuttsTrend(rounds, 5);
-
-        Assert.Equal(5, result.Count);
-        // Takes first 5, then reverses
-        Assert.Equal(5, result[0].RoundId);
-        Assert.Equal(1, result[4].RoundId);
     }
 
     [Fact]
@@ -871,7 +997,7 @@ public class StatsCalculatorTests
                 })
         };
 
-        var result = StatsCalculator.BuildPuttsTrend(rounds, 10);
+        var result = StatsCalculator.BuildPuttsTrend(rounds);
 
         Assert.Single(result);
         Assert.Equal(42, result[0].RoundId);
@@ -910,7 +1036,7 @@ public class StatsCalculatorTests
         Assert.Equal(1, result[0].CourseId);
         Assert.Equal("Home Course", result[0].CourseName);
         Assert.Equal(3, result[0].RoundCount);
-        Assert.Equal(85.0, result[0].AverageScore);
+        Assert.Equal(85.0, result[0].Average18HoleScore);
     }
 
     [Fact]
@@ -974,8 +1100,8 @@ public class StatsCalculatorTests
         var easy = result.First(c => c.CourseName == "Easy Course");
         var hard = result.First(c => c.CourseName == "Hard Course");
 
-        Assert.Equal(71.0, easy.AverageScore);
-        Assert.Equal(92.5, hard.AverageScore);
+        Assert.Equal(71.0, easy.Average18HoleScore);
+        Assert.Equal(92.5, hard.Average18HoleScore);
     }
 
     #endregion
@@ -1230,7 +1356,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_FirPercentage_CalculatesFrom18HoleRoundsOnly()
+    public void CalculateAdvancedStats_FirPercentage_CalculatesFromAllRounds()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1243,7 +1369,7 @@ public class StatsCalculatorTests
                 CreateHole(4, 4, hitFairway: false),
                 CreateHole(5, 3, hitFairway: null) // Par 3 - excluded from FIR
             }),
-            // 9-hole round - should be excluded from FIR calculation
+            // 9-hole round - now included in FIR calculation
             CreateRound(2, 40, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
             {
                 CreateHole(1, 4, hitFairway: true),
@@ -1253,12 +1379,12 @@ public class StatsCalculatorTests
 
         var result = StatsCalculator.CalculateAdvancedStats(rounds);
 
-        // Only 18-hole: 2 out of 4 = 50%
-        Assert.Equal(50.0, result.FirPercent);
+        // All rounds: 4 out of 6 = 66.7%
+        Assert.Equal(66.7, result.FirPercent);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_GirPercentage_CalculatesFrom18HoleRoundsOnly()
+    public void CalculateAdvancedStats_GirPercentage_CalculatesFromAllRounds()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1271,7 +1397,7 @@ public class StatsCalculatorTests
                 CreateHole(4, 4, hitGreen: false),
                 CreateHole(5, 3, hitGreen: false)
             }),
-            // 9-hole round - should be excluded from GIR calculation
+            // 9-hole round - now included in GIR calculation
             CreateRound(2, 40, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
             {
                 CreateHole(1, 4, hitGreen: true),
@@ -1281,8 +1407,8 @@ public class StatsCalculatorTests
 
         var result = StatsCalculator.CalculateAdvancedStats(rounds);
 
-        // Only 18-hole: 3 out of 5 = 60%
-        Assert.Equal(60.0, result.GirPercent);
+        // All rounds: 5 out of 7 = 71.4%
+        Assert.Equal(71.4, result.GirPercent);
     }
 
     [Fact]
@@ -1375,8 +1501,10 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_LessThan10Rounds_NoTrends()
+    public void CalculateAdvancedStats_LessThan10Rounds_StillCalculatesTrendsWithLinearRegression()
     {
+        // With linear regression, trends are calculated with 2+ rounds (not 10).
+        // 9 identical rounds → slope = 0 for all trends.
         var rounds = new List<RoundResponse>();
         for (int i = 1; i <= 9; i++)
         {
@@ -1388,10 +1516,11 @@ public class StatsCalculatorTests
 
         var result = StatsCalculator.CalculateAdvancedStats(rounds);
 
-        Assert.Null(result.FirPercentTrend);
-        Assert.Null(result.GirPercentTrend);
-        Assert.Null(result.Average18HolePuttsTrend);
-        Assert.Null(result.Average9HolePuttsTrend);
+        // All identical data → slope = 0
+        Assert.Equal(0.0, result.FirPercentTrend);
+        Assert.Equal(0.0, result.GirPercentTrend);
+        Assert.Equal(0.0, result.Average18HolePuttsTrend);
+        Assert.Null(result.Average9HolePuttsTrend); // No 9-hole rounds
     }
 
     [Fact]
@@ -1419,10 +1548,11 @@ public class StatsCalculatorTests
 
         var result = StatsCalculator.CalculateAdvancedStats(rounds);
 
-        // FIR trend: 100% - 0% = +100
-        Assert.Equal(100.0, result.FirPercentTrend);
-        // GIR trend: 100% - 0% = +100
-        Assert.Equal(100.0, result.GirPercentTrend);
+        // Reversed oldest-first: [0,0,0,0,0,100,100,100,100,100]
+        // n=10, sumX=45, sumY=500, sumXY=3500, sumX2=285
+        // slope = (35000-22500)/(2850-2025) = 12500/825 ≈ 15.15
+        Assert.Equal(15.15, result.FirPercentTrend);
+        Assert.Equal(15.15, result.GirPercentTrend);
     }
 
     [Fact]
@@ -1450,8 +1580,10 @@ public class StatsCalculatorTests
 
         var result = StatsCalculator.CalculateAdvancedStats(rounds);
 
-        // 18-hole putts trend: 1 - 3 = -2 (improvement = negative)
-        Assert.Equal(-2.0, result.Average18HolePuttsTrend);
+        // Reversed oldest-first: [3,3,3,3,3,1,1,1,1,1]
+        // n=10, sumX=45, sumY=20, sumXY=65, sumX2=285
+        // slope = (650-900)/(2850-2025) = -250/825 ≈ -0.30
+        Assert.Equal(-0.3, result.Average18HolePuttsTrend);
     }
 
     [Fact]
@@ -1479,8 +1611,9 @@ public class StatsCalculatorTests
 
         var result = StatsCalculator.CalculateAdvancedStats(rounds);
 
-        // 9-hole putts trend: 1 - 3 = -2 (improvement = negative)
-        Assert.Equal(-2.0, result.Average9HolePuttsTrend);
+        // Reversed oldest-first: [3,3,3,3,3,1,1,1,1,1]
+        // slope = -250/825 ≈ -0.30
+        Assert.Equal(-0.3, result.Average9HolePuttsTrend);
     }
 
     [Fact]
@@ -1523,10 +1656,10 @@ public class StatsCalculatorTests
 
         var result = StatsCalculator.CalculateAdvancedStats(rounds);
 
-        // 18-hole putts trend: 1 - 3 = -2 (improvement)
-        Assert.Equal(-2.0, result.Average18HolePuttsTrend);
-        // 9-hole putts trend: 2 - 1 = +1 (regression)
-        Assert.Equal(1.0, result.Average9HolePuttsTrend);
+        // 18-hole putts: reversed oldest-first [3,3,3,3,3,1,1,1,1,1], slope = -0.3
+        Assert.Equal(-0.3, result.Average18HolePuttsTrend);
+        // 9-hole putts: reversed oldest-first [1,1,1,1,1,2,2,2,2,2], slope = +0.15 (rounded to 2 decimals)
+        Assert.Equal(0.15, result.Average9HolePuttsTrend);
     }
 
     [Fact]
@@ -1553,7 +1686,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_Only9HoleRounds_NoFirGirStats()
+    public void CalculateAdvancedStats_Only9HoleRounds_CalculatesFirGirStats()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1569,10 +1702,10 @@ public class StatsCalculatorTests
 
         var result = StatsCalculator.CalculateAdvancedStats(rounds);
 
-        // FIR/GIR only calculated from 18-hole rounds
-        Assert.Null(result.FirPercent);
-        Assert.Null(result.GirPercent);
-        // But 9-hole putts should be calculated
+        // FIR/GIR now calculated from all rounds including 9-hole
+        Assert.Equal(50.0, result.FirPercent); // 1 out of 2
+        Assert.Equal(50.0, result.GirPercent); // 1 out of 2
+        // 9-hole putts should be calculated
         Assert.Equal(2.5, result.Average9HolePutts);
     }
 
@@ -1585,7 +1718,7 @@ public class StatsCalculatorTests
     {
         var rounds = new List<RoundResponse>();
 
-        var result = StatsCalculator.BuildFirTrend(rounds, 10);
+        var result = StatsCalculator.BuildFirTrend(rounds);
 
         Assert.Empty(result);
     }
@@ -1599,7 +1732,7 @@ public class StatsCalculatorTests
             CreateRound(2, 82, usingHoleStats: false)
         };
 
-        var result = StatsCalculator.BuildFirTrend(rounds, 10);
+        var result = StatsCalculator.BuildFirTrend(rounds);
 
         Assert.Empty(result);
     }
@@ -1616,7 +1749,7 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.BuildFirTrend(rounds, 10);
+        var result = StatsCalculator.BuildFirTrend(rounds);
 
         Assert.Empty(result);
     }
@@ -1637,7 +1770,7 @@ public class StatsCalculatorTests
                 })
         };
 
-        var result = StatsCalculator.BuildFirTrend(rounds, 10);
+        var result = StatsCalculator.BuildFirTrend(rounds);
 
         Assert.Single(result);
         // 2 out of 3 par 4/5 holes = 66.7%
@@ -1674,7 +1807,7 @@ public class StatsCalculatorTests
                 })
         };
 
-        var result = StatsCalculator.BuildFirTrend(rounds, 10);
+        var result = StatsCalculator.BuildFirTrend(rounds);
 
         Assert.Equal(3, result.Count);
         // Should be reversed (oldest first)
@@ -1703,7 +1836,7 @@ public class StatsCalculatorTests
                 })
         };
 
-        var result = StatsCalculator.BuildFirTrend(rounds, 10);
+        var result = StatsCalculator.BuildFirTrend(rounds);
 
         Assert.Single(result);
         Assert.Equal(42, result[0].RoundId);
@@ -1712,24 +1845,6 @@ public class StatsCalculatorTests
         Assert.Equal(3, result[0].FairwayAttempts);
         Assert.Equal("Augusta National", result[0].CourseName);
         Assert.Equal(new DateOnly(2024, 4, 14), result[0].DatePlayed);
-    }
-
-    [Fact]
-    public void BuildFirTrend_LimitsToCount()
-    {
-        var rounds = new List<RoundResponse>();
-        for (int i = 1; i <= 10; i++)
-        {
-            rounds.Add(CreateRound(i, 80, usingHoleStats: true,
-                holes: new List<RoundHole> { CreateHole(1, 4, hitFairway: true) }));
-        }
-
-        var result = StatsCalculator.BuildFirTrend(rounds, 5);
-
-        Assert.Equal(5, result.Count);
-        // Takes first 5, then reverses
-        Assert.Equal(5, result[0].RoundId);
-        Assert.Equal(1, result[4].RoundId);
     }
 
     [Fact]
@@ -1752,7 +1867,7 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.BuildFirTrend(rounds, 10);
+        var result = StatsCalculator.BuildFirTrend(rounds);
 
         Assert.Equal(2, result.Count);
         // Only rounds 1 and 4 have FIR data
@@ -1769,7 +1884,7 @@ public class StatsCalculatorTests
     {
         var rounds = new List<RoundResponse>();
 
-        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+        var result = StatsCalculator.BuildGirTrend(rounds);
 
         Assert.Empty(result);
     }
@@ -1783,7 +1898,7 @@ public class StatsCalculatorTests
             CreateRound(2, 82, usingHoleStats: false)
         };
 
-        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+        var result = StatsCalculator.BuildGirTrend(rounds);
 
         Assert.Empty(result);
     }
@@ -1800,7 +1915,7 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+        var result = StatsCalculator.BuildGirTrend(rounds);
 
         Assert.Empty(result);
     }
@@ -1821,7 +1936,7 @@ public class StatsCalculatorTests
                 })
         };
 
-        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+        var result = StatsCalculator.BuildGirTrend(rounds);
 
         Assert.Single(result);
         // 2 out of 4 = 50%
@@ -1858,7 +1973,7 @@ public class StatsCalculatorTests
                 })
         };
 
-        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+        var result = StatsCalculator.BuildGirTrend(rounds);
 
         Assert.Equal(3, result.Count);
         // Should be reversed (oldest first)
@@ -1887,7 +2002,7 @@ public class StatsCalculatorTests
                 })
         };
 
-        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+        var result = StatsCalculator.BuildGirTrend(rounds);
 
         Assert.Single(result);
         Assert.Equal(42, result[0].RoundId);
@@ -1896,24 +2011,6 @@ public class StatsCalculatorTests
         Assert.Equal(3, result[0].GreenAttempts);
         Assert.Equal("Augusta National", result[0].CourseName);
         Assert.Equal(new DateOnly(2024, 4, 14), result[0].DatePlayed);
-    }
-
-    [Fact]
-    public void BuildGirTrend_LimitsToCount()
-    {
-        var rounds = new List<RoundResponse>();
-        for (int i = 1; i <= 10; i++)
-        {
-            rounds.Add(CreateRound(i, 80, usingHoleStats: true,
-                holes: new List<RoundHole> { CreateHole(1, 4, hitGreen: true) }));
-        }
-
-        var result = StatsCalculator.BuildGirTrend(rounds, 5);
-
-        Assert.Equal(5, result.Count);
-        // Takes first 5, then reverses
-        Assert.Equal(5, result[0].RoundId);
-        Assert.Equal(1, result[4].RoundId);
     }
 
     [Fact]
@@ -1936,7 +2033,7 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+        var result = StatsCalculator.BuildGirTrend(rounds);
 
         Assert.Equal(2, result.Count);
         // Only rounds 1 and 4 have GIR data
@@ -1958,7 +2055,7 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.BuildGirTrend(rounds, 10);
+        var result = StatsCalculator.BuildGirTrend(rounds);
 
         Assert.Single(result);
         Assert.Equal(100.0, result[0].GirPercent);

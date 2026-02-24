@@ -26,10 +26,17 @@ public class UserStatsResponse
     public List<ScoreTrendPoint> ScoreTrend18Hole { get; set; } = new();
     public List<ScoreTrendPoint> ScoreTrend9Hole { get; set; } = new();
     public List<PuttsTrendPoint> PuttsTrend18Hole { get; set; } = new();
+    public List<PuttsTrendPoint> PuttsTrend9Hole { get; set; } = new();
     public List<FirTrendPoint> FirTrend { get; set; } = new();
     public List<GirTrendPoint> GirTrend { get; set; } = new();
     public ScoringDistribution ScoringDistribution { get; set; } = new();
     public List<CourseStats> MostPlayedCourses { get; set; } = new();
+    
+    /// <summary>
+    /// The filtered rounds used to calculate these stats.
+    /// Useful for displaying a rounds list alongside stats with matching filters.
+    /// </summary>
+    public List<RoundResponse> Rounds { get; set; } = new();
 }
 
 /// <summary>
@@ -52,6 +59,16 @@ public class ScoreTrendPoint
     public DateOnly DatePlayed { get; set; }
     public int Score { get; set; }
     public string CourseName { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// A single data point for a trend line (linear regression).
+/// Reusable across score, putts, FIR%, GIR%, etc.
+/// </summary>
+public class TrendLinePoint
+{
+    public string DateLabel { get; set; } = string.Empty;
+    public double Value { get; set; }
 }
 
 /// <summary>
@@ -102,7 +119,7 @@ public class AdvancedStats
     public double? FirPercent { get; set; }
     
     /// <summary>
-    /// FIR% trend (last 5 rounds vs previous 5 rounds). Positive = improvement.
+    /// FIR% trend (linear regression slope). Positive = improvement.
     /// </summary>
     public double? FirPercentTrend { get; set; }
     
@@ -112,7 +129,7 @@ public class AdvancedStats
     public double? GirPercent { get; set; }
     
     /// <summary>
-    /// GIR% trend (last 5 rounds vs previous 5 rounds). Positive = improvement.
+    /// GIR% trend (linear regression slope). Positive = improvement.
     /// </summary>
     public double? GirPercentTrend { get; set; }
     
@@ -123,7 +140,7 @@ public class AdvancedStats
     public double? Average9HolePutts { get; set; }
     
     /// <summary>
-    /// Average putts trend (last 5 rounds vs previous 5 rounds). Negative = improvement.
+    /// Average putts trend (linear regression slope). Negative = improvement.
     /// </summary>
     public double? Average18HolePuttsTrend { get; set; }
     public double? Average9HolePuttsTrend { get; set; }
@@ -167,7 +184,8 @@ public class CourseStats
     public long CourseId { get; set; }
     public string CourseName { get; set; } = string.Empty;
     public int RoundCount { get; set; }
-    public double AverageScore { get; set; }
+    public double? Average18HoleScore { get; set; }
+    public double? Average9HoleScore { get; set; }
 }
 
 /// <summary>
