@@ -30,6 +30,7 @@ builder.Services.AddScoped<IdentityRedirectManager>();
 // Feature services
 builder.Services.AddTransient<IRoundService, RoundService>();
 builder.Services.AddTransient<IStatsService, StatsService>();
+builder.Services.AddTransient<ICourseService, CourseService>();
 
 var app = builder.Build();
 

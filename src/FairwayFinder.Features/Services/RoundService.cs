@@ -163,6 +163,142 @@ public class RoundService : IRoundService
         );
     }
 
+    public async Task<long> CreateRoundAsync(CreateRoundRequest request)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var userId = request.UserId;
+        
+        // Compute scores
+        var frontHoles = request.Holes.Where(h => h.HoleNumber <= 9).ToList();
+        var backHoles = request.Holes.Where(h => h.HoleNumber > 9).ToList();
+        var scoreOut = frontHoles.Sum(h => (int)h.Score);
+        var scoreIn = backHoles.Sum(h => (int)h.Score);
+        var totalScore = scoreOut + scoreIn;
+        
+        // 1. Create Round entity
+        var round = new Round
+        {
+            CourseId = request.CourseId,
+            TeeboxId = request.TeeboxId,
+            DatePlayed = request.DatePlayed,
+            Score = totalScore,
+            ScoreOut = scoreOut,
+            ScoreIn = scoreIn,
+            UserId = userId,
+            UsingHoleStats = request.UsingHoleStats,
+            ExcludeFromStats = false,
+            FullRound = request.FullRound,
+            FrontNine = request.FrontNine,
+            BackNine = request.BackNine,
+            CreatedBy = userId,
+            CreatedOn = today,
+            UpdatedBy = userId,
+            UpdatedOn = today,
+            IsDeleted = false
+        };
+        
+        dbContext.Rounds.Add(round);
+        await dbContext.SaveChangesAsync(); // Save to get RoundId
+        
+        // 2. Create Score entities for each hole
+        var scores = request.Holes.Select(h => new Score
+        {
+            RoundId = round.RoundId,
+            HoleId = h.HoleId,
+            HoleScore = h.Score,
+            UserId = userId,
+            CreatedBy = userId,
+            CreatedOn = today,
+            UpdatedBy = userId,
+            UpdatedOn = today,
+            IsDeleted = false
+        }).ToList();
+        
+        dbContext.Scores.AddRange(scores);
+        await dbContext.SaveChangesAsync(); // Save to get ScoreIds
+        
+        // 3. Create HoleStat entities if advanced stats enabled
+        if (request.UsingHoleStats)
+        {
+            var scoreByHoleId = scores.ToDictionary(s => s.HoleId, s => s.ScoreId);
+            
+            var holeStats = request.Holes.Select(h => new HoleStat
+            {
+                ScoreId = scoreByHoleId[h.HoleId],
+                RoundId = round.RoundId,
+                HoleId = h.HoleId,
+                HitFairway = h.HitFairway,
+                MissFairwayType = h.MissFairwayType,
+                HitGreen = h.HitGreen,
+                MissGreenType = h.MissGreenType,
+                NumberOfPutts = h.NumberOfPutts,
+                CreatedBy = userId,
+                CreatedOn = today,
+                UpdatedBy = userId,
+                UpdatedOn = today,
+                IsDeleted = false
+            }).ToList();
+            
+            dbContext.HoleStats.AddRange(holeStats);
+        }
+        
+        // 4. Compute and create RoundStat (scoring distribution)
+        var roundStat = new RoundStat
+        {
+            RoundId = round.RoundId,
+            HoleInOne = 0,
+            DoubleEagles = 0,
+            Eagles = 0,
+            Birdies = 0,
+            Pars = 0,
+            Bogies = 0,
+            DoubleBogies = 0,
+            TripleOrWorse = 0,
+            CreatedBy = userId,
+            CreatedOn = today,
+            UpdatedBy = userId,
+            UpdatedOn = today,
+            IsDeleted = false
+        };
+        
+        foreach (var hole in request.Holes)
+        {
+            var diff = hole.Score - hole.Par;
+            switch (diff)
+            {
+                case <= -3:
+                    if (hole.Score == 1) roundStat.HoleInOne++;
+                    else roundStat.DoubleEagles++;
+                    break;
+                case -2:
+                    roundStat.Eagles++;
+                    break;
+                case -1:
+                    roundStat.Birdies++;
+                    break;
+                case 0:
+                    roundStat.Pars++;
+                    break;
+                case 1:
+                    roundStat.Bogies++;
+                    break;
+                case 2:
+                    roundStat.DoubleBogies++;
+                    break;
+                default:
+                    roundStat.TripleOrWorse++;
+                    break;
+            }
+        }
+        
+        dbContext.RoundStats.Add(roundStat);
+        await dbContext.SaveChangesAsync();
+        
+        return round.RoundId;
+    }
+    
     public async Task<List<CourseResponse>> GetPlayedCoursesByUserId(string userId, bool? statRounds = null)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();

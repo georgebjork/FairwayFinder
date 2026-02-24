@@ -23,4 +23,10 @@ public interface IRoundService
     /// Gets a list of all courses that a user has played
     /// </summary>
     Task<List<CourseResponse>> GetPlayedCoursesByUserId(string userId, bool? statRounds = null);
+    
+    /// <summary>
+    /// Creates a new round with scores, hole stats (if enabled), and round stats.
+    /// Returns the new round ID.
+    /// </summary>
+    Task<long> CreateRoundAsync(CreateRoundRequest request);
 }

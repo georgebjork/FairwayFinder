@@ -1,3 +1,5 @@
+@inject NavigationManager NavigationManager
+
 <RadzenHeader>
     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Gap="0" class="rz-p-2">
         <a href="/" style="text-decoration: none; color: inherit;">
@@ -7,6 +9,12 @@
             </RadzenStack>
         </a>
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+            <AuthorizeView>
+                <Authorized>
+                    <RadzenButton Text="Add Round" Icon="add" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small"
+                                  Click="@(() => NavigationManager.NavigateTo("/round/new"))" />
+                </Authorized>
+            </AuthorizeView>
             <RadzenAppearanceToggle />
             <AuthorizeView>
                 <Authorized>
