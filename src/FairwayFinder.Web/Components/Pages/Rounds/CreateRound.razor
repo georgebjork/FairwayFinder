@@ -1,0 +1,873 @@
+@page "/round/new"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Security.Claims
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Web.Components.Pages.Rounds.Components
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ICourseService CourseService
+@inject IRoundService RoundService
+@inject NavigationManager NavigationManager
+@inject NotificationService NotificationService
+
+<PageTitle>New Round</PageTitle>
+
+<RadzenStack Gap="1.5rem" class="rz-p-4">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">New Round</RadzenText>
+        <RadzenButton Text="Cancel" Variant="Variant.Text" Click="@(() => NavigationManager.NavigateTo("/"))" />
+    </RadzenStack>
+
+    @if (_currentStep == 0)
+    {
+        <RadzenCard class="rz-p-5" Style="max-width: 600px;">
+            <RadzenStack Gap="0.25rem" class="rz-mb-4">
+                <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Setup</RadzenText>
+                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Step 1 of 3</RadzenText>
+            </RadzenStack>
+
+            <RadzenStack Gap="1.5rem">
+                <RadzenStack Gap="0.25rem">
+                    <RadzenText TextStyle="TextStyle.Subtitle1">Course</RadzenText>
+                    <RadzenDropDown TValue="long?"
+                                    Data="@_courseSearchResults"
+                                    TextProperty="CourseName"
+                                    ValueProperty="CourseId"
+                                    @bind-Value="_selectedCourseId"
+                                    Placeholder="Search for a course..."
+                                    AllowFiltering="true"
+                                    AllowClear="true"
+                                    LoadData="@OnCourseSearch"
+                                    FilterDelay="300"
+                                    Style="width: 100%;"
+                                    Change="@OnCourseSelected" />
+                </RadzenStack>
+
+                <RadzenStack Gap="0.25rem">
+                    <RadzenText TextStyle="TextStyle.Subtitle1">Round Type</RadzenText>
+                    <RadzenSelectBar TValue="string" @bind-Value="_selectedRoundType" Change="@OnRoundTypeChanged" Style="width: 100%;">
+                        <Items>
+                            <RadzenSelectBarItem Text="18 Holes" Value="@("18")" />
+                            <RadzenSelectBarItem Text="9 Holes" Value="@("9")" />
+                        </Items>
+                    </RadzenSelectBar>
+                </RadzenStack>
+
+                @if (_selectedRoundType == "9")
+                {
+                    <RadzenStack Gap="0.25rem">
+                        <RadzenText TextStyle="TextStyle.Subtitle1">Which Nine?</RadzenText>
+                        <RadzenSelectBar TValue="string" @bind-Value="_selectedNine" Style="width: 100%;">
+                            <Items>
+                                <RadzenSelectBarItem Text="Front 9" Value="@("front")" />
+                                <RadzenSelectBarItem Text="Back 9" Value="@("back")" />
+                            </Items>
+                        </RadzenSelectBar>
+                    </RadzenStack>
+                }
+
+                @if (_selectedCourseId.HasValue && FilteredTeeboxes.Count > 0)
+                {
+                    <RadzenStack Gap="0.25rem">
+                        <RadzenText TextStyle="TextStyle.Subtitle1">Teebox</RadzenText>
+                        <RadzenDropDown TValue="long?"
+                                        Data="@FilteredTeeboxes"
+                                        TextProperty="DisplayLabel"
+                                        ValueProperty="TeeboxId"
+                                        @bind-Value="_selectedTeeboxId"
+                                        Placeholder="Select a teebox..."
+                                        Style="width: 100%;"
+                                        Change="@OnTeeboxSelected" />
+                    </RadzenStack>
+                }
+                else if (_selectedCourseId.HasValue && _loadingTeeboxes)
+                {
+                    <RadzenStack AlignItems="AlignItems.Center" class="rz-py-4">
+                        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small" />
+                    </RadzenStack>
+                }
+
+                <RadzenStack Gap="0.25rem">
+                    <RadzenText TextStyle="TextStyle.Subtitle1">Date Played</RadzenText>
+                    <RadzenDatePicker TValue="DateOnly"
+                                      @bind-Value="_datePlayed"
+                                      DateFormat="MM/dd/yyyy"
+                                      Style="width: 100%;"
+                                      Max="@DateTime.Today" />
+                </RadzenStack>
+
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+                    <RadzenSwitch @bind-Value="_trackAdvancedStats" />
+                    <RadzenStack Gap="0">
+                        <RadzenText TextStyle="TextStyle.Body1" class="rz-m-0">Track Advanced Stats</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Putts, fairways hit, greens in regulation</RadzenText>
+                    </RadzenStack>
+                </RadzenStack>
+
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" class="rz-pt-2">
+                    <RadzenButton Text="Next" Icon="arrow_forward" ButtonStyle="ButtonStyle.Primary" Click="@GoToScorecard" />
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenCard>
+    }
+    else if (_currentStep == 1 && _holeEntries.Count > 0)
+    {
+        @* Step 2: Scorecard Entry *@
+        <RadzenStack Gap="0.25rem" class="rz-mb-2">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                <RadzenStack Gap="0">
+                    <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Scorecard</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Step 2 of 3 &middot; @_selectedCourseName</RadzenText>
+                </RadzenStack>
+                <RadzenButton Text="Back to Setup" Icon="arrow_back" Variant="Variant.Outlined" Click="@(() => _currentStep = 0)" />
+            </RadzenStack>
+        </RadzenStack>
+
+        <div class="scorecard-wrapper">
+            <table class="scorecard-table">
+                <thead>
+                    <tr>
+                        <th colspan="2">Hole</th>
+                        @foreach (var hole in FrontNineHoles)
+                        {
+                            <th class="hole-cell">@hole.HoleNumber</th>
+                        }
+                        <th class="total-cell" colspan="2">Out</th>
+                        @foreach (var hole in BackNineHoles)
+                        {
+                            <th class="hole-cell">@hole.HoleNumber</th>
+                        }
+                        <th class="total-cell" colspan="2">In</th>
+                        <th class="total-cell" colspan="2">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @* Yardage Row *@
+                    <tr>
+                        <th colspan="2">@_selectedTeeboxName</th>
+                        @foreach (var hole in FrontNineHoles)
+                        {
+                            <td class="hole-cell">@hole.Yardage</td>
+                        }
+                        <td class="total-cell" colspan="2">@FrontNineHoles.Sum(h => h.Yardage)</td>
+                        @foreach (var hole in BackNineHoles)
+                        {
+                            <td class="hole-cell">@hole.Yardage</td>
+                        }
+                        <td class="total-cell" colspan="2">@BackNineHoles.Sum(h => h.Yardage)</td>
+                        <td class="total-cell" colspan="2">@_holes.Sum(h => h.Yardage)</td>
+                    </tr>
+
+                    @* Handicap Row *@
+                    <tr>
+                        <th colspan="2">Handicap</th>
+                        @foreach (var hole in FrontNineHoles)
+                        {
+                            <td class="hole-cell">@hole.Handicap</td>
+                        }
+                        <td class="total-cell" colspan="2">&nbsp;</td>
+                        @foreach (var hole in BackNineHoles)
+                        {
+                            <td class="hole-cell">@hole.Handicap</td>
+                        }
+                        <td class="total-cell" colspan="2">&nbsp;</td>
+                        <td class="total-cell" colspan="2">&nbsp;</td>
+                    </tr>
+
+                    @* Par Row *@
+                    <tr>
+                        <th colspan="2">Par</th>
+                        @foreach (var hole in FrontNineHoles)
+                        {
+                            <td class="hole-cell">@hole.Par</td>
+                        }
+                        <td class="total-cell" colspan="2">@FrontNineHoles.Sum(h => h.Par)</td>
+                        @foreach (var hole in BackNineHoles)
+                        {
+                            <td class="hole-cell">@hole.Par</td>
+                        }
+                        <td class="total-cell" colspan="2">@BackNineHoles.Sum(h => h.Par)</td>
+                        <td class="total-cell" colspan="2">@_holes.Sum(h => h.Par)</td>
+                    </tr>
+
+                    @* Score Row (editable) *@
+                    <tr class="score-row">
+                        <th colspan="2">Score</th>
+                        @foreach (var entry in FrontNineEntries)
+                        {
+                            <td class="hole-cell input-cell">
+                                <input type="text" inputmode="numeric" class="scorecard-input"
+                                       style="@GetScoreInputStyle(entry)"
+                                       value="@entry.Score"
+                                       @onchange="(e) => OnScoreChanged(entry, e)" />
+                            </td>
+                        }
+                        <td class="total-cell" colspan="2">@RunningScoreOut</td>
+                        @foreach (var entry in BackNineEntries)
+                        {
+                            <td class="hole-cell input-cell">
+                                <input type="text" inputmode="numeric" class="scorecard-input"
+                                       style="@GetScoreInputStyle(entry)"
+                                       value="@entry.Score"
+                                       @onchange="(e) => OnScoreChanged(entry, e)" />
+                            </td>
+                        }
+                        <td class="total-cell" colspan="2">@RunningScoreIn</td>
+                        <td class="total-cell" colspan="2">@RunningScoreTotal</td>
+                    </tr>
+
+                    @if (_trackAdvancedStats)
+                    {
+                        @* Putts Row (editable) *@
+                        <tr>
+                            <th colspan="2">Putts</th>
+                            @foreach (var entry in FrontNineEntries)
+                            {
+                                <td class="hole-cell input-cell">
+                                    <input type="text" inputmode="numeric" class="scorecard-input"
+                                           value="@entry.NumberOfPutts"
+                                           @onchange="(e) => OnPuttsChanged(entry, e)" />
+                                </td>
+                            }
+                            <td class="total-cell" colspan="2">@FrontNineEntries.Where(e => e.NumberOfPutts.HasValue).Sum(e => (int)e.NumberOfPutts!.Value)</td>
+                            @foreach (var entry in BackNineEntries)
+                            {
+                                <td class="hole-cell input-cell">
+                                    <input type="text" inputmode="numeric" class="scorecard-input"
+                                           value="@entry.NumberOfPutts"
+                                           @onchange="(e) => OnPuttsChanged(entry, e)" />
+                                </td>
+                            }
+                            <td class="total-cell" colspan="2">@BackNineEntries.Where(e => e.NumberOfPutts.HasValue).Sum(e => (int)e.NumberOfPutts!.Value)</td>
+                            <td class="total-cell" colspan="2">@_holeEntries.Where(e => e.NumberOfPutts.HasValue).Sum(e => (int)e.NumberOfPutts!.Value)</td>
+                        </tr>
+
+                        @* Fairway Row (clickable toggles) *@
+                        <tr>
+                            <th colspan="2">Fairway</th>
+                            @foreach (var entry in FrontNineEntries)
+                            {
+                                <td class="hole-cell toggle-cell" @onclick="() => ToggleFairway(entry)">
+                                    @if (entry.Par <= 3)
+                                    {
+                                        <span>&nbsp;</span>
+                                    }
+                                    else if (entry.HitFairway == true)
+                                    {
+                                        <RadzenIcon Icon="check_circle" Style="color: var(--rz-success); cursor: pointer;" />
+                                    }
+                                    else if (entry.HitFairway == false)
+                                    {
+                                        <RadzenIcon Icon="cancel" Style="color: var(--rz-danger); cursor: pointer;" />
+                                    }
+                                    else
+                                    {
+                                        <span class="toggle-placeholder">-</span>
+                                    }
+                                </td>
+                            }
+                            <td class="total-cell" colspan="2">@FrontNineFairwaysHit / @FrontNineFairwaysTotal</td>
+                            @foreach (var entry in BackNineEntries)
+                            {
+                                <td class="hole-cell toggle-cell" @onclick="() => ToggleFairway(entry)">
+                                    @if (entry.Par <= 3)
+                                    {
+                                        <span>&nbsp;</span>
+                                    }
+                                    else if (entry.HitFairway == true)
+                                    {
+                                        <RadzenIcon Icon="check_circle" Style="color: var(--rz-success); cursor: pointer;" />
+                                    }
+                                    else if (entry.HitFairway == false)
+                                    {
+                                        <RadzenIcon Icon="cancel" Style="color: var(--rz-danger); cursor: pointer;" />
+                                    }
+                                    else
+                                    {
+                                        <span class="toggle-placeholder">-</span>
+                                    }
+                                </td>
+                            }
+                            <td class="total-cell" colspan="2">@BackNineFairwaysHit / @BackNineFairwaysTotal</td>
+                            <td class="total-cell" colspan="2">@TotalFairwaysHit / @TotalFairwaysTotal</td>
+                        </tr>
+
+                        @* GIR Row (clickable toggles) *@
+                        <tr>
+                            <th colspan="2">GIR</th>
+                            @foreach (var entry in FrontNineEntries)
+                            {
+                                <td class="hole-cell toggle-cell" @onclick="() => ToggleGir(entry)">
+                                    @if (entry.HitGreen == true)
+                                    {
+                                        <RadzenIcon Icon="check_circle" Style="color: var(--rz-success); cursor: pointer;" />
+                                    }
+                                    else if (entry.HitGreen == false)
+                                    {
+                                        <RadzenIcon Icon="cancel" Style="color: var(--rz-danger); cursor: pointer;" />
+                                    }
+                                    else
+                                    {
+                                        <span class="toggle-placeholder">-</span>
+                                    }
+                                </td>
+                            }
+                            <td class="total-cell" colspan="2">@FrontNineGreensHit</td>
+                            @foreach (var entry in BackNineEntries)
+                            {
+                                <td class="hole-cell toggle-cell" @onclick="() => ToggleGir(entry)">
+                                    @if (entry.HitGreen == true)
+                                    {
+                                        <RadzenIcon Icon="check_circle" Style="color: var(--rz-success); cursor: pointer;" />
+                                    }
+                                    else if (entry.HitGreen == false)
+                                    {
+                                        <RadzenIcon Icon="cancel" Style="color: var(--rz-danger); cursor: pointer;" />
+                                    }
+                                    else
+                                    {
+                                        <span class="toggle-placeholder">-</span>
+                                    }
+                                </td>
+                            }
+                            <td class="total-cell" colspan="2">@BackNineGreensHit</td>
+                            <td class="total-cell" colspan="2">@TotalGreensHit / @_holeEntries.Count</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" class="rz-pt-2">
+            <RadzenButton Text="Review" Icon="arrow_forward" ButtonStyle="ButtonStyle.Primary" Click="@GoToReview" />
+        </RadzenStack>
+    }
+    else if (_currentStep == 2 && _previewRound is not null)
+    {
+        @* Step 3: Review & Save *@
+        <RadzenStack Gap="0.25rem" class="rz-mb-2">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                <RadzenStack Gap="0">
+                    <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Review</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Step 3 of 3</RadzenText>
+                </RadzenStack>
+                <RadzenButton Text="Back to Scorecard" Icon="arrow_back" Variant="Variant.Outlined" Click="@BackToScorecard" />
+            </RadzenStack>
+        </RadzenStack>
+
+        <RadzenStack Gap="0.5rem" class="rz-mb-4">
+            <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">@_selectedCourseName</RadzenText>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+                <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">@_selectedTeeboxName</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">@_datePlayed.ToString("MMM d, yyyy")</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">@(_selectedRoundType == "18" ? "18 Holes" : "9 Holes")</RadzenText>
+            </RadzenStack>
+        </RadzenStack>
+
+        <RoundScoringPills Round="@_previewRound" />
+
+        <FairwayFinderScorecard Round="@_previewRound" />
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" class="rz-pt-2">
+            <RadzenButton Text="Save Round" Icon="save" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Large"
+                          Click="@SaveRound" IsBusy="@_saving" />
+        </RadzenStack>
+    }
+</RadzenStack>
+
+<style>
+    .scorecard-wrapper {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .scorecard-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+        min-width: 900px;
+        border-top: 1px solid var(--rz-text-disabled-color);
+        border-bottom: 1px solid var(--rz-text-disabled-color);
+        border-left: 1px solid var(--rz-text-disabled-color);
+        border-right: 1px solid var(--rz-text-disabled-color);
+    }
+
+    .scorecard-table th,
+    .scorecard-table td {
+        padding: 0.5rem 0.25rem;
+        text-align: center;
+        border-top: 1px solid var(--rz-text-disabled-color);
+        border-bottom: 1px solid var(--rz-text-disabled-color);
+        border-left: none;
+        border-right: none;
+    }
+
+    .scorecard-table th:first-child,
+    .scorecard-table td:first-child {
+        border-left: 1px solid var(--rz-text-disabled-color);
+    }
+
+    .scorecard-table th:last-child,
+    .scorecard-table td:last-child {
+        border-right: 1px solid var(--rz-text-disabled-color);
+    }
+
+    .scorecard-table thead th {
+        background-color: var(--rz-base-background-color);
+        font-weight: 600;
+    }
+
+    .scorecard-table tbody th {
+        text-align: left;
+        padding-left: 0.5rem;
+        background-color: var(--rz-base-background-color);
+        font-weight: 600;
+        min-width: 80px;
+    }
+
+    .scorecard-table .hole-cell {
+        min-width: 36px;
+        width: 36px;
+    }
+
+    .scorecard-table .total-cell {
+        font-weight: 600;
+        background-color: var(--rz-base-background-color);
+        min-width: 45px;
+    }
+
+    .scorecard-table .score-row {
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .scorecard-table .input-cell {
+        padding: 0.125rem;
+    }
+
+    .scorecard-table .toggle-cell {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .scorecard-table .toggle-cell:hover {
+        background-color: var(--rz-base-background-color);
+    }
+
+    .toggle-placeholder {
+        color: var(--rz-text-disabled-color);
+        cursor: pointer;
+    }
+
+    .scorecard-input {
+        width: 100%;
+        min-width: 36px;
+        text-align: center;
+        padding: 0.25rem 0;
+        font-size: 0.875rem;
+        border: 1px dashed var(--rz-text-disabled-color);
+        border-radius: var(--rz-border-radius);
+        background: transparent;
+        color: inherit;
+        outline: none;
+        box-sizing: border-box;
+    }
+
+    .scorecard-input:focus {
+        border-color: var(--rz-primary);
+    }
+
+
+</style>
+
+@code {
+    private string? _userId;
+    private int _currentStep;
+
+    // Step 1: Setup state
+    private List<CourseSearchResult> _courseSearchResults = new();
+    private long? _selectedCourseId;
+    private string _selectedCourseName = string.Empty;
+    private List<TeeboxOption> _teeboxOptions = new();
+    private bool _loadingTeeboxes;
+    private long? _selectedTeeboxId;
+    private string _selectedTeeboxName = string.Empty;
+    private string _selectedRoundType = "18";
+    private string _selectedNine = "front";
+    private DateOnly _datePlayed = DateOnly.FromDateTime(DateTime.Today);
+    private bool _trackAdvancedStats;
+
+    // Step 2: Scorecard state
+    private List<HoleInfo> _holes = new();
+    private List<HoleScoreEntry> _holeEntries = new();
+
+    // Step 3: Review state
+    private RoundResponse? _previewRound;
+    private bool _saving;
+
+    // Computed: hole/entry splits for front/back nine
+    private List<HoleInfo> FrontNineHoles
+    {
+        get { return _holes.Where(h => h.HoleNumber <= 9).ToList(); }
+    }
+
+    private List<HoleInfo> BackNineHoles
+    {
+        get { return _holes.Where(h => h.HoleNumber > 9).ToList(); }
+    }
+
+    private List<HoleScoreEntry> FrontNineEntries
+    {
+        get { return _holeEntries.Where(e => e.HoleNumber <= 9).ToList(); }
+    }
+
+    private List<HoleScoreEntry> BackNineEntries
+    {
+        get { return _holeEntries.Where(e => e.HoleNumber > 9).ToList(); }
+    }
+
+    // Running score totals
+    private int RunningScoreOut => _holeEntries.Where(h => h.HoleNumber <= 9).Sum(h => (int)h.Score);
+    private int RunningScoreIn => _holeEntries.Where(h => h.HoleNumber > 9).Sum(h => (int)h.Score);
+    private int RunningScoreTotal => RunningScoreOut + RunningScoreIn;
+
+    // Fairway totals
+    private int FrontNineFairwaysHit => FrontNineEntries.Count(e => e.HitFairway == true);
+    private int FrontNineFairwaysTotal => FrontNineEntries.Count(e => e.Par > 3);
+    private int BackNineFairwaysHit => BackNineEntries.Count(e => e.HitFairway == true);
+    private int BackNineFairwaysTotal => BackNineEntries.Count(e => e.Par > 3);
+    private int TotalFairwaysHit => _holeEntries.Count(e => e.HitFairway == true);
+    private int TotalFairwaysTotal => _holeEntries.Count(e => e.Par > 3);
+
+    // GIR totals
+    private int FrontNineGreensHit => FrontNineEntries.Count(e => e.HitGreen == true);
+    private int BackNineGreensHit => BackNineEntries.Count(e => e.HitGreen == true);
+    private int TotalGreensHit => _holeEntries.Count(e => e.HitGreen == true);
+
+    private List<TeeboxOption> FilteredTeeboxes
+    {
+        get
+        {
+            if (_selectedRoundType == "9")
+                return _teeboxOptions.Where(t => t.IsNineHole).ToList();
+            return _teeboxOptions.Where(t => !t.IsNineHole).ToList();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        }
+
+        if (string.IsNullOrEmpty(_userId))
+        {
+            NavigationManager.NavigateTo("/");
+        }
+    }
+
+    // ===== Step Navigation =====
+
+    private async Task GoToScorecard()
+    {
+        if (!IsSetupValid())
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Missing Information",
+                Detail = "Please select a course, teebox, and date before continuing.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        await LoadHoles();
+        _currentStep = 1;
+    }
+
+    private void GoToReview()
+    {
+        BuildPreviewRound();
+        _currentStep = 2;
+    }
+
+    private void BackToScorecard()
+    {
+        _currentStep = 1;
+    }
+
+    private bool IsSetupValid()
+    {
+        return _selectedCourseId.HasValue && _selectedTeeboxId.HasValue;
+    }
+
+    // ===== Step 1: Setup Methods =====
+
+    private async Task OnCourseSearch(LoadDataArgs args)
+    {
+        if (string.IsNullOrWhiteSpace(args.Filter))
+        {
+            _courseSearchResults = [];
+            return;
+        }
+
+        _courseSearchResults = await CourseService.SearchCoursesAsync(args.Filter);
+    }
+
+    private async Task OnCourseSelected()
+    {
+        _selectedTeeboxId = null;
+        _teeboxOptions = [];
+
+        if (!_selectedCourseId.HasValue)
+        {
+            _selectedCourseName = string.Empty;
+            return;
+        }
+
+        var course = _courseSearchResults.FirstOrDefault(c => c.CourseId == _selectedCourseId.Value);
+        _selectedCourseName = course?.CourseName ?? string.Empty;
+
+        _loadingTeeboxes = true;
+        StateHasChanged();
+
+        _teeboxOptions = await CourseService.GetTeeboxesAsync(_selectedCourseId.Value);
+        _loadingTeeboxes = false;
+    }
+
+    private void OnRoundTypeChanged()
+    {
+        _selectedTeeboxId = null;
+    }
+
+    private void OnTeeboxSelected()
+    {
+        var teebox = _teeboxOptions.FirstOrDefault(t => t.TeeboxId == _selectedTeeboxId);
+        _selectedTeeboxName = teebox?.TeeboxName ?? string.Empty;
+    }
+
+    // ===== Step 2: Scorecard Methods =====
+
+    private async Task LoadHoles()
+    {
+        if (!_selectedTeeboxId.HasValue) return;
+
+        var allHoles = await CourseService.GetHolesAsync(_selectedTeeboxId.Value);
+
+        if (_selectedRoundType == "9")
+        {
+            _holes = _selectedNine == "front"
+                ? allHoles.Where(h => h.HoleNumber <= 9).ToList()
+                : allHoles.Where(h => h.HoleNumber > 9).ToList();
+        }
+        else
+        {
+            _holes = allHoles;
+        }
+
+        _holeEntries = _holes.Select(h => new HoleScoreEntry
+        {
+            HoleId = h.HoleId,
+            HoleNumber = h.HoleNumber,
+            Par = h.Par,
+            Score = (short)h.Par,
+            NumberOfPutts = _trackAdvancedStats ? (short)2 : null
+        }).ToList();
+    }
+
+    private void OnScoreChanged(HoleScoreEntry entry, ChangeEventArgs e)
+    {
+        if (short.TryParse(e.Value?.ToString(), out var val) && val >= 1 && val <= 15)
+        {
+            entry.Score = val;
+        }
+    }
+
+    private void OnPuttsChanged(HoleScoreEntry entry, ChangeEventArgs e)
+    {
+        var raw = e.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            entry.NumberOfPutts = null;
+            return;
+        }
+        if (short.TryParse(raw, out var val) && val >= 0 && val <= 10)
+        {
+            entry.NumberOfPutts = val;
+        }
+    }
+
+    private void ToggleFairway(HoleScoreEntry entry)
+    {
+        if (entry.Par <= 3) return;
+
+        if (entry.HitFairway == null)
+            entry.HitFairway = true;
+        else if (entry.HitFairway == true)
+            entry.HitFairway = false;
+        else
+        {
+            entry.HitFairway = null;
+            entry.MissFairwayType = null;
+        }
+    }
+
+    private void ToggleGir(HoleScoreEntry entry)
+    {
+        if (entry.HitGreen == null)
+            entry.HitGreen = true;
+        else if (entry.HitGreen == true)
+            entry.HitGreen = false;
+        else
+        {
+            entry.HitGreen = null;
+            entry.MissGreenType = null;
+        }
+    }
+
+    private string GetScoreInputStyle(HoleScoreEntry entry)
+    {
+        var diff = entry.Score - entry.Par;
+        if (diff < 0) return "color: var(--rz-success); font-weight: 700;";
+        if (diff == 0) return "font-weight: 600;";
+        if (diff == 1) return "color: var(--rz-warning); font-weight: 700;";
+        return "color: var(--rz-danger); font-weight: 700;";
+    }
+
+    // ===== Step 3: Review & Save Methods =====
+
+    private void BuildPreviewRound()
+    {
+        var teebox = _teeboxOptions.FirstOrDefault(t => t.TeeboxId == _selectedTeeboxId);
+        if (teebox is null) return;
+
+        var isFullRound = _selectedRoundType == "18";
+
+        var roundHoles = _holeEntries.Select(e =>
+        {
+            var holeInfo = _holes.First(h => h.HoleId == e.HoleId);
+            return new RoundHole
+            {
+                HoleId = e.HoleId,
+                HoleNumber = e.HoleNumber,
+                Par = e.Par,
+                Yardage = holeInfo.Yardage,
+                Handicap = holeInfo.Handicap,
+                Score = e.Score,
+                Stats = _trackAdvancedStats ? new RoundHoleStat
+                {
+                    HitFairway = e.HitFairway,
+                    MissFairwayType = e.MissFairwayType,
+                    HitGreen = e.HitGreen,
+                    MissGreenType = e.MissGreenType,
+                    NumberOfPutts = e.NumberOfPutts
+                } : null
+            };
+        }).ToList();
+
+        var stats = ComputeScoringDistribution();
+
+        _previewRound = new RoundResponse
+        {
+            DatePlayed = _datePlayed,
+            Score = _holeEntries.Sum(e => (int)e.Score),
+            ScoreOut = _holeEntries.Where(e => e.HoleNumber <= 9).Sum(e => (int)e.Score),
+            ScoreIn = _holeEntries.Where(e => e.HoleNumber > 9).Sum(e => (int)e.Score),
+            UsingHoleStats = _trackAdvancedStats,
+            FullRound = isFullRound,
+            CourseId = _selectedCourseId!.Value,
+            CourseName = _selectedCourseName,
+            Teebox = new RoundTeebox
+            {
+                TeeboxId = teebox.TeeboxId,
+                TeeboxName = teebox.TeeboxName,
+                Par = teebox.Par,
+                Rating = teebox.Rating,
+                Slope = teebox.Slope,
+                YardageTotal = teebox.YardageTotal,
+                IsNineHole = teebox.IsNineHole
+            },
+            Stats = stats,
+            Holes = roundHoles
+        };
+    }
+
+    private RoundStats ComputeScoringDistribution()
+    {
+        var stats = new RoundStats();
+
+        foreach (var e in _holeEntries)
+        {
+            var diff = e.Score - e.Par;
+            if (diff <= -3)
+            {
+                if (e.Score == 1) stats.HolesInOne++;
+                else stats.DoubleEagles++;
+            }
+            else if (diff == -2) stats.Eagles++;
+            else if (diff == -1) stats.Birdies++;
+            else if (diff == 0) stats.Pars++;
+            else if (diff == 1) stats.Bogeys++;
+            else if (diff == 2) stats.DoubleBogeys++;
+            else stats.TripleOrWorse++;
+        }
+
+        return stats;
+    }
+
+    private async Task SaveRound()
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+
+        _saving = true;
+        StateHasChanged();
+
+        try
+        {
+            var isFullRound = _selectedRoundType == "18";
+
+            var request = new CreateRoundRequest
+            {
+                UserId = _userId,
+                CourseId = _selectedCourseId!.Value,
+                TeeboxId = _selectedTeeboxId!.Value,
+                DatePlayed = _datePlayed,
+                FullRound = isFullRound,
+                FrontNine = isFullRound || _selectedNine == "front",
+                BackNine = isFullRound || _selectedNine == "back",
+                UsingHoleStats = _trackAdvancedStats,
+                Holes = _holeEntries
+            };
+
+            var roundId = await RoundService.CreateRoundAsync(request);
+
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Round Saved",
+                Detail = "Your round at " + _selectedCourseName + " has been saved.",
+                Duration = 4000
+            });
+
+            NavigationManager.NavigateTo("/round/" + roundId);
+        }
+        catch
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = "Failed to save round. Please try again.",
+                Duration = 4000
+            });
+
+            _saving = false;
+        }
+    }
+}
