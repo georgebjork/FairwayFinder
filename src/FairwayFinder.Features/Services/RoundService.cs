@@ -1,4 +1,5 @@
 using FairwayFinder.Data;
+using FairwayFinder.Data.Entities;
 using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -160,5 +161,39 @@ public class RoundService : IRoundService
             roundStat,
             roundHoles
         );
+    }
+
+    public async Task<List<CourseResponse>> GetPlayedCoursesByUserId(string userId, bool? statRounds = null)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        List<Course> courses;
+        if (!statRounds.HasValue)
+        {
+            courses = await dbContext.Courses
+                .Join(dbContext.Rounds.Where(r => r.UserId == userId),
+                    c => c.CourseId,
+                    r => r.CourseId,
+                    (c, r) => c)
+                .Distinct()
+                .ToListAsync();
+        }
+        else
+        {
+            courses = await dbContext.Courses
+                .Join(dbContext.Rounds.Where(r => r.UserId == userId && r.UsingHoleStats == statRounds),
+                    c => c.CourseId,
+                    r => r.CourseId,
+                    (c, r) => c)
+                .Distinct()
+                .ToListAsync();
+        }
+
+        return courses.Select(x => new CourseResponse
+        {
+            CourseId = x.CourseId,
+            CourseName = x.CourseName
+        }).ToList();
+
     }
 }

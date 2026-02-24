@@ -65,15 +65,13 @@ public class StatsService : IStatsService
     
     public async Task<List<CourseOption>> GetUserCoursesAsync(string userId)
     {
-        var rounds = await _roundService.GetRoundsByUserIdAsync(userId);
-        
-        return rounds
-            .Where(r => !r.ExcludeFromStats)
-            .Select(r => new { r.CourseId, r.CourseName })
-            .Distinct()
-            .OrderBy(c => c.CourseName)
-            .Select(c => new CourseOption { CourseId = c.CourseId, CourseName = c.CourseName })
-            .ToList();
+        var courses = await _roundService.GetPlayedCoursesByUserId(userId, true);
+
+        return courses.Select(x => new CourseOption
+        {
+            CourseId = x.CourseId,
+            CourseName = x.CourseName
+        }).ToList();
     }
     
     private static List<RoundResponse> ApplyFilters(List<RoundResponse> rounds, StatsFilter? filter)
