@@ -16,6 +16,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public virtual DbSet<RoundStat> RoundStats { get; set; }
     public virtual DbSet<Score> Scores { get; set; }
     public virtual DbSet<Teebox> Teeboxes { get; set; }
+    public virtual DbSet<TgtrPlayerMap> TgtrPlayerMaps { get; set; }
+    public virtual DbSet<TgtrCourseMap> TgtrCourseMaps { get; set; }
+    public virtual DbSet<TgtrTeeboxMap> TgtrTeeboxMaps { get; set; }
+    public virtual DbSet<TgtrRoundMap> TgtrRoundMaps { get; set; }
     public virtual DbSet<UserInvitation> UserInvitations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -185,6 +189,67 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.YardageIn).HasColumnName("yardage_in");
             entity.Property(e => e.YardageOut).HasColumnName("yardage_out");
             entity.Property(e => e.YardageTotal).HasColumnName("yardage_total");
+        });
+
+        // TgtrPlayerMap
+        modelBuilder.Entity<TgtrPlayerMap>(entity =>
+        {
+            entity.HasKey(e => e.TgtrPlayerMapId).HasName("tgtr_player_map_pkey");
+            entity.ToTable("tgtr_player_map");
+            entity.Property(e => e.TgtrPlayerMapId).HasColumnName("tgtr_player_map_id");
+            entity.Property(e => e.TgtrPlayerId).HasColumnName("tgtr_player_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+            entity.Property(e => e.CreatedOn).HasColumnName("created_on");
+            entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
+            entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+        });
+
+        // TgtrCourseMap
+        modelBuilder.Entity<TgtrCourseMap>(entity =>
+        {
+            entity.HasKey(e => e.TgtrCourseMapId).HasName("tgtr_course_map_pkey");
+            entity.ToTable("tgtr_course_map");
+            entity.Property(e => e.TgtrCourseMapId).HasColumnName("tgtr_course_map_id");
+            entity.Property(e => e.TgtrCourseId).HasColumnName("tgtr_course_id");
+            entity.Property(e => e.CourseId).HasColumnName("course_id");
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+            entity.Property(e => e.CreatedOn).HasColumnName("created_on");
+            entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
+            entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+        });
+
+        // TgtrTeeboxMap
+        modelBuilder.Entity<TgtrTeeboxMap>(entity =>
+        {
+            entity.HasKey(e => e.TgtrTeeboxMapId).HasName("tgtr_teebox_map_pkey");
+            entity.ToTable("tgtr_teebox_map");
+            entity.Property(e => e.TgtrTeeboxMapId).HasColumnName("tgtr_teebox_map_id");
+            entity.Property(e => e.TgtrTeeboxId).HasColumnName("tgtr_teebox_id");
+            entity.Property(e => e.TeeboxId).HasColumnName("teebox_id");
+            entity.Property(e => e.TgtrCourseId).HasColumnName("tgtr_course_id");
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+            entity.Property(e => e.CreatedOn).HasColumnName("created_on");
+            entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
+            entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+        });
+
+        // TgtrRoundMap
+        modelBuilder.Entity<TgtrRoundMap>(entity =>
+        {
+            entity.HasKey(e => e.TgtrRoundMapId).HasName("tgtr_round_map_pkey");
+            entity.ToTable("tgtr_round_map");
+            entity.Property(e => e.TgtrRoundMapId).HasColumnName("tgtr_round_map_id");
+            entity.Property(e => e.TgtrRoundId).HasColumnName("tgtr_round_id");
+            entity.Property(e => e.RoundId).HasColumnName("round_id");
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+            entity.Property(e => e.CreatedOn).HasColumnName("created_on");
+            entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
+            entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
         });
 
         // UserInvitation

@@ -1,6 +1,8 @@
 using FairwayFinder.Data;
+using FairwayFinder.Features.HttpClients;
 using FairwayFinder.Features.Services;
 using FairwayFinder.Features.Services.Interfaces;
+using FairwayFinder.Features.Services.TGTR;
 using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +33,15 @@ builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddTransient<IRoundService, RoundService>();
 builder.Services.AddTransient<IStatsService, StatsService>();
 builder.Services.AddTransient<ICourseService, CourseService>();
+
+// TGTR integration
+builder.Services.AddHttpClient<TgtrHttpClient>(client =>
+{
+    var baseUrl = builder.Configuration["Tgtr:BaseUrl"]
+                  ?? throw new InvalidOperationException("Tgtr:BaseUrl configuration is missing.");
+    client.BaseAddress = new Uri(baseUrl);
+});
+builder.Services.AddTransient<TgtrTransferService>();
 
 var app = builder.Build();
 
