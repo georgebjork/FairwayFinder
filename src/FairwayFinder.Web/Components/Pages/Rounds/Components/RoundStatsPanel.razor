@@ -1,0 +1,155 @@
+@using FairwayFinder.Features.Data
+
+@if (Round is null) { return; }
+
+<RadzenStack Gap="1rem">
+
+    @* ── Fairways, Greens, Putts (only when hole stats are tracked) ── *@
+    @if (Round.UsingHoleStats)
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+            <RadzenCard class="round-stat-card">
+                <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                        Fairways
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">
+                        @FairwayPercent
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                        @Round.FairwaysHit / @Round.FairwaysTotal
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenCard>
+
+            <RadzenCard class="round-stat-card">
+                <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                        Greens
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">
+                        @GreenPercent
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                        @Round.GreensHit / @Round.GreensTotal
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenCard>
+
+            <RadzenCard class="round-stat-card">
+                <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                        Putts
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">
+                        @Round.TotalPutts
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                        @PuttsPerHole per hole
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenCard>
+        </RadzenStack>
+    }
+
+    @* ── Score to Par by Par Type (always shown when hole data exists) ── *@
+    @if (Round.Holes.Count > 0)
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+            @foreach (var parType in ParTypeStats)
+            {
+                <RadzenCard class="round-stat-card">
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                            Par @parType.Par@("s")
+                        </RadzenText>
+                        <RadzenText TextStyle="TextStyle.H3" class="rz-m-0" style="@($"color: {ScoreToParColor(parType.TotalScoreToPar)};")">
+                            @FormatScoreToPar(parType.TotalScoreToPar)
+                        </RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                            @parType.HoleCount @(parType.HoleCount == 1 ? "hole" : "holes")
+                        </RadzenText>
+                    </RadzenStack>
+                </RadzenCard>
+            }
+        </RadzenStack>
+    }
+
+</RadzenStack>
+
+<style>
+    .round-stat-card {
+        text-align: center;
+        min-width: 150px;
+        flex: 1;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public RoundResponse? Round { get; set; }
+
+    private string FairwayPercent =>
+        Round is not null && Round.FairwaysTotal > 0
+            ? $"{(double)Round.FairwaysHit / Round.FairwaysTotal * 100:F1}%"
+            : "-";
+
+    private string GreenPercent =>
+        Round is not null && Round.GreensTotal > 0
+            ? $"{(double)Round.GreensHit / Round.GreensTotal * 100:F1}%"
+            : "-";
+
+    private string PuttsPerHole
+    {
+        get
+        {
+            if (Round is null) return "-";
+            var holesWithPutts = Round.Holes.Count(h => h.Stats?.NumberOfPutts.HasValue == true);
+            return holesWithPutts > 0
+                ? $"{(double)Round.TotalPutts / holesWithPutts:F1}"
+                : "-";
+        }
+    }
+
+    private List<ParTypeStat> ParTypeStats
+    {
+        get
+        {
+            if (Round is null) return [];
+
+            var holesWithScores = Round.Holes.Where(h => h.Score.HasValue).ToList();
+
+            return holesWithScores
+                .GroupBy(h => h.Par)
+                .OrderBy(g => g.Key)
+                .Select(g => new ParTypeStat
+                {
+                    Par = g.Key,
+                    HoleCount = g.Count(),
+                    TotalScoreToPar = g.Sum(h => h.ScoreToPar ?? 0)
+                })
+                .ToList();
+        }
+    }
+
+    private static string FormatScoreToPar(int scoreToPar) => scoreToPar switch
+    {
+        0 => "E",
+        > 0 => $"+{scoreToPar}",
+        _ => scoreToPar.ToString()
+    };
+
+    private static string ScoreToParColor(int scoreToPar)
+    {
+        if (scoreToPar < 0) return "var(--rz-success)";
+        if (scoreToPar == 0) return "var(--rz-info)";
+        return "var(--rz-danger)";
+    }
+
+    private class ParTypeStat
+    {
+        public int Par { get; set; }
+        public int HoleCount { get; set; }
+        public int TotalScoreToPar { get; set; }
+    }
+}

@@ -47,13 +47,15 @@ else
         
         
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Start">
-            <!-- Round Stats -->
+            <!-- Scoring Breakdown Pills -->
             <RoundScoringPills Round="@_round" />
         </RadzenStack>
-        
 
         <!-- Scorecard -->
         <FairwayFinderScorecard Round="@_round" />
+
+        <!-- Round Stats -->
+        <RoundStatsPanel Round="@_round" />
 
         
     </RadzenStack>
