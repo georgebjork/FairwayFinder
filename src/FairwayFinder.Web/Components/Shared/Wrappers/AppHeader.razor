@@ -15,6 +15,13 @@
                                   Click="@(() => NavigationManager.NavigateTo("/round/new"))" />
                 </Authorized>
             </AuthorizeView>
+            <AuthorizeView Roles="Admin">
+                <Authorized>
+                    <RadzenButton Text="Courses" Icon="golf_course" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small"
+                                  Variant="Variant.Outlined"
+                                  Click="@(() => NavigationManager.NavigateTo("/courses"))" />
+                </Authorized>
+            </AuthorizeView>
             <RadzenAppearanceToggle />
             <AuthorizeView>
                 <Authorized>
