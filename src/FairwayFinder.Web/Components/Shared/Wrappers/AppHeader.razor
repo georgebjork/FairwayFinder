@@ -26,6 +26,11 @@
                             </RadzenStack>
                         </Template>
                         <ChildContent>
+                            <AuthorizeView Roles="Admin" Context="adminContext">
+                                <Authorized>
+                                    <RadzenProfileMenuItem Text="Admin" Icon="admin_panel_settings" Path="/admin/tgtr" />
+                                </Authorized>
+                            </AuthorizeView>
                             <RadzenProfileMenuItem Text="Sign Out" Icon="logout" Path="/authentication/logout" />
                         </ChildContent>
                     </RadzenProfileMenu>

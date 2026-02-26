@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using FairwayFinder.Web.Components;
 using FairwayFinder.Web.Components.Auth;
+using FairwayFinder.Web.Services;
 using FairwayFinder.Web.Startup;
 using Radzen;
 
@@ -43,7 +44,16 @@ builder.Services.AddHttpClient<TgtrHttpClient>(client =>
 });
 builder.Services.AddTransient<TgtrTransferService>();
 
+// App Stuff
+builder.Services.AddTransient<IApplicationRoleService, ApplicationRoleService>();
+
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var roleService = scope.ServiceProvider.GetRequiredService<IApplicationRoleService>();
+    await roleService.EnsureRolesExistAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

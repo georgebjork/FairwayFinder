@@ -425,4 +425,98 @@ public class TgtrTransferService
 
         return roundStat;
     }
+
+    // --- Mapping CRUD methods for admin UI ---
+
+    public async Task<List<TgtrPlayerMap>> GetPlayerMapsAsync()
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        return await dbContext.TgtrPlayerMaps
+            .Where(m => !m.IsDeleted)
+            .OrderBy(m => m.TgtrPlayerId)
+            .ToListAsync();
+    }
+
+    public async Task<TgtrPlayerMap> AddPlayerMapAsync(int tgtrPlayerId, string userId, string createdBy)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var map = new TgtrPlayerMap
+        {
+            TgtrPlayerId = tgtrPlayerId,
+            UserId = userId,
+            CreatedBy = createdBy,
+            CreatedOn = today,
+            UpdatedBy = createdBy,
+            UpdatedOn = today,
+            IsDeleted = false
+        };
+
+        dbContext.TgtrPlayerMaps.Add(map);
+        await dbContext.SaveChangesAsync();
+        return map;
+    }
+
+    public async Task<List<TgtrCourseMap>> GetCourseMapsAsync()
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        return await dbContext.TgtrCourseMaps
+            .Where(m => !m.IsDeleted)
+            .OrderBy(m => m.TgtrCourseId)
+            .ToListAsync();
+    }
+
+    public async Task<TgtrCourseMap> AddCourseMapAsync(int tgtrCourseId, long courseId, string createdBy)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var map = new TgtrCourseMap
+        {
+            TgtrCourseId = tgtrCourseId,
+            CourseId = courseId,
+            CreatedBy = createdBy,
+            CreatedOn = today,
+            UpdatedBy = createdBy,
+            UpdatedOn = today,
+            IsDeleted = false
+        };
+
+        dbContext.TgtrCourseMaps.Add(map);
+        await dbContext.SaveChangesAsync();
+        return map;
+    }
+
+    public async Task<List<TgtrTeeboxMap>> GetTeeboxMapsAsync()
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        return await dbContext.TgtrTeeboxMaps
+            .Where(m => !m.IsDeleted)
+            .OrderBy(m => m.TgtrCourseId)
+            .ThenBy(m => m.TgtrTeeboxId)
+            .ToListAsync();
+    }
+
+    public async Task<TgtrTeeboxMap> AddTeeboxMapAsync(int tgtrTeeboxId, long teeboxId, int tgtrCourseId, string createdBy)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var map = new TgtrTeeboxMap
+        {
+            TgtrTeeboxId = tgtrTeeboxId,
+            TeeboxId = teeboxId,
+            TgtrCourseId = tgtrCourseId,
+            CreatedBy = createdBy,
+            CreatedOn = today,
+            UpdatedBy = createdBy,
+            UpdatedOn = today,
+            IsDeleted = false
+        };
+
+        dbContext.TgtrTeeboxMaps.Add(map);
+        await dbContext.SaveChangesAsync();
+        return map;
+    }
 }
