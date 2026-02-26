@@ -39,8 +39,8 @@
     {
         <RadzenCard>
             <RadzenStack Gap="1rem">
-                <RadzenTextBox Placeholder="Search courses by name..." @bind-Value="_searchText"
-                               Change="@OnSearchChanged" Style="width: 100%;" />
+                <RadzenTextBox Placeholder="Search courses by name..." Value="@_searchText"
+                               @oninput="@OnSearchInput" Style="width: 100%;" />
 
                 <RadzenDataGrid Data="@FilteredCourses"
                                 TItem="CourseListItem"
@@ -93,9 +93,9 @@
         _loading = false;
     }
 
-    private void OnSearchChanged(string value)
+    private void OnSearchInput(ChangeEventArgs args)
     {
-        _searchText = value;
+        _searchText = args.Value?.ToString() ?? string.Empty;
     }
 
     private void OnRowClick(DataGridRowMouseEventArgs<CourseListItem> args)
