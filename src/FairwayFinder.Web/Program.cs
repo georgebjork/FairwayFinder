@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using FairwayFinder.Web.Components;
 using FairwayFinder.Web.Components.Auth;
+using FairwayFinder.Web.Components.Shared.Layout;
 using FairwayFinder.Web.Services;
 using FairwayFinder.Web.Startup;
 using Radzen;
@@ -43,6 +44,9 @@ builder.Services.AddHttpClient<TgtrHttpClient>(client =>
     client.BaseAddress = new Uri(baseUrl);
 });
 builder.Services.AddTransient<TgtrTransferService>();
+
+// UI state
+builder.Services.AddScoped<BreadcrumbState>();
 
 // App Stuff
 builder.Services.AddTransient<IApplicationRoleService, ApplicationRoleService>();

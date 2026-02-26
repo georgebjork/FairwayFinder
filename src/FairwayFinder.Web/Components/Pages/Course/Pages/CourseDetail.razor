@@ -10,13 +10,11 @@
 @inject NavigationManager NavigationManager
 @inject NotificationService NotificationService
 @inject DialogService DialogService
+@inject BreadcrumbState BreadcrumbState
 
 <PageTitle>@(_course?.CourseName ?? "Course Detail")</PageTitle>
 
 <RadzenStack Gap="1.5rem" Style="max-width: 1100px;" class="rz-mx-auto rz-p-4">
-
-    @* Back link *@
-    <RadzenLink Path="/courses" Text="Back to Courses" Icon="arrow_back" Style="width: fit-content;" />
 
     @if (_loading)
     {
@@ -147,6 +145,12 @@
         _loading = true;
         _course = await CourseService.GetCourseDetailAsync(CourseId);
         _loading = false;
+
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem("Courses", "/courses"),
+            new BreadcrumbItem(_course?.CourseName ?? "Course Detail")
+        );
     }
 
     private async Task OnEditCourseClicked()

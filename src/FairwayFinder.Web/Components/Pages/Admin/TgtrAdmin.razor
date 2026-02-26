@@ -10,6 +10,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NotificationService NotificationService
 @inject DialogService DialogService
+@inject BreadcrumbState BreadcrumbState
 
 <PageTitle>TGTR Admin</PageTitle>
 
@@ -256,6 +257,11 @@
 
     protected override async Task OnInitializedAsync()
     {
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem("Admin")
+        );
+
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
         await LoadMappingsAsync();

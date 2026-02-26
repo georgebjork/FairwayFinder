@@ -1,8 +1,18 @@
 @page "/course/{CourseId:long}"
+@rendermode InteractiveServer
+@inject BreadcrumbState BreadcrumbState
 
 <h3>CourseStats for id: @CourseId</h3>
 
 @code {
     [Parameter]
     public long CourseId { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem("Course Stats")
+        );
+    }
 }

@@ -1,0 +1,24 @@
+@implements IDisposable
+@inject BreadcrumbState BreadcrumbState
+
+@if (BreadcrumbState.Items.Count > 0)
+{
+    <RadzenBreadCrumb>
+        @foreach (var item in BreadcrumbState.Items)
+        {
+            <RadzenBreadCrumbItem Text="@item.Text" Path="@item.Path" />
+        }
+    </RadzenBreadCrumb>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        BreadcrumbState.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        BreadcrumbState.OnChange -= StateHasChanged;
+    }
+}

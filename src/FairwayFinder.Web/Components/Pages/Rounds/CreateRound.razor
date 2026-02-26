@@ -10,6 +10,7 @@
 @inject IRoundService RoundService
 @inject NavigationManager NavigationManager
 @inject NotificationService NotificationService
+@inject BreadcrumbState BreadcrumbState
 
 <PageTitle>New Round</PageTitle>
 
@@ -549,6 +550,11 @@
 
     protected override async Task OnInitializedAsync()
     {
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem("New Round")
+        );
+
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 

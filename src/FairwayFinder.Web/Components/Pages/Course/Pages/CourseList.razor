@@ -10,6 +10,7 @@
 @inject NavigationManager NavigationManager
 @inject NotificationService NotificationService
 @inject DialogService DialogService
+@inject BreadcrumbState BreadcrumbState
 
 <PageTitle>Course Management</PageTitle>
 
@@ -81,6 +82,11 @@
 
     protected override async Task OnInitializedAsync()
     {
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem("Courses")
+        );
+
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
         await LoadCoursesAsync();
