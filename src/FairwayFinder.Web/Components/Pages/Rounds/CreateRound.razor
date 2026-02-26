@@ -545,15 +545,7 @@
     private int BackNineGreensHit => BackNineEntries.Count(e => e.HitGreen == true);
     private int TotalGreensHit => _holeEntries.Count(e => e.HitGreen == true);
 
-    private List<TeeboxOption> FilteredTeeboxes
-    {
-        get
-        {
-            if (_selectedRoundType == "9")
-                return _teeboxOptions.Where(t => t.IsNineHole).ToList();
-            return _teeboxOptions.Where(t => !t.IsNineHole).ToList();
-        }
-    }
+    private List<TeeboxOption> FilteredTeeboxes => _teeboxOptions;
 
     protected override async Task OnInitializedAsync()
     {
