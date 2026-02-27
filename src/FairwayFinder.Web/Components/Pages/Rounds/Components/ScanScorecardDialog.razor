@@ -82,26 +82,70 @@
                 Multiple players detected. Select a player to apply their scores:
             </RadzenText>
 
-            <RadzenStack Gap="0.75rem">
-                @foreach (var player in _agentResponse.Players)
-                {
-                    <RadzenCard class="rz-p-3" style="@GetPlayerCardStyle(player.PlayerName)"
-                                @onclick="@(() => _selectedPlayerName = player.PlayerName)">
+            <RadzenDropDown TValue="string"
+                            Data="@_agentResponse.Players"
+                            TextProperty="PlayerName"
+                            ValueProperty="PlayerName"
+                            @bind-Value="_selectedPlayerName"
+                            Placeholder="Select a player..."
+                            Style="width: 100%;" />
+
+            @if (SelectedPlayer is not null)
+            {
+                <RadzenCard Variant="Variant.Outlined" class="rz-p-3">
+                    <RadzenStack Gap="0.75rem">
                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
-                            <RadzenStack Gap="0">
-                                <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-m-0">@player.PlayerName</RadzenText>
-                                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
-                                    @player.Scores.Count hole(s) &middot; Total: @player.Scores.Sum(s => s.HoleScore)
-                                </RadzenText>
-                            </RadzenStack>
-                            @if (player.PlayerName == _selectedPlayerName)
-                            {
-                                <RadzenIcon Icon="check_circle" Style="color: var(--rz-primary); font-size: 1.5rem;" />
-                            }
+                            <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-m-0">@SelectedPlayer.PlayerName</RadzenText>
+                            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0">
+                                @SelectedPlayer.Scores.Count holes &middot; Total: @SelectedPlayer.Scores.Sum(s => s.HoleScore)
+                            </RadzenText>
                         </RadzenStack>
-                    </RadzenCard>
-                }
-            </RadzenStack>
+
+                        @{ var frontNine = SelectedPlayer.Scores.Where(s => s.HoleNumber <= 9).OrderBy(s => s.HoleNumber).ToList(); }
+                        @{ var backNine = SelectedPlayer.Scores.Where(s => s.HoleNumber > 9).OrderBy(s => s.HoleNumber).ToList(); }
+
+                        @if (frontNine.Count > 0)
+                        {
+                            <div class="scan-score-grid">
+                                <div class="scan-score-label">Front</div>
+                                @foreach (var s in frontNine)
+                                {
+                                    <div class="scan-score-hole">@s.HoleNumber</div>
+                                }
+                                <div class="scan-score-total">@frontNine.Sum(s => s.HoleScore)</div>
+                            </div>
+                            <div class="scan-score-grid">
+                                <div class="scan-score-label"></div>
+                                @foreach (var s in frontNine)
+                                {
+                                    <div class="scan-score-value">@s.HoleScore</div>
+                                }
+                                <div class="scan-score-total-value">@frontNine.Sum(s => s.HoleScore)</div>
+                            </div>
+                        }
+
+                        @if (backNine.Count > 0)
+                        {
+                            <div class="scan-score-grid" style="margin-top: 0.25rem;">
+                                <div class="scan-score-label">Back</div>
+                                @foreach (var s in backNine)
+                                {
+                                    <div class="scan-score-hole">@s.HoleNumber</div>
+                                }
+                                <div class="scan-score-total">@backNine.Sum(s => s.HoleScore)</div>
+                            </div>
+                            <div class="scan-score-grid">
+                                <div class="scan-score-label"></div>
+                                @foreach (var s in backNine)
+                                {
+                                    <div class="scan-score-value">@s.HoleScore</div>
+                                }
+                                <div class="scan-score-total-value">@backNine.Sum(s => s.HoleScore)</div>
+                            </div>
+                        }
+                    </RadzenStack>
+                </RadzenCard>
+            }
 
             <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
                 <RadzenButton Text="Try Again" Icon="refresh" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
@@ -125,6 +169,8 @@
     private bool _scanning;
     private ScorecardScoresReaderAgentResponse? _agentResponse;
     private string? _selectedPlayerName;
+
+    private Player? SelectedPlayer => _agentResponse?.Players.FirstOrDefault(p => p.PlayerName == _selectedPlayerName);
 
     private async Task OnFileSelected(InputFileChangeEventArgs e)
     {
@@ -207,9 +253,42 @@
         DialogService.Close(player);
     }
 
-    private string GetPlayerCardStyle(string playerName)
-    {
-        var borderColor = playerName == _selectedPlayerName ? "var(--rz-primary)" : "transparent";
-        return $"cursor: pointer; border: 2px solid {borderColor};";
-    }
 }
+
+<style>
+    .scan-score-grid {
+        display: grid;
+        grid-template-columns: 40px repeat(9, 1fr) 40px;
+        gap: 0;
+        text-align: center;
+        font-size: 0.75rem;
+    }
+
+    .scan-score-label {
+        font-weight: 600;
+        color: var(--rz-text-secondary-color);
+        text-align: left;
+    }
+
+    .scan-score-hole {
+        color: var(--rz-text-secondary-color);
+        font-weight: 500;
+    }
+
+    .scan-score-value {
+        font-weight: 700;
+        color: var(--rz-text-color);
+    }
+
+    .scan-score-total {
+        font-weight: 600;
+        color: var(--rz-text-secondary-color);
+        border-left: 1px solid var(--rz-border-color);
+    }
+
+    .scan-score-total-value {
+        font-weight: 700;
+        color: var(--rz-text-color);
+        border-left: 1px solid var(--rz-border-color);
+    }
+</style>
