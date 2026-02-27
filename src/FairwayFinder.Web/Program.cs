@@ -1,3 +1,4 @@
+using FairwayFinder.Agents;
 using FairwayFinder.Data;
 using FairwayFinder.Features.HttpClients;
 using FairwayFinder.Features.Services;
@@ -53,7 +54,11 @@ builder.Services.AddScoped<BreadcrumbState>();
 builder.Services.AddTransient<IApplicationRoleService, ApplicationRoleService>();
 
 // Options
-builder.Services.AddOptions<ClaudeSettings>(builder.Configuration["Claude"]);
+builder.Services.Configure<ClaudeSettings>(builder.Configuration.GetSection("Claude"));
+builder.Services.Configure<OpenAiSettings>(builder.Configuration.GetSection("OpenAI"));
+
+// Agent services
+builder.Services.AddAgentServices();
 
 var app = builder.Build();
 

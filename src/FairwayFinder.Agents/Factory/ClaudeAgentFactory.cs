@@ -1,4 +1,5 @@
 using Anthropic;
+using Anthropic.Services;
 using FairwayFinder.Agents.Factory.Interface;
 using FairwayFinder.Shared.Settings;
 using Microsoft.Agents.AI;
@@ -24,7 +25,7 @@ public class ClaudeAgentFactory : IAgentFactory
 
     public AIAgent Create(string name, string instructions, IList<AITool>? tools = null, string? description = null)
     {
-        return _client.AsAIAgent(
+        return _client.Beta.AsAIAgent(
             model: _claudeSettings.Model,
             name: name,
             instructions: instructions,

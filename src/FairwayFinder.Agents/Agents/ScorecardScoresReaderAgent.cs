@@ -18,8 +18,27 @@ public class ScorecardScoresReaderAgent : BaseAgent<ScorecardScoresReaderAgentRe
 
     public override string AgentIdentifier { get; } = nameof(ScorecardScoresReaderAgent);
 
-    protected override string GetInstructions =>
-        "Read in the scorecard data and output in the proper structured output.";
+    protected override string GetInstructions => """
+        You are a golf scorecard reader. You will receive an image of a golf scorecard.
+
+        Your job is to extract the handwritten hole-by-hole scores for each player.
+
+        For each player found on the scorecard:
+        - Extract their name exactly as written.
+        - Extract their score for each hole played.
+        - Their scores should be all in a row. Usually left to right, but sometimes up and down.
+
+        Rules:
+        - HoleNumber must be the actual hole number (1–18).
+        - HoleScore must be the handwritten stroke count for that hole.
+        - Only include holes where a handwritten score is clearly visible.
+        - Ignore printed values such as par, yardage, handicap, totals, IN/OUT scores, or net scores.
+        - Ignore circles around numbers — the circled number is still the score.
+        - Ignore X marks, GIR, fairway indicators, and putt tracking rows.
+        - If the player's name is not legible, use "Unknown Player" followed by their row position.
+        - If the image is rotated, mentally rotate it before reading.
+        - Ensure hole numbers progress left to right from 1 through 18.
+        """;
 
     /// <summary>
     /// Runs the agent with a single image and returns a typed response.

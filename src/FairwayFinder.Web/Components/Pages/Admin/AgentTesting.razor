@@ -1,0 +1,147 @@
+@page "/admin/agent-testing"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin")]
+@using System.Text.Json
+@using FairwayFinder.Agents.Agents
+@using FairwayFinder.Web.Components.Shared.Layout
+@inject ScorecardScoresReaderAgent ScorecardAgent
+@inject NotificationService NotificationService
+@inject BreadcrumbState BreadcrumbState
+
+<PageTitle>Agent Testing</PageTitle>
+
+<RadzenStack Gap="1.5rem" Style="max-width: 1200px;" class="rz-mx-auto rz-p-4">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+        <RadzenIcon Icon="smart_toy" Style="font-size: 1.75rem;" />
+        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">Agent Testing</RadzenText>
+    </RadzenStack>
+
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1.5rem" AlignItems="AlignItems.Start" Wrap="FlexWrap.Wrap">
+        @* ── Left: Image Input ── *@
+        <RadzenCard Style="flex: 1; min-width: 350px;">
+            <RadzenStack Gap="1rem">
+                <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Scorecard Image</RadzenText>
+
+                <RadzenStack Gap="0.5rem">
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                        Upload a scorecard image to test the Scorecard Scores Reader agent.
+                    </RadzenText>
+                    <InputFile OnChange="OnFileSelected" accept="image/*" />
+                </RadzenStack>
+
+                @if (_imagePreviewUrl is not null)
+                {
+                    <img src="@_imagePreviewUrl" alt="Scorecard preview"
+                         style="max-width: 100%; max-height: 400px; border-radius: var(--rz-border-radius); border: 1px solid var(--rz-border-color);" />
+                }
+
+                <RadzenButton Text="Run Agent" Icon="play_arrow" ButtonStyle="ButtonStyle.Primary"
+                              IsBusy="_processing" BusyText="Processing..."
+                              Click="OnRunAgentClicked"
+                              Disabled="@(_imageData is null || _processing)" />
+            </RadzenStack>
+        </RadzenCard>
+
+        @* ── Right: JSON Output ── *@
+        <RadzenCard Style="flex: 1; min-width: 350px;">
+            <RadzenStack Gap="1rem">
+                <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Agent Response</RadzenText>
+
+                @if (_processing)
+                {
+                    <RadzenStack AlignItems="AlignItems.Center" Gap="0.5rem" class="rz-p-4">
+                        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                            Waiting for agent response...
+                        </RadzenText>
+                    </RadzenStack>
+                }
+                else if (_jsonResult is not null)
+                {
+                    <pre style="background: var(--rz-base-background-color); color: var(--rz-text-color); border: 1px solid var(--rz-border-color); border-radius: var(--rz-border-radius); padding: 1rem; overflow: auto; max-height: 500px; white-space: pre-wrap; word-wrap: break-word; font-size: 0.85rem;">@_jsonResult</pre>
+                }
+                else
+                {
+                    <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                        Upload an image and click "Run Agent" to see results.
+                    </RadzenText>
+                }
+            </RadzenStack>
+        </RadzenCard>
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    private byte[]? _imageData;
+    private string? _imageMediaType;
+    private string? _imagePreviewUrl;
+    private string? _jsonResult;
+    private bool _processing;
+
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+
+    protected override void OnInitialized()
+    {
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem("Agent Testing")
+        );
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        if (!file.ContentType.StartsWith("image/"))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Invalid File",
+                Detail = "Please select an image file.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        // 10 MB limit
+        const long maxSize = 10 * 1024 * 1024;
+        await using var stream = file.OpenReadStream(maxSize);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+
+        _imageData = ms.ToArray();
+        _imageMediaType = file.ContentType;
+        _imagePreviewUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(_imageData)}";
+        _jsonResult = null;
+    }
+
+    private async Task OnRunAgentClicked()
+    {
+        if (_imageData is null || _imageMediaType is null) return;
+
+        _processing = true;
+        _jsonResult = null;
+        StateHasChanged();
+
+        try
+        {
+            var response = await ScorecardAgent.RunAsync(_imageData, _imageMediaType);
+            _jsonResult = JsonSerializer.Serialize(response.Result, JsonOptions);
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Agent Error",
+                Detail = ex.Message,
+                Duration = 8000
+            });
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+}
