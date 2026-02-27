@@ -38,6 +38,8 @@ public class ScorecardScoresReaderAgent : BaseAgent<ScorecardScoresReaderAgentRe
         - If the player's name is not legible, use "Unknown Player" followed by their row position.
         - If the image is rotated, mentally rotate it before reading.
         - Ensure hole numbers progress left to right from 1 through 18.
+        
+        If you cannot find any scores or the image is not a scorecard... then return an empty list.
         """;
 
     /// <summary>

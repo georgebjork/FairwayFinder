@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @attribute [Authorize]
 @using System.Security.Claims
+@using FairwayFinder.Agents.Agents
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
 @using FairwayFinder.Web.Components.Pages.Rounds.Components
@@ -10,6 +11,7 @@
 @inject IRoundService RoundService
 @inject NavigationManager NavigationManager
 @inject NotificationService NotificationService
+@inject DialogService DialogService
 @inject BreadcrumbState BreadcrumbState
 
 <PageTitle>New Round</PageTitle>
@@ -121,7 +123,14 @@
                     <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Scorecard</RadzenText>
                     <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Step 2 of 3 &middot; @_selectedCourseName</RadzenText>
                 </RadzenStack>
-                <RadzenButton Text="Back to Setup" Icon="arrow_back" Variant="Variant.Outlined" Click="@(() => _currentStep = 0)" />
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" AlignItems="AlignItems.Center">
+                    <RadzenButton Text="Scan Scorecard" Icon="photo_camera"
+                                  ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined"
+                                  Click="@OpenScanDialog" />
+                    <RadzenButton Text="Back to Setup" Icon="arrow_back"
+                                  ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                                  Click="@(() => _currentStep = 0)" />
+                </RadzenStack>
             </RadzenStack>
         </RadzenStack>
 
@@ -736,6 +745,40 @@
         if (diff == 0) return "font-weight: 600;";
         if (diff == 1) return "color: var(--rz-warning); font-weight: 700;";
         return "color: var(--rz-danger); font-weight: 700;";
+    }
+
+    // ===== Step 2: Scan Scorecard Methods =====
+
+    private async Task OpenScanDialog()
+    {
+        var result = await DialogService.OpenAsync<ScanScorecardDialog>("Scan Scorecard",
+            new Dictionary<string, object>(),
+            new DialogOptions
+            {
+                Width = "500px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true
+            });
+
+        if (result is Player player)
+        {
+            foreach (var score in player.Scores)
+            {
+                var entry = _holeEntries.FirstOrDefault(e => e.HoleNumber == score.HoleNumber);
+                if (entry is not null && score.HoleScore >= 1 && score.HoleScore <= 15)
+                {
+                    entry.Score = (short)score.HoleScore;
+                }
+            }
+
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Scores Applied",
+                Detail = $"Scores from {player.PlayerName} have been applied to the scorecard.",
+                Duration = 4000
+            });
+        }
     }
 
     // ===== Step 3: Review & Save Methods =====
