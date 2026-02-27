@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairwayFinder.AppHost", "sr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairwayFinder.Features.Tests", "tests\FairwayFinder.Features.Tests\FairwayFinder.Features.Tests.csproj", "{1EFEFFC6-4452-4EE9-872C-2FC2C05D4C7B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FairwayFinder.Agents", "src\FairwayFinder.Agents\FairwayFinder.Agents.csproj", "{84786D15-4A90-41A3-AE05-F09DD26B8380}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,6 +33,7 @@ Global
 		{AB4756D1-7975-4D5B-A9A3-343776A4469B} = {6E4F5D64-A955-4A88-9820-0EF5AB15253D}
 		{0E0EB62E-7775-4107-A76C-E6697D0CC811} = {6E4F5D64-A955-4A88-9820-0EF5AB15253D}
 		{1EFEFFC6-4452-4EE9-872C-2FC2C05D4C7B} = {8B331591-6512-406A-B9BE-0A6F16691350}
+		{84786D15-4A90-41A3-AE05-F09DD26B8380} = {6E4F5D64-A955-4A88-9820-0EF5AB15253D}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{E324C0A6-80FC-4C57-9AA2-E9021DB7B2F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -61,5 +64,9 @@ Global
 		{1EFEFFC6-4452-4EE9-872C-2FC2C05D4C7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1EFEFFC6-4452-4EE9-872C-2FC2C05D4C7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1EFEFFC6-4452-4EE9-872C-2FC2C05D4C7B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{84786D15-4A90-41A3-AE05-F09DD26B8380}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{84786D15-4A90-41A3-AE05-F09DD26B8380}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{84786D15-4A90-41A3-AE05-F09DD26B8380}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{84786D15-4A90-41A3-AE05-F09DD26B8380}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

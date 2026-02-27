@@ -4,6 +4,7 @@ using FairwayFinder.Features.Services;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Features.Services.TGTR;
 using FairwayFinder.Identity;
+using FairwayFinder.Shared.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using FairwayFinder.Web.Components;
@@ -50,6 +51,9 @@ builder.Services.AddScoped<BreadcrumbState>();
 
 // App Stuff
 builder.Services.AddTransient<IApplicationRoleService, ApplicationRoleService>();
+
+// Options
+builder.Services.AddOptions<ClaudeSettings>(builder.Configuration["Claude"]);
 
 var app = builder.Build();
 
