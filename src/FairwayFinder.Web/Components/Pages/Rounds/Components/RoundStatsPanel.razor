@@ -2,155 +2,171 @@
 
 @if (Round is null) { return; }
 
-<div class="stats-layout">
+<RadzenRow Gap="2rem" Style="align-items: start;">
 
     @* ── Left Column: Scoring Breakdown ── *@
-    <div class="stats-column">
+    <RadzenColumn Size="12" SizeLG="5">
         <RadzenStack Gap="0.25rem" class="rz-mb-3">
             <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Scoring Breakdown</RadzenText>
             <hr style="border: none; border-top: 1px solid var(--rz-text-disabled-color); margin: 0;" />
         </RadzenStack>
 
         @* ── Score Count (full width) ── *@
-        <RadzenPanel Text="Score Count" class="stat-panel rz-mb-3">
-            <div class="stat-list-group">
+        <RadzenFieldset Text="Score Count" class="stat-panel rz-mb-3">
+            <RadzenStack Orientation="Orientation.Vertical" Gap="0">
                 @foreach (var item in ScoreCountItems)
                 {
-                    <div class="stat-list-item">
-                        <span>@item.Label:</span>
-                        <span class="stat-value" style="@($"color: {item.Color};")">@item.Value</span>
-                    </div>
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="stat-list-item">
+                        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@item.Label:</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0 stat-value" Style="@($"color: {item.Color};")">@item.Value</RadzenText>
+                    </RadzenStack>
                 }
-            </div>
-        </RadzenPanel>
+            </RadzenStack>
+        </RadzenFieldset>
 
-        <div class="stats-grid">
+        <RadzenRow Gap="1rem">
             @* ── Score To Par ── *@
-            <RadzenPanel Text="Score To Par" class="stat-panel">
-                <div class="stat-list-group">
-                    @foreach (var pt in ParTypeStats)
-                    {
-                        <div class="stat-list-item">
-                            <span>Par @pt.Par:</span>
-                            <span class="stat-value" style="@($"color: {ScoreToParColor(pt.TotalScoreToPar)};")">@FormatScoreToPar(pt.TotalScoreToPar)</span>
-                        </div>
-                    }
-                </div>
-            </RadzenPanel>
+            <RadzenColumn Size="6">
+                <RadzenFieldset Text="Score To Par" class="stat-panel">
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="0">
+                        @foreach (var pt in ParTypeStats)
+                        {
+                            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="stat-list-item">
+                                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">Par @pt.Par:</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0 stat-value" Style="@($"color: {ScoreToParColor(pt.TotalScoreToPar)};")">@FormatScoreToPar(pt.TotalScoreToPar)</RadzenText>
+                            </RadzenStack>
+                        }
+                    </RadzenStack>
+                </RadzenFieldset>
+            </RadzenColumn>
 
             @* ── Avg. Score To Par ── *@
-            <RadzenPanel Text="Avg. Score To Par" class="stat-panel">
-                <div class="stat-list-group">
-                    @foreach (var pt in ParTypeStats)
-                    {
-                        var avg = pt.HoleCount > 0 ? (double)pt.TotalScore / pt.HoleCount : 0;
-                        <div class="stat-list-item">
-                            <span>Par @pt.Par:</span>
-                            <span class="stat-value">@avg.ToString("F2")</span>
-                        </div>
-                    }
-                </div>
-            </RadzenPanel>
+            <RadzenColumn Size="6">
+                <RadzenFieldset Text="Avg. Score To Par" class="stat-panel">
+                    <RadzenStack Orientation="Orientation.Vertical" Gap="0">
+                        @foreach (var pt in ParTypeStats)
+                        {
+                            var avg = pt.HoleCount > 0 ? (double)pt.TotalScore / pt.HoleCount : 0;
+                            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="stat-list-item">
+                                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">Par @pt.Par:</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0 stat-value">@avg.ToString("F2")</RadzenText>
+                            </RadzenStack>
+                        }
+                    </RadzenStack>
+                </RadzenFieldset>
+            </RadzenColumn>
 
             @if (Round.UsingHoleStats)
             {
                 @* ── Avg. Score Fwy Hit ── *@
-                <RadzenPanel Text="Avg. Score Fwy Hit" class="stat-panel">
-                    <div class="stat-list-group">
-                        @foreach (var pt in ParTypeStats)
-                        {
-                            var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitFairway == true).ToList();
-                            var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
-                            <div class="stat-list-item">
-                                <span>Par @pt.Par:</span>
-                                <span class="stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</span>
-                            </div>
-                        }
-                    </div>
-                </RadzenPanel>
+                <RadzenColumn Size="6">
+                    <RadzenFieldset Text="Avg. Score Fwy Hit" class="stat-panel">
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="0">
+                            @foreach (var pt in ParTypeStats)
+                            {
+                                var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitFairway == true).ToList();
+                                var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="stat-list-item">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">Par @pt.Par:</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0 stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</RadzenText>
+                                </RadzenStack>
+                            }
+                        </RadzenStack>
+                    </RadzenFieldset>
+                </RadzenColumn>
 
                 @* ── Avg. Score Fwy Miss ── *@
-                <RadzenPanel Text="Avg. Score Fwy Miss" class="stat-panel">
-                    <div class="stat-list-group">
-                        @foreach (var pt in ParTypeStats)
-                        {
-                            var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitFairway == false).ToList();
-                            var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
-                            <div class="stat-list-item">
-                                <span>Par @pt.Par:</span>
-                                <span class="stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</span>
-                            </div>
-                        }
-                    </div>
-                </RadzenPanel>
+                <RadzenColumn Size="6">
+                    <RadzenFieldset Text="Avg. Score Fwy Miss" class="stat-panel">
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="0">
+                            @foreach (var pt in ParTypeStats)
+                            {
+                                var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitFairway == false).ToList();
+                                var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="stat-list-item">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">Par @pt.Par:</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0 stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</RadzenText>
+                                </RadzenStack>
+                            }
+                        </RadzenStack>
+                    </RadzenFieldset>
+                </RadzenColumn>
 
                 @* ── Avg. Score GIR Hit ── *@
-                <RadzenPanel Text="Avg. Score GIR Hit" class="stat-panel">
-                    <div class="stat-list-group">
-                        @foreach (var pt in ParTypeStats)
-                        {
-                            var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitGreen == true).ToList();
-                            var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
-                            <div class="stat-list-item">
-                                <span>Par @pt.Par:</span>
-                                <span class="stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</span>
-                            </div>
-                        }
-                    </div>
-                </RadzenPanel>
+                <RadzenColumn Size="6">
+                    <RadzenFieldset Text="Avg. Score GIR Hit" class="stat-panel">
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="0">
+                            @foreach (var pt in ParTypeStats)
+                            {
+                                var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitGreen == true).ToList();
+                                var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="stat-list-item">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">Par @pt.Par:</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0 stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</RadzenText>
+                                </RadzenStack>
+                            }
+                        </RadzenStack>
+                    </RadzenFieldset>
+                </RadzenColumn>
 
                 @* ── Avg. Score GIR Miss ── *@
-                <RadzenPanel Text="Avg. Score GIR Miss" class="stat-panel">
-                    <div class="stat-list-group">
-                        @foreach (var pt in ParTypeStats)
-                        {
-                            var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitGreen == false).ToList();
-                            var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
-                            <div class="stat-list-item">
-                                <span>Par @pt.Par:</span>
-                                <span class="stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</span>
-                            </div>
-                        }
-                    </div>
-                </RadzenPanel>
+                <RadzenColumn Size="6">
+                    <RadzenFieldset Text="Avg. Score GIR Miss" class="stat-panel">
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="0">
+                            @foreach (var pt in ParTypeStats)
+                            {
+                                var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitGreen == false).ToList();
+                                var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="stat-list-item">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">Par @pt.Par:</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0 stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</RadzenText>
+                                </RadzenStack>
+                            }
+                        </RadzenStack>
+                    </RadzenFieldset>
+                </RadzenColumn>
 
                 @* ── Avg. Score FWY + GIR Hit ── *@
-                <RadzenPanel Text="Avg. Score FWY+ GIR Hit" class="stat-panel">
-                    <div class="stat-list-group">
-                        @foreach (var pt in ParTypeStats)
-                        {
-                            var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitFairway == true && h.Stats?.HitGreen == true).ToList();
-                            var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
-                            <div class="stat-list-item">
-                                <span>Par @pt.Par:</span>
-                                <span class="stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</span>
-                            </div>
-                        }
-                    </div>
-                </RadzenPanel>
+                <RadzenColumn Size="6">
+                    <RadzenFieldset Text="Avg. Score FWY+ GIR Hit" class="stat-panel">
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="0">
+                            @foreach (var pt in ParTypeStats)
+                            {
+                                var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitFairway == true && h.Stats?.HitGreen == true).ToList();
+                                var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="stat-list-item">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">Par @pt.Par:</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0 stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</RadzenText>
+                                </RadzenStack>
+                            }
+                        </RadzenStack>
+                    </RadzenFieldset>
+                </RadzenColumn>
 
                 @* ── Avg. Score FWY + GIR Miss ── *@
-                <RadzenPanel Text="Avg. Score FWY+ GIR Miss" class="stat-panel">
-                    <div class="stat-list-group">
-                        @foreach (var pt in ParTypeStats)
-                        {
-                            var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitFairway == true && h.Stats?.HitGreen == false).ToList();
-                            var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
-                            <div class="stat-list-item">
-                                <span>Par @pt.Par:</span>
-                                <span class="stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</span>
-                            </div>
-                        }
-                    </div>
-                </RadzenPanel>
+                <RadzenColumn Size="6">
+                    <RadzenFieldset Text="Avg. Score FWY+ GIR Miss" class="stat-panel">
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="0">
+                            @foreach (var pt in ParTypeStats)
+                            {
+                                var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitFairway == true && h.Stats?.HitGreen == false).ToList();
+                                var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="stat-list-item">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">Par @pt.Par:</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0 stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</RadzenText>
+                                </RadzenStack>
+                            }
+                        </RadzenStack>
+                    </RadzenFieldset>
+                </RadzenColumn>
             }
-        </div>
-    </div>
+        </RadzenRow>
+    </RadzenColumn>
 
     @* ── Right Column: Scoring Charts ── *@
     @if (Round.Holes.Count > 0 && Round.Holes.Any(h => h.Score.HasValue))
     {
-        <div class="charts-column">
+        <RadzenColumn Size="12" SizeLG="7">
             <RadzenStack Gap="0.25rem" class="rz-mb-3">
                 <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Scoring Charts</RadzenText>
                 <hr style="border: none; border-top: 1px solid var(--rz-text-disabled-color); margin: 0;" />
@@ -158,7 +174,7 @@
 
             <RadzenStack Gap="1rem">
                 @* ── Score Distribution (Donut) ── *@
-                <RadzenPanel Text="Score Distribution" class="stat-panel">
+                <RadzenFieldset Text="Score Distribution" class="stat-panel">
                     @if (_donutChartData is not null && _donutChartData.Count > 0)
                     {
                         <RadzenChart Style="height: 300px;">
@@ -185,10 +201,10 @@
                             <RadzenLegend Position="LegendPosition.Bottom" />
                         </RadzenChart>
                     }
-                </RadzenPanel>
+                </RadzenFieldset>
 
                 @* ── Score To Par (Line) ── *@
-                <RadzenPanel Text="Score To Par" class="stat-panel">
+                <RadzenFieldset Text="Score To Par" class="stat-panel">
                     @if (_scoreToParChartData is not null && _scoreToParChartData.Count > 0)
                     {
                         <RadzenChart Style="height: 300px;">
@@ -219,61 +235,28 @@
                             <RadzenLegend Visible="false" />
                         </RadzenChart>
                     }
-                </RadzenPanel>
+                </RadzenFieldset>
             </RadzenStack>
-        </div>
+        </RadzenColumn>
     }
 
-</div>
+</RadzenRow>
 
 <style>
-    /* ── Two-column layout ── */
-    .stats-layout {
-        display: grid;
-        grid-template-columns: 5fr 7fr;
-        gap: 2rem;
-        align-items: start;
-    }
-
-    @@media (max-width: 1024px) {
-        .stats-layout {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    .stats-column,
-    .charts-column {
-        min-width: 0;
-    }
-
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 1rem;
-    }
-
-    /* ── Panel card styling ── */
+    /* ── Fieldset card styling ── */
     .stat-panel {
         border: 1px solid var(--rz-text-disabled-color);
         border-radius: var(--rz-border-radius);
         overflow: hidden;
     }
 
-    /* Remove default panel body padding so list items go edge-to-edge */
-    .stat-panel :deep(.rz-panel-content) {
+    /* Remove default fieldset body padding so list items go edge-to-edge */
+    .stat-panel :deep(.rz-fieldset-content) {
         padding: 0;
     }
 
-    /* ── List group (Bootstrap list-group-flush equivalent) ── */
-    .stat-list-group {
-        display: flex;
-        flex-direction: column;
-    }
-
+    /* ── List item styling (border separator + padding) ── */
     .stat-list-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
         padding: 0.625rem 1rem;
         font-size: 0.875rem;
         border-bottom: 1px solid var(--rz-text-disabled-color);
