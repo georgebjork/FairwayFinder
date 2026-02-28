@@ -29,4 +29,10 @@ public interface IRoundService
     /// Returns the new round ID.
     /// </summary>
     Task<long> CreateRoundAsync(CreateRoundRequest request);
+
+    /// <summary>
+    /// Updates an existing round's teebox, date, scores, hole stats, and round stats.
+    /// Returns false if the round was not found or the user does not own it.
+    /// </summary>
+    Task<bool> UpdateRoundAsync(UpdateRoundRequest request);
 }

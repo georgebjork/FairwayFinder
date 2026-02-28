@@ -1,0 +1,415 @@
+@page "/round/{RoundId:long}/edit"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Security.Claims
+@using FairwayFinder.Agents.Agents
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Web.Components.Pages.Rounds.Components
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ICourseService CourseService
+@inject IRoundService RoundService
+@inject NavigationManager NavigationManager
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+@inject BreadcrumbState BreadcrumbState
+
+<PageTitle>Edit Round</PageTitle>
+
+@if (_loading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" class="rz-p-8">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (_loadError)
+{
+    <RadzenCard class="rz-p-5">
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
+            Round not found or you do not have permission to edit it.
+        </RadzenAlert>
+        <RadzenButton Text="Back to Home" Icon="arrow_back" ButtonStyle="ButtonStyle.Secondary"
+                      Click="@(() => NavigationManager.NavigateTo("/"))" class="rz-mt-4" />
+    </RadzenCard>
+}
+else
+{
+    <RadzenStack Gap="1.5rem" class="rz-p-4">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+            <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">Edit Round</RadzenText>
+            <RadzenButton Text="Cancel" Variant="Variant.Text" Click="@(() => NavigationManager.NavigateTo($"/round/{RoundId}"))" />
+        </RadzenStack>
+
+        @if (_currentStep == 0)
+        {
+            <EditRoundSetup State="_state"
+                            OnTeeboxSelected="OnTeeboxChanged"
+                            OnNext="GoToScorecard" />
+        }
+        else if (_currentStep == 1 && _state.HoleEntries.Count > 0)
+        {
+            <CreateRoundScorecard State="_state"
+                                  OnBack="@(() => _currentStep = 0)"
+                                  OnReview="GoToReview"
+                                  OnScanScorecard="OpenScanDialog" />
+        }
+        else if (_currentStep == 2 && _state.PreviewRound is not null)
+        {
+            <CreateRoundReview State="_state"
+                               Saving="_saving"
+                               OnBack="@BackToScorecard"
+                               OnSave="SaveRound" />
+        }
+    </RadzenStack>
+}
+
+@code {
+    [Parameter]
+    public long RoundId { get; set; }
+
+    private string? _userId;
+    private int _currentStep;
+    private bool _saving;
+    private bool _loading = true;
+    private bool _loadError;
+    private long _previousTeeboxId;
+    private readonly CreateRoundState _state = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Authenticate
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        }
+
+        if (string.IsNullOrEmpty(_userId))
+        {
+            NavigationManager.NavigateTo("/");
+            return;
+        }
+
+        // Load the existing round
+        var round = await RoundService.GetRoundByIdAsync(RoundId);
+        if (round is null)
+        {
+            _loadError = true;
+            _loading = false;
+            return;
+        }
+
+        // Load teeboxes for the course
+        var teeboxes = await CourseService.GetTeeboxesAsync(round.CourseId);
+
+        // Load holes for current teebox
+        var holes = await CourseService.GetHolesAsync(round.Teebox.TeeboxId);
+
+        // Determine round type
+        var isFullRound = round.FullRound;
+        var isFrontNine = round.Holes.All(h => h.HoleNumber <= 9);
+
+        // Pre-populate state
+        _state.SelectedCourseId = round.CourseId;
+        _state.SelectedCourseName = round.CourseName;
+        _state.TeeboxOptions = teeboxes;
+        _state.SelectedTeeboxId = round.Teebox.TeeboxId;
+        _state.SelectedTeeboxName = round.Teebox.TeeboxName;
+        _state.SelectedRoundType = isFullRound ? "18" : "9";
+        _state.SelectedNine = isFrontNine ? "front" : "back";
+        _state.DatePlayed = round.DatePlayed;
+        _state.TrackAdvancedStats = round.UsingHoleStats;
+
+        // Filter holes for 9-hole rounds
+        if (!isFullRound)
+        {
+            holes = isFrontNine
+                ? holes.Where(h => h.HoleNumber <= 9).ToList()
+                : holes.Where(h => h.HoleNumber > 9).ToList();
+        }
+
+        _state.Holes = holes;
+
+        // Map existing scores/stats into HoleScoreEntry list
+        _state.HoleEntries = holes.Select(h =>
+        {
+            var existingHole = round.Holes.FirstOrDefault(rh => rh.HoleNumber == h.HoleNumber);
+            return new HoleScoreEntry
+            {
+                HoleId = h.HoleId,
+                HoleNumber = h.HoleNumber,
+                Par = h.Par,
+                Score = existingHole?.Score ?? (short)h.Par,
+                HitFairway = existingHole?.Stats?.HitFairway,
+                MissFairwayType = existingHole?.Stats?.MissFairwayType,
+                HitGreen = existingHole?.Stats?.HitGreen,
+                MissGreenType = existingHole?.Stats?.MissGreenType,
+                NumberOfPutts = existingHole?.Stats?.NumberOfPutts ?? (round.UsingHoleStats ? (short)2 : null)
+            };
+        }).ToList();
+
+        _previousTeeboxId = round.Teebox.TeeboxId;
+
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem($"{round.CourseName} - {round.DatePlayed:M/d/yy}", $"/round/{RoundId}"),
+            new BreadcrumbItem("Edit")
+        );
+
+        _loading = false;
+    }
+
+    // ===== Step Navigation =====
+
+    private async Task GoToScorecard()
+    {
+        // If teebox changed, reload holes and remap entries
+        if (_state.SelectedTeeboxId.HasValue && _state.SelectedTeeboxId.Value != _previousTeeboxId)
+        {
+            await ReloadHolesForTeebox();
+            _previousTeeboxId = _state.SelectedTeeboxId.Value;
+        }
+
+        // If advanced stats were just turned on but entries don't have putts defaults, set them
+        if (_state.TrackAdvancedStats)
+        {
+            foreach (var entry in _state.HoleEntries)
+            {
+                entry.NumberOfPutts ??= 2;
+            }
+        }
+
+        _currentStep = 1;
+    }
+
+    private void GoToReview()
+    {
+        BuildPreviewRound();
+        _currentStep = 2;
+    }
+
+    private void BackToScorecard()
+    {
+        _currentStep = 1;
+    }
+
+    // ===== Teebox Change =====
+
+    private async Task OnTeeboxChanged()
+    {
+        // Nothing to do here — the actual reload happens when transitioning to scorecard step
+        // This keeps the UX snappy and avoids unnecessary API calls if user changes teebox multiple times
+        await Task.CompletedTask;
+    }
+
+    private async Task ReloadHolesForTeebox()
+    {
+        if (!_state.SelectedTeeboxId.HasValue) return;
+
+        var allHoles = await CourseService.GetHolesAsync(_state.SelectedTeeboxId.Value);
+
+        if (_state.SelectedRoundType == "9")
+        {
+            allHoles = _state.SelectedNine == "front"
+                ? allHoles.Where(h => h.HoleNumber <= 9).ToList()
+                : allHoles.Where(h => h.HoleNumber > 9).ToList();
+        }
+
+        // Preserve existing scores by hole number
+        var oldEntries = _state.HoleEntries.ToDictionary(e => e.HoleNumber);
+
+        _state.Holes = allHoles;
+        _state.HoleEntries = allHoles.Select(h =>
+        {
+            var preserved = oldEntries.GetValueOrDefault(h.HoleNumber);
+            return new HoleScoreEntry
+            {
+                HoleId = h.HoleId,
+                HoleNumber = h.HoleNumber,
+                Par = h.Par,
+                Score = preserved?.Score ?? (short)h.Par,
+                HitFairway = preserved?.HitFairway,
+                MissFairwayType = preserved?.MissFairwayType,
+                HitGreen = preserved?.HitGreen,
+                MissGreenType = preserved?.MissGreenType,
+                NumberOfPutts = preserved?.NumberOfPutts ?? (_state.TrackAdvancedStats ? (short)2 : null)
+            };
+        }).ToList();
+    }
+
+    // ===== Scan Scorecard =====
+
+    private async Task OpenScanDialog()
+    {
+        var result = await DialogService.OpenAsync<ScanScorecardDialog>("Scan Scorecard",
+            new Dictionary<string, object>(),
+            new DialogOptions
+            {
+                Width = "500px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true
+            });
+
+        if (result is Player player)
+        {
+            foreach (var score in player.Scores)
+            {
+                var entry = _state.HoleEntries.FirstOrDefault(e => e.HoleNumber == score.HoleNumber);
+                if (entry is not null && score.HoleScore >= 1 && score.HoleScore <= 15)
+                {
+                    entry.Score = (short)score.HoleScore;
+                }
+            }
+
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Scores Applied",
+                Detail = $"Scores from {player.PlayerName} have been applied to the scorecard.",
+                Duration = 4000
+            });
+        }
+    }
+
+    // ===== Review & Save =====
+
+    private void BuildPreviewRound()
+    {
+        var teebox = _state.TeeboxOptions.FirstOrDefault(t => t.TeeboxId == _state.SelectedTeeboxId);
+        if (teebox is null) return;
+
+        var roundHoles = _state.HoleEntries.Select(e =>
+        {
+            var holeInfo = _state.Holes.First(h => h.HoleId == e.HoleId);
+            return new RoundHole
+            {
+                HoleId = e.HoleId,
+                HoleNumber = e.HoleNumber,
+                Par = e.Par,
+                Yardage = holeInfo.Yardage,
+                Handicap = holeInfo.Handicap,
+                Score = e.Score,
+                Stats = _state.TrackAdvancedStats ? new RoundHoleStat
+                {
+                    HitFairway = e.HitFairway,
+                    MissFairwayType = e.MissFairwayType,
+                    HitGreen = e.HitGreen,
+                    MissGreenType = e.MissGreenType,
+                    NumberOfPutts = e.NumberOfPutts
+                } : null
+            };
+        }).ToList();
+
+        var stats = ComputeScoringDistribution();
+
+        _state.PreviewRound = new RoundResponse
+        {
+            RoundId = RoundId,
+            DatePlayed = _state.DatePlayed,
+            Score = _state.HoleEntries.Sum(e => (int)e.Score),
+            ScoreOut = _state.HoleEntries.Where(e => e.HoleNumber <= 9).Sum(e => (int)e.Score),
+            ScoreIn = _state.HoleEntries.Where(e => e.HoleNumber > 9).Sum(e => (int)e.Score),
+            UsingHoleStats = _state.TrackAdvancedStats,
+            FullRound = _state.SelectedRoundType == "18",
+            CourseId = _state.SelectedCourseId!.Value,
+            CourseName = _state.SelectedCourseName,
+            Teebox = new RoundTeebox
+            {
+                TeeboxId = teebox.TeeboxId,
+                TeeboxName = teebox.TeeboxName,
+                Par = teebox.Par,
+                Rating = teebox.Rating,
+                Slope = teebox.Slope,
+                YardageTotal = teebox.YardageTotal,
+                IsNineHole = teebox.IsNineHole
+            },
+            Stats = stats,
+            Holes = roundHoles
+        };
+    }
+
+    private RoundStats ComputeScoringDistribution()
+    {
+        var stats = new RoundStats();
+
+        foreach (var e in _state.HoleEntries)
+        {
+            var diff = e.Score - e.Par;
+            if (diff <= -3)
+            {
+                if (e.Score == 1) stats.HolesInOne++;
+                else stats.DoubleEagles++;
+            }
+            else if (diff == -2) stats.Eagles++;
+            else if (diff == -1) stats.Birdies++;
+            else if (diff == 0) stats.Pars++;
+            else if (diff == 1) stats.Bogeys++;
+            else if (diff == 2) stats.DoubleBogeys++;
+            else stats.TripleOrWorse++;
+        }
+
+        return stats;
+    }
+
+    private async Task SaveRound()
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+
+        _saving = true;
+        StateHasChanged();
+
+        try
+        {
+            var request = new UpdateRoundRequest
+            {
+                RoundId = RoundId,
+                UserId = _userId,
+                TeeboxId = _state.SelectedTeeboxId!.Value,
+                DatePlayed = _state.DatePlayed,
+                UsingHoleStats = _state.TrackAdvancedStats,
+                Holes = _state.HoleEntries
+            };
+
+            var success = await RoundService.UpdateRoundAsync(request);
+
+            if (success)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Round Updated",
+                    Detail = "Your round at " + _state.SelectedCourseName + " has been updated.",
+                    Duration = 4000
+                });
+
+                NavigationManager.NavigateTo($"/round/{RoundId}");
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = "Failed to update round. You may not have permission to edit this round.",
+                    Duration = 4000
+                });
+
+                _saving = false;
+            }
+        }
+        catch
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Error",
+                Detail = "Failed to update round. Please try again.",
+                Duration = 4000
+            });
+
+            _saving = false;
+        }
+    }
+}
