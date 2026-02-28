@@ -2,86 +2,289 @@
 
 @if (Round is null) { return; }
 
-<RadzenStack Gap="1rem">
+<div class="stats-layout">
 
-    @* ── Fairways, Greens, Putts (only when hole stats are tracked) ── *@
-    @if (Round.UsingHoleStats)
-    {
-        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
-            <RadzenCard class="round-stat-card">
-                <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
-                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
-                        Fairways
-                    </RadzenText>
-                    <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">
-                        @FairwayPercent
-                    </RadzenText>
-                    <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
-                        @Round.FairwaysHit / @Round.FairwaysTotal
-                    </RadzenText>
-                </RadzenStack>
-            </RadzenCard>
-
-            <RadzenCard class="round-stat-card">
-                <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
-                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
-                        Greens
-                    </RadzenText>
-                    <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">
-                        @GreenPercent
-                    </RadzenText>
-                    <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
-                        @Round.GreensHit / @Round.GreensTotal
-                    </RadzenText>
-                </RadzenStack>
-            </RadzenCard>
-
-            <RadzenCard class="round-stat-card">
-                <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
-                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
-                        Putts
-                    </RadzenText>
-                    <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">
-                        @Round.TotalPutts
-                    </RadzenText>
-                    <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
-                        @PuttsPerHole per hole
-                    </RadzenText>
-                </RadzenStack>
-            </RadzenCard>
+    @* ── Left Column: Scoring Breakdown ── *@
+    <div class="stats-column">
+        <RadzenStack Gap="0.25rem" class="rz-mb-3">
+            <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Scoring Breakdown</RadzenText>
+            <hr style="border: none; border-top: 1px solid var(--rz-text-disabled-color); margin: 0;" />
         </RadzenStack>
-    }
 
-    @* ── Score to Par by Par Type (always shown when hole data exists) ── *@
-    @if (Round.Holes.Count > 0)
-    {
-        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
-            @foreach (var parType in ParTypeStats)
+        @* ── Score Count (full width) ── *@
+        <RadzenPanel Text="Score Count" class="stat-panel rz-mb-3">
+            <div class="stat-list-group">
+                @foreach (var item in ScoreCountItems)
+                {
+                    <div class="stat-list-item">
+                        <span>@item.Label:</span>
+                        <span class="stat-value" style="@($"color: {item.Color};")">@item.Value</span>
+                    </div>
+                }
+            </div>
+        </RadzenPanel>
+
+        <div class="stats-grid">
+            @* ── Score To Par ── *@
+            <RadzenPanel Text="Score To Par" class="stat-panel">
+                <div class="stat-list-group">
+                    @foreach (var pt in ParTypeStats)
+                    {
+                        <div class="stat-list-item">
+                            <span>Par @pt.Par:</span>
+                            <span class="stat-value" style="@($"color: {ScoreToParColor(pt.TotalScoreToPar)};")">@FormatScoreToPar(pt.TotalScoreToPar)</span>
+                        </div>
+                    }
+                </div>
+            </RadzenPanel>
+
+            @* ── Avg. Score To Par ── *@
+            <RadzenPanel Text="Avg. Score To Par" class="stat-panel">
+                <div class="stat-list-group">
+                    @foreach (var pt in ParTypeStats)
+                    {
+                        var avg = pt.HoleCount > 0 ? (double)pt.TotalScore / pt.HoleCount : 0;
+                        <div class="stat-list-item">
+                            <span>Par @pt.Par:</span>
+                            <span class="stat-value">@avg.ToString("F2")</span>
+                        </div>
+                    }
+                </div>
+            </RadzenPanel>
+
+            @if (Round.UsingHoleStats)
             {
-                <RadzenCard class="round-stat-card">
-                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
-                        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
-                            Par @parType.Par@("s")
-                        </RadzenText>
-                        <RadzenText TextStyle="TextStyle.H3" class="rz-m-0" style="@($"color: {ScoreToParColor(parType.TotalScoreToPar)};")">
-                            @FormatScoreToPar(parType.TotalScoreToPar)
-                        </RadzenText>
-                        <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
-                            @parType.HoleCount @(parType.HoleCount == 1 ? "hole" : "holes")
-                        </RadzenText>
-                    </RadzenStack>
-                </RadzenCard>
+                @* ── Avg. Score Fwy Hit ── *@
+                <RadzenPanel Text="Avg. Score Fwy Hit" class="stat-panel">
+                    <div class="stat-list-group">
+                        @foreach (var pt in ParTypeStats)
+                        {
+                            var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitFairway == true).ToList();
+                            var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                            <div class="stat-list-item">
+                                <span>Par @pt.Par:</span>
+                                <span class="stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</span>
+                            </div>
+                        }
+                    </div>
+                </RadzenPanel>
+
+                @* ── Avg. Score Fwy Miss ── *@
+                <RadzenPanel Text="Avg. Score Fwy Miss" class="stat-panel">
+                    <div class="stat-list-group">
+                        @foreach (var pt in ParTypeStats)
+                        {
+                            var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitFairway == false).ToList();
+                            var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                            <div class="stat-list-item">
+                                <span>Par @pt.Par:</span>
+                                <span class="stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</span>
+                            </div>
+                        }
+                    </div>
+                </RadzenPanel>
+
+                @* ── Avg. Score GIR Hit ── *@
+                <RadzenPanel Text="Avg. Score GIR Hit" class="stat-panel">
+                    <div class="stat-list-group">
+                        @foreach (var pt in ParTypeStats)
+                        {
+                            var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitGreen == true).ToList();
+                            var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                            <div class="stat-list-item">
+                                <span>Par @pt.Par:</span>
+                                <span class="stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</span>
+                            </div>
+                        }
+                    </div>
+                </RadzenPanel>
+
+                @* ── Avg. Score GIR Miss ── *@
+                <RadzenPanel Text="Avg. Score GIR Miss" class="stat-panel">
+                    <div class="stat-list-group">
+                        @foreach (var pt in ParTypeStats)
+                        {
+                            var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitGreen == false).ToList();
+                            var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                            <div class="stat-list-item">
+                                <span>Par @pt.Par:</span>
+                                <span class="stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</span>
+                            </div>
+                        }
+                    </div>
+                </RadzenPanel>
+
+                @* ── Avg. Score FWY + GIR Hit ── *@
+                <RadzenPanel Text="Avg. Score FWY+ GIR Hit" class="stat-panel">
+                    <div class="stat-list-group">
+                        @foreach (var pt in ParTypeStats)
+                        {
+                            var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitFairway == true && h.Stats?.HitGreen == true).ToList();
+                            var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                            <div class="stat-list-item">
+                                <span>Par @pt.Par:</span>
+                                <span class="stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</span>
+                            </div>
+                        }
+                    </div>
+                </RadzenPanel>
+
+                @* ── Avg. Score FWY + GIR Miss ── *@
+                <RadzenPanel Text="Avg. Score FWY+ GIR Miss" class="stat-panel">
+                    <div class="stat-list-group">
+                        @foreach (var pt in ParTypeStats)
+                        {
+                            var holes = HolesForPar(pt.Par).Where(h => h.Stats?.HitFairway == true && h.Stats?.HitGreen == false).ToList();
+                            var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                            <div class="stat-list-item">
+                                <span>Par @pt.Par:</span>
+                                <span class="stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</span>
+                            </div>
+                        }
+                    </div>
+                </RadzenPanel>
             }
-        </RadzenStack>
+        </div>
+    </div>
+
+    @* ── Right Column: Scoring Charts ── *@
+    @if (Round.Holes.Count > 0 && Round.Holes.Any(h => h.Score.HasValue))
+    {
+        <div class="charts-column">
+            <RadzenStack Gap="0.25rem" class="rz-mb-3">
+                <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Scoring Charts</RadzenText>
+                <hr style="border: none; border-top: 1px solid var(--rz-text-disabled-color); margin: 0;" />
+            </RadzenStack>
+
+            <RadzenStack Gap="1rem">
+                @* ── Score Distribution (Donut) ── *@
+                <RadzenPanel Text="Score Distribution" class="stat-panel">
+                    @if (_donutChartData is not null && _donutChartData.Count > 0)
+                    {
+                        <RadzenChart Style="height: 300px;">
+                            <RadzenDonutSeries Data="@_donutChartData"
+                                               CategoryProperty="Category"
+                                               ValueProperty="Count"
+                                               Fills="@_donutColors"
+                                               Title="Scoring">
+                                <TitleTemplate>
+                                    <div class="rz-donut-content">
+                                        <div style="font-size: 1.5rem; font-weight: 600; line-height: 1.2;">@Round.Holes.Count(h => h.Score.HasValue)</div>
+                                        <div style="font-size: 0.75rem; color: var(--rz-text-secondary-color);">holes</div>
+                                    </div>
+                                </TitleTemplate>
+                                <TooltipTemplate Context="data">
+                                    <div class="rz-p-2">
+                                        <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-1">@data.Category</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Body2">
+                                            <strong>@data.Count</strong> holes
+                                        </RadzenText>
+                                    </div>
+                                </TooltipTemplate>
+                            </RadzenDonutSeries>
+                            <RadzenLegend Position="LegendPosition.Bottom" />
+                        </RadzenChart>
+                    }
+                </RadzenPanel>
+
+                @* ── Score To Par (Line) ── *@
+                <RadzenPanel Text="Score To Par" class="stat-panel">
+                    @if (_scoreToParChartData is not null && _scoreToParChartData.Count > 0)
+                    {
+                        <RadzenChart Style="height: 300px;">
+                            <RadzenLineSeries Data="@_scoreToParChartData"
+                                              CategoryProperty="HoleLabel"
+                                              ValueProperty="CumulativeScoreToPar"
+                                              Title="Score to Par"
+                                              Smooth="false">
+                                <TooltipTemplate Context="data">
+                                    <div class="rz-p-2">
+                                        <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-1">Hole @data.HoleNumber</RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Body2">
+                                            Score: <strong>@data.Score</strong> (Par @data.Par)
+                                        </RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Body2">
+                                            Cumulative: <strong>@FormatScoreToPar(data.CumulativeScoreToPar)</strong>
+                                        </RadzenText>
+                                    </div>
+                                </TooltipTemplate>
+                            </RadzenLineSeries>
+                            <RadzenValueAxis>
+                                <RadzenGridLines Visible="true" />
+                                <RadzenAxisTitle Text="Score to Par" />
+                            </RadzenValueAxis>
+                            <RadzenCategoryAxis>
+                                <RadzenAxisTitle Text="Hole" />
+                            </RadzenCategoryAxis>
+                            <RadzenLegend Visible="false" />
+                        </RadzenChart>
+                    }
+                </RadzenPanel>
+            </RadzenStack>
+        </div>
     }
 
-</RadzenStack>
+</div>
 
 <style>
-    .round-stat-card {
-        text-align: center;
-        min-width: 150px;
-        flex: 1;
+    /* ── Two-column layout ── */
+    .stats-layout {
+        display: grid;
+        grid-template-columns: 5fr 7fr;
+        gap: 2rem;
+        align-items: start;
+    }
+
+    @@media (max-width: 1024px) {
+        .stats-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .stats-column,
+    .charts-column {
+        min-width: 0;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    /* ── Panel card styling ── */
+    .stat-panel {
+        border: 1px solid var(--rz-text-disabled-color);
+        border-radius: var(--rz-border-radius);
+        overflow: hidden;
+    }
+
+    /* Remove default panel body padding so list items go edge-to-edge */
+    .stat-panel :deep(.rz-panel-content) {
+        padding: 0;
+    }
+
+    /* ── List group (Bootstrap list-group-flush equivalent) ── */
+    .stat-list-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+        border-bottom: 1px solid var(--rz-text-disabled-color);
+    }
+
+    .stat-list-item:last-child {
+        border-bottom: none;
+    }
+
+    .stat-value {
+        font-weight: 600;
     }
 </style>
 
@@ -89,44 +292,114 @@
     [Parameter]
     public RoundResponse? Round { get; set; }
 
-    private string FairwayPercent =>
-        Round is not null && Round.FairwaysTotal > 0
-            ? $"{(double)Round.FairwaysHit / Round.FairwaysTotal * 100:F1}%"
-            : "-";
+    // Chart data
+    private List<ScoringChartItem>? _donutChartData;
+    private List<ScoreToParChartItem>? _scoreToParChartData;
 
-    private string GreenPercent =>
-        Round is not null && Round.GreensTotal > 0
-            ? $"{(double)Round.GreensHit / Round.GreensTotal * 100:F1}%"
-            : "-";
+    private string[] _donutColors = new[]
+    {
+        "#1b5e20", // Eagles (dark green)
+        "#4caf50", // Birdies (green)
+        "#2196f3", // Pars (blue)
+        "#ff9800", // Bogeys (orange)
+        "#f44336", // Double Bogeys (red)
+        "#b71c1c"  // Triple+ (dark red)
+    };
 
-    private string PuttsPerHole
+    protected override void OnParametersSet()
+    {
+        BuildDonutChartData();
+        BuildScoreToParChartData();
+    }
+
+    private void BuildDonutChartData()
+    {
+        if (Round?.Stats is null) { _donutChartData = null; return; }
+
+        var eaglesTotal = Round.Stats.HolesInOne + Round.Stats.DoubleEagles + Round.Stats.Eagles;
+
+        _donutChartData = new List<ScoringChartItem>();
+
+        if (eaglesTotal > 0)
+            _donutChartData.Add(new ScoringChartItem { Category = "Eagles", Count = eaglesTotal });
+        if (Round.Stats.Birdies > 0)
+            _donutChartData.Add(new ScoringChartItem { Category = "Birdies", Count = Round.Stats.Birdies });
+        if (Round.Stats.Pars > 0)
+            _donutChartData.Add(new ScoringChartItem { Category = "Pars", Count = Round.Stats.Pars });
+        if (Round.Stats.Bogeys > 0)
+            _donutChartData.Add(new ScoringChartItem { Category = "Bogeys", Count = Round.Stats.Bogeys });
+        if (Round.Stats.DoubleBogeys > 0)
+            _donutChartData.Add(new ScoringChartItem { Category = "Double Bogeys", Count = Round.Stats.DoubleBogeys });
+        if (Round.Stats.TripleOrWorse > 0)
+            _donutChartData.Add(new ScoringChartItem { Category = "Triple+", Count = Round.Stats.TripleOrWorse });
+    }
+
+    private void BuildScoreToParChartData()
+    {
+        if (Round is null || Round.Holes.Count == 0) { _scoreToParChartData = null; return; }
+
+        var holesWithScores = Round.Holes
+            .Where(h => h.Score.HasValue)
+            .OrderBy(h => h.HoleNumber)
+            .ToList();
+
+        if (holesWithScores.Count == 0) { _scoreToParChartData = null; return; }
+
+        var cumulative = 0;
+        _scoreToParChartData = holesWithScores.Select(h =>
+        {
+            cumulative += h.ScoreToPar ?? 0;
+            return new ScoreToParChartItem
+            {
+                HoleNumber = h.HoleNumber,
+                HoleLabel = h.HoleNumber.ToString(),
+                Par = h.Par,
+                Score = h.Score!.Value,
+                CumulativeScoreToPar = cumulative
+            };
+        }).ToList();
+    }
+
+    // Cached hole lookup by par
+    private List<RoundHole> HolesForPar(int par) =>
+        Round?.Holes.Where(h => h.Score.HasValue && h.Par == par).ToList() ?? [];
+
+    // Score count items
+    private List<ScoreCountItem> ScoreCountItems
     {
         get
         {
-            if (Round is null) return "-";
-            var holesWithPutts = Round.Holes.Count(h => h.Stats?.NumberOfPutts.HasValue == true);
-            return holesWithPutts > 0
-                ? $"{(double)Round.TotalPutts / holesWithPutts:F1}"
-                : "-";
+            if (Round?.Stats is null) return [];
+
+            return new List<ScoreCountItem>
+            {
+                new("Eagles or better", Round.Stats.HolesInOne + Round.Stats.DoubleEagles + Round.Stats.Eagles, "var(--rz-success)"),
+                new("Birdies", Round.Stats.Birdies, "var(--rz-success)"),
+                new("Pars", Round.Stats.Pars, "var(--rz-info)"),
+                new("Bogeys", Round.Stats.Bogeys, "var(--rz-warning)"),
+                new("Doubles", Round.Stats.DoubleBogeys, "var(--rz-danger)"),
+                new("Worse", Round.Stats.TripleOrWorse, "var(--rz-danger)")
+            };
         }
     }
 
+    // Par type aggregate stats
     private List<ParTypeStat> ParTypeStats
     {
         get
         {
             if (Round is null) return [];
 
-            var holesWithScores = Round.Holes.Where(h => h.Score.HasValue).ToList();
-
-            return holesWithScores
+            return Round.Holes
+                .Where(h => h.Score.HasValue)
                 .GroupBy(h => h.Par)
                 .OrderBy(g => g.Key)
                 .Select(g => new ParTypeStat
                 {
                     Par = g.Key,
                     HoleCount = g.Count(),
-                    TotalScoreToPar = g.Sum(h => h.ScoreToPar ?? 0)
+                    TotalScoreToPar = g.Sum(h => h.ScoreToPar ?? 0),
+                    TotalScore = g.Sum(h => (int)h.Score!.Value)
                 })
                 .ToList();
         }
@@ -146,10 +419,28 @@
         return "var(--rz-danger)";
     }
 
+    private record ScoreCountItem(string Label, int Value, string Color);
+
     private class ParTypeStat
     {
         public int Par { get; set; }
         public int HoleCount { get; set; }
         public int TotalScoreToPar { get; set; }
+        public int TotalScore { get; set; }
+    }
+
+    private class ScoringChartItem
+    {
+        public string Category { get; set; } = string.Empty;
+        public int Count { get; set; }
+    }
+
+    private class ScoreToParChartItem
+    {
+        public int HoleNumber { get; set; }
+        public string HoleLabel { get; set; } = string.Empty;
+        public int Par { get; set; }
+        public short Score { get; set; }
+        public int CumulativeScoreToPar { get; set; }
     }
 }
