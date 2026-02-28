@@ -173,6 +173,13 @@
                 if (entry is not null && score.HoleScore >= 1 && score.HoleScore <= 15)
                 {
                     entry.Score = (short)score.HoleScore;
+
+                    /*if (_state.TrackAdvancedStats)
+                    {
+                        entry.HitFairway = score.HitFairway;
+                        entry.HitGreen = score.HitGreen;
+                        entry.NumberOfPutts = (short)score.Putts;
+                    }*/
                 }
             }
 
