@@ -33,12 +33,12 @@ public class TeeboxSummary
 {
     public long TeeboxId { get; set; }
     public string TeeboxName { get; set; } = string.Empty;
-    public long Par { get; set; }
+    public int Par { get; set; }
     public decimal Rating { get; set; }
-    public long Slope { get; set; }
-    public long YardageOut { get; set; }
-    public long YardageIn { get; set; }
-    public long YardageTotal { get; set; }
+    public int Slope { get; set; }
+    public int YardageOut { get; set; }
+    public int YardageIn { get; set; }
+    public int YardageTotal { get; set; }
     public bool IsNineHole { get; set; }
     public bool IsWomens { get; set; }
 }
@@ -52,7 +52,7 @@ public class TeeboxDetailResponse
     public long CourseId { get; set; }
     public string TeeboxName { get; set; } = string.Empty;
     public decimal Rating { get; set; }
-    public long Slope { get; set; }
+    public int Slope { get; set; }
     public bool IsNineHole { get; set; }
     public bool IsWomens { get; set; }
     public List<HoleInfo> Holes { get; set; } = new();
@@ -81,7 +81,7 @@ public class SaveTeeboxRequest
     public long CourseId { get; set; }
     public string TeeboxName { get; set; } = string.Empty;
     public decimal Rating { get; set; }
-    public long Slope { get; set; }
+    public int Slope { get; set; }
     public bool IsNineHole { get; set; }
     public bool IsWomens { get; set; }
     public List<HoleEntry> Holes { get; set; } = new();

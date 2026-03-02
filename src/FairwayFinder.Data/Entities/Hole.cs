@@ -1,6 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-
 namespace FairwayFinder.Data.Entities;
 
 public partial class Hole
@@ -11,13 +8,13 @@ public partial class Hole
 
     public long CourseId { get; set; }
 
-    public long HoleNumber { get; set; }
+    public int HoleNumber { get; set; }
 
-    public long Yardage { get; set; }
+    public int Yardage { get; set; }
 
-    public long Handicap { get; set; }
+    public int Handicap { get; set; }
 
-    public long Par { get; set; }
+    public int Par { get; set; }
 
     public string CreatedBy { get; set; } = null!;
 
@@ -28,4 +25,8 @@ public partial class Hole
     public DateOnly UpdatedOn { get; set; }
 
     public bool IsDeleted { get; set; }
+
+    // Navigation properties
+    public virtual Teebox Teebox { get; set; } = null!;
+    public virtual Course Course { get; set; } = null!;
 }

@@ -28,9 +28,9 @@ public class HoleScoreEntry
     
     // Advanced stats (only populated when UsingHoleStats is true)
     public bool? HitFairway { get; set; }
-    public int? MissFairwayType { get; set; }
+    public long? MissFairwayType { get; set; }
     public bool? HitGreen { get; set; }
-    public int? MissGreenType { get; set; }
+    public long? MissGreenType { get; set; }
     public short? NumberOfPutts { get; set; }
 }
 
@@ -51,10 +51,10 @@ public class TeeboxOption
 {
     public long TeeboxId { get; set; }
     public string TeeboxName { get; set; } = string.Empty;
-    public long Par { get; set; }
+    public int Par { get; set; }
     public decimal Rating { get; set; }
-    public long Slope { get; set; }
-    public long YardageTotal { get; set; }
+    public int Slope { get; set; }
+    public int YardageTotal { get; set; }
     public bool IsNineHole { get; set; }
     public bool IsWomens { get; set; }
     
