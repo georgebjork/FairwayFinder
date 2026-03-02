@@ -37,7 +37,7 @@ public static class AuthenticationConfiguration
             options.LoginPath = "/login";
             options.LogoutPath = "/authentication/logout";
             options.AccessDeniedPath = "/access-denied";
-            options.Cookie.Name = "fairway.finder";
+            options.Cookie.Name = ".fairway.finder";
         });
 
         services.AddAuthentication();

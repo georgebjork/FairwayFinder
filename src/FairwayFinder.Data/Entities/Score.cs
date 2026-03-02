@@ -1,6 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-
 namespace FairwayFinder.Data.Entities;
 
 public partial class Score
@@ -24,4 +21,8 @@ public partial class Score
     public DateOnly UpdatedOn { get; set; }
 
     public bool IsDeleted { get; set; }
+
+    // Navigation properties
+    public virtual Round Round { get; set; } = null!;
+    public virtual Hole Hole { get; set; } = null!;
 }

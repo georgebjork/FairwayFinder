@@ -5,10 +5,10 @@ namespace FairwayFinder.Identity;
 
 public class ApplicationUser : IdentityUser
 {
-    public string? FirstName;
-    public string? LastName;
-    public DateTime CreatedOn;
-    public DateTime UpdatedOn;
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+    public DateTime CreatedOn { get; set; }
+    public DateTime UpdatedOn { get; set; }
 
     [NotMapped]
     public bool IsAdmin { get; set; }

@@ -70,10 +70,10 @@ public class CourseService : ICourseService
             .Select(h => new HoleInfo
             {
                 HoleId = h.HoleId,
-                HoleNumber = (int)h.HoleNumber,
-                Par = (int)h.Par,
-                Yardage = (int)h.Yardage,
-                Handicap = (int)h.Handicap
+                HoleNumber = h.HoleNumber,
+                Par = h.Par,
+                Yardage = h.Yardage,
+                Handicap = h.Handicap
             })
             .ToListAsync();
     }
@@ -244,10 +244,10 @@ public class CourseService : ICourseService
             .Select(h => new HoleInfo
             {
                 HoleId = h.HoleId,
-                HoleNumber = (int)h.HoleNumber,
-                Par = (int)h.Par,
-                Yardage = (int)h.Yardage,
-                Handicap = (int)h.Handicap
+                HoleNumber = h.HoleNumber,
+                Par = h.Par,
+                Yardage = h.Yardage,
+                Handicap = h.Handicap
             })
             .ToListAsync();
 

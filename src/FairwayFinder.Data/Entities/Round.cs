@@ -1,6 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-
 namespace FairwayFinder.Data.Entities;
 
 public partial class Round
@@ -40,4 +37,8 @@ public partial class Round
     public bool FrontNine { get; set; }
 
     public bool BackNine { get; set; }
+
+    // Navigation properties
+    public virtual Course Course { get; set; } = null!;
+    public virtual Teebox Teebox { get; set; } = null!;
 }
