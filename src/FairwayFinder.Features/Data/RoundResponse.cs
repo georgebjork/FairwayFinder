@@ -32,7 +32,7 @@ public class RoundResponse
     // Computed properties - Par
     public int ParOut => Holes.Where(h => h.HoleNumber <= 9).Sum(h => h.Par);
     public int ParIn => Holes.Where(h => h.HoleNumber > 9).Sum(h => h.Par);
-    public int ScoreToPar => Score - (int)Teebox.Par;
+    public int ScoreToPar => Score - Teebox.Par;
 
     // Computed properties - Fairways (only par 4/5 holes have fairways)
     public int FairwaysHitOut => Holes.Count(h => h.HoleNumber <= 9 && h.Stats?.HitFairway == true);
@@ -84,12 +84,12 @@ public class RoundTeebox
 {
     public long TeeboxId { get; set; }
     public string TeeboxName { get; set; } = string.Empty;
-    public long Par { get; set; }
+    public int Par { get; set; }
     public decimal Rating { get; set; }
-    public long Slope { get; set; }
-    public long YardageOut { get; set; }
-    public long YardageIn { get; set; }
-    public long YardageTotal { get; set; }
+    public int Slope { get; set; }
+    public int YardageOut { get; set; }
+    public int YardageIn { get; set; }
+    public int YardageTotal { get; set; }
     public bool IsNineHole { get; set; }
 
     public static RoundTeebox From(Teebox teebox)
@@ -134,10 +134,10 @@ public class RoundHole
         return new RoundHole
         {
             HoleId = hole.HoleId,
-            HoleNumber = (int)hole.HoleNumber,
-            Par = (int)hole.Par,
-            Yardage = (int)hole.Yardage,
-            Handicap = (int)hole.Handicap,
+            HoleNumber = hole.HoleNumber,
+            Par = hole.Par,
+            Yardage = hole.Yardage,
+            Handicap = hole.Handicap,
             Score = score?.HoleScore,
             Stats = holeStat != null ? RoundHoleStat.From(holeStat) : null
         };
@@ -180,9 +180,9 @@ public class RoundStats
 public class RoundHoleStat
 {
     public bool? HitFairway { get; set; }
-    public int? MissFairwayType { get; set; }
+    public long? MissFairwayType { get; set; }
     public bool? HitGreen { get; set; }
-    public int? MissGreenType { get; set; }
+    public long? MissGreenType { get; set; }
     public short? NumberOfPutts { get; set; }
 
     public static RoundHoleStat From(HoleStat holeStat)

@@ -1,0 +1,87 @@
+@layout AuthenticationLayout
+@page "/confirm-email"
+@attribute [ExcludeFromInteractiveRouting]
+@attribute [AllowAnonymous]
+
+@using System.Text
+@using FairwayFinder.Identity
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@inject UserManager<ApplicationUser> UserManager
+
+<RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 100%;">
+    <RadzenStack Gap="2rem" Style="width: 100%; max-width: 420px;">
+
+        <RadzenStack AlignItems="AlignItems.Center" Gap="1rem">
+            <RadzenText TextStyle="TextStyle.H3" Style="margin: 0;">FairwayFinder</RadzenText>
+        </RadzenStack>
+
+        <RadzenCard>
+            <RadzenStack Gap="1.5rem">
+                @if (_succeeded)
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Success" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">
+                        Your email has been confirmed. You can now sign in.
+                    </RadzenAlert>
+                }
+                else
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">
+                        @_errorMessage
+                    </RadzenAlert>
+                }
+
+                <RadzenButton
+                    Text="Go to Sign In"
+                    Style="width: 100%;"
+                    ButtonStyle="ButtonStyle.Primary"
+                    Variant="Variant.Filled"
+                    Size="ButtonSize.Medium"
+                    Click="@(() => NavigationManager.NavigateTo("/login", forceLoad: true))" />
+            </RadzenStack>
+        </RadzenCard>
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    private bool _succeeded;
+    private string _errorMessage = "Error confirming your email.";
+
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? UserId { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? Token { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (string.IsNullOrEmpty(UserId) || string.IsNullOrEmpty(Token))
+        {
+            _errorMessage = "Invalid email confirmation link.";
+            return;
+        }
+
+        var user = await UserManager.FindByIdAsync(UserId);
+        if (user is null)
+        {
+            _errorMessage = "Invalid email confirmation link.";
+            return;
+        }
+
+        var decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Token));
+        var result = await UserManager.ConfirmEmailAsync(user, decodedToken);
+
+        if (result.Succeeded)
+        {
+            _succeeded = true;
+        }
+        else
+        {
+            _errorMessage = "Error confirming your email. The link may have expired.";
+        }
+    }
+}

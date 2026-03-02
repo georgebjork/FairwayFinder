@@ -69,6 +69,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
             entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
             entity.Property(e => e.Yardage).HasColumnName("yardage");
+
+            entity.HasOne(e => e.Teebox).WithMany().HasForeignKey(e => e.TeeboxId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Course).WithMany().HasForeignKey(e => e.CourseId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // HoleStat
@@ -93,6 +96,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.TeeShotOb).HasColumnName("tee_shot_ob");
             entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
             entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
+
+            entity.HasOne(e => e.Score).WithMany().HasForeignKey(e => e.ScoreId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Round).WithMany().HasForeignKey(e => e.RoundId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Hole).WithMany().HasForeignKey(e => e.HoleId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.MissFairwayMissType).WithMany().HasForeignKey(e => e.MissFairwayType).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.MissGreenMissType).WithMany().HasForeignKey(e => e.MissGreenType).OnDelete(DeleteBehavior.Restrict);
         });
 
         // MissType
@@ -127,6 +136,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
             entity.Property(e => e.UserId).HasDefaultValueSql("'unknown'::text").HasColumnName("user_id");
             entity.Property(e => e.UsingHoleStats).HasColumnName("using_hole_stats");
+
+            entity.HasOne(e => e.Course).WithMany().HasForeignKey(e => e.CourseId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Teebox).WithMany().HasForeignKey(e => e.TeeboxId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // RoundStat
@@ -149,6 +161,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.TripleOrWorse).HasColumnName("triple_or_worse");
             entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
             entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
+
+            entity.HasOne(e => e.Round).WithMany().HasForeignKey(e => e.RoundId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // Score
@@ -166,6 +180,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
             entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
             entity.Property(e => e.UserId).HasColumnName("user_id");
+
+            entity.HasOne(e => e.Round).WithMany().HasForeignKey(e => e.RoundId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Hole).WithMany().HasForeignKey(e => e.HoleId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // Teebox
@@ -189,6 +206,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.YardageIn).HasColumnName("yardage_in");
             entity.Property(e => e.YardageOut).HasColumnName("yardage_out");
             entity.Property(e => e.YardageTotal).HasColumnName("yardage_total");
+
+            entity.HasOne(e => e.Course).WithMany().HasForeignKey(e => e.CourseId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // TgtrPlayerMap
@@ -219,6 +238,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
             entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
             entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+
+            entity.HasOne(e => e.Course).WithMany().HasForeignKey(e => e.CourseId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // TgtrTeeboxMap
@@ -235,6 +256,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
             entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
             entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+
+            entity.HasOne(e => e.Teebox).WithMany().HasForeignKey(e => e.TeeboxId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // TgtrRoundMap
@@ -250,6 +273,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
             entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
             entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+
+            entity.HasOne(e => e.Round).WithMany().HasForeignKey(e => e.RoundId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // UserInvitation

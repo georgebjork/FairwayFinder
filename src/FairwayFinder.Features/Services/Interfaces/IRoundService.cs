@@ -35,4 +35,10 @@ public interface IRoundService
     /// Returns false if the round was not found or the user does not own it.
     /// </summary>
     Task<bool> UpdateRoundAsync(UpdateRoundRequest request);
+
+    /// <summary>
+    /// Soft-deletes a round and all its child records (scores, hole stats, round stats).
+    /// Returns false if the round was not found.
+    /// </summary>
+    Task<bool> DeleteRoundAsync(long roundId, string userId);
 }

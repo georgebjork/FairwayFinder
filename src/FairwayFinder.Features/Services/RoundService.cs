@@ -464,6 +464,61 @@ public class RoundService : IRoundService
         return true;
     }
     
+    public async Task<bool> DeleteRoundAsync(long roundId, string userId)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        var now = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var round = await dbContext.Rounds
+            .FirstOrDefaultAsync(r => r.RoundId == roundId && !r.IsDeleted);
+
+        if (round is null) return false;
+
+        // Soft-delete the round
+        round.IsDeleted = true;
+        round.UpdatedBy = userId;
+        round.UpdatedOn = now;
+
+        // Soft-delete all scores for this round
+        var scores = await dbContext.Scores
+            .Where(s => s.RoundId == roundId && !s.IsDeleted)
+            .ToListAsync();
+
+        foreach (var score in scores)
+        {
+            score.IsDeleted = true;
+            score.UpdatedBy = userId;
+            score.UpdatedOn = now;
+        }
+
+        // Soft-delete all hole stats for this round
+        var holeStats = await dbContext.HoleStats
+            .Where(hs => hs.RoundId == roundId && !hs.IsDeleted)
+            .ToListAsync();
+
+        foreach (var hs in holeStats)
+        {
+            hs.IsDeleted = true;
+            hs.UpdatedBy = userId;
+            hs.UpdatedOn = now;
+        }
+
+        // Soft-delete the round stat
+        var roundStat = await dbContext.RoundStats
+            .FirstOrDefaultAsync(rs => rs.RoundId == roundId && !rs.IsDeleted);
+
+        if (roundStat is not null)
+        {
+            roundStat.IsDeleted = true;
+            roundStat.UpdatedBy = userId;
+            roundStat.UpdatedOn = now;
+        }
+
+        await dbContext.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<List<CourseResponse>> GetPlayedCoursesByUserId(string userId, bool? statRounds = null)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
@@ -472,7 +527,7 @@ public class RoundService : IRoundService
         if (!statRounds.HasValue)
         {
             courses = await dbContext.Courses
-                .Join(dbContext.Rounds.Where(r => r.UserId == userId),
+                .Join(dbContext.Rounds.Where(r => r.UserId == userId && !r.IsDeleted),
                     c => c.CourseId,
                     r => r.CourseId,
                     (c, r) => c)
@@ -482,7 +537,7 @@ public class RoundService : IRoundService
         else
         {
             courses = await dbContext.Courses
-                .Join(dbContext.Rounds.Where(r => r.UserId == userId && r.UsingHoleStats == statRounds),
+                .Join(dbContext.Rounds.Where(r => r.UserId == userId && !r.IsDeleted && r.UsingHoleStats == statRounds),
                     c => c.CourseId,
                     r => r.CourseId,
                     (c, r) => c)

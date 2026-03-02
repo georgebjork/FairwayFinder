@@ -19,4 +19,7 @@ public partial class TgtrTeeboxMap
     public DateOnly UpdatedOn { get; set; }
 
     public bool IsDeleted { get; set; }
+
+    // Navigation properties
+    public virtual Teebox Teebox { get; set; } = null!;
 }

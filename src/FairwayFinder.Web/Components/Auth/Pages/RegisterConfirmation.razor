@@ -1,0 +1,39 @@
+@layout AuthenticationLayout
+@page "/register-confirmation"
+@attribute [ExcludeFromInteractiveRouting]
+@attribute [AllowAnonymous]
+
+@using Microsoft.AspNetCore.Authorization
+
+<RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 100%;">
+    <RadzenStack Gap="2rem" Style="width: 100%; max-width: 420px;">
+
+        <RadzenStack AlignItems="AlignItems.Center" Gap="1rem">
+            <RadzenText TextStyle="TextStyle.H3" Style="margin: 0;">FairwayFinder</RadzenText>
+        </RadzenStack>
+
+        <RadzenCard>
+            <RadzenStack Gap="1.5rem">
+                <RadzenStack Gap="0.5rem">
+                    <RadzenText TextStyle="TextStyle.H5" Style="margin: 0;">Check your email</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2">
+                        We've sent a confirmation link to your email address. Please check your inbox and spam folder to verify your account.
+                    </RadzenText>
+                </RadzenStack>
+
+                <RadzenButton
+                    Text="Back to Sign In"
+                    Style="width: 100%;"
+                    ButtonStyle="ButtonStyle.Primary"
+                    Variant="Variant.Filled"
+                    Size="ButtonSize.Medium"
+                    Click="@(() => NavigationManager.NavigateTo("/login", forceLoad: true))" />
+            </RadzenStack>
+        </RadzenCard>
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Inject]
+    private NavigationManager NavigationManager { get; set; } = default!;
+}

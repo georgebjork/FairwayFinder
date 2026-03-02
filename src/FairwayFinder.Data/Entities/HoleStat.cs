@@ -1,6 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-
 namespace FairwayFinder.Data.Entities;
 
 public partial class HoleStat
@@ -15,11 +12,11 @@ public partial class HoleStat
 
     public bool? HitFairway { get; set; }
 
-    public int? MissFairwayType { get; set; }
+    public long? MissFairwayType { get; set; }
 
     public bool? HitGreen { get; set; }
 
-    public int? MissGreenType { get; set; }
+    public long? MissGreenType { get; set; }
 
     public short? NumberOfPutts { get; set; }
 
@@ -38,4 +35,11 @@ public partial class HoleStat
     public bool? TeeShotOb { get; set; }
 
     public bool? ApproachShotOb { get; set; }
+
+    // Navigation properties
+    public virtual Score Score { get; set; } = null!;
+    public virtual Round Round { get; set; } = null!;
+    public virtual Hole Hole { get; set; } = null!;
+    public virtual MissType? MissFairwayMissType { get; set; }
+    public virtual MissType? MissGreenMissType { get; set; }
 }

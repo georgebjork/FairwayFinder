@@ -1,5 +1,3 @@
-using System;
-
 namespace FairwayFinder.Data.Entities;
 
 public partial class TgtrCourseMap
@@ -19,4 +17,7 @@ public partial class TgtrCourseMap
     public DateOnly UpdatedOn { get; set; }
 
     public bool IsDeleted { get; set; }
+
+    // Navigation properties
+    public virtual Course Course { get; set; } = null!;
 }

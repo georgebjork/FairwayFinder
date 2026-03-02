@@ -4,11 +4,16 @@
 @attribute [AllowAnonymous]
 
 @using System.ComponentModel.DataAnnotations
+@using System.Text
+@using FairwayFinder.Features.Services.Interfaces
 @using FairwayFinder.Identity
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
+@inject IEmailSender EmailSender
+@inject NavigationManager NavigationManager
 @inject ILogger<Register> Logger
 @inject IdentityRedirectManager RedirectManager
 
@@ -16,8 +21,7 @@
     <RadzenStack Gap="2rem" Style="width: 100%; max-width: 420px;">
 
         <RadzenStack AlignItems="AlignItems.Center" Gap="1rem">
-            <RadzenImage Path="icon256x256.png" Style="width: 64px; height: 64px;" />
-            <RadzenText TextStyle="TextStyle.H3" Style="margin: 0;">Macula Blaze</RadzenText>
+            <RadzenText TextStyle="TextStyle.H3" Style="margin: 0;">FairwayFinder</RadzenText>
         </RadzenStack>
 
         <RadzenCard>
@@ -117,7 +121,6 @@
         var user = CreateUser();
         user.FirstName = Input.FirstName;
         user.LastName = Input.LastName;
-        user.EmailConfirmed = true;
         
         await UserStore.SetUserNameAsync(user, Input!.Email, CancellationToken.None);
         var emailStore = GetEmailStore();
@@ -132,8 +135,16 @@
 
         Logger.LogInformation("User {email} created a new account with password.", Input.Email);
 
-        // Redirect to confirmation page
-        RedirectManager.RedirectTo("/login");
+        // Send confirmation email
+        var token = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+
+        var callbackUrl = NavigationManager.ToAbsoluteUri(
+            $"/confirm-email?userId={Uri.EscapeDataString(user.Id)}&token={encodedToken}");
+
+        await EmailSender.SendConfirmationEmailAsync(Input.Email, callbackUrl.AbsoluteUri);
+
+        RedirectManager.RedirectTo("/register-confirmation");
     }
 
     private ApplicationUser CreateUser()
