@@ -25,6 +25,9 @@ public static class ServiceRegistration
         });
         services.AddTransient<TgtrTransferService>();
 
+        // Email
+        services.AddTransient<IEmailSender, ResendEmailSender>();
+
         return services;
     }
 }
