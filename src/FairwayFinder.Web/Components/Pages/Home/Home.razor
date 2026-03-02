@@ -12,6 +12,7 @@
 @inject IStatsService StatsService
 @inject NavigationManager NavigationManager
 @inject DialogService DialogService
+@inject BreadcrumbState BreadcrumbState
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -383,6 +384,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        BreadcrumbState.Set(new BreadcrumbItem("Dashboard"));
+
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
 

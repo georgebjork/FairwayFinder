@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace FairwayFinder.Data.Entities;
+﻿namespace FairwayFinder.Data.Entities;
 
 public partial class MissType
 {

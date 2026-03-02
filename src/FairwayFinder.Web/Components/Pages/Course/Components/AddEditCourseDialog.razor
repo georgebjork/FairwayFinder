@@ -1,0 +1,82 @@
+@using FairwayFinder.Features.Data
+
+<RadzenTemplateForm TItem="SaveCourseRequest" Data="_model" Submit="OnSubmit">
+    <RadzenStack Gap="1rem">
+
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Course Name</RadzenText>
+            <RadzenTextBox Name="CourseName" @bind-Value="_model.CourseName" Style="width: 100%;" />
+            <RadzenRequiredValidator Component="CourseName" Text="Course name is required." />
+        </RadzenStack>
+
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Address</RadzenText>
+            <RadzenTextBox Name="Address" @bind-Value="_model.Address" Style="width: 100%;" />
+        </RadzenStack>
+
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Phone Number</RadzenText>
+            <RadzenTextBox Name="PhoneNumber" @bind-Value="_model.PhoneNumber" Style="width: 100%;" />
+        </RadzenStack>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Lighter" AllowClose="false" Size="AlertSize.Small">
+                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@_error</RadzenText>
+            </RadzenAlert>
+        }
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light"
+                          Click="@(() => DialogService.Close(null))" ButtonType="ButtonType.Button" />
+            <RadzenButton Text="@(_isEdit ? "Save Changes" : "Create Course")" Icon="@(_isEdit ? "save" : "add")"
+                          ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Submit"
+                          IsBusy="_submitting" BusyText="Saving..." />
+        </RadzenStack>
+    </RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+    [Inject] public DialogService DialogService { get; set; } = default!;
+
+    /// <summary>
+    /// If provided, the dialog is in edit mode with pre-populated values.
+    /// </summary>
+    [Parameter] public SaveCourseRequest? Existing { get; set; }
+
+    private SaveCourseRequest _model = new();
+    private bool _isEdit;
+    private bool _submitting;
+    private string? _error;
+
+    protected override void OnInitialized()
+    {
+        if (Existing is not null)
+        {
+            _isEdit = true;
+            _model = new SaveCourseRequest
+            {
+                CourseId = Existing.CourseId,
+                CourseName = Existing.CourseName,
+                Address = Existing.Address,
+                PhoneNumber = Existing.PhoneNumber
+            };
+        }
+    }
+
+    private void OnSubmit()
+    {
+        _error = null;
+        _submitting = true;
+
+        try
+        {
+            DialogService.Close(_model);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Unexpected error: {ex.Message}";
+            _submitting = false;
+        }
+    }
+}

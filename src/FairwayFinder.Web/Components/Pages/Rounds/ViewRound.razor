@@ -6,6 +6,7 @@
 @using FairwayFinder.Web.Components.Pages.Rounds.Components
 @inject IRoundService RoundService
 @inject NavigationManager NavigationManager
+@inject BreadcrumbState BreadcrumbState
 
 <PageTitle>View Round</PageTitle>
 
@@ -41,19 +42,23 @@ else
                     </RadzenText>
                 </RadzenStack>
             </RadzenStack>
-            <RadzenButton Icon="arrow_back" Text="Back" Variant="Variant.Text" ButtonStyle="ButtonStyle.Secondary"
-                          Click="@(() => NavigationManager.NavigateTo("/"))" />
+
+            <RadzenButton Text="Edit" Icon="edit"
+                          ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                          Click="@(() => NavigationManager.NavigateTo($"/round/{RoundId}/edit"))" />
         </RadzenStack>
         
         
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Start">
-            <!-- Round Stats -->
+            <!-- Scoring Breakdown Pills -->
             <RoundScoringPills Round="@_round" />
         </RadzenStack>
-        
 
         <!-- Scorecard -->
         <FairwayFinderScorecard Round="@_round" />
+
+        <!-- Round Stats -->
+        <RoundStatsPanel Round="@_round" />
 
         
     </RadzenStack>
@@ -71,5 +76,20 @@ else
         _loading = true;
         _round = await RoundService.GetRoundByIdAsync(RoundId);
         _loading = false;
+
+        if (_round is not null)
+        {
+            BreadcrumbState.Set(
+                new BreadcrumbItem("Home", "/"),
+                new BreadcrumbItem($"{_round.CourseName} - {_round.DatePlayed:M/d/yy}")
+            );
+        }
+        else
+        {
+            BreadcrumbState.Set(
+                new BreadcrumbItem("Home", "/"),
+                new BreadcrumbItem("Round")
+            );
+        }
     }
 }

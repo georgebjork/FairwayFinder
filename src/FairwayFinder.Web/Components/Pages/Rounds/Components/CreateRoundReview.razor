@@ -1,0 +1,46 @@
+@using FairwayFinder.Features.Data
+
+<RadzenStack Gap="0.25rem" class="rz-mb-2">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+        <RadzenStack Gap="0">
+            <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Review</RadzenText>
+            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Step 3 of 3</RadzenText>
+        </RadzenStack>
+        <RadzenButton Text="Back to Scorecard" Icon="arrow_back" Variant="Variant.Outlined" Click="@OnBackClicked" />
+    </RadzenStack>
+</RadzenStack>
+
+<RadzenStack Gap="0.5rem" class="rz-mb-4">
+    <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">@State.SelectedCourseName</RadzenText>
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">@State.SelectedTeeboxName</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">@State.DatePlayed.ToString("MMM d, yyyy")</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">@(State.SelectedRoundType == "18" ? "18 Holes" : "9 Holes")</RadzenText>
+    </RadzenStack>
+</RadzenStack>
+
+<RoundScoringPills Round="@State.PreviewRound" />
+
+<FairwayFinderScorecard Round="@State.PreviewRound" />
+
+<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" class="rz-pt-2">
+    <RadzenButton Text="Save Round" Icon="save" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Large"
+                  Click="@OnSaveClicked" IsBusy="@Saving" />
+</RadzenStack>
+
+@code {
+    [Parameter, EditorRequired]
+    public CreateRoundState State { get; set; } = default!;
+
+    [Parameter]
+    public bool Saving { get; set; }
+
+    [Parameter]
+    public EventCallback OnBack { get; set; }
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    private async Task OnBackClicked() => await OnBack.InvokeAsync();
+    private async Task OnSaveClicked() => await OnSave.InvokeAsync();
+}

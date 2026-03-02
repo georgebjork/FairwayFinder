@@ -1,0 +1,294 @@
+@using FairwayFinder.Agents.Agents
+@inject ScorecardScoresReaderAgent ScorecardAgent
+@inject NotificationService NotificationService
+
+<RadzenStack Gap="1.25rem">
+    @if (_agentResponse is null)
+    {
+        @* ── Step 1: Select Image & Scan ── *@
+        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+            Upload a photo of a scorecard to auto-fill hole scores.
+        </RadzenText>
+
+        <RadzenCard Variant="Variant.Outlined" class="rz-p-4">
+            <RadzenStack AlignItems="AlignItems.Center" Gap="1rem">
+                @if (_imagePreviewUrl is not null)
+                {
+                    <img src="@_imagePreviewUrl" alt="Scorecard preview"
+                         style="max-width: 100%; max-height: 280px; border-radius: var(--rz-border-radius); object-fit: contain;" />
+
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                        <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
+                        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@_selectedFileName</RadzenText>
+                    </RadzenStack>
+                }
+                else
+                {
+                    <RadzenIcon Icon="add_photo_alternate" Style="font-size: 2.5rem; color: var(--rz-text-disabled-color);" />
+                    <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);" class="rz-m-0">
+                        Select a scorecard image
+                    </RadzenText>
+                }
+
+                <label class="rz-button rz-button-md rz-variant-outlined rz-secondary @(_scanning ? "rz-state-disabled" : "")" style="cursor: pointer; margin: 0;">
+                    <InputFile OnChange="OnFileSelected" accept="image/*" style="display: none;" disabled="@_scanning" />
+                    <RadzenIcon Icon="upload" Style="margin-right: 0.25rem;" /> @(_imagePreviewUrl is not null ? "Change Image" : "Choose Image")
+                </label>
+            </RadzenStack>
+        </RadzenCard>
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light"
+                          Click="@(() => DialogService.Close(null))"
+                          Disabled="@_scanning" />
+            <RadzenButton Text="Scan Scorecard" Icon="search" ButtonStyle="ButtonStyle.Primary"
+                          IsBusy="@_scanning" BusyText="Scanning..."
+                          Click="@ScanScorecard"
+                          Disabled="@(_scanImageData is null || _scanning)" />
+        </RadzenStack>
+    }
+    else if (_agentResponse is not null)
+    {
+        @* ── Step 2: Results ── *@
+        @if (_agentResponse.Players.Count == 0)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false" Size="AlertSize.Small">
+                No players were detected in the scorecard image. Try a clearer photo.
+            </RadzenAlert>
+
+            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+                <RadzenButton Text="Try Again" Icon="refresh" ButtonStyle="ButtonStyle.Secondary" Variant="Variant.Outlined"
+                              Click="@ResetScan" />
+                <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light"
+                              Click="@(() => DialogService.Close(null))" />
+            </RadzenStack>
+        }
+        else if (_agentResponse.Players.Count == 1)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Success" Shade="Shade.Lighter" AllowClose="false" Size="AlertSize.Small">
+                Found <strong>@_agentResponse.Players[0].PlayerName</strong> with @_agentResponse.Players[0].Scores.Count hole score(s).
+            </RadzenAlert>
+
+            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+                <RadzenButton Text="Try Again" Icon="refresh" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                              Click="@ResetScan" />
+                <RadzenButton Text="Apply Scores" Icon="check" ButtonStyle="ButtonStyle.Success"
+                              Click="@(() => ApplyAndClose(_agentResponse.Players[0]))" />
+            </RadzenStack>
+        }
+        else
+        {
+            <RadzenText TextStyle="TextStyle.Body2">
+                Multiple players detected. Select a player to apply their scores:
+            </RadzenText>
+
+            <RadzenDropDown TValue="string"
+                            Data="@_agentResponse.Players"
+                            TextProperty="PlayerName"
+                            ValueProperty="PlayerName"
+                            @bind-Value="_selectedPlayerName"
+                            Placeholder="Select a player..."
+                            Style="width: 100%;" />
+
+            @if (SelectedPlayer is not null)
+            {
+                <RadzenCard Variant="Variant.Outlined" class="rz-p-3">
+                    <RadzenStack Gap="0.75rem">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                            <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-m-0">@SelectedPlayer.PlayerName</RadzenText>
+                            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0">
+                                @SelectedPlayer.Scores.Count holes &middot; Total: @SelectedPlayer.Scores.Sum(s => s.HoleScore)
+                            </RadzenText>
+                        </RadzenStack>
+
+                        @{ var frontNine = SelectedPlayer.Scores.Where(s => s.HoleNumber <= 9).OrderBy(s => s.HoleNumber).ToList(); }
+                        @{ var backNine = SelectedPlayer.Scores.Where(s => s.HoleNumber > 9).OrderBy(s => s.HoleNumber).ToList(); }
+
+                        @if (frontNine.Count > 0)
+                        {
+                            <div class="scan-score-grid">
+                                <div class="scan-score-label">Front</div>
+                                @foreach (var s in frontNine)
+                                {
+                                    <div class="scan-score-hole">@s.HoleNumber</div>
+                                }
+                                <div class="scan-score-total">@frontNine.Sum(s => s.HoleScore)</div>
+                            </div>
+                            <div class="scan-score-grid">
+                                <div class="scan-score-label"></div>
+                                @foreach (var s in frontNine)
+                                {
+                                    <div class="scan-score-value">@s.HoleScore</div>
+                                }
+                                <div class="scan-score-total-value">@frontNine.Sum(s => s.HoleScore)</div>
+                            </div>
+                        }
+
+                        @if (backNine.Count > 0)
+                        {
+                            <div class="scan-score-grid" style="margin-top: 0.25rem;">
+                                <div class="scan-score-label">Back</div>
+                                @foreach (var s in backNine)
+                                {
+                                    <div class="scan-score-hole">@s.HoleNumber</div>
+                                }
+                                <div class="scan-score-total">@backNine.Sum(s => s.HoleScore)</div>
+                            </div>
+                            <div class="scan-score-grid">
+                                <div class="scan-score-label"></div>
+                                @foreach (var s in backNine)
+                                {
+                                    <div class="scan-score-value">@s.HoleScore</div>
+                                }
+                                <div class="scan-score-total-value">@backNine.Sum(s => s.HoleScore)</div>
+                            </div>
+                        }
+                    </RadzenStack>
+                </RadzenCard>
+            }
+
+            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+                <RadzenButton Text="Try Again" Icon="refresh" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                              Click="@ResetScan" />
+                <RadzenButton Text="Apply Scores" Icon="check" ButtonStyle="ButtonStyle.Success"
+                              Click="@OnApplySelectedPlayer"
+                              Disabled="@(string.IsNullOrEmpty(_selectedPlayerName))" />
+            </RadzenStack>
+        }
+    }
+</RadzenStack>
+
+@code {
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
+
+    private byte[]? _scanImageData;
+    private string? _selectedFileName;
+    private string? _imagePreviewUrl;
+    private string? _imageMediaType;
+    private bool _scanning;
+    private ScorecardScoresReaderAgentResponse? _agentResponse;
+    private string? _selectedPlayerName;
+
+    private Player? SelectedPlayer => _agentResponse?.Players.FirstOrDefault(p => p.PlayerName == _selectedPlayerName);
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        if (!file.ContentType.StartsWith("image/"))
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Invalid File",
+                Detail = "Please select an image file.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        const long maxSize = 10 * 1024 * 1024;
+        await using var stream = file.OpenReadStream(maxSize);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+
+        _scanImageData = ms.ToArray();
+        _selectedFileName = file.Name;
+        _imageMediaType = file.ContentType;
+        _imagePreviewUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(_scanImageData)}";
+    }
+
+    private async Task ScanScorecard()
+    {
+        if (_scanImageData is null || _imageMediaType is null) return;
+
+        _scanning = true;
+        _agentResponse = null;
+        _selectedPlayerName = null;
+
+        try
+        {
+            var response = await ScorecardAgent.RunAsync(_scanImageData, _imageMediaType);
+            _agentResponse = response.Result;
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Scan Failed",
+                Detail = ex.Message,
+                Duration = 8000
+            });
+            _scanning = false;
+        }
+        finally
+        {
+            _scanning = false;
+        }
+    }
+
+    private void ResetScan()
+    {
+        _scanImageData = null;
+        _selectedFileName = null;
+        _imagePreviewUrl = null;
+        _imageMediaType = null;
+        _agentResponse = null;
+        _selectedPlayerName = null;
+    }
+
+    private void OnApplySelectedPlayer()
+    {
+        var player = _agentResponse?.Players.FirstOrDefault(p => p.PlayerName == _selectedPlayerName);
+        if (player is not null)
+        {
+            ApplyAndClose(player);
+        }
+    }
+
+    private void ApplyAndClose(Player player)
+    {
+        DialogService.Close(player);
+    }
+
+}
+
+<style>
+    .scan-score-grid {
+        display: grid;
+        grid-template-columns: 40px repeat(9, 1fr) 40px;
+        gap: 0;
+        text-align: center;
+        font-size: 0.75rem;
+    }
+
+    .scan-score-label {
+        font-weight: 600;
+        color: var(--rz-text-secondary-color);
+        text-align: left;
+    }
+
+    .scan-score-hole {
+        color: var(--rz-text-secondary-color);
+        font-weight: 500;
+    }
+
+    .scan-score-value {
+        font-weight: 700;
+        color: var(--rz-text-color);
+    }
+
+    .scan-score-total {
+        font-weight: 600;
+        color: var(--rz-text-secondary-color);
+        border-left: 1px solid var(--rz-border-color);
+    }
+
+    .scan-score-total-value {
+        font-weight: 700;
+        color: var(--rz-text-color);
+        border-left: 1px solid var(--rz-border-color);
+    }
+</style>

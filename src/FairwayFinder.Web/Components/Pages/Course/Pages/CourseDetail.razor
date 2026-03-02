@@ -1,0 +1,298 @@
+@page "/courses/{CourseId:long}"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin")]
+@using System.Security.Claims
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Web.Components.Pages.Course.Components
+@inject ICourseService CourseService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+@inject BreadcrumbState BreadcrumbState
+
+<PageTitle>@(_course?.CourseName ?? "Course Detail")</PageTitle>
+
+<RadzenStack Gap="1.5rem" Style="max-width: 1100px;" class="rz-mx-auto rz-p-4">
+
+    @if (_loading)
+    {
+        <RadzenStack AlignItems="AlignItems.Center" class="rz-p-8">
+            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        </RadzenStack>
+    }
+    else if (_course is null)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
+            Course not found.
+        </RadzenAlert>
+    }
+    else
+    {
+        @* ── Course Info Card ── *@
+        <RadzenCard class="rz-p-4">
+            <RadzenStack Gap="1rem">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                        <RadzenIcon Icon="golf_course" Style="font-size: 1.75rem;" />
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">@_course.CourseName</RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                        <RadzenButton Text="Edit" Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                                      Click="OnEditCourseClicked" />
+                        <RadzenButton Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
+                                      Variant="Variant.Outlined" Click="OnDeleteCourseClicked" />
+                    </RadzenStack>
+                </RadzenStack>
+
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" Wrap="FlexWrap.Wrap">
+                    @if (!string.IsNullOrEmpty(_course.Address))
+                    {
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem">
+                            <RadzenIcon Icon="location_on" Style="font-size: 1rem; color: var(--rz-text-secondary-color);" />
+                            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);" class="rz-m-0">@_course.Address</RadzenText>
+                        </RadzenStack>
+                    }
+                    @if (!string.IsNullOrEmpty(_course.PhoneNumber))
+                    {
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem">
+                            <RadzenIcon Icon="phone" Style="font-size: 1rem; color: var(--rz-text-secondary-color);" />
+                            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);" class="rz-m-0">@_course.PhoneNumber</RadzenText>
+                        </RadzenStack>
+                    }
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenCard>
+
+        @* ── Teeboxes Section ── *@
+        <RadzenCard class="rz-p-4">
+            <RadzenStack Gap="1rem">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+                    <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Teeboxes</RadzenText>
+                    <RadzenButton Text="Add Teebox" Icon="add" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small"
+                                  Click="@(() => NavigationManager.NavigateTo($"/courses/{CourseId}/teebox/new"))" />
+                </RadzenStack>
+
+                @if (_course.Teeboxes.Count == 0)
+                {
+                    <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                        No teeboxes yet. Click "Add Teebox" to create one.
+                    </RadzenText>
+                }
+                else
+                {
+                    <RadzenDataGrid TItem="TeeboxSummary" Data="_course.Teeboxes" Density="Density.Compact" AllowSorting="true">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="TeeboxSummary" Property="TeeboxName" Title="Name" Width="140px" />
+                            <RadzenDataGridColumn TItem="TeeboxSummary" Property="Par" Title="Par" Width="70px" TextAlign="TextAlign.Center" />
+                            <RadzenDataGridColumn TItem="TeeboxSummary" Property="Rating" Title="Rating" Width="80px" TextAlign="TextAlign.Center"
+                                                  FormatString="{0:F1}" />
+                            <RadzenDataGridColumn TItem="TeeboxSummary" Property="Slope" Title="Slope" Width="80px" TextAlign="TextAlign.Center" />
+                            <RadzenDataGridColumn TItem="TeeboxSummary" Property="YardageOut" Title="Out" Width="80px" TextAlign="TextAlign.Center" />
+                            <RadzenDataGridColumn TItem="TeeboxSummary" Property="YardageIn" Title="In" Width="80px" TextAlign="TextAlign.Center" />
+                            <RadzenDataGridColumn TItem="TeeboxSummary" Property="YardageTotal" Title="Total" Width="80px" TextAlign="TextAlign.Center" />
+                            <RadzenDataGridColumn TItem="TeeboxSummary" Title="Type" Width="100px" TextAlign="TextAlign.Center">
+                                <Template Context="teebox">
+                                    @if (teebox.IsNineHole)
+                                    {
+                                        <RadzenBadge Text="9-Hole" BadgeStyle="BadgeStyle.Info" />
+                                    }
+                                    @if (teebox.IsWomens)
+                                    {
+                                        <RadzenBadge Text="Women's" BadgeStyle="BadgeStyle.Warning" class="rz-ml-1" />
+                                    }
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="TeeboxSummary" Title="Actions" Width="140px" TextAlign="TextAlign.Center" Sortable="false">
+                                <Template Context="teebox">
+                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
+                                        <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.ExtraSmall"
+                                                      Click="@(() => NavigationManager.NavigateTo($"/courses/{CourseId}/teebox/{teebox.TeeboxId}/edit"))" />
+                                        <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Text" Size="ButtonSize.ExtraSmall"
+                                                      Click="@(() => OnDeleteTeeboxClicked(teebox))" />
+                                    </RadzenStack>
+                                </Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                }
+            </RadzenStack>
+        </RadzenCard>
+    }
+</RadzenStack>
+
+@code {
+    [Parameter] public long CourseId { get; set; }
+
+    private CourseDetailResponse? _course;
+    private bool _loading = true;
+    private string _currentUserId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadCourseAsync();
+    }
+
+    private async Task LoadCourseAsync()
+    {
+        _loading = true;
+        _course = await CourseService.GetCourseDetailAsync(CourseId);
+        _loading = false;
+
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem("Courses", "/courses"),
+            new BreadcrumbItem(_course?.CourseName ?? "Course Detail")
+        );
+    }
+
+    private async Task OnEditCourseClicked()
+    {
+        if (_course is null) return;
+
+        var existing = new SaveCourseRequest
+        {
+            CourseId = _course.CourseId,
+            CourseName = _course.CourseName,
+            Address = _course.Address,
+            PhoneNumber = _course.PhoneNumber
+        };
+
+        var result = await DialogService.OpenAsync<AddEditCourseDialog>("Edit Course",
+            new Dictionary<string, object> { { "Existing", existing } },
+            new DialogOptions
+            {
+                Width = "500px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true
+            });
+
+        if (result is SaveCourseRequest request)
+        {
+            try
+            {
+                var success = await CourseService.UpdateCourseAsync(request, _currentUserId);
+                if (success)
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Success,
+                        Summary = "Course Updated",
+                        Detail = $"{request.CourseName} has been updated.",
+                        Duration = 4000
+                    });
+                    await LoadCourseAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Failed to Update Course",
+                    Detail = ex.Message,
+                    Duration = 6000
+                });
+            }
+        }
+    }
+
+    private async Task OnDeleteCourseClicked()
+    {
+        if (_course is null) return;
+
+        var result = await DialogService.OpenAsync<DeleteConfirmDialog>("Delete Course",
+            new Dictionary<string, object>
+            {
+                { "EntityName", _course.CourseName },
+                { "WarningMessage", "This will also delete all teeboxes and hole data for this course." }
+            },
+            new DialogOptions
+            {
+                Width = "450px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true
+            });
+
+        if (result is true)
+        {
+            try
+            {
+                var success = await CourseService.DeleteCourseAsync(CourseId, _currentUserId);
+                if (success)
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Success,
+                        Summary = "Course Deleted",
+                        Detail = $"{_course.CourseName} has been deleted.",
+                        Duration = 4000
+                    });
+                    NavigationManager.NavigateTo("/courses");
+                }
+            }
+            catch (Exception ex)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Failed to Delete Course",
+                    Detail = ex.Message,
+                    Duration = 6000
+                });
+            }
+        }
+    }
+
+    private async Task OnDeleteTeeboxClicked(TeeboxSummary teebox)
+    {
+        var result = await DialogService.OpenAsync<DeleteConfirmDialog>("Delete Teebox",
+            new Dictionary<string, object>
+            {
+                { "EntityName", teebox.TeeboxName },
+                { "WarningMessage", "This will also delete all hole data for this teebox. Existing rounds referencing this teebox will not be affected." }
+            },
+            new DialogOptions
+            {
+                Width = "450px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true
+            });
+
+        if (result is true)
+        {
+            try
+            {
+                var success = await CourseService.DeleteTeeboxAsync(teebox.TeeboxId, _currentUserId);
+                if (success)
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Success,
+                        Summary = "Teebox Deleted",
+                        Detail = $"{teebox.TeeboxName} has been deleted.",
+                        Duration = 4000
+                    });
+                    await LoadCourseAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Failed to Delete Teebox",
+                    Detail = ex.Message,
+                    Duration = 6000
+                });
+            }
+        }
+    }
+}

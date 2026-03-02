@@ -1,3 +1,4 @@
+@using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
 @using FairwayFinder.Web.Components.Shared.Wrappers
 @inherits LayoutComponentBase
 
@@ -12,6 +13,7 @@
     @*<AppSidebar @bind-Expanded="_sidebarExpanded" />*@
 
     <RadzenBody>
+        <Breadcrumb />
         @Body
     </RadzenBody>
 

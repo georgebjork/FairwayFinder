@@ -1,0 +1,108 @@
+@using FairwayFinder.Features.Data
+
+<RadzenCard class="rz-p-5" Style="max-width: 600px;">
+    <RadzenStack Gap="0.25rem" class="rz-mb-4">
+        <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Setup</RadzenText>
+        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Step 1 of 3 &middot; Edit Round</RadzenText>
+    </RadzenStack>
+
+    <RadzenStack Gap="1.5rem">
+        @* Course (read-only) *@
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Subtitle1">Course</RadzenText>
+            <RadzenTextBox Value="@State.SelectedCourseName" ReadOnly="true" Style="width: 100%;" />
+        </RadzenStack>
+
+        @* Round Type (read-only) *@
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Subtitle1">Round Type</RadzenText>
+            <RadzenTextBox Value="@RoundTypeLabel" ReadOnly="true" Style="width: 100%;" />
+        </RadzenStack>
+
+        @* Teebox (editable) *@
+        @if (State.FilteredTeeboxes.Count > 0)
+        {
+            <RadzenStack Gap="0.25rem">
+                <RadzenText TextStyle="TextStyle.Subtitle1">Teebox</RadzenText>
+                <RadzenDropDown TValue="long?"
+                                Data="@State.FilteredTeeboxes"
+                                TextProperty="DisplayLabel"
+                                ValueProperty="TeeboxId"
+                                @bind-Value="State.SelectedTeeboxId"
+                                Placeholder="Select a teebox..."
+                                Style="width: 100%;"
+                                Change="@OnTeeboxChanged" />
+            </RadzenStack>
+        }
+
+        @* Date Played (editable) *@
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Subtitle1">Date Played</RadzenText>
+            <RadzenDatePicker TValue="DateOnly"
+                              @bind-Value="State.DatePlayed"
+                              DateFormat="MM/dd/yyyy"
+                              Style="width: 100%;"
+                              Max="@DateTime.Today" />
+        </RadzenStack>
+
+        @* Advanced Stats toggle (editable) *@
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+            <RadzenSwitch @bind-Value="State.TrackAdvancedStats" />
+            <RadzenStack Gap="0">
+                <RadzenText TextStyle="TextStyle.Body1" class="rz-m-0">Track Advanced Stats</RadzenText>
+                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Putts, fairways hit, greens in regulation</RadzenText>
+            </RadzenStack>
+        </RadzenStack>
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" class="rz-pt-2">
+            <RadzenButton Text="Next" Icon="arrow_forward" ButtonStyle="ButtonStyle.Primary" Click="@OnNextClicked" />
+        </RadzenStack>
+    </RadzenStack>
+</RadzenCard>
+
+@code {
+    [Parameter, EditorRequired]
+    public CreateRoundState State { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnTeeboxSelected { get; set; }
+
+    [Parameter]
+    public EventCallback OnNext { get; set; }
+
+    [Inject]
+    public NotificationService NotificationService { get; set; } = default!;
+
+    private string RoundTypeLabel
+    {
+        get
+        {
+            if (State.SelectedRoundType == "18") return "18 Holes";
+            return State.SelectedNine == "front" ? "9 Holes - Front 9" : "9 Holes - Back 9";
+        }
+    }
+
+    private async Task OnTeeboxChanged()
+    {
+        var teebox = State.TeeboxOptions.FirstOrDefault(t => t.TeeboxId == State.SelectedTeeboxId);
+        State.SelectedTeeboxName = teebox?.TeeboxName ?? string.Empty;
+        await OnTeeboxSelected.InvokeAsync();
+    }
+
+    private async Task OnNextClicked()
+    {
+        if (!State.IsSetupValid)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Missing Information",
+                Detail = "Please select a teebox and date before continuing.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        await OnNext.InvokeAsync();
+    }
+}

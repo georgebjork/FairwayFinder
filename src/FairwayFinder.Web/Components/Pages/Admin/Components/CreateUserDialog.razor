@@ -1,0 +1,141 @@
+@using System.ComponentModel.DataAnnotations
+@using FairwayFinder.Identity
+@using Microsoft.AspNetCore.Identity
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IUserStore<ApplicationUser> UserStore
+
+<RadzenTemplateForm TItem="CreateUserModel" Data="_model" Submit="OnSubmit">
+    <RadzenStack Gap="1rem">
+
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
+            <RadzenStack Gap="0.25rem" Style="flex: 1;">
+                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">First Name</RadzenText>
+                <RadzenTextBox Name="FirstName" @bind-Value="_model.FirstName" Style="width: 100%;" />
+                <RadzenRequiredValidator Component="FirstName" Text="First name is required." />
+            </RadzenStack>
+            <RadzenStack Gap="0.25rem" Style="flex: 1;">
+                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Last Name</RadzenText>
+                <RadzenTextBox Name="LastName" @bind-Value="_model.LastName" Style="width: 100%;" />
+                <RadzenRequiredValidator Component="LastName" Text="Last name is required." />
+            </RadzenStack>
+        </RadzenStack>
+
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Email</RadzenText>
+            <RadzenTextBox Name="Email" @bind-Value="_model.Email" Style="width: 100%;" />
+            <RadzenRequiredValidator Component="Email" Text="Email is required." />
+            <RadzenEmailValidator Component="Email" Text="Enter a valid email address." />
+        </RadzenStack>
+
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Password</RadzenText>
+            <RadzenPassword Name="Password" @bind-Value="_model.Password" Style="width: 100%;" />
+            <RadzenRequiredValidator Component="Password" Text="Password is required." />
+            <RadzenLengthValidator Component="Password" Min="8" Text="Password must be at least 8 characters." />
+        </RadzenStack>
+
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Confirm Password</RadzenText>
+            <RadzenPassword Name="ConfirmPassword" @bind-Value="_model.ConfirmPassword" Style="width: 100%;" />
+            <RadzenRequiredValidator Component="ConfirmPassword" Text="Please confirm the password." />
+            <RadzenCompareValidator Component="ConfirmPassword" Value="@_model.Password" Text="Passwords do not match." />
+        </RadzenStack>
+
+        @if (_errors.Count > 0)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Lighter" AllowClose="false" Size="AlertSize.Small">
+                @foreach (var error in _errors)
+                {
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@error</RadzenText>
+                }
+            </RadzenAlert>
+        }
+
+        @if (!string.IsNullOrEmpty(_createdUserId))
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Success" Shade="Shade.Lighter" AllowClose="false" Size="AlertSize.Small">
+                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">User created successfully.</RadzenText>
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" class="rz-mt-2">
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">User ID:</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0"><strong>@_createdUserId</strong></RadzenText>
+                </RadzenStack>
+            </RadzenAlert>
+        }
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+            @if (!string.IsNullOrEmpty(_createdUserId))
+            {
+                <RadzenButton Text="Use This User ID" Icon="check" ButtonStyle="ButtonStyle.Success"
+                              Click="@(() => DialogService.Close(_createdUserId))" />
+            }
+            else
+            {
+                <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light"
+                              Click="@(() => DialogService.Close(null))" ButtonType="ButtonType.Button" />
+                <RadzenButton Text="Create User" Icon="person_add" ButtonStyle="ButtonStyle.Primary"
+                              ButtonType="ButtonType.Submit" IsBusy="_submitting" BusyText="Creating..." />
+            }
+        </RadzenStack>
+    </RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
+
+    private CreateUserModel _model = new();
+    private List<string> _errors = new();
+    private bool _submitting;
+    private string? _createdUserId;
+
+    private async Task OnSubmit()
+    {
+        _errors.Clear();
+        _submitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var user = new ApplicationUser
+            {
+                FirstName = _model.FirstName,
+                LastName = _model.LastName,
+                EmailConfirmed = true
+            };
+
+            await UserStore.SetUserNameAsync(user, _model.Email, CancellationToken.None);
+
+            var emailStore = (IUserEmailStore<ApplicationUser>)UserStore;
+            await emailStore.SetEmailAsync(user, _model.Email, CancellationToken.None);
+
+            var result = await UserManager.CreateAsync(user, _model.Password);
+
+            if (result.Succeeded)
+            {
+                _createdUserId = user.Id;
+            }
+            else
+            {
+                _errors = result.Errors.Select(e => e.Description).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errors.Add($"Unexpected error: {ex.Message}");
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private class CreateUserModel
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+}
