@@ -18,15 +18,15 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Content Include="..\..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
-    </ItemGroup>
-
-    <ItemGroup>
       <ProjectReference Include="..\FairwayFinder.Agents\FairwayFinder.Agents.csproj" />
       <ProjectReference Include="..\FairwayFinder.Features\FairwayFinder.Features.csproj" />
       <ProjectReference Include="..\FairwayFinder.Identity\FairwayFinder.Identity.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
     </ItemGroup>
 
 </Project>
