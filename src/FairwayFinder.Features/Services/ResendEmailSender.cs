@@ -11,7 +11,7 @@ public class ResendEmailSender : IEmailSender
     private readonly IResend _resend;
     private readonly ILogger<ResendEmailSender> _logger;
 
-    private const string FromAddress = "noreply@fairwayfinder.app";
+    private const string FromAddress = "noreply@fairwayfinder.pro";
 
     public ResendEmailSender(IOptions<ResendSettings> settings, ILogger<ResendEmailSender> logger)
     {
