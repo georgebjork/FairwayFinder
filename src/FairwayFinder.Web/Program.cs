@@ -36,8 +36,10 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var roleService = scope.ServiceProvider.GetRequiredService<IApplicationRoleService>();
-    await roleService.EnsureRolesExistAsync();
+    var startupService = scope.ServiceProvider.GetRequiredService<IApplicationStartupService>();
+    await startupService.RunMigrationsAsync();
+    await startupService.EnsureRolesExistAsync();
+    await startupService.SeedDefaultUserAsync();
 }
 
 // Configure the HTTP request pipeline.

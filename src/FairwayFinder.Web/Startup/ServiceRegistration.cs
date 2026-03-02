@@ -15,7 +15,7 @@ public static class ServiceRegistration
         services.AddScoped<BreadcrumbState>();
 
         // App services
-        services.AddTransient<IApplicationRoleService, ApplicationRoleService>();
+        services.AddTransient<IApplicationStartupService, ApplicationStartupService>();
 
         return services;
     }

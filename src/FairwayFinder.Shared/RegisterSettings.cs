@@ -11,6 +11,7 @@ public static class RegisterSettings
         services.Configure<ClaudeSettings>(config.GetSection("Claude"));
         services.Configure<OpenAiSettings>(config.GetSection("OpenAI"));
         services.Configure<ResendSettings>(config.GetSection("Resend"));
+        services.Configure<SeedUserSettings>(config.GetSection("SeedUser"));
 
         return services;
     }
