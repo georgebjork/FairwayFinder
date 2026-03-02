@@ -28,7 +28,7 @@ builder.Services.AddFairwayFinderAuthorization();
 builder.Services.AddCascadingAuthenticationState();
 
 builder.Services.RegisterSharedSettings(builder.Configuration);
-builder.Services.RegisterFeatureServices(builder.Configuration);
+builder.Services.RegisterFeatureServices(builder.Configuration, builder.Environment.IsDevelopment());
 builder.Services.RegisterWebServices();
 builder.Services.AddAgentServices();
 

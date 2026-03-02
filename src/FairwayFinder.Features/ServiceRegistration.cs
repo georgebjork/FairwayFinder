@@ -9,7 +9,7 @@ namespace FairwayFinder.Features;
 
 public static class ServiceRegistration
 {
-    public static IServiceCollection RegisterFeatureServices(this IServiceCollection services, ConfigurationManager config)
+    public static IServiceCollection RegisterFeatureServices(this IServiceCollection services, ConfigurationManager config, bool isDevelopment)
     {
         // Domain services
         services.AddTransient<IRoundService, RoundService>();
@@ -25,8 +25,15 @@ public static class ServiceRegistration
         });
         services.AddTransient<TgtrTransferService>();
 
-        // Email
-        services.AddTransient<IEmailSender, ResendEmailSender>();
+        // Email — use dev sender locally to avoid sending real emails
+        if (isDevelopment)
+        {
+            services.AddTransient<IEmailSender, DevEmailSender>();
+        }
+        else
+        {
+            services.AddTransient<IEmailSender, ResendEmailSender>();
+        }
 
         return services;
     }
