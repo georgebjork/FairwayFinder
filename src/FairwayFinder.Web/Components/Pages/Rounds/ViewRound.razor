@@ -1,12 +1,17 @@
 @page "/round/{RoundId:long}"
 @rendermode InteractiveServer
 @attribute [Authorize]
+@using System.Security.Claims
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Web.Components.Pages.Course.Components
 @using FairwayFinder.Web.Components.Pages.Rounds.Components
 @inject IRoundService RoundService
 @inject NavigationManager NavigationManager
 @inject BreadcrumbState BreadcrumbState
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>View Round</PageTitle>
 
@@ -43,9 +48,14 @@ else
                 </RadzenStack>
             </RadzenStack>
 
-            <RadzenButton Text="Edit" Icon="edit"
-                          ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
-                          Click="@(() => NavigationManager.NavigateTo($"/round/{RoundId}/edit"))" />
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                <RadzenButton Text="Edit" Icon="edit"
+                              ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                              Click="@(() => NavigationManager.NavigateTo($"/round/{RoundId}/edit"))" />
+                <RadzenButton Text="Delete" Icon="delete"
+                              ButtonStyle="ButtonStyle.Danger" Variant="Variant.Outlined"
+                              Click="OnDeleteRoundClicked" />
+            </RadzenStack>
         </RadzenStack>
         
         
@@ -70,6 +80,13 @@ else
 
     private RoundResponse? _round;
     private bool _loading = true;
+    private string _currentUserId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -90,6 +107,53 @@ else
                 new BreadcrumbItem("Home", "/"),
                 new BreadcrumbItem("Round")
             );
+        }
+    }
+
+    private async Task OnDeleteRoundClicked()
+    {
+        if (_round is null) return;
+
+        var result = await DialogService.OpenAsync<DeleteConfirmDialog>("Delete Round",
+            new Dictionary<string, object>
+            {
+                { "EntityName", $"{_round.CourseName} - {_round.DatePlayed:M/d/yy}" },
+                { "WarningMessage", "This will also delete all scores and stats for this round." }
+            },
+            new DialogOptions
+            {
+                Width = "450px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true
+            });
+
+        if (result is true)
+        {
+            try
+            {
+                var success = await RoundService.DeleteRoundAsync(RoundId, _currentUserId);
+                if (success)
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Success,
+                        Summary = "Round Deleted",
+                        Detail = $"{_round.CourseName} - {_round.DatePlayed:M/d/yy} has been deleted.",
+                        Duration = 4000
+                    });
+                    NavigationManager.NavigateTo("/");
+                }
+            }
+            catch (Exception ex)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Failed to Delete Round",
+                    Detail = ex.Message,
+                    Duration = 6000
+                });
+            }
         }
     }
 }
