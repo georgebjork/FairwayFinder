@@ -1,3 +1,5 @@
+using System;
+
 namespace FairwayFinder.Data.Entities;
 
 public partial class TgtrCourseMap
