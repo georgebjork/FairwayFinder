@@ -28,7 +28,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./FairwayFinder.Web
+          context: ./src/FairwayFinder.Web
           push: true
           tags: |
             ghcr.io/georgebjork/fairwayfinder:latest
