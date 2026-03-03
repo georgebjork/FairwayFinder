@@ -21,13 +21,9 @@
                     </RadzenText>
                 </RadzenStack>
 
-                <RadzenButton
-                    Text="Back to Sign In"
-                    Style="width: 100%;"
-                    ButtonStyle="ButtonStyle.Primary"
-                    Variant="Variant.Filled"
-                    Size="ButtonSize.Medium"
-                    Click="@(() => NavigationManager.NavigateTo("/login", forceLoad: true))" />
+                <a href="/login" class="rz-button rz-button-md rz-variant-filled rz-primary" style="width: 100%; display: inline-flex; justify-content: center; align-items: center; text-decoration: none;">
+                    Back to Sign In
+                </a>
             </RadzenStack>
         </RadzenCard>
     </RadzenStack>
