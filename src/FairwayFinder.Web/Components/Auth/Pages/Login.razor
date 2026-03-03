@@ -100,10 +100,18 @@
             return;
         }
 
-        // Check if user exists and email is confirmed
         var user = await UserManager.FindByEmailAsync(Input.Email);
-        if (user is not null && !await UserManager.IsEmailConfirmedAsync(user))
+
+        if (user is null)
         {
+            Logger.LogWarning("Failed login attempt for non-existent user {Email}.", Input.Email);
+            _error_message = "Error: Invalid login attempt.";
+            return;
+        }
+
+        if (!await UserManager.IsEmailConfirmedAsync(user))
+        {
+            Logger.LogWarning("User {Email} attempted to sign in without a confirmed email.", Input.Email);
             _error_message = "You must confirm your email before signing in. Please check your inbox.";
             return;
         }
@@ -112,22 +120,27 @@
 
         if (result.Succeeded)
         {
-            // Assign application role if user doesn't have one yet
-            if (user is not null)
-            {
-                var roles = await UserManager.GetRolesAsync(user);
-                if (roles.Count == 0)
-                {
-                    //await ApplicationRoleService.AssignRoleAsync(user, UserManager);
-                }
-                
-            }
-
-            Logger.LogInformation("User logged in.");
+            Logger.LogInformation("User {Email} logged in successfully.", Input.Email);
             RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else if (result.IsLockedOut)
+        {
+            Logger.LogWarning("User {Email} is locked out.", Input.Email);
+            _error_message = "This account has been locked due to too many failed attempts. Please try again later.";
+        }
+        else if (result.IsNotAllowed)
+        {
+            Logger.LogWarning("User {Email} sign-in was not allowed.", Input.Email);
+            _error_message = "You are not allowed to sign in.";
+        }
+        else if (result.RequiresTwoFactor)
+        {
+            Logger.LogInformation("User {Email} requires two-factor authentication.", Input.Email);
+            _error_message = "Two-factor authentication is required.";
         }
         else
         {
+            Logger.LogWarning("Failed login attempt for {Email}. Invalid password.", Input.Email);
             _error_message = "Error: Invalid login attempt.";
         }
     }
