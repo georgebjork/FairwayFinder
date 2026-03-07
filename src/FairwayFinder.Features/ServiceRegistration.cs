@@ -15,6 +15,7 @@ public static class ServiceRegistration
         services.AddTransient<IRoundService, RoundService>();
         services.AddTransient<IStatsService, StatsService>();
         services.AddTransient<ICourseService, CourseService>();
+        services.AddTransient<IProfileService, ProfileService>();
 
         // TGTR integration
         services.AddHttpClient<TgtrHttpClient>(client =>
