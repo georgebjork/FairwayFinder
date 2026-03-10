@@ -1,6 +1,7 @@
 @page "/profile/{PublicId:guid}/round/{RoundId:long}"
 @rendermode InteractiveServer
 @layout MainLayout
+@attribute [AllowAnonymous]
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
 @using FairwayFinder.Web.Components.Pages.Rounds.Components
