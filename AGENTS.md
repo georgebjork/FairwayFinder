@@ -72,16 +72,46 @@ Services are grouped by domain (e.g., `Rounds`, `Players`, `Stats`, `Clubs`, `Co
 ### Render Modes
 
 - **Interactive Server** — default for all pages.
-- **Static SSR** — only for authentication pages (`Account/Pages/`).
+- **Static SSR** — only for authentication pages (`Components/Autg/`).
 
 ### Component Organization
 
+Each domain folder under `Pages/` uses a consistent subfolder structure:
+
 ```
 src/FairwayFinder.Web/Components/
-├── Pages/          # Routable pages (@page directive)
-├── Layout/         # MainLayout, NavMenu (Radzen layout components)
-└── Auth/Pages/  # Identity pages (static SSR)
+├── Pages/                          # Domain folders
+│   ├── Admin/
+│   │   ├── Pages/                  # Routable pages (@page directive)
+│   │   └── Dialogs/                # Dialog components (DialogService.OpenAsync)
+│   ├── Course/
+│   │   ├── Pages/
+│   │   └── Dialogs/
+│   ├── Home/
+│   │   ├── Pages/
+│   │   ├── Components/             # Reusable child components
+│   │   └── Dialogs/
+│   ├── PublicProfile/
+│   │   └── Pages/
+│   ├── Rounds/
+│   │   ├── Pages/
+│   │   ├── Components/
+│   │   └── Dialogs/
+│   └── Settings/
+│       └── Pages/
+├── Shared/                         # Cross-domain shared components
+│   ├── Layout/                     # MainLayout, NavMenu (Radzen layout components)
+│   └── Dialogs/                    # Shared dialogs (e.g., DeleteConfirmDialog)
+└── Auth/Pages/                     # Identity pages (static SSR)
 ```
+
+#### Domain Folder Rules
+
+- **Pages/** — Routable pages with `@page` directive. Every domain must have this.
+- **Components/** — Reusable child components (no `@page` directive, no `DialogService.Close()`). Only create when the domain has components.
+- **Dialogs/** — Dialog components opened via `DialogService.OpenAsync<T>()`. Only create when the domain has dialogs.
+- **Shared/Dialogs/** — Generic dialogs used across multiple domains.
+- Only create `Components/` and `Dialogs/` subfolders when there are actual files to put in them.
 
 ### When Working from Screenshots
 
