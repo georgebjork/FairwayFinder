@@ -3,6 +3,8 @@ using FairwayFinder.Data;
 using FairwayFinder.Features;
 using FairwayFinder.Identity;
 using FairwayFinder.Shared;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using FairwayFinder.Web.Components;
@@ -31,6 +33,12 @@ builder.Services.RegisterSharedSettings(builder.Configuration);
 builder.Services.RegisterFeatureServices(builder.Configuration, builder.Environment.IsDevelopment());
 builder.Services.RegisterWebServices();
 builder.Services.AddAgentServices();
+
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        connectionString,
+        name: "FairwayFinderDatabase",
+        tags: ["db", "sql", "FairwayFinderAppDb"]);
 
 var app = builder.Build();
 
