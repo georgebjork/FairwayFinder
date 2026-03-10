@@ -807,6 +807,66 @@ namespace FairwayFinder.Data.Migrations
                     b.ToTable("user_invitation", (string)null);
                 });
 
+            modelBuilder.Entity("FairwayFinder.Data.Entities.UserProfile", b =>
+                {
+                    b.Property<long>("UserProfileId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_profile_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("UserProfileId"));
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateOnly>("CreatedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("created_on");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsPublic")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_public");
+
+                    b.Property<Guid>("PublicIdentifier")
+                        .HasColumnType("uuid")
+                        .HasColumnName("public_identifier");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("updated_by");
+
+                    b.Property<DateOnly>("UpdatedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("updated_on");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("UserProfileId")
+                        .HasName("user_profile_pkey");
+
+                    b.HasIndex("PublicIdentifier")
+                        .IsUnique()
+                        .HasDatabaseName("ix_user_profile_public_identifier");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_user_profile_user_id");
+
+                    b.ToTable("user_profile", (string)null);
+                });
+
             modelBuilder.Entity("FairwayFinder.Identity.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
