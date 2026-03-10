@@ -1,0 +1,418 @@
+@using System.Security.Claims
+@using FairwayFinder.Data.Entities
+@using FairwayFinder.Features.Data.TGTR
+@using FairwayFinder.Features.Services.TGTR
+@using FairwayFinder.Web.Components.Pages.Admin.Dialogs
+@inject TgtrTransferService TgtrTransferService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<RadzenTabs>
+    <Tabs>
+        @* ── Tab 1: Transfer Rounds ── *@
+        <RadzenTabsItem Text="Transfer Rounds">
+            <RadzenStack Gap="1rem" class="rz-p-2">
+                <RadzenCard>
+                    <RadzenStack Gap="1rem">
+                        <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-m-0">Import rounds from the TGTR API for a mapped player.</RadzenText>
+
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End" Wrap="FlexWrap.Wrap">
+                            <RadzenStack Gap="0.25rem">
+                                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">TGTR Player ID</RadzenText>
+                                <RadzenNumeric TValue="int" @bind-Value="_transferPlayerId" Min="1" Style="width: 160px;" />
+                            </RadzenStack>
+                            <RadzenButton Text="Transfer Rounds" Icon="sync" ButtonStyle="ButtonStyle.Primary"
+                                          IsBusy="_transferring" BusyText="Transferring..."
+                                          Click="OnTransferClicked" Disabled="_transferring" />
+                        </RadzenStack>
+                    </RadzenStack>
+                </RadzenCard>
+
+                @if (_transferResult is not null)
+                {
+                    <RadzenCard>
+                        <RadzenStack Gap="1rem">
+                            <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Transfer Results</RadzenText>
+
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" Wrap="FlexWrap.Wrap">
+                                <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                                    <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-success);">@_transferResult.RoundsImported</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Imported</RadzenText>
+                                </RadzenStack>
+                                <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                                    <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-info);">@_transferResult.RoundsSkipped</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Skipped</RadzenText>
+                                </RadzenStack>
+                                <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                                    <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-danger);">@_transferResult.Errors.Count</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Errors</RadzenText>
+                                </RadzenStack>
+                            </RadzenStack>
+
+                            @if (_transferResult.Errors.Count > 0)
+                            {
+                                <RadzenDataGrid TItem="TgtrTransferError" Data="_transferResult.Errors" Density="Density.Compact">
+                                    <Columns>
+                                        <RadzenDataGridColumn TItem="TgtrTransferError" Property="TgtrRoundId" Title="TGTR Round ID" Width="140px" />
+                                        <RadzenDataGridColumn TItem="TgtrTransferError" Property="Reason" Title="Reason" />
+                                    </Columns>
+                                </RadzenDataGrid>
+                            }
+                        </RadzenStack>
+                    </RadzenCard>
+                }
+            </RadzenStack>
+        </RadzenTabsItem>
+
+        @* ── Tab 2: Player Mappings ── *@
+        <RadzenTabsItem Text="Player Mappings">
+            <RadzenStack Gap="1rem" class="rz-p-2">
+                <RadzenCard>
+                    <RadzenStack Gap="1rem">
+                        <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Add Player Mapping</RadzenText>
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End" Wrap="FlexWrap.Wrap">
+                            <RadzenStack Gap="0.25rem">
+                                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">TGTR Player ID</RadzenText>
+                                <RadzenNumeric TValue="int" @bind-Value="_newPlayerMapTgtrId" Min="1" Style="width: 160px;" />
+                            </RadzenStack>
+                            <RadzenStack Gap="0.25rem">
+                                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Local User ID</RadzenText>
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" AlignItems="AlignItems.Center">
+                                    <RadzenTextBox @bind-Value="_newPlayerMapUserId" Style="width: 320px;" Placeholder="User GUID" />
+                                    <RadzenButton Text="Create User" Icon="person_add" ButtonStyle="ButtonStyle.Info"
+                                                  Size="ButtonSize.Small" Variant="Variant.Outlined"
+                                                  Click="OnCreateUserClicked" />
+                                </RadzenStack>
+                            </RadzenStack>
+                            <RadzenButton Text="Add Mapping" Icon="add" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Small"
+                                          Click="OnAddPlayerMapClicked" Disabled="@(string.IsNullOrWhiteSpace(_newPlayerMapUserId))" />
+                        </RadzenStack>
+                    </RadzenStack>
+                </RadzenCard>
+
+                <RadzenCard>
+                    <RadzenStack Gap="1rem">
+                        <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Existing Player Mappings</RadzenText>
+                        @if (_loadingMappings)
+                        {
+                            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                        }
+                        else if (_playerMaps.Count == 0)
+                        {
+                            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">No player mappings yet.</RadzenText>
+                        }
+                        else
+                        {
+                            <RadzenDataGrid TItem="TgtrPlayerMap" Data="_playerMaps" Density="Density.Compact">
+                                <Columns>
+                                    <RadzenDataGridColumn TItem="TgtrPlayerMap" Property="TgtrPlayerId" Title="TGTR Player ID" Width="160px" />
+                                    <RadzenDataGridColumn TItem="TgtrPlayerMap" Property="UserId" Title="Local User ID" />
+                                    <RadzenDataGridColumn TItem="TgtrPlayerMap" Property="CreatedOn" Title="Created" Width="120px" />
+                                </Columns>
+                            </RadzenDataGrid>
+                        }
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenStack>
+        </RadzenTabsItem>
+
+        @* ── Tab 3: Course & Teebox Mappings ── *@
+        <RadzenTabsItem Text="Course & Teebox Mappings">
+            <RadzenStack Gap="1rem" class="rz-p-2">
+                @* Course Mappings *@
+                <RadzenCard>
+                    <RadzenStack Gap="1rem">
+                        <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Add Course Mapping</RadzenText>
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End" Wrap="FlexWrap.Wrap">
+                            <RadzenStack Gap="0.25rem">
+                                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">TGTR Course ID</RadzenText>
+                                <RadzenNumeric TValue="int" @bind-Value="_newCourseMapTgtrId" Min="1" Style="width: 160px;" />
+                            </RadzenStack>
+                            <RadzenStack Gap="0.25rem">
+                                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Local Course ID</RadzenText>
+                                <RadzenNumeric TValue="long" @bind-Value="_newCourseMapLocalId" Min="1" Style="width: 160px;" />
+                            </RadzenStack>
+                            <RadzenButton Text="Add Mapping" Icon="add" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Small"
+                                          Click="OnAddCourseMapClicked" />
+                        </RadzenStack>
+                    </RadzenStack>
+                </RadzenCard>
+
+                <RadzenCard>
+                    <RadzenStack Gap="1rem">
+                        <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Course Mappings</RadzenText>
+                        @if (_loadingMappings)
+                        {
+                            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                        }
+                        else if (_courseMaps.Count == 0)
+                        {
+                            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">No course mappings yet. These are auto-created during transfer when names match.</RadzenText>
+                        }
+                        else
+                        {
+                            <RadzenDataGrid TItem="TgtrCourseMap" Data="_courseMaps" Density="Density.Compact">
+                                <Columns>
+                                    <RadzenDataGridColumn TItem="TgtrCourseMap" Property="TgtrCourseId" Title="TGTR Course ID" Width="160px" />
+                                    <RadzenDataGridColumn TItem="TgtrCourseMap" Property="CourseId" Title="Local Course ID" Width="160px" />
+                                    <RadzenDataGridColumn TItem="TgtrCourseMap" Property="CreatedOn" Title="Created" Width="120px" />
+                                </Columns>
+                            </RadzenDataGrid>
+                        }
+                    </RadzenStack>
+                </RadzenCard>
+
+                @* Teebox Mappings *@
+                <RadzenCard>
+                    <RadzenStack Gap="1rem">
+                        <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Add Teebox Mapping</RadzenText>
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End" Wrap="FlexWrap.Wrap">
+                            <RadzenStack Gap="0.25rem">
+                                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">TGTR Teebox ID</RadzenText>
+                                <RadzenNumeric TValue="int" @bind-Value="_newTeeboxMapTgtrId" Min="1" Style="width: 140px;" />
+                            </RadzenStack>
+                            <RadzenStack Gap="0.25rem">
+                                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Local Teebox ID</RadzenText>
+                                <RadzenNumeric TValue="long" @bind-Value="_newTeeboxMapLocalId" Min="1" Style="width: 140px;" />
+                            </RadzenStack>
+                            <RadzenStack Gap="0.25rem">
+                                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">TGTR Course ID</RadzenText>
+                                <RadzenNumeric TValue="int" @bind-Value="_newTeeboxMapTgtrCourseId" Min="1" Style="width: 140px;" />
+                            </RadzenStack>
+                            <RadzenButton Text="Add Mapping" Icon="add" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Small"
+                                          Click="OnAddTeeboxMapClicked" />
+                        </RadzenStack>
+                    </RadzenStack>
+                </RadzenCard>
+
+                <RadzenCard>
+                    <RadzenStack Gap="1rem">
+                        <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Teebox Mappings</RadzenText>
+                        @if (_loadingMappings)
+                        {
+                            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                        }
+                        else if (_teeboxMaps.Count == 0)
+                        {
+                            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">No teebox mappings yet. These are auto-created during transfer when names match.</RadzenText>
+                        }
+                        else
+                        {
+                            <RadzenDataGrid TItem="TgtrTeeboxMap" Data="_teeboxMaps" Density="Density.Compact">
+                                <Columns>
+                                    <RadzenDataGridColumn TItem="TgtrTeeboxMap" Property="TgtrTeeboxId" Title="TGTR Teebox ID" Width="160px" />
+                                    <RadzenDataGridColumn TItem="TgtrTeeboxMap" Property="TeeboxId" Title="Local Teebox ID" Width="160px" />
+                                    <RadzenDataGridColumn TItem="TgtrTeeboxMap" Property="TgtrCourseId" Title="TGTR Course ID" Width="160px" />
+                                    <RadzenDataGridColumn TItem="TgtrTeeboxMap" Property="CreatedOn" Title="Created" Width="120px" />
+                                </Columns>
+                            </RadzenDataGrid>
+                        }
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenStack>
+        </RadzenTabsItem>
+    </Tabs>
+</RadzenTabs>
+
+@code {
+    // Transfer state
+    private int _transferPlayerId = 1;
+    private bool _transferring;
+    private TgtrTransferResult? _transferResult;
+
+    // Player mapping form state
+    private int _newPlayerMapTgtrId = 1;
+    private string _newPlayerMapUserId = string.Empty;
+
+    // Course mapping form state
+    private int _newCourseMapTgtrId = 1;
+    private long _newCourseMapLocalId = 1;
+
+    // Teebox mapping form state
+    private int _newTeeboxMapTgtrId = 1;
+    private long _newTeeboxMapLocalId = 1;
+    private int _newTeeboxMapTgtrCourseId = 1;
+
+    // Data
+    private List<TgtrPlayerMap> _playerMaps = new();
+    private List<TgtrCourseMap> _courseMaps = new();
+    private List<TgtrTeeboxMap> _teeboxMaps = new();
+    private bool _loadingMappings = true;
+
+    private string _currentUserId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        await LoadMappingsAsync();
+    }
+
+    private async Task LoadMappingsAsync()
+    {
+        _loadingMappings = true;
+        _playerMaps = await TgtrTransferService.GetPlayerMapsAsync();
+        _courseMaps = await TgtrTransferService.GetCourseMapsAsync();
+        _teeboxMaps = await TgtrTransferService.GetTeeboxMapsAsync();
+        _loadingMappings = false;
+    }
+
+    private async Task OnTransferClicked()
+    {
+        _transferring = true;
+        _transferResult = null;
+        StateHasChanged();
+
+        try
+        {
+            _transferResult = await TgtrTransferService.TransferRoundsAsync(_transferPlayerId);
+
+            if (_transferResult.Errors.Count == 0 && _transferResult.RoundsImported > 0)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Transfer Complete",
+                    Detail = $"{_transferResult.RoundsImported} round(s) imported successfully.",
+                    Duration = 5000
+                });
+            }
+            else if (_transferResult.Errors.Count > 0)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Transfer Complete with Errors",
+                    Detail = $"{_transferResult.RoundsImported} imported, {_transferResult.Errors.Count} error(s).",
+                    Duration = 5000
+                });
+            }
+            else if (_transferResult.RoundsImported == 0 && _transferResult.RoundsSkipped > 0)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Info,
+                    Summary = "No New Rounds",
+                    Detail = $"All {_transferResult.RoundsSkipped} round(s) were already imported.",
+                    Duration = 5000
+                });
+            }
+
+            await LoadMappingsAsync();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Transfer Failed",
+                Detail = ex.Message,
+                Duration = 8000
+            });
+        }
+        finally
+        {
+            _transferring = false;
+        }
+    }
+
+    private async Task OnCreateUserClicked()
+    {
+        var result = await DialogService.OpenAsync<CreateUserDialog>("Create New User",
+            new Dictionary<string, object>(),
+            new DialogOptions
+            {
+                Width = "500px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true
+            });
+
+        if (result is string userId && !string.IsNullOrEmpty(userId))
+        {
+            _newPlayerMapUserId = userId;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnAddPlayerMapClicked()
+    {
+        if (string.IsNullOrWhiteSpace(_newPlayerMapUserId)) return;
+
+        try
+        {
+            await TgtrTransferService.AddPlayerMapAsync(_newPlayerMapTgtrId, _newPlayerMapUserId.Trim(), _currentUserId);
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Player Mapping Added",
+                Detail = $"TGTR Player {_newPlayerMapTgtrId} mapped to user {_newPlayerMapUserId.Trim()}.",
+                Duration = 4000
+            });
+            _newPlayerMapUserId = string.Empty;
+            await LoadMappingsAsync();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Failed to Add Mapping",
+                Detail = ex.Message,
+                Duration = 6000
+            });
+        }
+    }
+
+    private async Task OnAddCourseMapClicked()
+    {
+        try
+        {
+            await TgtrTransferService.AddCourseMapAsync(_newCourseMapTgtrId, _newCourseMapLocalId, _currentUserId);
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Course Mapping Added",
+                Detail = $"TGTR Course {_newCourseMapTgtrId} mapped to local course {_newCourseMapLocalId}.",
+                Duration = 4000
+            });
+            await LoadMappingsAsync();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Failed to Add Mapping",
+                Detail = ex.Message,
+                Duration = 6000
+            });
+        }
+    }
+
+    private async Task OnAddTeeboxMapClicked()
+    {
+        try
+        {
+            await TgtrTransferService.AddTeeboxMapAsync(_newTeeboxMapTgtrId, _newTeeboxMapLocalId, _newTeeboxMapTgtrCourseId, _currentUserId);
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Teebox Mapping Added",
+                Detail = $"TGTR Teebox {_newTeeboxMapTgtrId} mapped to local teebox {_newTeeboxMapLocalId}.",
+                Duration = 4000
+            });
+            await LoadMappingsAsync();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Failed to Add Mapping",
+                Detail = ex.Message,
+                Duration = 6000
+            });
+        }
+    }
+}

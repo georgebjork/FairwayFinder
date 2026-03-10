@@ -32,6 +32,12 @@ builder.Services.RegisterFeatureServices(builder.Configuration, builder.Environm
 builder.Services.RegisterWebServices();
 builder.Services.AddAgentServices();
 
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        connectionString,
+        name: "FairwayFinderDatabase",
+        tags: ["db", "sql", "FairwayFinderAppDb"]);
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())

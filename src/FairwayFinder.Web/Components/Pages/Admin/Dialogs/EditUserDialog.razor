@@ -1,0 +1,93 @@
+@using FairwayFinder.Features.Services.Admin
+
+<RadzenTemplateForm TItem="EditUserModel" Data="_model" Submit="OnSubmit">
+    <RadzenStack Gap="1rem">
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
+            <RadzenFormField Text="First Name" Style="flex: 1;">
+                <RadzenTextBox @bind-Value="_model.FirstName" Name="FirstName" />
+                <RadzenRequiredValidator Component="FirstName" Text="First name is required." />
+            </RadzenFormField>
+            <RadzenFormField Text="Last Name" Style="flex: 1;">
+                <RadzenTextBox @bind-Value="_model.LastName" Name="LastName" />
+                <RadzenRequiredValidator Component="LastName" Text="Last name is required." />
+            </RadzenFormField>
+        </RadzenStack>
+
+        <RadzenFormField Text="Email">
+            <RadzenTextBox @bind-Value="_model.Email" Name="Email" />
+            <RadzenRequiredValidator Component="Email" Text="Email is required." />
+            <RadzenEmailValidator Component="Email" Text="Enter a valid email address." />
+        </RadzenFormField>
+
+        @if (_errors.Count > 0)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Lighter" AllowClose="false">
+                <ul style="margin: 0; padding-left: 1.25rem;">
+                    @foreach (var error in _errors)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </RadzenAlert>
+        }
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light"
+                          Click="@(() => DialogService.Close(false))" />
+            <RadzenButton Text="Save" Icon="save" ButtonStyle="ButtonStyle.Primary"
+                          ButtonType="ButtonType.Submit" IsBusy="_saving" BusyText="Saving..." />
+        </RadzenStack>
+    </RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+    [Inject] public DialogService DialogService { get; set; } = default!;
+    [Inject] public UserAdminService UserAdminService { get; set; } = default!;
+
+    [Parameter] public UserAdminDto User { get; set; } = default!;
+
+    private EditUserModel _model = new();
+    private List<string> _errors = new();
+    private bool _saving;
+
+    protected override void OnParametersSet()
+    {
+        _model = new EditUserModel
+        {
+            FirstName = User.FirstName,
+            LastName = User.LastName,
+            Email = User.Email
+        };
+    }
+
+    private async Task OnSubmit()
+    {
+        _saving = true;
+        _errors.Clear();
+
+        var result = await UserAdminService.UpdateUserAsync(User.Id, new UpdateUserDto
+        {
+            FirstName = _model.FirstName,
+            LastName = _model.LastName,
+            Email = _model.Email
+        });
+
+        if (result.Succeeded)
+        {
+            DialogService.Close(true);
+        }
+        else
+        {
+            _errors = result.Errors.Select(e => e.Description).ToList();
+        }
+
+        _saving = false;
+    }
+
+    private class EditUserModel
+    {
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+    }
+}
