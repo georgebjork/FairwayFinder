@@ -1,7 +1,7 @@
 using FairwayFinder.Features.Services.Interfaces;
 using Microsoft.Extensions.Logging;
 
-namespace FairwayFinder.Features.Services;
+namespace FairwayFinder.Features.Services.Email;
 
 public class DevEmailSender : IEmailSender
 {

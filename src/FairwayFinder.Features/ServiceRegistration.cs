@@ -1,5 +1,6 @@
 using FairwayFinder.Features.HttpClients;
 using FairwayFinder.Features.Services;
+using FairwayFinder.Features.Services.Email;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Features.Services.TGTR;
 using Microsoft.Extensions.Configuration;

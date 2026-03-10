@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Resend;
 
-namespace FairwayFinder.Features.Services;
+namespace FairwayFinder.Features.Services.Email;
 
 public class ResendEmailSender : IEmailSender
 {
