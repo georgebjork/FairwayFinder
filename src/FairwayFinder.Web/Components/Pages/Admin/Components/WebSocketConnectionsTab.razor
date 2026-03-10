@@ -1,0 +1,103 @@
+@using FairwayFinder.Web.Services
+@inject CircuitTrackingService CircuitTrackingService
+@implements IDisposable
+
+<RadzenStack Gap="1rem" class="rz-p-2">
+    @* ── Summary ── *@
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+        <RadzenCard Style="flex: 0 0 auto; min-width: 160px;">
+            <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                <RadzenText TextStyle="TextStyle.H3" class="rz-m-0" style="color: var(--rz-primary);">@_circuits.Count</RadzenText>
+                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Active Connections</RadzenText>
+            </RadzenStack>
+        </RadzenCard>
+        <RadzenCard Style="flex: 1; min-width: 200px;">
+            <RadzenStack Gap="0.25rem">
+                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">About</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2">
+                    These are active Blazor Server SignalR circuits — one per open browser tab. 
+                    The list refreshes every 10 seconds automatically.
+                </RadzenText>
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                        Last refreshed: @_lastRefreshed.ToLocalTime().ToString("HH:mm:ss")
+                    </RadzenText>
+                    <RadzenButton Text="Refresh" Icon="refresh" ButtonStyle="ButtonStyle.Light"
+                                  Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
+                                  Click="RefreshData" />
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenCard>
+    </RadzenStack>
+
+    @* ── Connections Grid ── *@
+    <RadzenCard>
+        @if (_circuits.Count == 0)
+        {
+            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                No active connections. (Note: your own connection will appear here.)
+            </RadzenText>
+        }
+        else
+        {
+            <RadzenDataGrid TItem="ActiveCircuit" Data="_circuits" Density="Density.Compact"
+                            AllowSorting="true">
+                <Columns>
+                    <RadzenDataGridColumn TItem="ActiveCircuit" Property="UserName" Title="User" />
+                    <RadzenDataGridColumn TItem="ActiveCircuit" Property="UserEmail" Title="Email" />
+                    <RadzenDataGridColumn TItem="ActiveCircuit" Property="ConnectedAt" Title="Connected At" Width="160px"
+                                         FormatString="{0:HH:mm:ss}" />
+                    <RadzenDataGridColumn TItem="ActiveCircuit" Title="Duration" Width="120px" Sortable="false">
+                        <Template Context="circuit">
+                            @FormatDuration(circuit.Duration)
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="ActiveCircuit" Property="CircuitId" Title="Circuit ID"
+                                         Width="220px">
+                        <Template Context="circuit">
+                            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color); font-family: monospace;">
+                                @circuit.CircuitId[..Math.Min(16, circuit.CircuitId.Length)]...
+                            </RadzenText>
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        }
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    private List<ActiveCircuit> _circuits = new();
+    private DateTime _lastRefreshed = DateTime.UtcNow;
+    private Timer? _refreshTimer;
+
+    protected override void OnInitialized()
+    {
+        RefreshData();
+        _refreshTimer = new Timer(_ => InvokeAsync(() =>
+        {
+            RefreshData();
+            StateHasChanged();
+        }), null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
+    }
+
+    private void RefreshData()
+    {
+        _circuits = CircuitTrackingService.GetActiveCircuits().ToList();
+        _lastRefreshed = DateTime.UtcNow;
+    }
+
+    private static string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalHours >= 1)
+            return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+        if (duration.TotalMinutes >= 1)
+            return $"{(int)duration.TotalMinutes}m {duration.Seconds}s";
+        return $"{duration.Seconds}s";
+    }
+
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
+    }
+}

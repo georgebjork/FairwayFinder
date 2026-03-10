@@ -1,5 +1,6 @@
 using FairwayFinder.Features.HttpClients;
 using FairwayFinder.Features.Services;
+using FairwayFinder.Features.Services.Admin;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Features.Services.TGTR;
 using Microsoft.Extensions.Configuration;
@@ -11,6 +12,9 @@ public static class ServiceRegistration
 {
     public static IServiceCollection RegisterFeatureServices(this IServiceCollection services, ConfigurationManager config, bool isDevelopment)
     {
+        // Admin services
+        services.AddTransient<UserAdminService>();
+
         // Domain services
         services.AddTransient<IRoundService, RoundService>();
         services.AddTransient<IStatsService, StatsService>();
