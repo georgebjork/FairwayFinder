@@ -3,8 +3,6 @@ using FairwayFinder.Data;
 using FairwayFinder.Features;
 using FairwayFinder.Identity;
 using FairwayFinder.Shared;
-using HealthChecks.UI.Client;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using FairwayFinder.Web.Components;
