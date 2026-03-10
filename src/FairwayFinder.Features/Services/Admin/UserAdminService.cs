@@ -59,13 +59,6 @@ public class UserAdminService(UserManager<ApplicationUser> userManager)
         user.LastName = dto.LastName;
         user.UpdatedOn = DateTime.UtcNow;
 
-        if (user.Email != dto.Email)
-        {
-            var setEmailResult = await userManager.SetEmailAsync(user, dto.Email);
-            if (!setEmailResult.Succeeded) return setEmailResult;
-            await userManager.SetUserNameAsync(user, dto.Email);
-        }
-
         return await userManager.UpdateAsync(user);
     }
 

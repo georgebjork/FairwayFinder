@@ -13,11 +13,10 @@
             </RadzenFormField>
         </RadzenStack>
 
-        <RadzenFormField Text="Email">
-            <RadzenTextBox @bind-Value="_model.Email" Name="Email" />
-            <RadzenRequiredValidator Component="Email" Text="Email is required." />
-            <RadzenEmailValidator Component="Email" Text="Enter a valid email address." />
-        </RadzenFormField>
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Email</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body2">@User.Email</RadzenText>
+        </RadzenStack>
 
         @if (_errors.Count > 0)
         {
@@ -55,8 +54,7 @@
         _model = new EditUserModel
         {
             FirstName = User.FirstName,
-            LastName = User.LastName,
-            Email = User.Email
+            LastName = User.LastName
         };
     }
 
@@ -68,8 +66,7 @@
         var result = await UserAdminService.UpdateUserAsync(User.Id, new UpdateUserDto
         {
             FirstName = _model.FirstName,
-            LastName = _model.LastName,
-            Email = _model.Email
+            LastName = _model.LastName
         });
 
         if (result.Succeeded)
@@ -88,6 +85,5 @@
     {
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
     }
 }
