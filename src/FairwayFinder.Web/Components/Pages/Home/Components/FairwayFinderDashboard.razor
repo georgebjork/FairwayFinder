@@ -1,41 +1,39 @@
-@page "/"
-@rendermode InteractiveServer
-@layout MainLayout
-@attribute [Authorize]
-@using System.Security.Claims
 @using FairwayFinder.Features.Data
-@using FairwayFinder.Features.Services
 @using FairwayFinder.Features.Services.Interfaces
-@using FairwayFinder.Web.Components.Pages.Home.Components
+@using FairwayFinder.Web.Components.Pages.Home.Dialogs
 @using Microsoft.AspNetCore.WebUtilities
-@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IStatsService StatsService
 @inject NavigationManager NavigationManager
 @inject DialogService DialogService
-@inject BreadcrumbState BreadcrumbState
-
-<PageTitle>Dashboard</PageTitle>
 
 <RadzenStack Gap="1.5rem">
+    <!-- Optional Header -->
+    @if (!string.IsNullOrEmpty(HeaderText))
+    {
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">@HeaderText</RadzenText>
+        </RadzenStack>
+    }
+
     <!-- Filters -->
     <RadzenCard class="rz-p-3">
         <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End" Wrap="FlexWrap.Wrap">
             <RadzenStack Gap="0.25rem">
                 <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Round Type</RadzenText>
-                <RadzenDropDown TValue="string" 
-                                Data="@_roundTypeOptions" 
-                                TextProperty="Text" 
+                <RadzenDropDown TValue="string"
+                                Data="@_roundTypeOptions"
+                                TextProperty="Text"
                                 ValueProperty="Value"
                                 @bind-Value="_selectedRoundType"
                                 Style="width: 140px;"
                                 Change="@OnFilterChanged" />
             </RadzenStack>
-            
+
             <RadzenStack Gap="0.25rem">
                 <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Course</RadzenText>
-                <RadzenDropDown TValue="long?" 
-                                Data="@_courseOptions" 
-                                TextProperty="CourseName" 
+                <RadzenDropDown TValue="long?"
+                                Data="@_courseOptions"
+                                TextProperty="CourseName"
                                 ValueProperty="CourseId"
                                 @bind-Value="_selectedCourseId"
                                 Placeholder="All Courses"
@@ -44,36 +42,37 @@
                                 Style="width: 200px;"
                                 Change="@OnFilterChanged" />
             </RadzenStack>
-            
+
             <RadzenStack Gap="0.25rem">
                 <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">From</RadzenText>
-                <RadzenDatePicker TValue="DateOnly?" 
-                                  @bind-Value="_startDate" 
+                <RadzenDatePicker TValue="DateOnly?"
+                                  @bind-Value="_startDate"
                                   DateFormat="MM/dd/yyyy"
                                   Style="width: 140px;"
                                   Change="@OnFilterChanged"
                                   AllowClear="true" />
             </RadzenStack>
-            
+
             <RadzenStack Gap="0.25rem">
                 <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">To</RadzenText>
-                <RadzenDatePicker TValue="DateOnly?" 
-                                  @bind-Value="_endDate" 
+                <RadzenDatePicker TValue="DateOnly?"
+                                  @bind-Value="_endDate"
                                   DateFormat="MM/dd/yyyy"
                                   Style="width: 140px;"
                                   Change="@OnFilterChanged"
                                   AllowClear="true" />
             </RadzenStack>
-            
+
             @if (_hasActiveFilters)
             {
-                <RadzenButton Text="Clear Filters" 
-                              ButtonStyle="ButtonStyle.Primary" 
+                <RadzenButton Text="Clear Filters"
+                              ButtonStyle="ButtonStyle.Primary"
                               Size="ButtonSize.Medium"
                               Click="@ClearFilters" />
             }
         </RadzenStack>
     </RadzenCard>
+
     <!-- Stats Cards -->
     @if (_loading)
     {
@@ -92,17 +91,16 @@
     else if (_stats is not null)
     {
         <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
-            <FairwayFinderStatsCard 
-                Label="Rounds Played" 
+            <FairwayFinderStatsCard
+                Label="Rounds Played"
                 Value="@_stats.TotalRounds.ToString()" />
-            
-            
+
             @if (_stats.Average18HoleScore.HasValue)
             {
-                <FairwayFinderStatsCard 
-                    Label="Avg Score (18)" 
+                <FairwayFinderStatsCard
+                    Label="Avg Score (18)"
                     Value="@(_stats.Average18HoleScore?.ToString("F1") ?? "-")"
-                    SubText="@(_stats.Total18HoleRounds + " rounds")">  
+                    SubText="@(_stats.Total18HoleRounds + " rounds")">
                     @if (_stats.Average18HoleScoreTrend.HasValue)
                     {
                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
@@ -123,13 +121,13 @@
                     }
                 </FairwayFinderStatsCard>
             }
-            
+
             @if (_stats.Average9HoleScore.HasValue)
             {
-                <FairwayFinderStatsCard 
-                    Label="Avg Score (9)" 
+                <FairwayFinderStatsCard
+                    Label="Avg Score (9)"
                     Value="@(_stats.Average9HoleScore?.ToString("F1") ?? "-")"
-                    SubText="@(_stats.Total9HoleRounds + " rounds")">  
+                    SubText="@(_stats.Total9HoleRounds + " rounds")">
                     @if (_stats.Average9HoleScoreTrend.HasValue)
                     {
                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
@@ -150,32 +148,31 @@
                     }
                 </FairwayFinderStatsCard>
             }
-            
-            
+
             @if (_stats.Best18HoleRound is not null)
             {
-                <FairwayFinderStatsCard 
-                    Label="Best Round (18)" 
+                <FairwayFinderStatsCard
+                    Label="Best Round (18)"
                     Value="@_stats.Best18HoleRound.Score.ToString()"
                     SubText="@_stats.Best18HoleRound.CourseName"
                     OnClick="NavigateToBestFullRound"/>
             }
-            
+
             @if (_stats.Best9HoleRound is not null)
             {
-                <FairwayFinderStatsCard 
-                    Label="Best Round (9)" 
+                <FairwayFinderStatsCard
+                    Label="Best Round (9)"
                     Value="@_stats.Best9HoleRound.Score.ToString()"
                     SubText="@_stats.Best9HoleRound.CourseName"
                     OnClick="NavigateToNineHoleRound"/>
             }
-            
+
             @if (_stats.AdvancedStats.RoundsWithStats > 0)
             {
                 @if (_stats.AdvancedStats.FirPercent.HasValue)
                 {
-                    <FairwayFinderStatsCard 
-                        Label="Fairways" 
+                    <FairwayFinderStatsCard
+                        Label="Fairways"
                         Value="@($"{_stats.AdvancedStats.FirPercent:F1}%")"
                         SubText="@($"{_stats.AdvancedStats.RoundsWithStats} rounds")"
                         OnClick="ShowFirTrendDialog">
@@ -199,11 +196,11 @@
                         }
                     </FairwayFinderStatsCard>
                 }
-                
+
                 @if (_stats.AdvancedStats.GirPercent.HasValue)
                 {
-                    <FairwayFinderStatsCard 
-                        Label="Greens" 
+                    <FairwayFinderStatsCard
+                        Label="Greens"
                         Value="@($"{_stats.AdvancedStats.GirPercent:F1}%")"
                         SubText="@($"{_stats.AdvancedStats.RoundsWithStats} rounds")"
                         OnClick="ShowGirTrendDialog">
@@ -227,11 +224,11 @@
                         }
                     </FairwayFinderStatsCard>
                 }
-                
+
                 @if (_stats.AdvancedStats.Average18HolePutts.HasValue)
                 {
-                    <FairwayFinderStatsCard 
-                        Label="Avg Putts (18)" 
+                    <FairwayFinderStatsCard
+                        Label="Avg Putts (18)"
                         Value="@($"{_stats.AdvancedStats.Average18HolePutts:F1}")"
                         SubText="per round"
                         OnClick="ShowPuttsTrendDialog18Hole">
@@ -255,11 +252,11 @@
                         }
                     </FairwayFinderStatsCard>
                 }
-                
+
                 @if (_stats.AdvancedStats.Average9HolePutts.HasValue)
                 {
-                    <FairwayFinderStatsCard 
-                        Label="Avg Putts (9)" 
+                    <FairwayFinderStatsCard
+                        Label="Avg Putts (9)"
                         Value="@($"{_stats.AdvancedStats.Average9HolePutts:F1}")"
                         SubText="per round"
                         OnClick="ShowPuttsTrendDialog9Hole">
@@ -285,35 +282,35 @@
                 }
             }
         </RadzenStack>
-        
+
         <!-- Par Type Stats Row -->
-        if (_stats.ParTypeScoring.Par3Average.HasValue || _stats.ParTypeScoring.Par4Average.HasValue || _stats.ParTypeScoring.Par5Average.HasValue)
+        @if (_stats.ParTypeScoring.Par3Average.HasValue || _stats.ParTypeScoring.Par4Average.HasValue || _stats.ParTypeScoring.Par5Average.HasValue)
         {
             <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
-            @if (_stats.ParTypeScoring.Par3Average.HasValue)
-            {
-                <FairwayFinderStatsCard 
-                    Label="Par 3 Avg" 
-                    Value="@($"{_stats.ParTypeScoring.Par3Average:F2}")"
-                    SubText="@($"{_stats.ParTypeScoring.Par3Count} holes")" />
-            }
-            
-            @if (_stats.ParTypeScoring.Par4Average.HasValue)
-            {
-                <FairwayFinderStatsCard 
-                    Label="Par 4 Avg" 
-                    Value="@($"{_stats.ParTypeScoring.Par4Average:F2}")"
-                    SubText="@($"{_stats.ParTypeScoring.Par4Count} holes")" />
-            }
-            
-            @if (_stats.ParTypeScoring.Par5Average.HasValue)
-            {
-                <FairwayFinderStatsCard 
-                    Label="Par 5 Avg" 
-                    Value="@($"{_stats.ParTypeScoring.Par5Average:F2}")"
-                    SubText="@($"{_stats.ParTypeScoring.Par5Count} holes")" />
-            }
-        </RadzenStack>
+                @if (_stats.ParTypeScoring.Par3Average.HasValue)
+                {
+                    <FairwayFinderStatsCard
+                        Label="Par 3 Avg"
+                        Value="@($"{_stats.ParTypeScoring.Par3Average:F2}")"
+                        SubText="@($"{_stats.ParTypeScoring.Par3Count} holes")" />
+                }
+
+                @if (_stats.ParTypeScoring.Par4Average.HasValue)
+                {
+                    <FairwayFinderStatsCard
+                        Label="Par 4 Avg"
+                        Value="@($"{_stats.ParTypeScoring.Par4Average:F2}")"
+                        SubText="@($"{_stats.ParTypeScoring.Par4Count} holes")" />
+                }
+
+                @if (_stats.ParTypeScoring.Par5Average.HasValue)
+                {
+                    <FairwayFinderStatsCard
+                        Label="Par 5 Avg"
+                        Value="@($"{_stats.ParTypeScoring.Par5Average:F2}")"
+                        SubText="@($"{_stats.ParTypeScoring.Par5Count} holes")" />
+                }
+            </RadzenStack>
         }
     }
 
@@ -338,7 +335,7 @@
         <RadzenColumn Size="12" SizeLG="8">
             <RadzenCard Style="height: 100%;">
                 <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Recent Rounds</RadzenText>
-                <FairwayFinderRoundsList Rounds="@_stats?.Rounds" />
+                <FairwayFinderRoundsList Rounds="@_stats?.Rounds" RoundUrlPrefix="@RoundUrlPrefix" />
             </RadzenCard>
         </RadzenColumn>
         <RadzenColumn Size="12" SizeLG="4">
@@ -362,19 +359,52 @@
 </style>
 
 @code {
-    private string? _userId;
+    /// <summary>
+    /// The user ID whose stats to load and display.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string UserId { get; set; } = null!;
+
+    /// <summary>
+    /// The base URL path used when persisting filter query parameters.
+    /// e.g. "/" for the owner dashboard, "/profile/{guid}" for a public profile.
+    /// </summary>
+    [Parameter, EditorRequired]
+    public string BasePath { get; set; } = "/";
+
+    /// <summary>
+    /// Optional prefix prepended to round navigation URLs.
+    /// When null, rounds navigate to "/round/{id}".
+    /// When set (e.g. "/profile/{guid}"), rounds navigate to "{prefix}/round/{id}".
+    /// </summary>
+    [Parameter]
+    public string? RoundUrlPrefix { get; set; }
+
+    /// <summary>
+    /// Whether clicking advanced stats cards (FIR, GIR, Putts) opens trend dialogs.
+    /// true for the owner's dashboard, false for public viewers.
+    /// </summary>
+    [Parameter]
+    public bool ShowTrendDialogs { get; set; } = true;
+
+    /// <summary>
+    /// Optional header text displayed above the dashboard (e.g. a user's display name).
+    /// </summary>
+    [Parameter]
+    public string? HeaderText { get; set; }
+
     private UserStatsResponse? _stats;
     private bool _loading = true;
-    
+
     // Filter state
     private string _selectedRoundType = "all";
     private long? _selectedCourseId;
     private DateOnly? _startDate;
     private DateOnly? _endDate;
     private List<CourseOption> _courseOptions = new();
-    
+
     private bool _hasActiveFilters => _selectedRoundType != "all" || _selectedCourseId.HasValue || _startDate.HasValue || _endDate.HasValue;
-    
+
     private readonly List<object> _roundTypeOptions = new()
     {
         new { Text = "All Rounds", Value = "all" },
@@ -384,35 +414,17 @@
 
     protected override async Task OnInitializedAsync()
     {
-        BreadcrumbState.Set(new BreadcrumbItem("Dashboard"));
-
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-
-        if (user.Identity?.IsAuthenticated == true)
-        {
-            _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            
-            if (!string.IsNullOrEmpty(_userId))
-            {
-                // Load course options for the filter dropdown
-                _courseOptions = await StatsService.GetUserCoursesAsync(_userId);
-                
-                // Parse URL query parameters
-                ParseQueryParameters();
-                
-                await LoadStats();
-            }
-        }
-        
+        _courseOptions = await StatsService.GetUserCoursesAsync(UserId);
+        ParseQueryParameters();
+        await LoadStats();
         _loading = false;
     }
-    
+
     private void ParseQueryParameters()
     {
         var uri = new Uri(NavigationManager.Uri);
         var query = QueryHelpers.ParseQuery(uri.Query);
-        
+
         if (query.TryGetValue("type", out var typeValue))
         {
             var type = typeValue.ToString();
@@ -421,54 +433,57 @@
                 _selectedRoundType = type;
             }
         }
-        
+
         if (query.TryGetValue("course", out var courseValue) && long.TryParse(courseValue.ToString(), out var courseId))
         {
             _selectedCourseId = courseId;
         }
-        
+
         if (query.TryGetValue("from", out var fromValue) && DateOnly.TryParse(fromValue.ToString(), out var startDate))
         {
             _startDate = startDate;
         }
-        
+
         if (query.TryGetValue("to", out var toValue) && DateOnly.TryParse(toValue.ToString(), out var endDate))
         {
             _endDate = endDate;
         }
     }
-    
+
     private void UpdateUrl()
     {
         var queryParams = new Dictionary<string, string?>();
-        
+
         if (_selectedRoundType != "all")
         {
             queryParams["type"] = _selectedRoundType;
         }
-        
+
         if (_selectedCourseId.HasValue)
         {
             queryParams["course"] = _selectedCourseId.Value.ToString();
         }
-        
+
         if (_startDate.HasValue)
         {
             queryParams["from"] = _startDate.Value.ToString("yyyy-MM-dd");
         }
-        
+
         if (_endDate.HasValue)
         {
             queryParams["to"] = _endDate.Value.ToString("yyyy-MM-dd");
         }
-        
-        var newUrl = queryParams.Count > 0 
-            ? QueryHelpers.AddQueryString("/", queryParams!) 
-            : "/";
-        
+
+        var basePath = BasePath.TrimEnd('/');
+        if (string.IsNullOrEmpty(basePath)) basePath = "/";
+
+        var newUrl = queryParams.Count > 0
+            ? QueryHelpers.AddQueryString(basePath, queryParams!)
+            : basePath;
+
         NavigationManager.NavigateTo(newUrl, replace: true);
     }
-    
+
     private StatsFilter BuildFilter()
     {
         return new StatsFilter
@@ -484,59 +499,61 @@
             EndDate = _endDate
         };
     }
-    
+
     private async Task LoadStats()
     {
-        if (string.IsNullOrEmpty(_userId)) return;
-        
         var filter = BuildFilter();
-        _stats = await StatsService.GetUserStatsAsync(_userId, filter);
+        _stats = await StatsService.GetUserStatsAsync(UserId, filter);
     }
-    
+
     private async Task OnFilterChanged()
     {
         _loading = true;
         StateHasChanged();
-        
+
         UpdateUrl();
         await LoadStats();
-        
+
         _loading = false;
     }
-    
+
     private async Task ClearFilters()
     {
         _selectedRoundType = "all";
         _selectedCourseId = null;
         _startDate = null;
         _endDate = null;
-        
+
         await OnFilterChanged();
+    }
+
+    private string BuildRoundUrl(long roundId)
+    {
+        var prefix = string.IsNullOrEmpty(RoundUrlPrefix) ? "" : RoundUrlPrefix.TrimEnd('/');
+        return $"{prefix}/round/{roundId}";
     }
 
     private void NavigateToBestFullRound()
     {
         if (_stats?.Best18HoleRound is not null)
         {
-            NavigationManager.NavigateTo($"/round/{_stats.Best18HoleRound.RoundId}");
+            NavigationManager.NavigateTo(BuildRoundUrl(_stats.Best18HoleRound.RoundId));
         }
     }
-    
+
     private void NavigateToNineHoleRound()
     {
         if (_stats?.Best9HoleRound is not null)
         {
-            NavigationManager.NavigateTo($"/round/{_stats.Best9HoleRound.RoundId}");
+            NavigationManager.NavigateTo(BuildRoundUrl(_stats.Best9HoleRound.RoundId));
         }
     }
-    
+
     private async Task ShowPuttsTrendDialog18Hole()
     {
-        if (_stats?.PuttsTrend18Hole is null || _stats.PuttsTrend18Hole.Count < 2)
-        {
-            return;
-        }
-        
+        if (!ShowTrendDialogs) return;
+        if (_stats?.PuttsTrend18Hole is null || _stats.PuttsTrend18Hole.Count < 2) return;
+
         await DialogService.OpenAsync<PuttsTrendDialog>("Putting Trend (18-Hole Rounds)",
             new Dictionary<string, object>
             {
@@ -549,14 +566,12 @@
                 CloseDialogOnEsc = true
             });
     }
-    
+
     private async Task ShowPuttsTrendDialog9Hole()
     {
-        if (_stats?.PuttsTrend9Hole is null || _stats.PuttsTrend9Hole.Count < 2)
-        {
-            return;
-        }
-        
+        if (!ShowTrendDialogs) return;
+        if (_stats?.PuttsTrend9Hole is null || _stats.PuttsTrend9Hole.Count < 2) return;
+
         await DialogService.OpenAsync<PuttsTrendDialog>("Putting Trend (9-Hole Rounds)",
             new Dictionary<string, object>
             {
@@ -569,14 +584,12 @@
                 CloseDialogOnEsc = true
             });
     }
-    
+
     private async Task ShowFirTrendDialog()
     {
-        if (_stats?.FirTrend is null || _stats.FirTrend.Count < 2)
-        {
-            return;
-        }
-        
+        if (!ShowTrendDialogs) return;
+        if (_stats?.FirTrend is null || _stats.FirTrend.Count < 2) return;
+
         await DialogService.OpenAsync<FirTrendDialog>("Fairways In Regulation Trend",
             new Dictionary<string, object>
             {
@@ -589,14 +602,12 @@
                 CloseDialogOnEsc = true
             });
     }
-    
+
     private async Task ShowGirTrendDialog()
     {
-        if (_stats?.GirTrend is null || _stats.GirTrend.Count < 2)
-        {
-            return;
-        }
-        
+        if (!ShowTrendDialogs) return;
+        if (_stats?.GirTrend is null || _stats.GirTrend.Count < 2) return;
+
         await DialogService.OpenAsync<GirTrendDialog>("Greens In Regulation Trend",
             new Dictionary<string, object>
             {

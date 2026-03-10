@@ -519,6 +519,13 @@ public class RoundService : IRoundService
         return true;
     }
 
+    public async Task<bool> IsRoundOwnedByUserAsync(long roundId, string userId)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        return await dbContext.Rounds
+            .AnyAsync(r => r.RoundId == roundId && r.UserId == userId && !r.IsDeleted);
+    }
+
     public async Task<List<CourseResponse>> GetPlayedCoursesByUserId(string userId, bool? statRounds = null)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();

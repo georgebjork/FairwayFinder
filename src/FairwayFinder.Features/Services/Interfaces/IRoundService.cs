@@ -25,6 +25,11 @@ public interface IRoundService
     Task<List<CourseResponse>> GetPlayedCoursesByUserId(string userId, bool? statRounds = null);
 
     /// <summary>
+    /// Checks if a round belongs to a specific user.
+    /// </summary>
+    Task<bool> IsRoundOwnedByUserAsync(long roundId, string userId);
+
+    /// <summary>
     /// Creates a new round with scores, hole stats (if enabled), and round stats.
     /// Returns the new round ID.
     /// </summary>

@@ -1,0 +1,131 @@
+@page "/profile/{PublicId:guid}/round/{RoundId:long}"
+@rendermode InteractiveServer
+@layout MainLayout
+@attribute [AllowAnonymous]
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Web.Components.Pages.Rounds.Components
+@inject IProfileService ProfileService
+@inject IRoundService RoundService
+@inject NavigationManager NavigationManager
+@inject BreadcrumbState BreadcrumbState
+
+<PageTitle>View Round</PageTitle>
+
+@if (_loading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" class="rz-p-8">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (_round is null)
+{
+    <RadzenCard class="rz-p-5">
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
+            @_errorMessage
+        </RadzenAlert>
+        @if (_profile is not null)
+        {
+            <RadzenButton Text="Back to Profile" Icon="arrow_back" ButtonStyle="ButtonStyle.Secondary"
+                          Click="@(() => NavigationManager.NavigateTo($"/profile/{PublicId}"))" class="rz-mt-4" />
+        }
+    </RadzenCard>
+}
+else
+{
+    <RadzenStack Gap="1.5rem">
+        <!-- Header -->
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Start">
+            <RadzenStack Gap="0.25rem">
+                <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">@_round.CourseName</RadzenText>
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem">
+                    <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                        Tee Box: @_round.Teebox.TeeboxName
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                        Date: @_round.DatePlayed.ToString("M/d/yy")
+                    </RadzenText>
+                    @if (_profile is not null)
+                    {
+                        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                            Player: @_profile.DisplayName
+                        </RadzenText>
+                    }
+                </RadzenStack>
+            </RadzenStack>
+
+            <RadzenButton Text="Back to Profile" Icon="arrow_back" ButtonStyle="ButtonStyle.Light"
+                          Variant="Variant.Outlined"
+                          Click="@(() => NavigationManager.NavigateTo($"/profile/{PublicId}"))" />
+        </RadzenStack>
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Start">
+            <!-- Scoring Breakdown Pills -->
+            <RoundScoringPills Round="@_round" />
+        </RadzenStack>
+
+        <!-- Scorecard -->
+        <FairwayFinderScorecard Round="@_round" />
+
+        <!-- Round Stats -->
+        <RoundStatsPanel Round="@_round" />
+    </RadzenStack>
+}
+
+@code {
+    [Parameter]
+    public Guid PublicId { get; set; }
+
+    [Parameter]
+    public long RoundId { get; set; }
+
+    private UserProfileResponse? _profile;
+    private RoundResponse? _round;
+    private bool _loading = true;
+    private string _errorMessage = "Round not found.";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+
+        // 1. Validate the public profile
+        _profile = await ProfileService.GetPublicProfileAsync(PublicId);
+        if (_profile is null)
+        {
+            _errorMessage = "This profile is not available. It may be private or may not exist.";
+            _loading = false;
+            return;
+        }
+
+        // 2. Load the round
+        _round = await RoundService.GetRoundByIdAsync(RoundId);
+
+        // 3. Verify the round belongs to this profile's user
+        if (_round is not null)
+        {
+            var isOwned = await RoundService.IsRoundOwnedByUserAsync(RoundId, _profile.UserId);
+            if (!isOwned)
+            {
+                _round = null;
+                _errorMessage = "Round not found or does not belong to this profile.";
+            }
+        }
+
+        if (_round is not null && _profile is not null)
+        {
+            BreadcrumbState.Set(
+                new BreadcrumbItem($"{_profile.DisplayName}'s Profile", $"/profile/{PublicId}"),
+                new BreadcrumbItem($"{_round.CourseName} - {_round.DatePlayed:M/d/yy}")
+            );
+        }
+        else
+        {
+            BreadcrumbState.Set(
+                new BreadcrumbItem("Profile", $"/profile/{PublicId}"),
+                new BreadcrumbItem("Round")
+            );
+        }
+
+        _loading = false;
+    }
+}

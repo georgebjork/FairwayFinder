@@ -1,0 +1,34 @@
+@page "/"
+@rendermode InteractiveServer
+@layout MainLayout
+@attribute [Authorize]
+@using System.Security.Claims
+@using FairwayFinder.Web.Components.Pages.Home.Components
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject BreadcrumbState BreadcrumbState
+
+<PageTitle>Dashboard</PageTitle>
+
+@if (!string.IsNullOrEmpty(_userId))
+{
+    <FairwayFinderDashboard UserId="@_userId"
+                            BasePath="/"
+                            ShowTrendDialogs="true" />
+}
+
+@code {
+    private string? _userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        BreadcrumbState.Set(new BreadcrumbItem("Dashboard"));
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        }
+    }
+}

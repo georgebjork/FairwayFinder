@@ -1,0 +1,139 @@
+@page "/settings"
+@rendermode InteractiveServer
+@layout MainLayout
+@attribute [Authorize]
+@using System.Security.Claims
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services.Interfaces
+@inject IProfileService ProfileService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject NotificationService NotificationService
+@inject BreadcrumbState BreadcrumbState
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Settings</PageTitle>
+
+@if (_loading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" class="rz-p-8">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (_profile is not null)
+{
+    <RadzenStack Gap="1.5rem" Style="max-width: 600px;">
+        <RadzenText TextStyle="TextStyle.H3">Settings</RadzenText>
+
+        <!-- Profile Visibility -->
+        <RadzenCard class="rz-p-5">
+            <RadzenStack Gap="1rem">
+                <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Profile Visibility</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                    When your profile is public, anyone with the link can view your dashboard and rounds.
+                </RadzenText>
+
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+                    <RadzenSwitch @bind-Value="_isPublic" Change="OnVisibilityChanged" />
+                    <RadzenText TextStyle="TextStyle.Body1" class="rz-m-0">
+                        @(_isPublic ? "Public" : "Private")
+                    </RadzenText>
+                </RadzenStack>
+
+                @if (_isPublic)
+                {
+                    <RadzenStack Gap="0.5rem" class="rz-mt-2">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" style="color: var(--rz-text-secondary-color);">
+                            Shareable Link
+                        </RadzenText>
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" AlignItems="AlignItems.Center">
+                            <RadzenTextBox Value="@_shareableUrl" ReadOnly="true" Style="flex: 1;" />
+                            <RadzenButton Icon="content_copy"
+                                          ButtonStyle="ButtonStyle.Light"
+                                          Variant="Variant.Outlined"
+                                          Size="ButtonSize.Medium"
+                                          Click="CopyShareableLink" />
+                        </RadzenStack>
+                    </RadzenStack>
+                }
+            </RadzenStack>
+        </RadzenCard>
+    </RadzenStack>
+}
+
+@code {
+    private string? _userId;
+    private UserProfileResponse? _profile;
+    private bool _loading = true;
+    private bool _isPublic;
+    private string _shareableUrl = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem("Settings")
+        );
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(_userId))
+        {
+            _profile = await ProfileService.GetOrCreateProfileAsync(_userId);
+            _isPublic = _profile.IsPublic;
+            BuildShareableUrl();
+        }
+
+        _loading = false;
+    }
+
+    private void BuildShareableUrl()
+    {
+        if (_profile is null) return;
+        var baseUri = NavigationManager.BaseUri.TrimEnd('/');
+        _shareableUrl = $"{baseUri}/profile/{_profile.PublicIdentifier}";
+    }
+
+    private async Task OnVisibilityChanged(bool value)
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+
+        await ProfileService.UpdateProfileVisibilityAsync(_userId, value);
+        _isPublic = value;
+
+        var message = value ? "Your profile is now public." : "Your profile is now private.";
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = value ? NotificationSeverity.Success : NotificationSeverity.Info,
+            Summary = "Profile Updated",
+            Detail = message,
+            Duration = 3000
+        });
+    }
+
+    private async Task CopyShareableLink()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _shareableUrl);
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Copied!",
+                Detail = "Link copied to clipboard.",
+                Duration = 2000
+            });
+        }
+        catch
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Copy Failed",
+                Detail = "Please copy the link manually.",
+                Duration = 3000
+            });
+        }
+    }
+}

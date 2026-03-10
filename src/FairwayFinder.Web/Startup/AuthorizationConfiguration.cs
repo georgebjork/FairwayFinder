@@ -1,17 +1,14 @@
-using Microsoft.AspNetCore.Authorization;
-
 namespace FairwayFinder.Web.Startup;
 
 public static class AuthorizationConfiguration
 {
     public static IServiceCollection AddFairwayFinderAuthorization(this IServiceCollection services)
     {
-        services.AddAuthorization(options =>
-        {
-            options.FallbackPolicy = new AuthorizationPolicyBuilder()
-                .RequireAuthenticatedUser()
-                .Build();
-        });
+        // No FallbackPolicy — authorization is enforced per-page via [Authorize] attributes
+        // and AuthorizeRouteView in Routes.razor. This allows [AllowAnonymous] pages
+        // (public profiles) to work with InteractiveServer mode without the auth middleware
+        // blocking the SignalR circuit negotiation.
+        services.AddAuthorization();
         return services;
     }
 }

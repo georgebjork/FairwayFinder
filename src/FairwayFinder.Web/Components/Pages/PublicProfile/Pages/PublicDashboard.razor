@@ -1,0 +1,56 @@
+@page "/profile/{PublicId:guid}"
+@rendermode InteractiveServer
+@layout MainLayout
+@attribute [AllowAnonymous]
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Web.Components.Pages.Home.Components
+@inject IProfileService ProfileService
+@inject BreadcrumbState BreadcrumbState
+
+<PageTitle>@(_profile?.DisplayName ?? "Profile") - FairwayFinder</PageTitle>
+
+@if (_loading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" class="rz-p-8">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (_profile is null)
+{
+    <RadzenCard class="rz-p-5">
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
+            This profile is not available. It may be private or may not exist.
+        </RadzenAlert>
+    </RadzenCard>
+}
+else
+{
+    <FairwayFinderDashboard UserId="@_profile.UserId"
+                            BasePath="@($"/profile/{PublicId}")"
+                            RoundUrlPrefix="@($"/profile/{PublicId}")"
+                            ShowTrendDialogs="false"
+                            HeaderText="@_profile.DisplayName" />
+}
+
+@code {
+    [Parameter]
+    public Guid PublicId { get; set; }
+
+    private UserProfileResponse? _profile;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _profile = await ProfileService.GetPublicProfileAsync(PublicId);
+
+        if (_profile is not null)
+        {
+            BreadcrumbState.Set(
+                new BreadcrumbItem($"{_profile.DisplayName}'s Profile")
+            );
+        }
+
+        _loading = false;
+    }
+}

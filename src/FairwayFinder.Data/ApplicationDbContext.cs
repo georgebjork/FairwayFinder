@@ -21,6 +21,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public virtual DbSet<TgtrTeeboxMap> TgtrTeeboxMaps { get; set; }
     public virtual DbSet<TgtrRoundMap> TgtrRoundMaps { get; set; }
     public virtual DbSet<UserInvitation> UserInvitations { get; set; }
+    public virtual DbSet<UserProfile> UserProfiles { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -293,6 +294,25 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.SentToEmail).HasColumnName("sent_to_email");
             entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
             entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
+        });
+
+        // UserProfile
+        modelBuilder.Entity<UserProfile>(entity =>
+        {
+            entity.HasKey(e => e.UserProfileId).HasName("user_profile_pkey");
+            entity.ToTable("user_profile");
+            entity.Property(e => e.UserProfileId).HasColumnName("user_profile_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.PublicIdentifier).HasColumnName("public_identifier");
+            entity.Property(e => e.IsPublic).HasColumnName("is_public").HasDefaultValue(false);
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+            entity.Property(e => e.CreatedOn).HasColumnName("created_on");
+            entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
+            entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+
+            entity.HasIndex(e => e.UserId).IsUnique().HasDatabaseName("ix_user_profile_user_id");
+            entity.HasIndex(e => e.PublicIdentifier).IsUnique().HasDatabaseName("ix_user_profile_public_identifier");
         });
     }
 }
