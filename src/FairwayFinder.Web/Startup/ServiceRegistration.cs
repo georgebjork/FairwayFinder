@@ -1,6 +1,7 @@
 using FairwayFinder.Web.Components.Auth;
 using FairwayFinder.Web.Components.Shared.Layout;
 using FairwayFinder.Web.Services;
+using Microsoft.AspNetCore.Components.Server.Circuits;
 
 namespace FairwayFinder.Web.Startup;
 
@@ -16,6 +17,11 @@ public static class ServiceRegistration
 
         // App services
         services.AddTransient<IApplicationStartupService, ApplicationStartupService>();
+
+        // Circuit tracking (singleton so state is shared across all connections)
+        services.AddSingleton<CircuitTrackingService>();
+        services.AddScoped<CircuitHandler, TrackingCircuitHandler>();
+        services.AddHttpContextAccessor();
 
         return services;
     }

@@ -1,0 +1,266 @@
+@using FairwayFinder.Features.Services.Admin
+@using FairwayFinder.Web.Components.Pages.Admin.Dialogs
+@using FairwayFinder.Web.Components.Shared.Dialogs
+@inject UserAdminService UserAdminService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+
+<RadzenStack Gap="1rem" class="rz-p-2">
+    @* ── Toolbar ── *@
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="0.5rem">
+        <RadzenTextBox Placeholder="Search by name or email..." @bind-Value="_searchQuery"
+                       @oninput="OnSearchChanged" Style="width: 300px;" />
+        <RadzenButton Text="Create User" Icon="person_add" ButtonStyle="ButtonStyle.Primary"
+                      Size="ButtonSize.Small" Click="OnCreateUserClicked" />
+    </RadzenStack>
+
+    @* ── Users Grid ── *@
+    <RadzenCard>
+        @if (_loading)
+        {
+            <RadzenStack AlignItems="AlignItems.Center" class="rz-p-4" Gap="0.5rem">
+                <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">Loading users...</RadzenText>
+            </RadzenStack>
+        }
+        else
+        {
+            <RadzenDataGrid TItem="UserAdminDto" Data="FilteredUsers" Density="Density.Compact"
+                            AllowSorting="true" AllowPaging="true" PageSize="15"
+                            EmptyText="No users found.">
+                <Columns>
+                    <RadzenDataGridColumn TItem="UserAdminDto" Property="FullName" Title="Name" Width="180px" />
+                    <RadzenDataGridColumn TItem="UserAdminDto" Property="Email" Title="Email" />
+                    <RadzenDataGridColumn TItem="UserAdminDto" Title="Role" Width="100px" Sortable="false">
+                        <Template Context="user">
+                            @if (user.IsAdmin)
+                            {
+                                <RadzenBadge Text="Admin" BadgeStyle="BadgeStyle.Warning" Shade="Shade.Lighter" />
+                            }
+                            else
+                            {
+                                <RadzenBadge Text="User" BadgeStyle="BadgeStyle.Info" Shade="Shade.Lighter" />
+                            }
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="UserAdminDto" Title="Status" Width="100px" Sortable="false">
+                        <Template Context="user">
+                            @if (user.IsLockedOut)
+                            {
+                                <RadzenBadge Text="Locked" BadgeStyle="BadgeStyle.Danger" Shade="Shade.Lighter" />
+                            }
+                            else
+                            {
+                                <RadzenBadge Text="Active" BadgeStyle="BadgeStyle.Success" Shade="Shade.Lighter" />
+                            }
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="UserAdminDto" Property="CreatedOn" Title="Created" Width="120px" FormatString="{0:MMM d, yyyy}" />
+                    <RadzenDataGridColumn TItem="UserAdminDto" Title="Actions" Width="220px" Sortable="false">
+                        <Template Context="user">
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.25rem">
+                                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.ExtraSmall"
+                                              Variant="Variant.Outlined" Title="Edit user"
+                                              Click="@(() => OnEditUserClicked(user))" />
+                                <RadzenButton Icon="@(user.IsAdmin ? "remove_moderator" : "admin_panel_settings")"
+                                              ButtonStyle="@(user.IsAdmin ? ButtonStyle.Warning : ButtonStyle.Secondary)"
+                                              Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
+                                              Title="@(user.IsAdmin ? "Remove Admin" : "Make Admin")"
+                                              Click="@(() => OnToggleAdminClicked(user))" />
+                                <RadzenButton Icon="@(user.IsLockedOut ? "lock_open" : "lock")"
+                                              ButtonStyle="@(user.IsLockedOut ? ButtonStyle.Success : ButtonStyle.Warning)"
+                                              Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
+                                              Title="@(user.IsLockedOut ? "Unlock user" : "Lock user")"
+                                              Click="@(() => OnToggleLockoutClicked(user))" />
+                                <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.ExtraSmall"
+                                              Variant="Variant.Outlined" Title="Delete user"
+                                              Click="@(() => OnDeleteUserClicked(user))" />
+                            </RadzenStack>
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        }
+    </RadzenCard>
+</RadzenStack>
+
+@code {
+    private List<UserAdminDto> _users = new();
+    private bool _loading = true;
+    private string _searchQuery = string.Empty;
+
+    private IEnumerable<UserAdminDto> FilteredUsers => string.IsNullOrWhiteSpace(_searchQuery)
+        ? _users
+        : _users.Where(u =>
+            u.FullName.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase) ||
+            u.Email.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        _loading = true;
+        _users = await UserAdminService.GetAllUsersAsync();
+        _loading = false;
+    }
+
+    private void OnSearchChanged(ChangeEventArgs e)
+    {
+        _searchQuery = e.Value?.ToString() ?? string.Empty;
+    }
+
+    private async Task OnCreateUserClicked()
+    {
+        var result = await DialogService.OpenAsync<CreateUserDialog>("Create New User",
+            new Dictionary<string, object>(),
+            new DialogOptions
+            {
+                Width = "500px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true
+            });
+
+        if (result is string userId && !string.IsNullOrEmpty(userId))
+        {
+            await LoadUsersAsync();
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "User Created",
+                Detail = "The new user account has been created.",
+                Duration = 4000
+            });
+        }
+    }
+
+    private async Task OnEditUserClicked(UserAdminDto user)
+    {
+        var result = await DialogService.OpenAsync<EditUserDialog>("Edit User",
+            new Dictionary<string, object> { { "User", user } },
+            new DialogOptions
+            {
+                Width = "450px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true
+            });
+
+        if (result is true)
+        {
+            await LoadUsersAsync();
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "User Updated",
+                Detail = "User details have been saved.",
+                Duration = 4000
+            });
+        }
+    }
+
+    private async Task OnToggleAdminClicked(UserAdminDto user)
+    {
+        var action = user.IsAdmin ? "remove Admin role from" : "grant Admin role to";
+        var confirmed = await DialogService.Confirm(
+            $"Are you sure you want to {action} {user.FullName}?",
+            "Confirm Role Change",
+            new ConfirmOptions { OkButtonText = "Yes", CancelButtonText = "Cancel" });
+
+        if (confirmed != true) return;
+
+        var result = await UserAdminService.ToggleAdminRoleAsync(user.Id);
+        if (result.Succeeded)
+        {
+            await LoadUsersAsync();
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Role Updated",
+                Detail = $"Admin role {(user.IsAdmin ? "removed from" : "granted to")} {user.FullName}.",
+                Duration = 4000
+            });
+        }
+        else
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Role Update Failed",
+                Detail = string.Join(", ", result.Errors.Select(e => e.Description)),
+                Duration = 6000
+            });
+        }
+    }
+
+    private async Task OnToggleLockoutClicked(UserAdminDto user)
+    {
+        var action = user.IsLockedOut ? "unlock" : "lock";
+        var confirmed = await DialogService.Confirm(
+            $"Are you sure you want to {action} {user.FullName}?",
+            $"Confirm {(user.IsLockedOut ? "Unlock" : "Lock")}",
+            new ConfirmOptions { OkButtonText = "Yes", CancelButtonText = "Cancel" });
+
+        if (confirmed != true) return;
+
+        var result = await UserAdminService.SetLockoutAsync(user.Id, !user.IsLockedOut);
+        if (result.Succeeded)
+        {
+            await LoadUsersAsync();
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = user.IsLockedOut ? "User Unlocked" : "User Locked",
+                Detail = $"{user.FullName} has been {(user.IsLockedOut ? "unlocked" : "locked")}.",
+                Duration = 4000
+            });
+        }
+        else
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Action Failed",
+                Detail = string.Join(", ", result.Errors.Select(e => e.Description)),
+                Duration = 6000
+            });
+        }
+    }
+
+    private async Task OnDeleteUserClicked(UserAdminDto user)
+    {
+        var result = await DialogService.OpenAsync<DeleteConfirmDialog>("Delete User",
+            new Dictionary<string, object>
+            {
+                { "EntityName", user.FullName },
+                { "WarningMessage", "This will permanently remove the user and all associated data." }
+            },
+            new DialogOptions { Width = "400px", CloseDialogOnOverlayClick = false });
+
+        if (result is not true) return;
+
+        var deleteResult = await UserAdminService.DeleteUserAsync(user.Id);
+        if (deleteResult.Succeeded)
+        {
+            await LoadUsersAsync();
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "User Deleted",
+                Detail = $"{user.FullName} has been deleted.",
+                Duration = 4000
+            });
+        }
+        else
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Delete Failed",
+                Detail = string.Join(", ", deleteResult.Errors.Select(e => e.Description)),
+                Duration = 6000
+            });
+        }
+    }
+}
