@@ -67,6 +67,12 @@
                         <ValidationMessage For="() => Input.Email" />
                     </RadzenFormField>
 
+                    @* Honeypot: hidden from real users, bots will fill it. Must NOT use display:none/visibility:hidden as bots skip those. *@
+                    <div style="position: absolute; left: -9999px; opacity: 0; height: 0; overflow: hidden;" aria-hidden="true">
+                        <label for="website">Website</label>
+                        <InputText @bind-Value="Input!.Website" id="website" tabindex="-1" autocomplete="off" />
+                    </div>
+
                     <RadzenFormField Text="Password" Variant="Variant.Outlined">
                         <InputText type="password" @bind-Value="Input!.Password" class="rz-textbox" autocomplete="new-password" aria-required="true" placeholder="Create a password" />
                         <ValidationMessage For="() => Input.Password" />
@@ -115,6 +121,15 @@
         if (Input == null)
         {
             Logger.LogError("Input form in the register page came back null.");
+            return;
+        }
+
+        // Honeypot check — real users never see or fill this field; bots do.
+        // Redirect to the confirmation page so the bot gets no signal it was caught.
+        if (!string.IsNullOrEmpty(Input.Website))
+        {
+            Logger.LogWarning("Honeypot triggered on registration attempt. Likely bot. Email attempted: {Email}", Input.Email);
+            RedirectManager.RedirectTo("/register-confirmation");
             return;
         }
 
@@ -170,6 +185,9 @@
 
     private sealed class InputModel
     {
+        // Honeypot field — should always be empty for real users. Bots will fill it.
+        public string? Website { get; set; }
+
         [Required]
         public string FirstName { get; set; } = "";
 
