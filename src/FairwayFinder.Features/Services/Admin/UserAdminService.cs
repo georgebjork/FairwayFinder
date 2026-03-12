@@ -23,6 +23,7 @@ public class UserAdminService(UserManager<ApplicationUser> userManager)
                 Email = user.Email ?? string.Empty,
                 Roles = roles.ToList(),
                 IsLockedOut = isLockedOut,
+                IsEmailConfirmed = user.EmailConfirmed,
                 CreatedOn = user.CreatedOn
             });
         }
@@ -46,6 +47,7 @@ public class UserAdminService(UserManager<ApplicationUser> userManager)
             Email = user.Email ?? string.Empty,
             Roles = roles.ToList(),
             IsLockedOut = isLockedOut,
+            IsEmailConfirmed = user.EmailConfirmed,
             CreatedOn = user.CreatedOn
         };
     }

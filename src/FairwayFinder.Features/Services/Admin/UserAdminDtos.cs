@@ -10,6 +10,7 @@ public class UserAdminDto
     public List<string> Roles { get; set; } = new();
     public bool IsAdmin => Roles.Contains("Admin");
     public bool IsLockedOut { get; set; }
+    public bool IsEmailConfirmed { get; set; }
     public DateTime CreatedOn { get; set; }
 }
 

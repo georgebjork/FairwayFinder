@@ -8,80 +8,106 @@
 <RadzenStack Gap="1rem" class="rz-p-2">
     @* ── Toolbar ── *@
     <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="0.5rem">
-        <RadzenTextBox Placeholder="Search by name or email..." @bind-Value="_searchQuery"
-                       @oninput="OnSearchChanged" Style="width: 300px;" />
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+            <RadzenIcon Icon="people" Style="font-size: 1.75rem;" />
+            <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Users</RadzenText>
+        </RadzenStack>
         <RadzenButton Text="Create User" Icon="person_add" ButtonStyle="ButtonStyle.Primary"
                       Size="ButtonSize.Small" Click="OnCreateUserClicked" />
     </RadzenStack>
 
     @* ── Users Grid ── *@
-    <RadzenCard>
-        @if (_loading)
-        {
-            <RadzenStack AlignItems="AlignItems.Center" class="rz-p-4" Gap="0.5rem">
-                <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
-                <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">Loading users...</RadzenText>
+    @if (_loading)
+    {
+        <RadzenStack AlignItems="AlignItems.Center" class="rz-p-8">
+            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        </RadzenStack>
+    }
+    else if (_users.Count == 0)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+            No users found. Click "Create User" to add one.
+        </RadzenAlert>
+    }
+    else
+    {
+            <RadzenStack Gap="1rem">
+                <RadzenTextBox Placeholder="Search by name or email..." Value="@_searchQuery"
+                               @oninput="OnSearchChanged" Style="width: 100%;" />
+
+                <RadzenDataGrid TItem="UserAdminDto" Data="FilteredUsers"
+                                AllowFiltering="true" FilterMode="FilterMode.Advanced"
+                                AllowSorting="true" AllowPaging="true" PageSize="10"
+                                PagerHorizontalAlign="HorizontalAlign.Right"
+                                ShowPagingSummary="true"
+                                PagingSummaryFormat="Displaying page {0} of {1} (total {2} users)"
+                                EmptyText="No users found.">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="UserAdminDto" Property="FullName" Title="Name" Width="200px" />
+                        <RadzenDataGridColumn TItem="UserAdminDto" Property="Email" Title="Email" />
+                        <RadzenDataGridColumn TItem="UserAdminDto" Title="Role" Width="100px" Sortable="false" Filterable="false">
+                            <Template Context="user">
+                                @if (user.IsAdmin)
+                                {
+                                    <RadzenBadge Text="Admin" BadgeStyle="BadgeStyle.Warning" Shade="Shade.Lighter" />
+                                }
+                                else
+                                {
+                                    <RadzenBadge Text="User" BadgeStyle="BadgeStyle.Info" Shade="Shade.Lighter" />
+                                }
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="UserAdminDto" Title="Email Verified" Width="130px" Sortable="false" Filterable="false" TextAlign="TextAlign.Center">
+                            <Template Context="user">
+                                @if (user.IsEmailConfirmed)
+                                {
+                                    <RadzenIcon Icon="check_circle" Style="color: var(--rz-success); font-size: 1.25rem;" />
+                                }
+                                else
+                                {
+                                    <RadzenIcon Icon="cancel" Style="color: var(--rz-danger); font-size: 1.25rem;" />
+                                }
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="UserAdminDto" Title="Status" Width="100px" Sortable="false" Filterable="false" TextAlign="TextAlign.Center">
+                            <Template Context="user">
+                                @if (user.IsLockedOut)
+                                {
+                                    <RadzenIcon Icon="cancel" Style="color: var(--rz-danger); font-size: 1.25rem;" />
+                                }
+                                else
+                                {
+                                    <RadzenIcon Icon="check_circle" Style="color: var(--rz-success); font-size: 1.25rem;" />
+                                }
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="UserAdminDto" Property="CreatedOn" Title="Created" Width="140px" FormatString="{0:MMM d, yyyy}" />
+                        <RadzenDataGridColumn TItem="UserAdminDto" Title="Actions" Width="220px" Sortable="false" Filterable="false">
+                            <Template Context="user">
+                                <RadzenStack Orientation="Orientation.Horizontal" Gap="0.25rem">
+                                    <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.ExtraSmall"
+                                                  Variant="Variant.Outlined" Title="Edit user"
+                                                  Click="@(() => OnEditUserClicked(user))" />
+                                    <RadzenButton Icon="@(user.IsAdmin ? "remove_moderator" : "admin_panel_settings")"
+                                                  ButtonStyle="@(user.IsAdmin ? ButtonStyle.Warning : ButtonStyle.Secondary)"
+                                                  Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
+                                                  Title="@(user.IsAdmin ? "Remove Admin" : "Make Admin")"
+                                                  Click="@(() => OnToggleAdminClicked(user))" />
+                                    <RadzenButton Icon="@(user.IsLockedOut ? "lock_open" : "lock")"
+                                                  ButtonStyle="@(user.IsLockedOut ? ButtonStyle.Success : ButtonStyle.Warning)"
+                                                  Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
+                                                  Title="@(user.IsLockedOut ? "Unlock user" : "Lock user")"
+                                                  Click="@(() => OnToggleLockoutClicked(user))" />
+                                    <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.ExtraSmall"
+                                                  Variant="Variant.Outlined" Title="Delete user"
+                                                  Click="@(() => OnDeleteUserClicked(user))" />
+                                </RadzenStack>
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
             </RadzenStack>
-        }
-        else
-        {
-            <RadzenDataGrid TItem="UserAdminDto" Data="FilteredUsers" Density="Density.Compact"
-                            AllowSorting="true" AllowPaging="true" PageSize="15"
-                            EmptyText="No users found.">
-                <Columns>
-                    <RadzenDataGridColumn TItem="UserAdminDto" Property="FullName" Title="Name" Width="180px" />
-                    <RadzenDataGridColumn TItem="UserAdminDto" Property="Email" Title="Email" />
-                    <RadzenDataGridColumn TItem="UserAdminDto" Title="Role" Width="100px" Sortable="false">
-                        <Template Context="user">
-                            @if (user.IsAdmin)
-                            {
-                                <RadzenBadge Text="Admin" BadgeStyle="BadgeStyle.Warning" Shade="Shade.Lighter" />
-                            }
-                            else
-                            {
-                                <RadzenBadge Text="User" BadgeStyle="BadgeStyle.Info" Shade="Shade.Lighter" />
-                            }
-                        </Template>
-                    </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="UserAdminDto" Title="Status" Width="100px" Sortable="false">
-                        <Template Context="user">
-                            @if (user.IsLockedOut)
-                            {
-                                <RadzenBadge Text="Locked" BadgeStyle="BadgeStyle.Danger" Shade="Shade.Lighter" />
-                            }
-                            else
-                            {
-                                <RadzenBadge Text="Active" BadgeStyle="BadgeStyle.Success" Shade="Shade.Lighter" />
-                            }
-                        </Template>
-                    </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="UserAdminDto" Property="CreatedOn" Title="Created" Width="120px" FormatString="{0:MMM d, yyyy}" />
-                    <RadzenDataGridColumn TItem="UserAdminDto" Title="Actions" Width="220px" Sortable="false">
-                        <Template Context="user">
-                            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.25rem">
-                                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.ExtraSmall"
-                                              Variant="Variant.Outlined" Title="Edit user"
-                                              Click="@(() => OnEditUserClicked(user))" />
-                                <RadzenButton Icon="@(user.IsAdmin ? "remove_moderator" : "admin_panel_settings")"
-                                              ButtonStyle="@(user.IsAdmin ? ButtonStyle.Warning : ButtonStyle.Secondary)"
-                                              Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
-                                              Title="@(user.IsAdmin ? "Remove Admin" : "Make Admin")"
-                                              Click="@(() => OnToggleAdminClicked(user))" />
-                                <RadzenButton Icon="@(user.IsLockedOut ? "lock_open" : "lock")"
-                                              ButtonStyle="@(user.IsLockedOut ? ButtonStyle.Success : ButtonStyle.Warning)"
-                                              Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
-                                              Title="@(user.IsLockedOut ? "Unlock user" : "Lock user")"
-                                              Click="@(() => OnToggleLockoutClicked(user))" />
-                                <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.ExtraSmall"
-                                              Variant="Variant.Outlined" Title="Delete user"
-                                              Click="@(() => OnDeleteUserClicked(user))" />
-                            </RadzenStack>
-                        </Template>
-                    </RadzenDataGridColumn>
-                </Columns>
-            </RadzenDataGrid>
-        }
-    </RadzenCard>
+    }
 </RadzenStack>
 
 @code {
