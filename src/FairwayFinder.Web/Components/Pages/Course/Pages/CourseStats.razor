@@ -120,10 +120,8 @@ else
             </RadzenStack>
         }
 
-        <!-- Per-Hole Stats Grid — child component keeps parent render method small -->
         <CourseHoleStatsGrid HoleStats="@_stats?.HoleStats" ShowYardage="@_hasTeeboxSelected" />
 
-        <!-- Scoring Distribution & Hardest Holes — stable siblings -->
         <RadzenRow Gap="1rem">
             <RadzenColumn Size="12" SizeLG="6">
                 <RadzenCard Style="height: 100%;">
@@ -137,7 +135,6 @@ else
                     @if (_hardestHoles.Count > 0)
                     {
                         <RadzenStack Gap="0">
-                            <!-- Header -->
                             <RadzenStack Orientation="Orientation.Horizontal"
                                          JustifyContent="JustifyContent.SpaceBetween"
                                          AlignItems="AlignItems.Center"
@@ -150,7 +147,6 @@ else
                                 </RadzenText>
                             </RadzenStack>
 
-                            <!-- Rows -->
                             @foreach (var hole in _hardestHoles)
                             {
                                 <RadzenStack Orientation="Orientation.Horizontal"
@@ -187,7 +183,6 @@ else
             </RadzenColumn>
         </RadzenRow>
 
-        <!-- Round History — child component -->
         <CourseRoundHistoryGrid Rounds="@_stats?.Rounds" />
     </RadzenStack>
 }
@@ -230,7 +225,6 @@ else
     private List<CourseTeeboxOption> _teeboxOptions = new();
     private bool _noData;
 
-    // Loading flags
     private bool _initialLoading = true;  // true only until first load completes
     private bool _loading;                // true during filter-triggered reloads
 
@@ -273,10 +267,8 @@ else
 
         if (_stats is not null)
         {
-            // Update stable state on first load (or if course name somehow changes)
             _courseName = _stats.CourseName;
 
-            // Always update teebox options from the response (built from all rounds, not filtered)
             _teeboxOptions = _stats.TeeboxOptions;
 
             BreadcrumbState.Set(
