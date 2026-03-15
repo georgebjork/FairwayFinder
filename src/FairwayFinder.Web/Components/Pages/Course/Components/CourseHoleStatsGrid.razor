@@ -1,0 +1,118 @@
+@using FairwayFinder.Features.Data
+
+@if (HoleStats is not null && HoleStats.Count > 0)
+{
+    <RadzenCard class="rz-p-4">
+        <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Stats Per Hole</RadzenText>
+        <RadzenDataGrid TItem="HoleAggregateStats" Data="@HoleStats"
+                        AllowFiltering="true"
+                        FilterMode="FilterMode.Advanced"
+                        AllowSorting="true"
+                        AllowPaging="true"
+                        PageSize="18"
+                        PagerHorizontalAlign="HorizontalAlign.Right"
+                        ShowPagingSummary="true"
+                        PagingSummaryFormat="Displaying page {0} of {1} (total {2} holes)">
+            <Columns>
+                <RadzenDataGridColumn TItem="HoleAggregateStats" Property="HoleNumber" Title="Hole" Width="70px" TextAlign="TextAlign.Center" Frozen="true" />
+                <RadzenDataGridColumn TItem="HoleAggregateStats" Property="Par" Title="Par" Width="70px" TextAlign="TextAlign.Center" />
+                <RadzenDataGridColumn TItem="HoleAggregateStats" Property="Handicap" Title="Hdcp" Width="70px" TextAlign="TextAlign.Center" />
+                <RadzenDataGridColumn TItem="HoleAggregateStats" Property="AverageYardage" Title="Yds" Width="80px" TextAlign="TextAlign.Center" Visible="@ShowYardage" />
+                <RadzenDataGridColumn TItem="HoleAggregateStats" Property="AverageScore" Title="Avg Score" Width="110px" TextAlign="TextAlign.Center" FormatString="{0:F2}" />
+                <RadzenDataGridColumn TItem="HoleAggregateStats" Property="AverageScoreToPar" Title="vs Par" Width="90px" TextAlign="TextAlign.Center" Sortable="true">
+                    <Template Context="hole">
+                        <span style="color: @GetScoreToParColor(hole.AverageScoreToPar); font-weight: 600;">
+                            @FormatScoreToPar(hole.AverageScoreToPar)
+                        </span>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="HoleAggregateStats" Title="FWY%" Width="90px" TextAlign="TextAlign.Center" Sortable="true"
+                                      SortProperty="FairwayHitPercent">
+                    <Template Context="hole">
+                        @if (hole.FairwayHitPercent.HasValue)
+                        {
+                            <span>@hole.FairwayHitPercent.Value.ToString("F0")%</span>
+                        }
+                        else
+                        {
+                            <span style="color: var(--rz-text-disabled-color);">-</span>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="HoleAggregateStats" Title="GIR%" Width="90px" TextAlign="TextAlign.Center" Sortable="true"
+                                      SortProperty="GirPercent">
+                    <Template Context="hole">
+                        @if (hole.GirPercent.HasValue)
+                        {
+                            <span>@hole.GirPercent.Value.ToString("F0")%</span>
+                        }
+                        else
+                        {
+                            <span style="color: var(--rz-text-disabled-color);">-</span>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="HoleAggregateStats" Title="Avg Putts" Width="110px" TextAlign="TextAlign.Center" Sortable="true"
+                                      SortProperty="AveragePutts">
+                    <Template Context="hole">
+                        @if (hole.AveragePutts.HasValue)
+                        {
+                            <span>@hole.AveragePutts.Value.ToString("F1")</span>
+                        }
+                        else
+                        {
+                            <span style="color: var(--rz-text-disabled-color);">-</span>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="HoleAggregateStats" Title="FWY Miss" Width="120px" TextAlign="TextAlign.Center" Sortable="false">
+                    <Template Context="hole">
+                        @if (hole.FairwayMiss?.PrimaryMiss is not null)
+                        {
+                            <span style="color: var(--rz-danger);">@hole.FairwayMiss.PrimaryMiss</span>
+                        }
+                        else
+                        {
+                            <span style="color: var(--rz-text-disabled-color);">-</span>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="HoleAggregateStats" Title="GIR Miss" Width="120px" TextAlign="TextAlign.Center" Sortable="false">
+                    <Template Context="hole">
+                        @if (hole.GreenMiss?.PrimaryMiss is not null)
+                        {
+                            <span style="color: var(--rz-danger);">@hole.GreenMiss.PrimaryMiss</span>
+                        }
+                        else
+                        {
+                            <span style="color: var(--rz-text-disabled-color);">-</span>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="HoleAggregateStats" Property="TimesPlayed" Title="Played" Width="90px" TextAlign="TextAlign.Center" />
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenCard>
+}
+
+@code {
+    [Parameter]
+    public List<HoleAggregateStats>? HoleStats { get; set; }
+
+    [Parameter]
+    public bool ShowYardage { get; set; }
+
+    private string GetScoreToParColor(decimal scoreToPar)
+    {
+        if (scoreToPar < 0) return "var(--rz-success)";
+        if (scoreToPar == 0) return "var(--rz-text-color)";
+        return "var(--rz-danger)";
+    }
+
+    private string FormatScoreToPar(decimal scoreToPar)
+    {
+        if (scoreToPar < 0) return scoreToPar.ToString("F2");
+        if (scoreToPar == 0) return "E";
+        return $"+{scoreToPar:F2}";
+    }
+}

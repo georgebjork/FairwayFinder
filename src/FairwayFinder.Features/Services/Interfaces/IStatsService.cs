@@ -14,6 +14,16 @@ public interface IStatsService
     Task<UserStatsResponse> GetUserStatsAsync(string userId, StatsFilter? filter = null, int coursesCount = 5);
     
     /// <summary>
+    /// Gets course-specific stats for a user at a particular course.
+    /// Includes per-hole aggregate stats, overall averages, scoring distribution, and round history.
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <param name="courseId">Course ID</param>
+    /// <param name="teeboxId">Optional teebox filter. Null = all teeboxes.</param>
+    /// <returns>Course-specific stats, or null if user has no rounds at this course</returns>
+    Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null);
+    
+    /// <summary>
     /// Gets the distinct years that a user has played rounds in.
     /// </summary>
     /// <param name="userId">User ID</param>

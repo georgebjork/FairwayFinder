@@ -52,6 +52,67 @@ public class StatsService : IStatsService
         };
     }
     
+    public async Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null)
+    {
+        var rounds = await _roundService.GetRoundsWithDetailsAsync(userId);
+        
+        var allCourseRounds = rounds
+            .Where(r => r.CourseId == courseId && !r.ExcludeFromStats)
+            .ToList();
+        
+        if (allCourseRounds.Count == 0)
+        {
+            return null;
+        }
+
+        // Build teebox options from all rounds at this course (before filtering)
+        var teeboxOptions = allCourseRounds
+            .GroupBy(r => new { r.Teebox.TeeboxId, r.Teebox.TeeboxName })
+            .OrderByDescending(g => g.Count())
+            .Select(g => new CourseTeeboxOption
+            {
+                TeeboxId = g.Key.TeeboxId,
+                TeeboxName = g.Key.TeeboxName,
+                RoundCount = g.Count()
+            })
+            .ToList();
+
+        // Apply teebox filter if specified
+        var filteredRounds = teeboxId.HasValue
+            ? allCourseRounds.Where(r => r.Teebox.TeeboxId == teeboxId.Value).ToList()
+            : allCourseRounds;
+        
+        if (filteredRounds.Count == 0)
+        {
+            // Teebox filter matched no rounds — return shell with options so user can pick another
+            return new CourseStatsResponse
+            {
+                CourseId = courseId,
+                CourseName = allCourseRounds.First().CourseName,
+                TeeboxOptions = teeboxOptions,
+                SelectedTeeboxId = teeboxId
+            };
+        }
+
+        var courseName = filteredRounds.First().CourseName;
+
+        return new CourseStatsResponse
+        {
+            CourseId = courseId,
+            CourseName = courseName,
+            TotalRounds = filteredRounds.Count,
+            Average18HoleScore = StatsCalculator.CalculateAverageScore(filteredRounds),
+            Average9HoleScore = StatsCalculator.CalculateAverageScore(filteredRounds, false),
+            Best18HoleRound = StatsCalculator.FindBestRound(filteredRounds),
+            Best9HoleRound = StatsCalculator.FindBestRound(filteredRounds, false),
+            HoleStats = StatsCalculator.CalculateHoleAggregateStats(filteredRounds),
+            ScoringDistribution = StatsCalculator.AggregateScoringDistribution(filteredRounds),
+            Rounds = filteredRounds,
+            TeeboxOptions = teeboxOptions,
+            SelectedTeeboxId = teeboxId
+        };
+    }
+    
     public async Task<List<int>> GetAvailableYearsAsync(string userId)
     {
         var rounds = await _roundService.GetRoundsByUserIdAsync(userId);

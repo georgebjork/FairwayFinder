@@ -449,6 +449,137 @@ public static class StatsCalculator
         return BuildTrendLine(values, defaultLabels);
     }
 
+    /// <summary>
+    /// Calculates per-hole aggregate stats across all rounds at a course.
+    /// Groups hole data by HoleNumber (since different teeboxes have different HoleIds
+    /// but the same HoleNumber). Uses the most common par for each hole.
+    /// </summary>
+    public static List<HoleAggregateStats> CalculateHoleAggregateStats(IReadOnlyList<RoundResponse> rounds)
+    {
+        // Flatten all holes from all rounds, keeping only holes with scores
+        var allHoles = rounds
+            .SelectMany(r => r.Holes)
+            .Where(h => h.Score.HasValue)
+            .ToList();
+
+        if (allHoles.Count == 0) return new List<HoleAggregateStats>();
+
+        return allHoles
+            .GroupBy(h => h.HoleNumber)
+            .OrderBy(g => g.Key)
+            .Select(g =>
+            {
+                var holes = g.ToList();
+
+                // Use the most common par for this hole number (handles multiple teeboxes)
+                var par = holes
+                    .GroupBy(h => h.Par)
+                    .OrderByDescending(pg => pg.Count())
+                    .First().Key;
+
+                // Use the most common handicap for this hole number
+                var handicap = holes
+                    .Where(h => h.Handicap > 0)
+                    .GroupBy(h => h.Handicap)
+                    .OrderByDescending(hg => hg.Count())
+                    .Select(hg => hg.Key)
+                    .FirstOrDefault();
+
+                var avgYardage = (int)Math.Round(holes.Average(h => h.Yardage));
+                var avgScore = Math.Round((decimal)holes.Average(h => h.Score!.Value), 2);
+
+                var result = new HoleAggregateStats
+                {
+                    HoleNumber = g.Key,
+                    Par = par,
+                    Handicap = handicap,
+                    AverageYardage = avgYardage,
+                    TimesPlayed = holes.Count,
+                    AverageScore = avgScore,
+                    AverageScoreToPar = Math.Round(avgScore - par, 2)
+                };
+
+                // Fairway stats (only meaningful for par 4/5)
+                if (par > 3)
+                {
+                    var fairwayHoles = holes
+                        .Where(h => h.Stats?.HitFairway.HasValue == true)
+                        .ToList();
+
+                    if (fairwayHoles.Count > 0)
+                    {
+                        var hit = fairwayHoles.Count(h => h.Stats!.HitFairway == true);
+                        result.FairwayHitPercent = Math.Round((decimal)hit / fairwayHoles.Count * 100, 1);
+
+                        // Fairway miss breakdown (only count actual misses)
+                        var fairwayMisses = fairwayHoles
+                            .Where(h => h.Stats!.HitFairway == false && h.Stats!.MissFairwayType.HasValue)
+                            .Select(h => h.Stats!.MissFairwayType!.Value)
+                            .ToList();
+
+                        if (fairwayMisses.Count > 0)
+                        {
+                            result.FairwayMiss = BuildMissBreakdown(fairwayMisses);
+                        }
+                    }
+                }
+
+                // GIR stats
+                var girHoles = holes
+                    .Where(h => h.Stats?.HitGreen.HasValue == true)
+                    .ToList();
+
+                if (girHoles.Count > 0)
+                {
+                    var hit = girHoles.Count(h => h.Stats!.HitGreen == true);
+                    result.GirPercent = Math.Round((decimal)hit / girHoles.Count * 100, 1);
+
+                    // Green miss breakdown
+                    var greenMisses = girHoles
+                        .Where(h => h.Stats!.HitGreen == false && h.Stats!.MissGreenType.HasValue)
+                        .Select(h => h.Stats!.MissGreenType!.Value)
+                        .ToList();
+
+                    if (greenMisses.Count > 0)
+                    {
+                        result.GreenMiss = BuildMissBreakdown(greenMisses);
+                    }
+                }
+
+                // Putting stats
+                var puttHoles = holes
+                    .Where(h => h.Stats?.NumberOfPutts.HasValue == true)
+                    .ToList();
+
+                if (puttHoles.Count > 0)
+                {
+                    result.AveragePutts = Math.Round((decimal)puttHoles.Average(h => h.Stats!.NumberOfPutts!.Value), 2);
+                }
+
+                return result;
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Builds a miss direction breakdown from a list of miss type IDs.
+    /// IDs: 1=Left, 2=Right, 3=Short, 4=Long, 5=None.
+    /// </summary>
+    private static MissBreakdown BuildMissBreakdown(List<long> missTypeIds)
+    {
+        // Filter out "None" (ID 5)
+        var actualMisses = missTypeIds.Where(id => id != 5).ToList();
+
+        return new MissBreakdown
+        {
+            LeftCount = actualMisses.Count(id => id == 1),
+            RightCount = actualMisses.Count(id => id == 2),
+            ShortCount = actualMisses.Count(id => id == 3),
+            LongCount = actualMisses.Count(id => id == 4),
+            TotalMisses = actualMisses.Count
+        };
+    }
+
     private static void CalculateAdvancedStatsTrends(
         AdvancedStats result,
         List<RoundResponse> roundsWithHoleStats)

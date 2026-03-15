@@ -1,0 +1,53 @@
+@using FairwayFinder.Features.Data
+@inject NavigationManager NavigationManager
+
+<RadzenCard class="rz-p-4">
+    <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Round History</RadzenText>
+    <RadzenDataGrid TItem="RoundResponse" Data="@Rounds"
+                    AllowFiltering="true"
+                    FilterMode="FilterMode.Advanced"
+                    AllowSorting="true"
+                    AllowPaging="true"
+                    PageSize="10"
+                    PagerHorizontalAlign="HorizontalAlign.Right"
+                    ShowPagingSummary="true"
+                    PagingSummaryFormat="Displaying page {0} of {1} (total {2} rounds)"
+                    Style="cursor: pointer;"
+                    @bind-Value=@_selectedRound
+                    RowClick="@OnRoundRowClick">
+        <Columns>
+            <RadzenDataGridColumn TItem="RoundResponse" Property="DatePlayed" Title="Date Played" Width="150px">
+                <Template Context="round">
+                    @round.DatePlayed.ToString("MMM dd, yyyy")
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="RoundResponse" Property="Teebox.TeeboxName" Title="Teebox" />
+            <RadzenDataGridColumn TItem="RoundResponse" Property="Teebox.Slope" Title="Slope/Rating" Width="120px" TextAlign="TextAlign.Center">
+                <Template Context="round">
+                    @round.Teebox.Slope / @round.Teebox.Rating
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="RoundResponse" Property="FullRound" Title="Holes" Width="80px" TextAlign="TextAlign.Center">
+                <Template Context="round">
+                    @(round.FullRound ? "18" : "9")
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="RoundResponse" Property="Score" Title="Score" Width="100px" TextAlign="TextAlign.Center" />
+        </Columns>
+    </RadzenDataGrid>
+</RadzenCard>
+
+@code {
+    [Parameter]
+    public List<RoundResponse>? Rounds { get; set; }
+
+    private IList<RoundResponse> _selectedRound = [];
+
+    private void OnRoundRowClick(DataGridRowMouseEventArgs<RoundResponse> args)
+    {
+        if (args.Data is not null)
+        {
+            NavigationManager.NavigateTo($"/round/{args.Data.RoundId}");
+        }
+    }
+}
