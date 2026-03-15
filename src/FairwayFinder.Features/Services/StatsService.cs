@@ -52,7 +52,7 @@ public class StatsService : IStatsService
         };
     }
     
-    public async Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null)
+    public async Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null)
     {
         var rounds = await _roundService.GetRoundsWithDetailsAsync(userId);
         
@@ -65,7 +65,7 @@ public class StatsService : IStatsService
             return null;
         }
 
-        // Build teebox options from all rounds at this course (before filtering)
+        // Build teebox options from all rounds at this course (before any filtering)
         var teeboxOptions = allCourseRounds
             .GroupBy(r => new { r.Teebox.TeeboxId, r.Teebox.TeeboxName })
             .OrderByDescending(g => g.Count())
@@ -81,6 +81,20 @@ public class StatsService : IStatsService
         var filteredRounds = teeboxId.HasValue
             ? allCourseRounds.Where(r => r.Teebox.TeeboxId == teeboxId.Value).ToList()
             : allCourseRounds;
+        
+        // Apply date range filter
+        if (startDate.HasValue)
+        {
+            filteredRounds = filteredRounds
+                .Where(r => r.DatePlayed >= startDate.Value)
+                .ToList();
+        }
+        if (endDate.HasValue)
+        {
+            filteredRounds = filteredRounds
+                .Where(r => r.DatePlayed <= endDate.Value)
+                .ToList();
+        }
         
         if (filteredRounds.Count == 0)
         {

@@ -1,4 +1,6 @@
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Enums;
+using static FairwayFinder.Features.Enums.MissType;
 
 namespace FairwayFinder.Features.Helpers;
 
@@ -572,10 +574,11 @@ public static class StatsCalculator
 
         return new MissBreakdown
         {
-            LeftCount = actualMisses.Count(id => id == 1),
-            RightCount = actualMisses.Count(id => id == 2),
-            ShortCount = actualMisses.Count(id => id == 3),
-            LongCount = actualMisses.Count(id => id == 4),
+            LeftCount = actualMisses.Count(id => id.Is(MissTypeEnum.MissLeft)),
+            RightCount = actualMisses.Count(id => id.Is(MissTypeEnum.MissRight)),
+            ShortCount = actualMisses.Count(id => id.Is(MissTypeEnum.MissShort)),
+            LongCount = actualMisses.Count(id => id.Is(MissTypeEnum.MissLong)),
+            OtherCount = actualMisses.Count(id => id.Is(MissTypeEnum.MissOther)),
             TotalMisses = actualMisses.Count
         };
     }

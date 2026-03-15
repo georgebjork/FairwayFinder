@@ -141,6 +141,7 @@ public class MissBreakdown
     public int RightCount { get; set; }
     public int ShortCount { get; set; }
     public int LongCount { get; set; }
+    public int OtherCount { get; set; }
     public int TotalMisses { get; set; }
     
     /// <summary>
@@ -158,7 +159,8 @@ public class MissBreakdown
                 ("Left", LeftCount),
                 ("Right", RightCount),
                 ("Short", ShortCount),
-                ("Long", LongCount)
+                ("Long", LongCount),
+                ("Other", OtherCount)
             };
             
             var top = directions.OrderByDescending(d => d.Count).First();
@@ -168,4 +170,5 @@ public class MissBreakdown
             return $"{top.Name} ({percent}%)";
         }
     }
+
 }

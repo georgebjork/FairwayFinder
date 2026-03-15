@@ -45,10 +45,11 @@ else
             }
         </RadzenStack>
 
-        @if (_teeboxOptions.Count > 1)
-        {
-            <RadzenCard class="rz-p-3">
-                <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End" Wrap="FlexWrap.Wrap">
+        <!-- Filters — always rendered -->
+        <RadzenCard class="rz-p-3">
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End" Wrap="FlexWrap.Wrap">
+                @if (_teeboxOptions.Count > 1)
+                {
                     <RadzenStack Gap="0.25rem">
                         <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Teebox</RadzenText>
                         <RadzenDropDown TValue="long?"
@@ -59,11 +60,40 @@ else
                                         Placeholder="All Teeboxes"
                                         AllowClear="true"
                                         Style="width: 220px;"
-                                        Change="@OnTeeboxFilterChanged" />
+                                        Change="@OnFilterChanged" />
                     </RadzenStack>
+                }
+                <RadzenStack Gap="0.25rem">
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">From</RadzenText>
+                    <RadzenDatePicker TValue="DateOnly?"
+                                      @bind-Value="_startDate"
+                                      DateFormat="MM/dd/yyyy"
+                                      AllowClear="true"
+                                      Placeholder="Start date"
+                                      Style="width: 160px;"
+                                      Change="@OnFilterChanged" />
                 </RadzenStack>
-            </RadzenCard>
-        }
+                <RadzenStack Gap="0.25rem">
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">To</RadzenText>
+                    <RadzenDatePicker TValue="DateOnly?"
+                                      @bind-Value="_endDate"
+                                      DateFormat="MM/dd/yyyy"
+                                      AllowClear="true"
+                                      Placeholder="End date"
+                                      Style="width: 160px;"
+                                      Change="@OnFilterChanged" />
+                </RadzenStack>
+                @if (_hasActiveFilters)
+                {
+                    <RadzenButton Text="Clear Filters"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Variant="Variant.Text"
+                                  Size="ButtonSize.Small"
+                                  Icon="clear"
+                                  Click="@ClearFilters" />
+                }
+            </RadzenStack>
+        </RadzenCard>
 
         @if (_loading)
         {
@@ -228,9 +258,12 @@ else
     private bool _initialLoading = true;  // true only until first load completes
     private bool _loading;                // true during filter-triggered reloads
 
-    // Teebox filter
+    // Filters
     private long? _selectedTeeboxId;
     private bool _hasTeeboxSelected => _selectedTeeboxId.HasValue;
+    private DateOnly? _startDate;
+    private DateOnly? _endDate;
+    private bool _hasActiveFilters => _selectedTeeboxId.HasValue || _startDate.HasValue || _endDate.HasValue;
 
     protected override async Task OnInitializedAsync()
     {
@@ -263,7 +296,7 @@ else
     {
         if (string.IsNullOrEmpty(_userId)) return;
 
-        _stats = await StatsService.GetCourseStatsAsync(_userId, CourseId, _selectedTeeboxId);
+        _stats = await StatsService.GetCourseStatsAsync(_userId, CourseId, _selectedTeeboxId, _startDate, _endDate);
 
         if (_stats is not null)
         {
@@ -289,7 +322,7 @@ else
         }
     }
 
-    private async Task OnTeeboxFilterChanged()
+    private async Task OnFilterChanged()
     {
         _loading = true;
         StateHasChanged();
@@ -297,6 +330,14 @@ else
         await LoadStats();
 
         _loading = false;
+    }
+
+    private async Task ClearFilters()
+    {
+        _selectedTeeboxId = null;
+        _startDate = null;
+        _endDate = null;
+        await OnFilterChanged();
     }
 
     private void NavigateToRound(long roundId)

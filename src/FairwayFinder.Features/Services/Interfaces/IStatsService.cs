@@ -20,8 +20,10 @@ public interface IStatsService
     /// <param name="userId">User ID</param>
     /// <param name="courseId">Course ID</param>
     /// <param name="teeboxId">Optional teebox filter. Null = all teeboxes.</param>
+    /// <param name="startDate">Optional start date (inclusive). Null = no lower bound.</param>
+    /// <param name="endDate">Optional end date (inclusive). Null = no upper bound.</param>
     /// <returns>Course-specific stats, or null if user has no rounds at this course</returns>
-    Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null);
+    Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null);
     
     /// <summary>
     /// Gets the distinct years that a user has played rounds in.
