@@ -1,4 +1,5 @@
 @using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Enums
 
 <RadzenStack Gap="0.25rem" class="rz-mb-2">
     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
@@ -136,7 +137,7 @@
                     <td class="total-cell" colspan="2">@State.HoleEntries.Where(e => e.NumberOfPutts.HasValue).Sum(e => (int)e.NumberOfPutts!.Value)</td>
                 </tr>
 
-                @* Fairway Row (clickable toggles) *@
+                @* Fairway Row (clickable toggles with miss direction) *@
                 <tr>
                     <th colspan="2">Fairway</th>
                     @foreach (var entry in FrontNineEntries)
@@ -152,7 +153,7 @@
                             }
                             else if (entry.HitFairway == false)
                             {
-                                <RadzenIcon Icon="cancel" Style="color: var(--rz-danger); cursor: pointer;" />
+                                <RadzenIcon Icon="@GetMissIcon(entry.MissFairwayType)" Style="color: var(--rz-danger); cursor: pointer;" />
                             }
                             else
                             {
@@ -174,7 +175,7 @@
                             }
                             else if (entry.HitFairway == false)
                             {
-                                <RadzenIcon Icon="cancel" Style="color: var(--rz-danger); cursor: pointer;" />
+                                <RadzenIcon Icon="@GetMissIcon(entry.MissFairwayType)" Style="color: var(--rz-danger); cursor: pointer;" />
                             }
                             else
                             {
@@ -186,7 +187,7 @@
                     <td class="total-cell" colspan="2">@TotalFairwaysHit / @TotalFairwaysTotal</td>
                 </tr>
 
-                @* GIR Row (clickable toggles) *@
+                @* GIR Row (clickable toggles with miss direction) *@
                 <tr>
                     <th colspan="2">GIR</th>
                     @foreach (var entry in FrontNineEntries)
@@ -198,7 +199,7 @@
                             }
                             else if (entry.HitGreen == false)
                             {
-                                <RadzenIcon Icon="cancel" Style="color: var(--rz-danger); cursor: pointer;" />
+                                <RadzenIcon Icon="@GetMissIcon(entry.MissGreenType)" Style="color: var(--rz-danger); cursor: pointer;" />
                             }
                             else
                             {
@@ -216,7 +217,7 @@
                             }
                             else if (entry.HitGreen == false)
                             {
-                                <RadzenIcon Icon="cancel" Style="color: var(--rz-danger); cursor: pointer;" />
+                                <RadzenIcon Icon="@GetMissIcon(entry.MissGreenType)" Style="color: var(--rz-danger); cursor: pointer;" />
                             }
                             else
                             {
@@ -410,28 +411,86 @@
         if (entry.Par <= 3) return;
 
         if (entry.HitFairway == null)
+        {
+            // unset -> hit
             entry.HitFairway = true;
+            entry.MissFairwayType = null;
+        }
         else if (entry.HitFairway == true)
+        {
+            // hit -> generic miss (MissOther = 999)
             entry.HitFairway = false;
+            entry.MissFairwayType = (long)MissType.MissTypeEnum.MissOther;
+        }
         else
         {
-            entry.HitFairway = null;
-            entry.MissFairwayType = null;
+            // miss -> cycle: generic X -> Left -> Right -> Short -> Long -> unset
+            var next = NextMissDirection(entry.MissFairwayType);
+            if (next.HasValue)
+            {
+                entry.MissFairwayType = next.Value;
+            }
+            else
+            {
+                // Cycle ended, reset to unset
+                entry.HitFairway = null;
+                entry.MissFairwayType = null;
+            }
         }
     }
 
     private void ToggleGir(HoleScoreEntry entry)
     {
         if (entry.HitGreen == null)
-            entry.HitGreen = true;
-        else if (entry.HitGreen == true)
-            entry.HitGreen = false;
-        else
         {
-            entry.HitGreen = null;
+            // unset -> hit
+            entry.HitGreen = true;
             entry.MissGreenType = null;
         }
+        else if (entry.HitGreen == true)
+        {
+            // hit -> generic miss (MissOther = 999)
+            entry.HitGreen = false;
+            entry.MissGreenType = (long)MissType.MissTypeEnum.MissOther;
+        }
+        else
+        {
+            // miss -> cycle: generic X -> Left -> Right -> Short -> Long -> unset
+            var next = NextMissDirection(entry.MissGreenType);
+            if (next.HasValue)
+            {
+                entry.MissGreenType = next.Value;
+            }
+            else
+            {
+                // Cycle ended, reset to unset
+                entry.HitGreen = null;
+                entry.MissGreenType = null;
+            }
+        }
     }
+
+    /// <summary>
+    /// Returns the next miss direction in the cycle, or null when the cycle is complete.
+    /// Cycle: 999 (Other/generic X) -> 1 (Left) -> 2 (Right) -> 3 (Short) -> 4 (Long) -> end (null).
+    /// </summary>
+    private static long? NextMissDirection(long? current) => current switch
+    {
+        999 => 1,   // Other -> Left
+        1 => 2,     // Left -> Right
+        2 => 3,     // Right -> Short
+        3 => 4,     // Short -> Long
+        _ => null   // Long (or unknown) -> cycle ends
+    };
+
+    private static string GetMissIcon(long? missType) => missType switch
+    {
+        1 => "arrow_circle_left",   // Left
+        2 => "arrow_circle_right",  // Right
+        3 => "arrow_circle_down",   // Short
+        4 => "arrow_circle_up",     // Long
+        _ => "cancel"               // Generic miss
+    };
 
     private string GetScoreInputStyle(HoleScoreEntry entry)
     {
