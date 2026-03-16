@@ -139,6 +139,7 @@ else
             var existingHole = round.Holes.FirstOrDefault(rh => rh.HoleNumber == h.HoleNumber);
             return new HoleScoreEntry
             {
+                ScoreId = existingHole?.ScoreId ?? 0,
                 HoleId = h.HoleId,
                 HoleNumber = h.HoleNumber,
                 Par = h.Par,
@@ -227,7 +228,8 @@ else
             var preserved = oldEntries.GetValueOrDefault(h.HoleNumber);
             return new HoleScoreEntry
             {
-                HoleId = h.HoleId,
+                ScoreId = preserved?.ScoreId ?? 0, // Preserve ScoreId so update matches existing scores
+                HoleId = h.HoleId, // New HoleId from new teebox
                 HoleNumber = h.HoleNumber,
                 Par = h.Par,
                 Score = preserved?.Score ?? (short)h.Par,

@@ -21,6 +21,11 @@ public class CreateRoundRequest
 /// </summary>
 public class HoleScoreEntry
 {
+    /// <summary>
+    /// The score's primary key. 0 for new rounds; populated when editing an existing round.
+    /// Used to match existing scores during updates (instead of HoleId, which changes with teebox).
+    /// </summary>
+    public long ScoreId { get; set; }
     public long HoleId { get; set; }
     public int HoleNumber { get; set; }
     public int Par { get; set; }

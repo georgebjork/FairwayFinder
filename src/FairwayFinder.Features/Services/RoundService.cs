@@ -333,15 +333,20 @@ public class RoundService : IRoundService
             .Where(s => s.RoundId == request.RoundId && !s.IsDeleted)
             .ToListAsync();
         
-        var scoresByHoleId = existingScores.ToDictionary(s => s.HoleId);
+        var scoresByScoreId = existingScores.ToDictionary(s => s.ScoreId);
+        
+        // Track the Score entity for each hole entry (needed for HoleStats ScoreId lookup)
+        var scoreForHole = new Dictionary<long, Score>(); // keyed by HoleId from request
         
         foreach (var hole in request.Holes)
         {
-            if (scoresByHoleId.TryGetValue(hole.HoleId, out var existingScore))
+            if (hole.ScoreId > 0 && scoresByScoreId.TryGetValue(hole.ScoreId, out var existingScore))
             {
+                existingScore.HoleId = hole.HoleId; // Update HoleId in case teebox changed
                 existingScore.HoleScore = hole.Score;
                 existingScore.UpdatedBy = userId;
                 existingScore.UpdatedOn = today;
+                scoreForHole[hole.HoleId] = existingScore;
             }
             else
             {
@@ -358,25 +363,27 @@ public class RoundService : IRoundService
                     IsDeleted = false
                 };
                 dbContext.Scores.Add(newScore);
-                scoresByHoleId[hole.HoleId] = newScore;
+                scoreForHole[hole.HoleId] = newScore;
             }
         }
         
-        await dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync(); // Generates ScoreIds for any new scores
         
         var existingHoleStats = await dbContext.HoleStats
             .Where(hs => hs.RoundId == request.RoundId && !hs.IsDeleted)
             .ToListAsync();
         
-        var holeStatsByHoleId = existingHoleStats.ToDictionary(hs => hs.HoleId);
+        var holeStatsByScoreId = existingHoleStats.ToDictionary(hs => hs.ScoreId);
         
         if (request.UsingHoleStats)
         {
             foreach (var hole in request.Holes)
             {
-                if (holeStatsByHoleId.TryGetValue(hole.HoleId, out var existingStat))
+                var score = scoreForHole[hole.HoleId];
+                
+                if (holeStatsByScoreId.TryGetValue(score.ScoreId, out var existingStat))
                 {
-                    existingStat.ScoreId = scoresByHoleId[hole.HoleId].ScoreId;
+                    existingStat.HoleId = hole.HoleId; // Update HoleId in case teebox changed
                     existingStat.HitFairway = hole.HitFairway;
                     existingStat.MissFairwayType = hole.MissFairwayType;
                     existingStat.HitGreen = hole.HitGreen;
@@ -389,7 +396,7 @@ public class RoundService : IRoundService
                 {
                     dbContext.HoleStats.Add(new HoleStat
                     {
-                        ScoreId = scoresByHoleId[hole.HoleId].ScoreId,
+                        ScoreId = score.ScoreId,
                         RoundId = round.RoundId,
                         HoleId = hole.HoleId,
                         HitFairway = hole.HitFairway,

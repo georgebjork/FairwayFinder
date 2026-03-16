@@ -114,6 +114,7 @@ public class RoundTeebox
 /// </summary>
 public class RoundHole
 {
+    public long ScoreId { get; set; }
     public long HoleId { get; set; }
     public int HoleNumber { get; set; }
     public int Par { get; set; }
@@ -133,6 +134,7 @@ public class RoundHole
     {
         return new RoundHole
         {
+            ScoreId = score?.ScoreId ?? 0,
             HoleId = hole.HoleId,
             HoleNumber = hole.HoleNumber,
             Par = hole.Par,
