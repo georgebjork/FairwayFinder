@@ -306,7 +306,6 @@ public class RoundService : IRoundService
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var userId = request.UserId;
         
-        // 1. Load and verify ownership
         var round = await dbContext.Rounds
             .FirstOrDefaultAsync(r => r.RoundId == request.RoundId && !r.IsDeleted);
         
@@ -315,14 +314,12 @@ public class RoundService : IRoundService
             return false;
         }
         
-        // 2. Compute scores
         var frontHoles = request.Holes.Where(h => h.HoleNumber <= 9).ToList();
         var backHoles = request.Holes.Where(h => h.HoleNumber > 9).ToList();
         var scoreOut = frontHoles.Sum(h => (int)h.Score);
         var scoreIn = backHoles.Sum(h => (int)h.Score);
         var totalScore = scoreOut + scoreIn;
         
-        // 3. Update round entity
         round.TeeboxId = request.TeeboxId;
         round.DatePlayed = request.DatePlayed;
         round.UsingHoleStats = request.UsingHoleStats;
@@ -332,101 +329,94 @@ public class RoundService : IRoundService
         round.UpdatedBy = userId;
         round.UpdatedOn = today;
         
-        // 4. Soft-delete existing scores, hole stats, and round stat
         var existingScores = await dbContext.Scores
             .Where(s => s.RoundId == request.RoundId && !s.IsDeleted)
             .ToListAsync();
         
-        foreach (var score in existingScores)
+        var scoresByHoleId = existingScores.ToDictionary(s => s.HoleId);
+        
+        foreach (var hole in request.Holes)
         {
-            score.IsDeleted = true;
-            score.UpdatedBy = userId;
-            score.UpdatedOn = today;
+            if (scoresByHoleId.TryGetValue(hole.HoleId, out var existingScore))
+            {
+                existingScore.HoleScore = hole.Score;
+                existingScore.UpdatedBy = userId;
+                existingScore.UpdatedOn = today;
+            }
+            else
+            {
+                var newScore = new Score
+                {
+                    RoundId = round.RoundId,
+                    HoleId = hole.HoleId,
+                    HoleScore = hole.Score,
+                    UserId = userId,
+                    CreatedBy = userId,
+                    CreatedOn = today,
+                    UpdatedBy = userId,
+                    UpdatedOn = today,
+                    IsDeleted = false
+                };
+                dbContext.Scores.Add(newScore);
+                scoresByHoleId[hole.HoleId] = newScore;
+            }
         }
+        
+        await dbContext.SaveChangesAsync();
         
         var existingHoleStats = await dbContext.HoleStats
             .Where(hs => hs.RoundId == request.RoundId && !hs.IsDeleted)
             .ToListAsync();
         
-        foreach (var hs in existingHoleStats)
-        {
-            hs.IsDeleted = true;
-            hs.UpdatedBy = userId;
-            hs.UpdatedOn = today;
-        }
+        var holeStatsByHoleId = existingHoleStats.ToDictionary(hs => hs.HoleId);
         
-        var existingRoundStat = await dbContext.RoundStats
-            .FirstOrDefaultAsync(rs => rs.RoundId == request.RoundId && !rs.IsDeleted);
-        
-        if (existingRoundStat is not null)
-        {
-            existingRoundStat.IsDeleted = true;
-            existingRoundStat.UpdatedBy = userId;
-            existingRoundStat.UpdatedOn = today;
-        }
-        
-        await dbContext.SaveChangesAsync();
-        
-        // 5. Create new score entities
-        var newScores = request.Holes.Select(h => new Score
-        {
-            RoundId = round.RoundId,
-            HoleId = h.HoleId,
-            HoleScore = h.Score,
-            UserId = userId,
-            CreatedBy = userId,
-            CreatedOn = today,
-            UpdatedBy = userId,
-            UpdatedOn = today,
-            IsDeleted = false
-        }).ToList();
-        
-        dbContext.Scores.AddRange(newScores);
-        await dbContext.SaveChangesAsync();
-        
-        // 6. Create new hole stats if advanced stats enabled
         if (request.UsingHoleStats)
         {
-            var scoreByHoleId = newScores.ToDictionary(s => s.HoleId, s => s.ScoreId);
-            
-            var newHoleStats = request.Holes.Select(h => new HoleStat
+            foreach (var hole in request.Holes)
             {
-                ScoreId = scoreByHoleId[h.HoleId],
-                RoundId = round.RoundId,
-                HoleId = h.HoleId,
-                HitFairway = h.HitFairway,
-                MissFairwayType = h.MissFairwayType,
-                HitGreen = h.HitGreen,
-                MissGreenType = h.MissGreenType,
-                NumberOfPutts = h.NumberOfPutts,
-                CreatedBy = userId,
-                CreatedOn = today,
-                UpdatedBy = userId,
-                UpdatedOn = today,
-                IsDeleted = false
-            }).ToList();
-            
-            dbContext.HoleStats.AddRange(newHoleStats);
+                if (holeStatsByHoleId.TryGetValue(hole.HoleId, out var existingStat))
+                {
+                    existingStat.ScoreId = scoresByHoleId[hole.HoleId].ScoreId;
+                    existingStat.HitFairway = hole.HitFairway;
+                    existingStat.MissFairwayType = hole.MissFairwayType;
+                    existingStat.HitGreen = hole.HitGreen;
+                    existingStat.MissGreenType = hole.MissGreenType;
+                    existingStat.NumberOfPutts = hole.NumberOfPutts;
+                    existingStat.UpdatedBy = userId;
+                    existingStat.UpdatedOn = today;
+                }
+                else
+                {
+                    dbContext.HoleStats.Add(new HoleStat
+                    {
+                        ScoreId = scoresByHoleId[hole.HoleId].ScoreId,
+                        RoundId = round.RoundId,
+                        HoleId = hole.HoleId,
+                        HitFairway = hole.HitFairway,
+                        MissFairwayType = hole.MissFairwayType,
+                        HitGreen = hole.HitGreen,
+                        MissGreenType = hole.MissGreenType,
+                        NumberOfPutts = hole.NumberOfPutts,
+                        CreatedBy = userId,
+                        CreatedOn = today,
+                        UpdatedBy = userId,
+                        UpdatedOn = today,
+                        IsDeleted = false
+                    });
+                }
+            }
+        }
+        else
+        {
+            foreach (var hs in existingHoleStats)
+            {
+                hs.IsDeleted = true;
+                hs.UpdatedBy = userId;
+                hs.UpdatedOn = today;
+            }
         }
         
-        // 7. Recompute and create new round stat
-        var newRoundStat = new RoundStat
-        {
-            RoundId = round.RoundId,
-            HoleInOne = 0,
-            DoubleEagles = 0,
-            Eagles = 0,
-            Birdies = 0,
-            Pars = 0,
-            Bogies = 0,
-            DoubleBogies = 0,
-            TripleOrWorse = 0,
-            CreatedBy = userId,
-            CreatedOn = today,
-            UpdatedBy = userId,
-            UpdatedOn = today,
-            IsDeleted = false
-        };
+        int holeInOne = 0, doubleEagles = 0, eagles = 0, birdies = 0, pars = 0, bogies = 0, doubleBogies = 0, tripleOrWorse = 0;
         
         foreach (var hole in request.Holes)
         {
@@ -434,31 +424,55 @@ public class RoundService : IRoundService
             switch (diff)
             {
                 case <= -3:
-                    if (hole.Score == 1) newRoundStat.HoleInOne++;
-                    else newRoundStat.DoubleEagles++;
+                    if (hole.Score == 1) holeInOne++;
+                    else doubleEagles++;
                     break;
-                case -2:
-                    newRoundStat.Eagles++;
-                    break;
-                case -1:
-                    newRoundStat.Birdies++;
-                    break;
-                case 0:
-                    newRoundStat.Pars++;
-                    break;
-                case 1:
-                    newRoundStat.Bogies++;
-                    break;
-                case 2:
-                    newRoundStat.DoubleBogies++;
-                    break;
-                default:
-                    newRoundStat.TripleOrWorse++;
-                    break;
+                case -2: eagles++; break;
+                case -1: birdies++; break;
+                case 0: pars++; break;
+                case 1: bogies++; break;
+                case 2: doubleBogies++; break;
+                default: tripleOrWorse++; break;
             }
         }
         
-        dbContext.RoundStats.Add(newRoundStat);
+        var existingRoundStat = await dbContext.RoundStats
+            .FirstOrDefaultAsync(rs => rs.RoundId == request.RoundId && !rs.IsDeleted);
+        
+        if (existingRoundStat is not null)
+        {
+            existingRoundStat.HoleInOne = holeInOne;
+            existingRoundStat.DoubleEagles = doubleEagles;
+            existingRoundStat.Eagles = eagles;
+            existingRoundStat.Birdies = birdies;
+            existingRoundStat.Pars = pars;
+            existingRoundStat.Bogies = bogies;
+            existingRoundStat.DoubleBogies = doubleBogies;
+            existingRoundStat.TripleOrWorse = tripleOrWorse;
+            existingRoundStat.UpdatedBy = userId;
+            existingRoundStat.UpdatedOn = today;
+        }
+        else
+        {
+            dbContext.RoundStats.Add(new RoundStat
+            {
+                RoundId = round.RoundId,
+                HoleInOne = holeInOne,
+                DoubleEagles = doubleEagles,
+                Eagles = eagles,
+                Birdies = birdies,
+                Pars = pars,
+                Bogies = bogies,
+                DoubleBogies = doubleBogies,
+                TripleOrWorse = tripleOrWorse,
+                CreatedBy = userId,
+                CreatedOn = today,
+                UpdatedBy = userId,
+                UpdatedOn = today,
+                IsDeleted = false
+            });
+        }
+        
         await dbContext.SaveChangesAsync();
         
         return true;

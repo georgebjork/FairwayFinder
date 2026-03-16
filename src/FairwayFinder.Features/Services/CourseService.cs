@@ -353,35 +353,49 @@ public class CourseService : ICourseService
         teebox.UpdatedBy = userId;
         teebox.UpdatedOn = now;
 
-        // Soft-delete existing holes and create new ones
         var existingHoles = await dbContext.Holes
             .Where(h => h.TeeboxId == request.TeeboxId && !h.IsDeleted)
             .ToListAsync();
 
-        foreach (var hole in existingHoles)
+        var existingByNumber = existingHoles.ToDictionary(h => h.HoleNumber);
+        var requestHoleNumbers = request.Holes.Select(h => h.HoleNumber).ToHashSet();
+
+        foreach (var requestHole in request.Holes)
         {
-            hole.IsDeleted = true;
-            hole.UpdatedBy = userId;
-            hole.UpdatedOn = now;
+            if (existingByNumber.TryGetValue(requestHole.HoleNumber, out var existing))
+            {
+                existing.Par = requestHole.Par;
+                existing.Yardage = requestHole.Yardage;
+                existing.Handicap = requestHole.Handicap;
+                existing.UpdatedBy = userId;
+                existing.UpdatedOn = now;
+            }
+            else
+            {
+                dbContext.Holes.Add(new Hole
+                {
+                    TeeboxId = teebox.TeeboxId,
+                    CourseId = request.CourseId,
+                    HoleNumber = requestHole.HoleNumber,
+                    Par = requestHole.Par,
+                    Yardage = requestHole.Yardage,
+                    Handicap = requestHole.Handicap,
+                    CreatedBy = userId,
+                    CreatedOn = now,
+                    UpdatedBy = userId,
+                    UpdatedOn = now,
+                    IsDeleted = false
+                });
+            }
         }
 
-        // Create new holes
-        var newHoles = request.Holes.Select(h => new Hole
+        foreach (var existing in existingHoles.Where(h => !requestHoleNumbers.Contains(h.HoleNumber)))
         {
-            TeeboxId = teebox.TeeboxId,
-            CourseId = request.CourseId,
-            HoleNumber = h.HoleNumber,
-            Par = h.Par,
-            Yardage = h.Yardage,
-            Handicap = h.Handicap,
-            CreatedBy = userId,
-            CreatedOn = now,
-            UpdatedBy = userId,
-            UpdatedOn = now,
-            IsDeleted = false
-        }).ToList();
+            existing.IsDeleted = true;
+            existing.UpdatedBy = userId;
+            existing.UpdatedOn = now;
+        }
 
-        dbContext.Holes.AddRange(newHoles);
         await dbContext.SaveChangesAsync();
 
         return true;
