@@ -41,13 +41,22 @@
     [Parameter]
     public List<RoundResponse>? Rounds { get; set; }
 
+    /// <summary>
+    /// Optional prefix prepended to round navigation URLs.
+    /// When null, rounds navigate to "/round/{id}".
+    /// When set (e.g. "/profile/{guid}"), rounds navigate to "{prefix}/round/{id}".
+    /// </summary>
+    [Parameter]
+    public string? RoundUrlPrefix { get; set; }
+
     private IList<RoundResponse> _selectedRound = [];
 
     private void OnRoundRowClick(DataGridRowMouseEventArgs<RoundResponse> args)
     {
         if (args.Data is not null)
         {
-            NavigationManager.NavigateTo($"/round/{args.Data.RoundId}");
+            var prefix = string.IsNullOrEmpty(RoundUrlPrefix) ? "" : RoundUrlPrefix.TrimEnd('/');
+            NavigationManager.NavigateTo($"{prefix}/round/{args.Data.RoundId}");
         }
     }
 }

@@ -1,0 +1,378 @@
+@page "/profile/{PublicId:guid}/course/{CourseId:long}"
+@rendermode InteractiveServer
+@layout MainLayout
+@attribute [AllowAnonymous]
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Web.Components.Pages.Home.Components
+@using FairwayFinder.Web.Components.Pages.Course.Components
+@inject IProfileService ProfileService
+@inject IStatsService StatsService
+@inject NavigationManager NavigationManager
+@inject BreadcrumbState BreadcrumbState
+
+<PageTitle>@(_courseName ?? "Course Stats")</PageTitle>
+
+@if (_initialLoading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 400px;">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (_profile is null)
+{
+    <RadzenCard class="rz-p-5">
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
+            This profile is not available. It may be private or may not exist.
+        </RadzenAlert>
+    </RadzenCard>
+}
+else if (_noData)
+{
+    <RadzenCard class="rz-p-5 rz-mx-auto" style="max-width: 800px;">
+        <RadzenStack AlignItems="AlignItems.Center" Gap="1rem">
+            <RadzenIcon Icon="info" IconStyle="IconStyle.Warning" Style="font-size: 3rem;" />
+            <RadzenText TextStyle="TextStyle.H5">No Stats Available</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                No rounds have been played at this course yet, or all rounds are excluded from stats.
+            </RadzenText>
+            <RadzenButton Text="Back to Profile" Icon="arrow_back" ButtonStyle="ButtonStyle.Primary"
+                          Click="@(() => NavigationManager.NavigateTo($"/profile/{PublicId}"))" />
+        </RadzenStack>
+    </RadzenCard>
+}
+else
+{
+    <RadzenStack Gap="1.5rem">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Start">
+            <RadzenStack Gap="0.25rem">
+                <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">@_courseName</RadzenText>
+                @if (_stats is not null)
+                {
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                        @_stats.TotalRounds round@(_stats.TotalRounds != 1 ? "s" : "") played
+                    </RadzenText>
+                }
+            </RadzenStack>
+
+            <RadzenButton Text="Back to Profile" Icon="arrow_back" ButtonStyle="ButtonStyle.Light"
+                          Variant="Variant.Outlined"
+                          Click="@(() => NavigationManager.NavigateTo($"/profile/{PublicId}"))" />
+        </RadzenStack>
+
+        <!-- Filters -->
+        <RadzenCard class="rz-p-3">
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End" Wrap="FlexWrap.Wrap">
+                @if (_teeboxOptions.Count > 1)
+                {
+                    <RadzenStack Gap="0.25rem">
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Teebox</RadzenText>
+                        <RadzenDropDown TValue="long?"
+                                        Data="@_teeboxOptions"
+                                        TextProperty="TeeboxName"
+                                        ValueProperty="TeeboxId"
+                                        @bind-Value="_selectedTeeboxId"
+                                        Placeholder="All Teeboxes"
+                                        AllowClear="true"
+                                        Style="width: 220px;"
+                                        Change="@OnFilterChanged" />
+                    </RadzenStack>
+                }
+                <RadzenStack Gap="0.25rem">
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">From</RadzenText>
+                    <RadzenDatePicker TValue="DateOnly?"
+                                      @bind-Value="_startDate"
+                                      DateFormat="MM/dd/yyyy"
+                                      AllowClear="true"
+                                      Placeholder="Start date"
+                                      Style="width: 160px;"
+                                      Change="@OnFilterChanged" />
+                </RadzenStack>
+                <RadzenStack Gap="0.25rem">
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">To</RadzenText>
+                    <RadzenDatePicker TValue="DateOnly?"
+                                      @bind-Value="_endDate"
+                                      DateFormat="MM/dd/yyyy"
+                                      AllowClear="true"
+                                      Placeholder="End date"
+                                      Style="width: 160px;"
+                                      Change="@OnFilterChanged" />
+                </RadzenStack>
+                @if (_hasActiveFilters)
+                {
+                    <RadzenButton Text="Clear Filters"
+                                  ButtonStyle="ButtonStyle.Light"
+                                  Variant="Variant.Text"
+                                  Size="ButtonSize.Small"
+                                  Icon="clear"
+                                  Click="@ClearFilters" />
+                }
+            </RadzenStack>
+        </RadzenCard>
+
+        @if (_loading)
+        {
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+                <RadzenCard class="stats-card-loading">
+                    <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                </RadzenCard>
+                <RadzenCard class="stats-card-loading">
+                    <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                </RadzenCard>
+                <RadzenCard class="stats-card-loading">
+                    <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                </RadzenCard>
+            </RadzenStack>
+        }
+        else if (_stats is not null)
+        {
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+                <FairwayFinderStatsCard
+                    Label="Rounds Played"
+                    Value="@_stats.TotalRounds.ToString()" />
+
+                @if (_stats.Average18HoleScore.HasValue)
+                {
+                    <FairwayFinderStatsCard
+                        Label="Avg Score (18)"
+                        Value="@_stats.Average18HoleScore.Value.ToString("F1")" />
+                }
+
+                @if (_stats.Average9HoleScore.HasValue)
+                {
+                    <FairwayFinderStatsCard
+                        Label="Avg Score (9)"
+                        Value="@_stats.Average9HoleScore.Value.ToString("F1")" />
+                }
+
+                @if (_stats.Best18HoleRound is not null)
+                {
+                    <FairwayFinderStatsCard
+                        Label="Best Round (18)"
+                        Value="@_stats.Best18HoleRound.Score.ToString()"
+                        SubText="@_stats.Best18HoleRound.DatePlayed.ToString("MMM d, yyyy")"
+                        OnClick="@(() => NavigateToRound(_stats.Best18HoleRound.RoundId))" />
+                }
+
+                @if (_stats.Best9HoleRound is not null)
+                {
+                    <FairwayFinderStatsCard
+                        Label="Best Round (9)"
+                        Value="@_stats.Best9HoleRound.Score.ToString()"
+                        SubText="@_stats.Best9HoleRound.DatePlayed.ToString("MMM d, yyyy")"
+                        OnClick="@(() => NavigateToRound(_stats.Best9HoleRound.RoundId))" />
+                }
+            </RadzenStack>
+        }
+
+        <CourseHoleStatsGrid HoleStats="@_stats?.HoleStats" ShowYardage="@_hasTeeboxSelected" />
+
+        <RadzenRow Gap="1rem">
+            <RadzenColumn Size="12" SizeLG="6">
+                <RadzenCard Style="height: 100%;">
+                    <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Scoring Distribution</RadzenText>
+                    <FairwayFinderScoringDistributionChart Distribution="@_stats?.ScoringDistribution" />
+                </RadzenCard>
+            </RadzenColumn>
+            <RadzenColumn Size="12" SizeLG="6">
+                <RadzenCard Style="height: 100%;">
+                    <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Hardest Holes</RadzenText>
+                    @if (_hardestHoles.Count > 0)
+                    {
+                        <RadzenStack Gap="0">
+                            <RadzenStack Orientation="Orientation.Horizontal"
+                                         JustifyContent="JustifyContent.SpaceBetween"
+                                         AlignItems="AlignItems.Center"
+                                         class="hardest-hole-header">
+                                <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0; color: var(--rz-text-secondary-color); text-transform: uppercase; font-weight: 600;">
+                                    Hole
+                                </RadzenText>
+                                <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0; color: var(--rz-text-secondary-color); text-transform: uppercase; font-weight: 600;">
+                                    vs Par
+                                </RadzenText>
+                            </RadzenStack>
+
+                            @foreach (var hole in _hardestHoles)
+                            {
+                                <RadzenStack Orientation="Orientation.Horizontal"
+                                             JustifyContent="JustifyContent.SpaceBetween"
+                                             AlignItems="AlignItems.Center"
+                                             class="hardest-hole-row">
+                                    <RadzenStack Gap="0">
+                                        <RadzenText TextStyle="TextStyle.Body1" Style="margin: 0; font-weight: 500;">
+                                            Hole @hole.HoleNumber
+                                        </RadzenText>
+                                        <RadzenText TextStyle="TextStyle.Caption" Style="margin: 0; color: var(--rz-text-secondary-color);">
+                                            @if (_hasTeeboxSelected)
+                                            {
+                                                @:Par @hole.Par &middot; @hole.AverageYardage yds &middot; Avg @hole.AverageScore.ToString("F1")
+                                            }
+                                            else
+                                            {
+                                                @:Par @hole.Par &middot; Avg @hole.AverageScore.ToString("F1")
+                                            }
+                                        </RadzenText>
+                                    </RadzenStack>
+                                    <RadzenText TextStyle="TextStyle.Body1" Style="@($"margin: 0; font-weight: 600; color: {GetScoreToParColor(hole.AverageScoreToPar)};")">
+                                        @FormatScoreToPar(hole.AverageScoreToPar)
+                                    </RadzenText>
+                                </RadzenStack>
+                            }
+                        </RadzenStack>
+                    }
+                    else
+                    {
+                        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">No hole data available.</RadzenText>
+                    }
+                </RadzenCard>
+            </RadzenColumn>
+        </RadzenRow>
+
+        <CourseRoundHistoryGrid Rounds="@_stats?.Rounds" RoundUrlPrefix="@($"/profile/{PublicId}")" />
+    </RadzenStack>
+}
+
+<style>
+    .stats-card-loading {
+        min-width: 150px;
+        min-height: 100px;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .hardest-hole-header {
+        padding: 0 0 0.5rem 0;
+        border-bottom: 1px solid var(--rz-base-200);
+    }
+
+    .hardest-hole-row {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--rz-base-200);
+    }
+
+    .hardest-hole-row:last-child {
+        border-bottom: none;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public Guid PublicId { get; set; }
+
+    [Parameter]
+    public long CourseId { get; set; }
+
+    private UserProfileResponse? _profile;
+    private CourseStatsResponse? _stats;
+    private List<HoleAggregateStats> _hardestHoles = new();
+
+    // Stable state — survives filter reloads so the header/filter don't flicker
+    private string? _courseName;
+    private List<CourseTeeboxOption> _teeboxOptions = new();
+    private bool _noData;
+
+    private bool _initialLoading = true;  // true only until first load completes
+    private bool _loading;                // true during filter-triggered reloads
+
+    // Filters
+    private long? _selectedTeeboxId;
+    private bool _hasTeeboxSelected => _selectedTeeboxId.HasValue;
+    private DateOnly? _startDate;
+    private DateOnly? _endDate;
+    private bool _hasActiveFilters => _selectedTeeboxId.HasValue || _startDate.HasValue || _endDate.HasValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. Validate the public profile
+        _profile = await ProfileService.GetPublicProfileAsync(PublicId);
+
+        if (_profile is null)
+        {
+            _initialLoading = false;
+            return;
+        }
+
+        // 2. Load course stats for this user
+        await LoadStats();
+
+        if (_profile is not null && _courseName is not null)
+        {
+            BreadcrumbState.Set(
+                new BreadcrumbItem($"{_profile.DisplayName}'s Profile", $"/profile/{PublicId}"),
+                new BreadcrumbItem(_courseName)
+            );
+        }
+        else
+        {
+            BreadcrumbState.Set(
+                new BreadcrumbItem("Profile", $"/profile/{PublicId}"),
+                new BreadcrumbItem("Course Stats")
+            );
+        }
+
+        _initialLoading = false;
+    }
+
+    private async Task LoadStats()
+    {
+        if (_profile is null) return;
+
+        _stats = await StatsService.GetCourseStatsAsync(_profile.UserId, CourseId, _selectedTeeboxId, _startDate, _endDate);
+
+        if (_stats is not null)
+        {
+            _courseName = _stats.CourseName;
+            _teeboxOptions = _stats.TeeboxOptions;
+
+            _hardestHoles = _stats.HoleStats
+                .OrderByDescending(h => h.AverageScoreToPar)
+                .Take(5)
+                .ToList();
+
+            _noData = false;
+        }
+        else
+        {
+            _noData = true;
+        }
+    }
+
+    private async Task OnFilterChanged()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        await LoadStats();
+
+        _loading = false;
+    }
+
+    private async Task ClearFilters()
+    {
+        _selectedTeeboxId = null;
+        _startDate = null;
+        _endDate = null;
+        await OnFilterChanged();
+    }
+
+    private void NavigateToRound(long roundId)
+    {
+        NavigationManager.NavigateTo($"/profile/{PublicId}/round/{roundId}");
+    }
+
+    private string GetScoreToParColor(decimal scoreToPar)
+    {
+        if (scoreToPar < 0) return "var(--rz-success)";
+        if (scoreToPar == 0) return "var(--rz-text-color)";
+        return "var(--rz-danger)";
+    }
+
+    private string FormatScoreToPar(decimal scoreToPar)
+    {
+        if (scoreToPar < 0) return scoreToPar.ToString("F2");
+        if (scoreToPar == 0) return "E";
+        return $"+{scoreToPar:F2}";
+    }
+}

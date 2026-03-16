@@ -31,7 +31,7 @@ else
                          class="course-row">
                 <RadzenStack Gap="0">
                     <RadzenText TextStyle="TextStyle.Body1" Style="margin:0; font-weight:500;">
-                        <RadzenLink Path="@($"/course/{course.CourseId}")">
+                        <RadzenLink Path="@BuildCourseUrl(course.CourseId)">
                             @course.CourseName
                         </RadzenLink>
                     </RadzenText>
@@ -66,4 +66,18 @@ else
 @code {
     [Parameter]
     public List<CourseStats>? Courses { get; set; }
+
+    /// <summary>
+    /// Optional prefix prepended to course navigation URLs.
+    /// When null, courses navigate to "/course/{id}".
+    /// When set (e.g. "/profile/{guid}"), courses navigate to "{prefix}/course/{id}".
+    /// </summary>
+    [Parameter]
+    public string? CourseUrlPrefix { get; set; }
+
+    private string BuildCourseUrl(long courseId)
+    {
+        var prefix = string.IsNullOrEmpty(CourseUrlPrefix) ? "" : CourseUrlPrefix.TrimEnd('/');
+        return $"{prefix}/course/{courseId}";
+    }
 }

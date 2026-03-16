@@ -341,7 +341,7 @@
         <RadzenColumn Size="12" SizeLG="4">
             <RadzenCard Style="height: 100%;">
                 <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Most Played Courses</RadzenText>
-                <FairwayFinderMostPlayedCourses Courses="@_stats?.MostPlayedCourses" />
+                <FairwayFinderMostPlayedCourses Courses="@_stats?.MostPlayedCourses" CourseUrlPrefix="@RoundUrlPrefix" />
             </RadzenCard>
         </RadzenColumn>
     </RadzenRow>
