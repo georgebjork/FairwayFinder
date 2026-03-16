@@ -1,4 +1,4 @@
-namespace FairwayFinder.Web.Components.Shared.Layout;
+namespace FairwayFinder.Web.Components.Shared.Layout.Breadcrumb;
 
 public class BreadcrumbState
 {

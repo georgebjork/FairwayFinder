@@ -1,5 +1,6 @@
 using FairwayFinder.Web.Components.Auth;
 using FairwayFinder.Web.Components.Shared.Layout;
+using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb;
 using FairwayFinder.Web.Services;
 using Microsoft.AspNetCore.Components.Server.Circuits;
 

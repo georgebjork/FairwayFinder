@@ -3,6 +3,7 @@
 @attribute [Authorize(Roles = "Admin")]
 @using Microsoft.Extensions.Diagnostics.HealthChecks
 @using System.Reflection
+@using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
 @inject HealthCheckService HealthCheckService
 @inject BreadcrumbState BreadcrumbState
 @inject ILogger<HealthChecks> Logger
