@@ -5,6 +5,7 @@
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
 @using FairwayFinder.Web.Components.Pages.Home.Components
+@using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
 @inject IProfileService ProfileService
 @inject BreadcrumbState BreadcrumbState
 
@@ -42,14 +43,6 @@ else
     protected override async Task OnInitializedAsync()
     {
         _profile = await ProfileService.GetPublicProfileAsync(PublicId);
-
-        if (_profile is not null)
-        {
-            BreadcrumbState.Set(
-                new BreadcrumbItem($"{_profile.DisplayName}'s Profile")
-            );
-        }
-
         _loading = false;
     }
 }

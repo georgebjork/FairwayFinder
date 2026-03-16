@@ -6,6 +6,7 @@
 @using FairwayFinder.Features.Services.Interfaces
 @using FairwayFinder.Web.Components.Pages.Home.Components
 @using FairwayFinder.Web.Components.Pages.Course.Components
+@using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
 @inject IProfileService ProfileService
 @inject IStatsService StatsService
 @inject NavigationManager NavigationManager
@@ -297,20 +298,10 @@ else
         // 2. Load course stats for this user
         await LoadStats();
 
-        if (_profile is not null && _courseName is not null)
-        {
-            BreadcrumbState.Set(
-                new BreadcrumbItem($"{_profile.DisplayName}'s Profile", $"/profile/{PublicId}"),
-                new BreadcrumbItem(_courseName)
-            );
-        }
-        else
-        {
-            BreadcrumbState.Set(
-                new BreadcrumbItem("Profile", $"/profile/{PublicId}"),
-                new BreadcrumbItem("Course Stats")
-            );
-        }
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Dashboard", $"/profile/{PublicId}"),
+            new BreadcrumbItem(_courseName ?? "unknown course")
+        );
 
         _initialLoading = false;
     }

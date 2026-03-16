@@ -5,6 +5,7 @@
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
 @using FairwayFinder.Web.Components.Pages.Rounds.Components
+@using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
 @inject IProfileService ProfileService
 @inject IRoundService RoundService
 @inject NavigationManager NavigationManager
@@ -111,20 +112,10 @@ else
             }
         }
 
-        if (_round is not null && _profile is not null)
-        {
-            BreadcrumbState.Set(
-                new BreadcrumbItem($"{_profile.DisplayName}'s Profile", $"/profile/{PublicId}"),
-                new BreadcrumbItem($"{_round.CourseName} - {_round.DatePlayed:M/d/yy}")
-            );
-        }
-        else
-        {
-            BreadcrumbState.Set(
-                new BreadcrumbItem("Profile", $"/profile/{PublicId}"),
-                new BreadcrumbItem("Round")
-            );
-        }
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Dashboard", $"/profile/{PublicId}"),
+            new BreadcrumbItem($"{_round?.CourseName} - {_round?.DatePlayed:M/d/yy}")
+        );
 
         _loading = false;
     }
