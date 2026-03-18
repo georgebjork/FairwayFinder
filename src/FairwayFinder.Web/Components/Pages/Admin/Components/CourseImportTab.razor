@@ -1,0 +1,333 @@
+@using FairwayFinder.Data.Entities
+@using FairwayFinder.Features.Data.GolfCourseApi
+@using FairwayFinder.Features.Services.GolfCourseApi
+@inject GolfCourseApiImportService ImportService
+@inject GolfCourseApiImportJob ImportJob
+@inject GolfCourseApiImportState ImportState
+@inject NotificationService NotificationService
+@implements IDisposable
+
+<RadzenStack Gap="1rem" class="rz-p-2">
+
+    @* ── Mapping Management ── *@
+    <RadzenCard>
+        <RadzenStack Gap="1rem">
+            <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Add Course Mapping</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                Link an existing local course to an API course ID. Mapped courses will be updated in-place during import.
+            </RadzenText>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End" Wrap="FlexWrap.Wrap">
+                <RadzenStack Gap="0.25rem">
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">API Course ID</RadzenText>
+                    <RadzenNumeric TValue="int" @bind-Value="_newMapApiCourseId" Min="1" Style="width: 160px;" />
+                </RadzenStack>
+                <RadzenStack Gap="0.25rem">
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Local Course ID</RadzenText>
+                    <RadzenNumeric TValue="long" @bind-Value="_newMapLocalCourseId" Min="1" Style="width: 160px;" />
+                </RadzenStack>
+                <RadzenButton Text="Add Mapping" Icon="add" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Small"
+                              Click="OnAddMappingClicked" />
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenCard>
+
+    <RadzenCard>
+        <RadzenStack Gap="1rem">
+            <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Existing Course Mappings</RadzenText>
+            @if (_loadingMappings)
+            {
+                <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+            }
+            else if (_mappings.Count == 0)
+            {
+                <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                    No course mappings yet. Mappings are created automatically during import or manually above.
+                </RadzenText>
+            }
+            else
+            {
+                <RadzenDataGrid TItem="GolfCourseApiCourseMap" Data="_mappings" Density="Density.Compact"
+                                AllowPaging="true" PageSize="10">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="GolfCourseApiCourseMap" Property="ApiCourseId" Title="API Course ID" Width="140px" />
+                        <RadzenDataGridColumn TItem="GolfCourseApiCourseMap" Property="CourseId" Title="Local Course ID" Width="140px" />
+                        <RadzenDataGridColumn TItem="GolfCourseApiCourseMap" Property="Course.CourseName" Title="Course Name" />
+                    </Columns>
+                </RadzenDataGrid>
+            }
+        </RadzenStack>
+    </RadzenCard>
+
+    @* ── Import ── *@
+    <RadzenCard>
+        <RadzenStack Gap="1rem">
+            <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-m-0">
+                Import all golf courses from the GolfCourseAPI into the local database.
+            </RadzenText>
+            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                This will fetch all courses (page size 100) with a 200ms delay between requests.
+                Mapped courses will be updated in-place. New courses will be inserted.
+                The import runs as a background job and will continue even if you navigate away.
+            </RadzenText>
+
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
+                <RadzenButton Text="Import All Courses" Icon="cloud_download" ButtonStyle="ButtonStyle.Primary"
+                              IsBusy="ImportState.IsRunning" BusyText="Importing..."
+                              Click="OnImportClicked" Disabled="ImportState.IsRunning" />
+                @if (ImportState.IsRunning)
+                {
+                    <RadzenButton Text="Cancel" Icon="cancel" ButtonStyle="ButtonStyle.Danger"
+                                  Variant="Variant.Outlined" Size="ButtonSize.Small"
+                                  Click="OnCancelClicked" />
+                }
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenCard>
+
+    @if (ImportState.IsRunning && ImportState.CurrentProgress is not null)
+    {
+        var progress = ImportState.CurrentProgress;
+        <RadzenCard>
+            <RadzenStack Gap="1rem">
+                <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Import Progress</RadzenText>
+
+                <RadzenStack Gap="0.5rem">
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">
+                        Page @progress.PagesProcessed of @progress.TotalPages
+                    </RadzenText>
+                    <RadzenProgressBar Value="@CalculatePercent(progress)" ShowValue="true"
+                                       Style="height: 24px;" />
+                </RadzenStack>
+
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" Wrap="FlexWrap.Wrap">
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-success);">@progress.CoursesImported</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Imported</RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-primary);">@progress.CoursesUpdated</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Updated</RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-danger);">@progress.Errors.Count</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Errors</RadzenText>
+                    </RadzenStack>
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenCard>
+    }
+
+    @if (!ImportState.IsRunning && ImportState.LastResult is not null)
+    {
+        var result = ImportState.LastResult;
+        <RadzenCard>
+            <RadzenStack Gap="1rem">
+                <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">
+                    Import Results @(ImportState.WasCancelled ? "(Cancelled)" : "")
+                </RadzenText>
+
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" Wrap="FlexWrap.Wrap">
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-success);">@result.CoursesImported</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Imported</RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-primary);">@result.CoursesUpdated</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Updated</RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-danger);">@result.Errors.Count</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Errors</RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">@result.PagesProcessed / @result.TotalPages</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Pages</RadzenText>
+                    </RadzenStack>
+                </RadzenStack>
+
+                @if (result.Errors.Count > 0)
+                {
+                    <RadzenDataGrid TItem="GolfCourseApiImportError" Data="result.Errors" Density="Density.Compact">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="GolfCourseApiImportError" Property="ApiCourseId" Title="API Course ID" Width="140px" />
+                            <RadzenDataGridColumn TItem="GolfCourseApiImportError" Property="CourseName" Title="Course Name" Width="250px" />
+                            <RadzenDataGridColumn TItem="GolfCourseApiImportError" Property="Reason" Title="Reason" />
+                        </Columns>
+                    </RadzenDataGrid>
+                }
+            </RadzenStack>
+        </RadzenCard>
+    }
+</RadzenStack>
+
+@code {
+    // Mapping state
+    private int _newMapApiCourseId = 1;
+    private long _newMapLocalCourseId = 1;
+    private List<GolfCourseApiCourseMap> _mappings = [];
+    private bool _loadingMappings = true;
+
+    // Polling timer
+    private Timer? _pollTimer;
+    private bool _wasRunningOnLastPoll;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMappingsAsync();
+
+        // Start polling if an import is already running (e.g., reconnected to page)
+        if (ImportState.IsRunning)
+        {
+            StartPolling();
+        }
+    }
+
+    private async Task LoadMappingsAsync()
+    {
+        _loadingMappings = true;
+        _mappings = await ImportService.GetMappingsAsync();
+        _loadingMappings = false;
+    }
+
+    private async Task OnAddMappingClicked()
+    {
+        try
+        {
+            await ImportService.AddMappingAsync(_newMapApiCourseId, _newMapLocalCourseId);
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Mapping Added",
+                Detail = $"API Course {_newMapApiCourseId} mapped to local course {_newMapLocalCourseId}.",
+                Duration = 4000
+            });
+            await LoadMappingsAsync();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Failed to Add Mapping",
+                Detail = ex.Message,
+                Duration = 6000
+            });
+        }
+    }
+
+    private void OnImportClicked()
+    {
+        var triggered = ImportJob.TriggerImport();
+        if (!triggered)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Import Already Running",
+                Detail = "An import is already in progress.",
+                Duration = 4000
+            });
+            return;
+        }
+
+        _wasRunningOnLastPoll = true;
+        StartPolling();
+        StateHasChanged();
+    }
+
+    private void OnCancelClicked()
+    {
+        ImportJob.CancelImport();
+    }
+
+    private void StartPolling()
+    {
+        StopPolling();
+        _pollTimer = new Timer(PollState, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(500));
+    }
+
+    private void StopPolling()
+    {
+        _pollTimer?.Dispose();
+        _pollTimer = null;
+    }
+
+    private void PollState(object? _)
+    {
+        InvokeAsync(async () =>
+        {
+            StateHasChanged();
+
+            // Detect transition from running -> not running
+            if (_wasRunningOnLastPoll && !ImportState.IsRunning)
+            {
+                _wasRunningOnLastPoll = false;
+                StopPolling();
+
+                // Show notification
+                if (ImportState.WasCancelled)
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Warning,
+                        Summary = "Import Cancelled",
+                        Detail = "The import was cancelled.",
+                        Duration = 5000
+                    });
+                }
+                else if (ImportState.LastResult is not null)
+                {
+                    var r = ImportState.LastResult;
+                    if (r.Errors.Count > 0)
+                    {
+                        NotificationService.Notify(new NotificationMessage
+                        {
+                            Severity = NotificationSeverity.Warning,
+                            Summary = "Import Complete with Errors",
+                            Detail = $"{r.CoursesImported} imported, {r.CoursesUpdated} updated, {r.Errors.Count} error(s).",
+                            Duration = 5000
+                        });
+                    }
+                    else if (r.CoursesImported > 0 || r.CoursesUpdated > 0)
+                    {
+                        NotificationService.Notify(new NotificationMessage
+                        {
+                            Severity = NotificationSeverity.Success,
+                            Summary = "Import Complete",
+                            Detail = $"{r.CoursesImported} imported, {r.CoursesUpdated} updated.",
+                            Duration = 5000
+                        });
+                    }
+                    else
+                    {
+                        NotificationService.Notify(new NotificationMessage
+                        {
+                            Severity = NotificationSeverity.Info,
+                            Summary = "No Changes",
+                            Detail = "No new or updated courses found.",
+                            Duration = 5000
+                        });
+                    }
+                }
+
+                // Refresh mappings since import creates new ones
+                await LoadMappingsAsync();
+                StateHasChanged();
+            }
+
+            _wasRunningOnLastPoll = ImportState.IsRunning;
+        });
+    }
+
+    private static double CalculatePercent(GolfCourseApiImportResult progress)
+    {
+        return progress.TotalPages > 0
+            ? Math.Round((double)progress.PagesProcessed / progress.TotalPages * 100, 1)
+            : 0;
+    }
+
+    public void Dispose()
+    {
+        StopPolling();
+    }
+}

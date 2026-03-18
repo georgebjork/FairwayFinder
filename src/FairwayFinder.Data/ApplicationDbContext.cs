@@ -22,6 +22,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public virtual DbSet<TgtrRoundMap> TgtrRoundMaps { get; set; }
     public virtual DbSet<UserInvitation> UserInvitations { get; set; }
     public virtual DbSet<UserProfile> UserProfiles { get; set; }
+    public virtual DbSet<GolfCourseApiCourseMap> GolfCourseApiCourseMaps { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -44,11 +45,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.ToTable("course");
             entity.Property(e => e.CourseId).HasColumnName("course_id");
             entity.Property(e => e.Address).HasColumnName("address");
+            entity.Property(e => e.City).HasColumnName("city");
+            entity.Property(e => e.ClubName).HasColumnName("club_name");
+            entity.Property(e => e.Country).HasColumnName("country");
             entity.Property(e => e.CourseName).HasColumnName("course_name");
+            entity.Property(e => e.Latitude).HasColumnName("latitude");
+            entity.Property(e => e.Longitude).HasColumnName("longitude");
             entity.Property(e => e.CreatedBy).HasColumnName("created_by");
             entity.Property(e => e.CreatedOn).HasColumnName("created_on");
             entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
             entity.Property(e => e.PhoneNumber).HasColumnName("phone_number");
+            entity.Property(e => e.State).HasColumnName("state");
             entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
             entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
         });
@@ -313,6 +320,19 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
             entity.HasIndex(e => e.UserId).IsUnique().HasDatabaseName("ix_user_profile_user_id");
             entity.HasIndex(e => e.PublicIdentifier).IsUnique().HasDatabaseName("ix_user_profile_public_identifier");
+        });
+
+        // GolfCourseApiCourseMap (lookup table)
+        modelBuilder.Entity<GolfCourseApiCourseMap>(entity =>
+        {
+            entity.HasKey(e => e.GolfCourseApiCourseMapId).HasName("golf_course_api_course_map_pkey");
+            entity.ToTable("golf_course_api_course_map");
+            entity.Property(e => e.GolfCourseApiCourseMapId).HasColumnName("golf_course_api_course_map_id");
+            entity.Property(e => e.ApiCourseId).HasColumnName("api_course_id");
+            entity.Property(e => e.CourseId).HasColumnName("course_id");
+
+            entity.HasIndex(e => e.ApiCourseId).IsUnique().HasDatabaseName("ix_golf_course_api_course_map_api_course_id");
+            entity.HasOne(e => e.Course).WithMany().HasForeignKey(e => e.CourseId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

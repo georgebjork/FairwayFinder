@@ -1,7 +1,9 @@
+using System.Threading.Channels;
 using FairwayFinder.Features.HttpClients;
 using FairwayFinder.Features.Services;
 using FairwayFinder.Features.Services.Email;
 using FairwayFinder.Features.Services.Admin;
+using FairwayFinder.Features.Services.GolfCourseApi;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Features.Services.TGTR;
 using Microsoft.Extensions.Configuration;
@@ -30,6 +32,22 @@ public static class ServiceRegistration
             client.BaseAddress = new Uri(baseUrl);
         });
         services.AddTransient<TgtrTransferService>();
+
+        // GolfCourseAPI integration
+        services.AddHttpClient<GolfCourseApiHttpClient>(client =>
+        {
+            var baseUrl = config["GolfCourseApi:BaseUrl"]
+                          ?? throw new InvalidOperationException("GolfCourseApi:BaseUrl configuration is missing.");
+            var apiKey = config["GolfCourseApi:ApiKey"]
+                         ?? throw new InvalidOperationException("GolfCourseApi:ApiKey configuration is missing.");
+            client.BaseAddress = new Uri(baseUrl);
+            client.DefaultRequestHeaders.Add("Authorization", $"Key {apiKey}");
+        });
+        services.AddTransient<GolfCourseApiImportService>();
+        services.AddSingleton(Channel.CreateBounded<bool>(1));
+        services.AddSingleton<GolfCourseApiImportState>();
+        services.AddSingleton<GolfCourseApiImportJob>();
+        services.AddHostedService(sp => sp.GetRequiredService<GolfCourseApiImportJob>());
 
         // Email — use dev sender locally to avoid sending real emails
         if (isDevelopment)
