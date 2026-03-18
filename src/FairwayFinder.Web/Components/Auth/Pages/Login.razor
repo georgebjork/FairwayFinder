@@ -12,6 +12,7 @@
 @inject UserManager<ApplicationUser> UserManager
 @inject ILogger<Login> Logger
 @inject IdentityRedirectManager RedirectManager
+@inject IConfiguration Configuration
 
 <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 100%;">
     <RadzenStack Gap="2rem" Style="width: 100%; max-width: 420px;">
@@ -58,11 +59,14 @@
                         Variant="Variant.Filled"
                         Size="ButtonSize.Medium" />
 
-                    <RadzenStack AlignItems="AlignItems.Center">
-                        <RadzenText TextStyle="TextStyle.Body2">
-                            Don't have an account? <RadzenLink Path="/register" Text="Create account" />
-                        </RadzenText>
-                    </RadzenStack>
+                    @if (string.Equals(Configuration["Registration:Enabled"], "true", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <RadzenStack AlignItems="AlignItems.Center">
+                            <RadzenText TextStyle="TextStyle.Body2">
+                                Don't have an account? <RadzenLink Path="/register" Text="Create account" />
+                            </RadzenText>
+                        </RadzenStack>
+                    }
                 </RadzenStack>
             </EditForm>
         </RadzenCard>
