@@ -8,7 +8,7 @@ namespace FairwayFinder.Features.Services.GolfCourseApi;
 
 public class GolfCourseApiImportJob : BackgroundService
 {
-    private readonly Channel<bool> _trigger;
+    private readonly Channel<int> _trigger;
     private readonly GolfCourseApiImportState _state;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<GolfCourseApiImportJob> _logger;
@@ -16,7 +16,7 @@ public class GolfCourseApiImportJob : BackgroundService
     private CancellationTokenSource? _importCts;
 
     public GolfCourseApiImportJob(
-        Channel<bool> trigger,
+        Channel<int> trigger,
         GolfCourseApiImportState state,
         IServiceScopeFactory scopeFactory,
         ILogger<GolfCourseApiImportJob> logger)
@@ -30,10 +30,10 @@ public class GolfCourseApiImportJob : BackgroundService
     /// <summary>
     /// Signal the background job to start an import. Returns false if already running.
     /// </summary>
-    public bool TriggerImport()
+    public bool TriggerImport(int startPage = 1)
     {
         if (_state.IsRunning) return false;
-        _trigger.Writer.TryWrite(true);
+        _trigger.Writer.TryWrite(Math.Max(1, startPage));
         return true;
     }
 
@@ -49,7 +49,7 @@ public class GolfCourseApiImportJob : BackgroundService
     {
         _logger.LogInformation("GolfCourseApiImportJob started, waiting for triggers");
 
-        await foreach (var _ in _trigger.Reader.ReadAllAsync(stoppingToken))
+        await foreach (var startPage in _trigger.Reader.ReadAllAsync(stoppingToken))
         {
             if (_state.IsRunning)
             {
@@ -62,7 +62,7 @@ public class GolfCourseApiImportJob : BackgroundService
 
             try
             {
-                _logger.LogInformation("Background import triggered");
+                _logger.LogInformation("Background import triggered (startPage={StartPage})", startPage);
 
                 using var scope = _scopeFactory.CreateScope();
                 var importService = scope.ServiceProvider.GetRequiredService<GolfCourseApiImportService>();
@@ -72,7 +72,7 @@ public class GolfCourseApiImportJob : BackgroundService
                     _state.UpdateProgress(result);
                 });
 
-                var result = await importService.ImportAllCoursesAsync(progress, _importCts.Token);
+                var result = await importService.ImportAllCoursesAsync(startPage, progress, _importCts.Token);
                 _state.MarkCompleted(result);
 
                 _logger.LogInformation("Background import completed: {Imported} imported, {Updated} updated, {Errors} errors",

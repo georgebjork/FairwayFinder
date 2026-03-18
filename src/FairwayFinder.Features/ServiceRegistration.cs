@@ -44,7 +44,7 @@ public static class ServiceRegistration
             client.DefaultRequestHeaders.Add("Authorization", $"Key {apiKey}");
         });
         services.AddTransient<GolfCourseApiImportService>();
-        services.AddSingleton(Channel.CreateBounded<bool>(1));
+        services.AddSingleton(Channel.CreateBounded<int>(1));
         services.AddSingleton<GolfCourseApiImportState>();
         services.AddSingleton<GolfCourseApiImportJob>();
         services.AddHostedService(sp => sp.GetRequiredService<GolfCourseApiImportJob>());

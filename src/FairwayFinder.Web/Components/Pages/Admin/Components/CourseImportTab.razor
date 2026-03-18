@@ -70,8 +70,13 @@
                 The import runs as a background job and will continue even if you navigate away.
             </RadzenText>
 
-            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
-                <RadzenButton Text="Import All Courses" Icon="cloud_download" ButtonStyle="ButtonStyle.Primary"
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End" Wrap="FlexWrap.Wrap">
+                <RadzenStack Gap="0.25rem">
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Start Page</RadzenText>
+                    <RadzenNumeric TValue="int" @bind-Value="_startPage" Min="1" Style="width: 120px;"
+                                   Disabled="ImportState.IsRunning" />
+                </RadzenStack>
+                <RadzenButton Text="Import Courses" Icon="cloud_download" ButtonStyle="ButtonStyle.Primary"
                               IsBusy="ImportState.IsRunning" BusyText="Importing..."
                               Click="OnImportClicked" Disabled="ImportState.IsRunning" />
                 @if (ImportState.IsRunning)
@@ -167,6 +172,9 @@
     private List<GolfCourseApiCourseMap> _mappings = [];
     private bool _loadingMappings = true;
 
+    // Import options
+    private int _startPage = 1;
+
     // Polling timer
     private Timer? _pollTimer;
     private bool _wasRunningOnLastPoll;
@@ -217,7 +225,7 @@
 
     private void OnImportClicked()
     {
-        var triggered = ImportJob.TriggerImport();
+        var triggered = ImportJob.TriggerImport(_startPage);
         if (!triggered)
         {
             NotificationService.Notify(new NotificationMessage

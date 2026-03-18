@@ -64,10 +64,12 @@ public class GolfCourseApiImportService
     // ── Import ──
 
     public async Task<GolfCourseApiImportResult> ImportAllCoursesAsync(
+        int startPage = 1,
         IProgress<GolfCourseApiImportResult>? progress = null,
         CancellationToken ct = default)
     {
         var result = new GolfCourseApiImportResult();
+        startPage = Math.Max(1, startPage);
 
         // Fetch the first page to get metadata
         var firstPage = await _httpClient.GetCoursesAsync(1, PageSize, ct);
@@ -84,16 +86,25 @@ public class GolfCourseApiImportService
         result.TotalPages = firstPage.Metadata.LastPage;
         result.TotalRecords = firstPage.Metadata.TotalRecords;
 
-        _logger.LogInformation("Starting GolfCourseAPI import: {TotalRecords} courses across {TotalPages} pages",
-            result.TotalRecords, result.TotalPages);
+        _logger.LogInformation("Starting GolfCourseAPI import: {TotalRecords} courses across {TotalPages} pages (startPage={StartPage})",
+            result.TotalRecords, result.TotalPages, startPage);
 
-        // Process the first page
-        await ProcessPageAsync(firstPage, result, ct);
-        result.PagesProcessed = 1;
+        // Process the first page only if starting from page 1
+        if (startPage <= 1)
+        {
+            await ProcessPageAsync(firstPage, result, ct);
+            result.PagesProcessed = 1;
+        }
+        else
+        {
+            // Resuming — set progress to reflect pages already processed in a prior run
+            result.PagesProcessed = startPage - 1;
+        }
         progress?.Report(CloneResult(result));
 
-        // Process remaining pages
-        for (var page = 2; page <= result.TotalPages; page++)
+        // Process remaining pages (start at page 2 normally, or at startPage if resuming)
+        var firstLoopPage = Math.Max(2, startPage);
+        for (var page = firstLoopPage; page <= result.TotalPages; page++)
         {
             ct.ThrowIfCancellationRequested();
 
