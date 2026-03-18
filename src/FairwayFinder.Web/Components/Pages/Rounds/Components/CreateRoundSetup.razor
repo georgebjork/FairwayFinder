@@ -11,7 +11,7 @@
             <RadzenText TextStyle="TextStyle.Subtitle1">Course</RadzenText>
             <RadzenDropDown TValue="long?"
                             Data="@State.CourseSearchResults"
-                            TextProperty="CourseName"
+                            TextProperty="DisplayText"
                             ValueProperty="CourseId"
                             @bind-Value="State.SelectedCourseId"
                             Placeholder="Search for a course..."

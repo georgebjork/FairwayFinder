@@ -47,6 +47,20 @@ public class CourseSearchResult
     public long CourseId { get; set; }
     public string CourseName { get; set; } = string.Empty;
     public string? Address { get; set; }
+    public string? City { get; set; }
+    public string? State { get; set; }
+
+    /// <summary>
+    /// Display text for the course picker dropdown, e.g. "Pine Valley — Clementon, NJ"
+    /// </summary>
+    public string DisplayText
+    {
+        get
+        {
+            var location = string.Join(", ", new[] { City, State }.Where(s => !string.IsNullOrWhiteSpace(s)));
+            return string.IsNullOrWhiteSpace(location) ? CourseName : $"{CourseName} — {location}";
+        }
+    }
 }
 
 /// <summary>

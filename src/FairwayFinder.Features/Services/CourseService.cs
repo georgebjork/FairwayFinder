@@ -34,7 +34,9 @@ public class CourseService : ICourseService
             {
                 CourseId = c.CourseId,
                 CourseName = c.CourseName,
-                Address = c.Address
+                Address = c.Address,
+                City = c.City,
+                State = c.State
             })
             .ToListAsync();
     }
