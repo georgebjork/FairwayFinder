@@ -92,6 +92,8 @@ public class CourseService : ICourseService
                 CourseId = c.CourseId,
                 CourseName = c.CourseName,
                 Address = c.Address,
+                City = c.City,
+                State = c.State,
                 PhoneNumber = c.PhoneNumber,
                 TeeboxCount = dbContext.Teeboxes.Count(t => t.CourseId == c.CourseId && !t.IsDeleted)
             })

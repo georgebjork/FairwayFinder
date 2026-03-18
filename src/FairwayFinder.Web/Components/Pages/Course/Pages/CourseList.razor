@@ -41,7 +41,7 @@
     {
         <RadzenCard>
             <RadzenStack Gap="1rem">
-                <RadzenTextBox Placeholder="Search courses by name..." Value="@_searchText"
+                <RadzenTextBox Placeholder="Search by name, city, or state..." Value="@_searchText"
                                @oninput="@OnSearchInput" Style="width: 100%;" />
 
                 <RadzenDataGrid Data="@FilteredCourses"
@@ -59,8 +59,8 @@
                                 RowClick="@OnRowClick">
                     <Columns>
                         <RadzenDataGridColumn TItem="CourseListItem" Property="CourseName" Title="Course" />
-                        <RadzenDataGridColumn TItem="CourseListItem" Property="Address" Title="Address" />
-                        <RadzenDataGridColumn TItem="CourseListItem" Property="PhoneNumber" Title="Phone" Width="160px" />
+                        <RadzenDataGridColumn TItem="CourseListItem" Property="City" Title="City" Width="160px" />
+                        <RadzenDataGridColumn TItem="CourseListItem" Property="State" Title="State" Width="120px" />
                         <RadzenDataGridColumn TItem="CourseListItem" Property="TeeboxCount" Title="Teeboxes" Width="100px" TextAlign="TextAlign.Center" />
                     </Columns>
                 </RadzenDataGrid>
@@ -79,7 +79,9 @@
     private IEnumerable<CourseListItem> FilteredCourses =>
         string.IsNullOrWhiteSpace(_searchText)
             ? _courses
-            : _courses.Where(c => c.CourseName.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
+            : _courses.Where(c => c.CourseName.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+                || (c.City?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (c.State?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false));
 
     protected override async Task OnInitializedAsync()
     {
