@@ -1,3 +1,4 @@
+using System.Threading.Channels;
 using FairwayFinder.Features.HttpClients;
 using FairwayFinder.Features.Services;
 using FairwayFinder.Features.Services.Email;
@@ -43,6 +44,10 @@ public static class ServiceRegistration
             client.DefaultRequestHeaders.Add("Authorization", $"Key {apiKey}");
         });
         services.AddTransient<GolfCourseApiImportService>();
+        services.AddSingleton(Channel.CreateBounded<bool>(1));
+        services.AddSingleton<GolfCourseApiImportState>();
+        services.AddSingleton<GolfCourseApiImportJob>();
+        services.AddHostedService(sp => sp.GetRequiredService<GolfCourseApiImportJob>());
 
         // Email — use dev sender locally to avoid sending real emails
         if (isDevelopment)
