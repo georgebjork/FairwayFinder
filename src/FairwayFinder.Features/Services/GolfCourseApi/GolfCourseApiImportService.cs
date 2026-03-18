@@ -408,8 +408,8 @@ public class GolfCourseApiImportService
         List<(Teebox, List<GolfCourseApiHole>)> newTeeboxHoles)
     {
         var genderTeeboxes = existingTeeboxes.Where(t => t.IsWomens == isWomens).ToList();
-        var existingByName = genderTeeboxes.ToDictionary(t => t.TeeboxName, t => t);
-        var matchedNames = new HashSet<string>();
+        var existingByName = genderTeeboxes.ToDictionary(t => t.TeeboxName, t => t, StringComparer.OrdinalIgnoreCase);
+        var matchedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var apiTee in apiTeeBoxes)
         {
@@ -481,14 +481,7 @@ public class GolfCourseApiImportService
                     }
                 }
 
-                // Soft-delete removed holes
-                foreach (var hole in teeboxHoles)
-                {
-                    if (matchedNumbers.Contains(hole.HoleNumber)) continue;
-                    hole.IsDeleted = true;
-                    hole.UpdatedBy = SystemUser;
-                    hole.UpdatedOn = today;
-                }
+
             }
             else
             {
@@ -517,24 +510,7 @@ public class GolfCourseApiImportService
             }
         }
 
-        // Soft-delete teeboxes that no longer exist in the API
-        foreach (var existingTeebox in genderTeeboxes)
-        {
-            if (matchedNames.Contains(existingTeebox.TeeboxName)) continue;
 
-            existingTeebox.IsDeleted = true;
-            existingTeebox.UpdatedBy = SystemUser;
-            existingTeebox.UpdatedOn = today;
-
-            // Soft-delete their holes too
-            var orphanedHoles = holesByTeebox.GetValueOrDefault(existingTeebox.TeeboxId, []);
-            foreach (var hole in orphanedHoles)
-            {
-                hole.IsDeleted = true;
-                hole.UpdatedBy = SystemUser;
-                hole.UpdatedOn = today;
-            }
-        }
     }
 
     // ── Helpers ──
