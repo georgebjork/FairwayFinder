@@ -9,10 +9,11 @@ public class CourseListItem
 {
     public long CourseId { get; set; }
     public string CourseName { get; set; } = string.Empty;
+    public string? ClubName { get; set; }
     public string? Address { get; set; }
     public string? City { get; set; }
     public string? State { get; set; }
-    public string? PhoneNumber { get; set; }
+    public string? Country { get; set; }
     public int TeeboxCount { get; set; }
 }
 

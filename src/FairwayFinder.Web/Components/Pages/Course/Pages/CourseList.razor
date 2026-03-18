@@ -16,12 +16,8 @@
 
 <PageTitle>Course Management</PageTitle>
 
-<RadzenStack Gap="1.5rem" Style="max-width: 1100px;" class="rz-mx-auto rz-p-4">
-    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-            <RadzenIcon Icon="golf_course" Style="font-size: 1.75rem;" />
-            <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">Course Management</RadzenText>
-        </RadzenStack>
+<RadzenStack Gap="1.5rem" class="rz-mx-auto rz-p-4">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.End">
         <RadzenButton Text="Add Course" Icon="add" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small"
                       Click="OnAddCourseClicked" />
     </RadzenStack>
@@ -42,7 +38,7 @@
     {
         <RadzenCard>
             <RadzenStack Gap="1rem">
-                <RadzenTextBox Placeholder="Search by name, city, or state..." Value="@_searchText"
+                <RadzenTextBox Placeholder="Search by name, club, city, state, or country..." Value="@_searchText"
                                @oninput="@OnSearchInput" Style="width: 100%;" />
 
                 <RadzenDataGrid Data="@FilteredCourses"
@@ -52,16 +48,20 @@
                                 AllowSorting="true"
                                 AllowPaging="true"
                                 PageSize="10"
+                                PageSizeOptions="@(new[] { 10, 25, 50, 100 })"
                                 PagerHorizontalAlign="HorizontalAlign.Right"
                                 ShowPagingSummary="true"
+                                PageSizeText="per page"
                                 PagingSummaryFormat="Displaying page {0} of {1} (total {2} courses)"
                                 Style="cursor: pointer;"
                                 @bind-Value="@_selectedCourse"
                                 RowClick="@OnRowClick">
                     <Columns>
                         <RadzenDataGridColumn TItem="CourseListItem" Property="CourseName" Title="Course" />
-                        <RadzenDataGridColumn TItem="CourseListItem" Property="City" Title="City" Width="160px" />
-                        <RadzenDataGridColumn TItem="CourseListItem" Property="State" Title="State" Width="120px" />
+                        <RadzenDataGridColumn TItem="CourseListItem" Property="ClubName" Title="Club" />
+                        <RadzenDataGridColumn TItem="CourseListItem" Property="City" Title="City" Width="180px" />
+                        <RadzenDataGridColumn TItem="CourseListItem" Property="State" Title="State" Width="140px" />
+                        <RadzenDataGridColumn TItem="CourseListItem" Property="Country" Title="Country" Width="140px" />
                         <RadzenDataGridColumn TItem="CourseListItem" Property="TeeboxCount" Title="Teeboxes" Width="100px" TextAlign="TextAlign.Center" />
                     </Columns>
                 </RadzenDataGrid>
@@ -85,8 +85,10 @@
         string.IsNullOrWhiteSpace(_searchText)
             ? _courses
             : _courses.Where(c => c.CourseName.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
+                || (c.ClubName?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false)
                 || (c.City?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false)
-                || (c.State?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false));
+                || (c.State?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (c.Country?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false));
 
     protected override async Task OnInitializedAsync()
     {

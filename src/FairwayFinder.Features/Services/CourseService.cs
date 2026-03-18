@@ -93,10 +93,11 @@ public class CourseService : ICourseService
             {
                 CourseId = c.CourseId,
                 CourseName = c.CourseName,
+                ClubName = c.ClubName,
                 Address = c.Address,
                 City = c.City,
                 State = c.State,
-                PhoneNumber = c.PhoneNumber,
+                Country = c.Country,
                 TeeboxCount = dbContext.Teeboxes.Count(t => t.CourseId == c.CourseId && !t.IsDeleted)
             })
             .ToListAsync();
