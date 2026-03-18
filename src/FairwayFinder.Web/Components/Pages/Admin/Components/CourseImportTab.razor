@@ -1,0 +1,195 @@
+@using FairwayFinder.Features.Data.GolfCourseApi
+@using FairwayFinder.Features.Services.GolfCourseApi
+@inject GolfCourseApiImportService ImportService
+@inject NotificationService NotificationService
+
+<RadzenStack Gap="1rem" class="rz-p-2">
+    <RadzenCard>
+        <RadzenStack Gap="1rem">
+            <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-m-0">
+                Import all golf courses from the GolfCourseAPI into the local database.
+            </RadzenText>
+            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                This will fetch all courses (page size 100) with a 200ms delay between requests. 
+                Courses already imported will be skipped.
+            </RadzenText>
+
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
+                <RadzenButton Text="Import All Courses" Icon="cloud_download" ButtonStyle="ButtonStyle.Primary"
+                              IsBusy="_importing" BusyText="Importing..."
+                              Click="OnImportClicked" Disabled="_importing" />
+                @if (_importing)
+                {
+                    <RadzenButton Text="Cancel" Icon="cancel" ButtonStyle="ButtonStyle.Danger"
+                                  Variant="Variant.Outlined" Size="ButtonSize.Small"
+                                  Click="OnCancelClicked" />
+                }
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenCard>
+
+    @if (_importing && _progressResult is not null)
+    {
+        <RadzenCard>
+            <RadzenStack Gap="1rem">
+                <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Import Progress</RadzenText>
+
+                <RadzenStack Gap="0.5rem">
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">
+                        Page @_progressResult.PagesProcessed of @_progressResult.TotalPages
+                    </RadzenText>
+                    <RadzenProgressBar Value="@ProgressPercent" ShowValue="true"
+                                       Style="height: 24px;" />
+                </RadzenStack>
+
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" Wrap="FlexWrap.Wrap">
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-success);">@_progressResult.CoursesImported</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Imported</RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-info);">@_progressResult.CoursesSkipped</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Skipped</RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-danger);">@_progressResult.Errors.Count</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Errors</RadzenText>
+                    </RadzenStack>
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenCard>
+    }
+
+    @if (!_importing && _finalResult is not null)
+    {
+        <RadzenCard>
+            <RadzenStack Gap="1rem">
+                <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Import Results</RadzenText>
+
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" Wrap="FlexWrap.Wrap">
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-success);">@_finalResult.CoursesImported</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Imported</RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-info);">@_finalResult.CoursesSkipped</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Skipped</RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-danger);">@_finalResult.Errors.Count</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Errors</RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">@_finalResult.PagesProcessed / @_finalResult.TotalPages</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Pages</RadzenText>
+                    </RadzenStack>
+                </RadzenStack>
+
+                @if (_finalResult.Errors.Count > 0)
+                {
+                    <RadzenDataGrid TItem="GolfCourseApiImportError" Data="_finalResult.Errors" Density="Density.Compact">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="GolfCourseApiImportError" Property="ApiCourseId" Title="API Course ID" Width="140px" />
+                            <RadzenDataGridColumn TItem="GolfCourseApiImportError" Property="CourseName" Title="Course Name" Width="250px" />
+                            <RadzenDataGridColumn TItem="GolfCourseApiImportError" Property="Reason" Title="Reason" />
+                        </Columns>
+                    </RadzenDataGrid>
+                }
+            </RadzenStack>
+        </RadzenCard>
+    }
+</RadzenStack>
+
+@code {
+    private bool _importing;
+    private GolfCourseApiImportResult? _progressResult;
+    private GolfCourseApiImportResult? _finalResult;
+    private CancellationTokenSource? _cts;
+
+    private double ProgressPercent => _progressResult is { TotalPages: > 0 }
+        ? Math.Round((double)_progressResult.PagesProcessed / _progressResult.TotalPages * 100, 1)
+        : 0;
+
+    private async Task OnImportClicked()
+    {
+        _importing = true;
+        _finalResult = null;
+        _progressResult = null;
+        _cts = new CancellationTokenSource();
+        StateHasChanged();
+
+        try
+        {
+            var progress = new Progress<GolfCourseApiImportResult>(result =>
+            {
+                _progressResult = result;
+                InvokeAsync(StateHasChanged);
+            });
+
+            _finalResult = await ImportService.ImportAllCoursesAsync(progress, _cts.Token);
+
+            if (_finalResult.Errors.Count == 0 && _finalResult.CoursesImported > 0)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Import Complete",
+                    Detail = $"{_finalResult.CoursesImported} course(s) imported successfully.",
+                    Duration = 5000
+                });
+            }
+            else if (_finalResult.Errors.Count > 0)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Warning,
+                    Summary = "Import Complete with Errors",
+                    Detail = $"{_finalResult.CoursesImported} imported, {_finalResult.Errors.Count} error(s).",
+                    Duration = 5000
+                });
+            }
+            else if (_finalResult.CoursesImported == 0 && _finalResult.CoursesSkipped > 0)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Info,
+                    Summary = "No New Courses",
+                    Detail = $"All {_finalResult.CoursesSkipped} course(s) were already imported.",
+                    Duration = 5000
+                });
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            _finalResult = _progressResult;
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Import Cancelled",
+                Detail = "The import was cancelled by the user.",
+                Duration = 5000
+            });
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Import Failed",
+                Detail = ex.Message,
+                Duration = 8000
+            });
+        }
+        finally
+        {
+            _importing = false;
+            _cts?.Dispose();
+            _cts = null;
+        }
+    }
+
+    private void OnCancelClicked()
+    {
+        _cts?.Cancel();
+    }
+}
