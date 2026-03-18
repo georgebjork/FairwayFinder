@@ -185,10 +185,11 @@ public class GolfCourseApiImportService
         }
     }
 
-    // ── Insert (new course) ──
+    // ── Insert (new course) — 3 saves total ──
 
     private async Task InsertCourseAsync(ApplicationDbContext dbContext, GolfCourseApiCourse apiCourse, DateOnly today, CancellationToken ct)
     {
+        // Save 1: Insert course to get CourseId
         var course = new Course
         {
             CourseName = apiCourse.CourseName,
@@ -209,219 +210,29 @@ public class GolfCourseApiImportService
         dbContext.Courses.Add(course);
         await dbContext.SaveChangesAsync(ct);
 
-        // Create teeboxes and holes
+        // Save 2: Insert ALL teeboxes (both genders) to get TeeboxIds
+        var teeboxApiMap = new List<(Teebox Teebox, List<GolfCourseApiHole> ApiHoles)>();
+
         if (apiCourse.Tees is not null)
         {
-            await CreateTeeboxesAsync(dbContext, course.CourseId, apiCourse.Tees.Male, false, today, ct);
-            await CreateTeeboxesAsync(dbContext, course.CourseId, apiCourse.Tees.Female, true, today, ct);
+            AddTeeboxesToContext(dbContext, course.CourseId, apiCourse.Tees.Male, false, today, teeboxApiMap);
+            AddTeeboxesToContext(dbContext, course.CourseId, apiCourse.Tees.Female, true, today, teeboxApiMap);
         }
 
-        // Create the mapping record
-        dbContext.GolfCourseApiCourseMaps.Add(new GolfCourseApiCourseMap
+        if (teeboxApiMap.Count > 0)
+            await dbContext.SaveChangesAsync(ct); // All teeboxes now have their TeeboxIds
+
+        // Save 3: Insert ALL holes for ALL teeboxes + the mapping record
+        foreach (var (teebox, apiHoles) in teeboxApiMap)
         {
-            ApiCourseId = apiCourse.Id,
-            CourseId = course.CourseId
-        });
-
-        await dbContext.SaveChangesAsync(ct);
-    }
-
-    // ── Update (existing mapped course) ──
-
-    private async Task UpdateCourseAsync(ApplicationDbContext dbContext, long courseId, GolfCourseApiCourse apiCourse, DateOnly today, CancellationToken ct)
-    {
-        // Update the course record
-        var course = await dbContext.Courses.FirstOrDefaultAsync(c => c.CourseId == courseId, ct);
-        if (course is null) return;
-
-        course.CourseName = apiCourse.CourseName;
-        course.ClubName = apiCourse.ClubName;
-        course.Address = apiCourse.Location?.Address;
-        course.City = apiCourse.Location?.City;
-        course.State = apiCourse.Location?.State;
-        course.Country = apiCourse.Location?.Country;
-        course.Latitude = apiCourse.Location?.Latitude;
-        course.Longitude = apiCourse.Location?.Longitude;
-        course.UpdatedBy = SystemUser;
-        course.UpdatedOn = today;
-
-        await dbContext.SaveChangesAsync(ct);
-
-        // Update teeboxes and holes in-place
-        if (apiCourse.Tees is not null)
-        {
-            await UpdateTeeboxesAsync(dbContext, courseId, apiCourse.Tees.Male, false, today, ct);
-            await UpdateTeeboxesAsync(dbContext, courseId, apiCourse.Tees.Female, true, today, ct);
-        }
-    }
-
-    private async Task UpdateTeeboxesAsync(
-        ApplicationDbContext dbContext,
-        long courseId,
-        List<GolfCourseApiTeeBox> apiTeeBoxes,
-        bool isWomens,
-        DateOnly today,
-        CancellationToken ct)
-    {
-        // Load existing non-deleted teeboxes for this course + gender
-        var existingTeeboxes = await dbContext.Teeboxes
-            .Where(t => t.CourseId == courseId && t.IsWomens == isWomens && !t.IsDeleted)
-            .ToListAsync(ct);
-
-        // Build a lookup by name for matching
-        var existingByName = existingTeeboxes.ToDictionary(t => t.TeeboxName, t => t);
-        var matchedNames = new HashSet<string>();
-
-        foreach (var apiTee in apiTeeBoxes)
-        {
-            var isNineHole = apiTee.NumberOfHoles == 9;
-            var holes = apiTee.Holes;
-
-            var yardageOut = 0;
-            var yardageIn = 0;
-            if (isNineHole)
+            for (var i = 0; i < apiHoles.Count; i++)
             {
-                yardageOut = holes.Sum(h => h.Yardage);
-            }
-            else
-            {
-                yardageOut = holes.Take(9).Sum(h => h.Yardage);
-                yardageIn = holes.Skip(9).Sum(h => h.Yardage);
-            }
-
-            if (existingByName.TryGetValue(apiTee.TeeName, out var existingTeebox))
-            {
-                // Update existing teebox in-place
-                matchedNames.Add(apiTee.TeeName);
-
-                existingTeebox.Par = apiTee.ParTotal;
-                existingTeebox.Rating = apiTee.CourseRating;
-                existingTeebox.Slope = apiTee.SlopeRating;
-                existingTeebox.YardageOut = yardageOut;
-                existingTeebox.YardageIn = yardageIn;
-                existingTeebox.YardageTotal = apiTee.TotalYards;
-                existingTeebox.IsNineHole = isNineHole;
-                existingTeebox.UpdatedBy = SystemUser;
-                existingTeebox.UpdatedOn = today;
-
-                await dbContext.SaveChangesAsync(ct);
-
-                // Update holes in-place by HoleNumber
-                await UpdateHolesAsync(dbContext, existingTeebox.TeeboxId, courseId, holes, today, ct);
-            }
-            else
-            {
-                // No matching teebox — create new one
-                var teebox = new Teebox
-                {
-                    CourseId = courseId,
-                    TeeboxName = apiTee.TeeName,
-                    Par = apiTee.ParTotal,
-                    Rating = apiTee.CourseRating,
-                    Slope = apiTee.SlopeRating,
-                    YardageOut = yardageOut,
-                    YardageIn = yardageIn,
-                    YardageTotal = apiTee.TotalYards,
-                    IsNineHole = isNineHole,
-                    IsWomens = isWomens,
-                    CreatedBy = SystemUser,
-                    CreatedOn = today,
-                    UpdatedBy = SystemUser,
-                    UpdatedOn = today,
-                    IsDeleted = false
-                };
-
-                dbContext.Teeboxes.Add(teebox);
-                await dbContext.SaveChangesAsync(ct);
-
-                // Create holes for the new teebox
-                for (var i = 0; i < holes.Count; i++)
-                {
-                    var apiHole = holes[i];
-                    dbContext.Holes.Add(new Hole
-                    {
-                        TeeboxId = teebox.TeeboxId,
-                        CourseId = courseId,
-                        HoleNumber = i + 1,
-                        Par = apiHole.Par,
-                        Yardage = apiHole.Yardage,
-                        Handicap = apiHole.Handicap,
-                        CreatedBy = SystemUser,
-                        CreatedOn = today,
-                        UpdatedBy = SystemUser,
-                        UpdatedOn = today,
-                        IsDeleted = false
-                    });
-                }
-
-                await dbContext.SaveChangesAsync(ct);
-            }
-        }
-
-        // Soft-delete teeboxes that no longer exist in the API
-        foreach (var existingTeebox in existingTeeboxes)
-        {
-            if (matchedNames.Contains(existingTeebox.TeeboxName)) continue;
-
-            existingTeebox.IsDeleted = true;
-            existingTeebox.UpdatedBy = SystemUser;
-            existingTeebox.UpdatedOn = today;
-
-            // Soft-delete their holes too
-            var orphanedHoles = await dbContext.Holes
-                .Where(h => h.TeeboxId == existingTeebox.TeeboxId && !h.IsDeleted)
-                .ToListAsync(ct);
-
-            foreach (var hole in orphanedHoles)
-            {
-                hole.IsDeleted = true;
-                hole.UpdatedBy = SystemUser;
-                hole.UpdatedOn = today;
-            }
-        }
-
-        await dbContext.SaveChangesAsync(ct);
-    }
-
-    private async Task UpdateHolesAsync(
-        ApplicationDbContext dbContext,
-        long teeboxId,
-        long courseId,
-        List<GolfCourseApiHole> apiHoles,
-        DateOnly today,
-        CancellationToken ct)
-    {
-        var existingHoles = await dbContext.Holes
-            .Where(h => h.TeeboxId == teeboxId && !h.IsDeleted)
-            .ToListAsync(ct);
-
-        var existingByNumber = existingHoles.ToDictionary(h => h.HoleNumber, h => h);
-        var matchedNumbers = new HashSet<int>();
-
-        for (var i = 0; i < apiHoles.Count; i++)
-        {
-            var apiHole = apiHoles[i];
-            var holeNumber = i + 1;
-
-            if (existingByNumber.TryGetValue(holeNumber, out var existingHole))
-            {
-                // Update in-place
-                matchedNumbers.Add(holeNumber);
-
-                existingHole.Par = apiHole.Par;
-                existingHole.Yardage = apiHole.Yardage;
-                existingHole.Handicap = apiHole.Handicap;
-                existingHole.UpdatedBy = SystemUser;
-                existingHole.UpdatedOn = today;
-            }
-            else
-            {
-                // Insert new hole
+                var apiHole = apiHoles[i];
                 dbContext.Holes.Add(new Hole
                 {
-                    TeeboxId = teeboxId,
-                    CourseId = courseId,
-                    HoleNumber = holeNumber,
+                    TeeboxId = teebox.TeeboxId,
+                    CourseId = course.CourseId,
+                    HoleNumber = i + 1,
                     Par = apiHole.Par,
                     Yardage = apiHole.Yardage,
                     Handicap = apiHole.Handicap,
@@ -434,40 +245,33 @@ public class GolfCourseApiImportService
             }
         }
 
-        // Soft-delete holes that no longer exist in the API
-        foreach (var existingHole in existingHoles)
+        dbContext.GolfCourseApiCourseMaps.Add(new GolfCourseApiCourseMap
         {
-            if (matchedNumbers.Contains(existingHole.HoleNumber)) continue;
-
-            existingHole.IsDeleted = true;
-            existingHole.UpdatedBy = SystemUser;
-            existingHole.UpdatedOn = today;
-        }
+            ApiCourseId = apiCourse.Id,
+            CourseId = course.CourseId
+        });
 
         await dbContext.SaveChangesAsync(ct);
     }
 
-    // ── Create (for new inserts only) ──
-
-    private async Task CreateTeeboxesAsync(
+    private static void AddTeeboxesToContext(
         ApplicationDbContext dbContext,
         long courseId,
-        List<GolfCourseApiTeeBox> teeBoxes,
+        List<GolfCourseApiTeeBox> apiTeeBoxes,
         bool isWomens,
         DateOnly today,
-        CancellationToken ct)
+        List<(Teebox, List<GolfCourseApiHole>)> teeboxApiMap)
     {
-        foreach (var apiTee in teeBoxes)
+        foreach (var apiTee in apiTeeBoxes)
         {
             var isNineHole = apiTee.NumberOfHoles == 9;
             var holes = apiTee.Holes;
 
-            var yardageOut = 0;
-            var yardageIn = 0;
-
+            int yardageOut, yardageIn;
             if (isNineHole)
             {
                 yardageOut = holes.Sum(h => h.Yardage);
+                yardageIn = 0;
             }
             else
             {
@@ -495,28 +299,222 @@ public class GolfCourseApiImportService
             };
 
             dbContext.Teeboxes.Add(teebox);
-            await dbContext.SaveChangesAsync(ct);
+            teeboxApiMap.Add((teebox, holes));
+        }
+    }
 
-            for (var i = 0; i < holes.Count; i++)
+    // ── Update (existing mapped course) — 3 queries + 1 save ──
+
+    private async Task UpdateCourseAsync(ApplicationDbContext dbContext, long courseId, GolfCourseApiCourse apiCourse, DateOnly today, CancellationToken ct)
+    {
+        // Query 1: Load the course
+        var course = await dbContext.Courses.FirstOrDefaultAsync(c => c.CourseId == courseId, ct);
+        if (course is null) return;
+
+        course.CourseName = apiCourse.CourseName;
+        course.ClubName = apiCourse.ClubName;
+        course.Address = apiCourse.Location?.Address;
+        course.City = apiCourse.Location?.City;
+        course.State = apiCourse.Location?.State;
+        course.Country = apiCourse.Location?.Country;
+        course.Latitude = apiCourse.Location?.Latitude;
+        course.Longitude = apiCourse.Location?.Longitude;
+        course.UpdatedBy = SystemUser;
+        course.UpdatedOn = today;
+
+        // Query 2: Load all non-deleted teeboxes for this course
+        var existingTeeboxes = await dbContext.Teeboxes
+            .Where(t => t.CourseId == courseId && !t.IsDeleted)
+            .ToListAsync(ct);
+
+        // Query 3: Load all non-deleted holes for this course in one query
+        var existingHoles = await dbContext.Holes
+            .Where(h => h.CourseId == courseId && !h.IsDeleted)
+            .ToListAsync(ct);
+
+        var holesByTeebox = existingHoles
+            .GroupBy(h => h.TeeboxId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // Collect new teeboxes that need TeeboxIds before we can add holes
+        var newTeeboxHoles = new List<(Teebox Teebox, List<GolfCourseApiHole> ApiHoles)>();
+
+        // Process both genders
+        if (apiCourse.Tees is not null)
+        {
+            ProcessTeeboxUpdates(dbContext, courseId, apiCourse.Tees.Male, false, existingTeeboxes, holesByTeebox, today, newTeeboxHoles);
+            ProcessTeeboxUpdates(dbContext, courseId, apiCourse.Tees.Female, true, existingTeeboxes, holesByTeebox, today, newTeeboxHoles);
+        }
+
+        // If there are new teeboxes, save to get their IDs, then add their holes
+        if (newTeeboxHoles.Count > 0)
+        {
+            await dbContext.SaveChangesAsync(ct); // Save 1: course updates + teebox updates + new teeboxes
+
+            foreach (var (teebox, apiHoles) in newTeeboxHoles)
             {
-                var apiHole = holes[i];
-                dbContext.Holes.Add(new Hole
+                for (var i = 0; i < apiHoles.Count; i++)
                 {
-                    TeeboxId = teebox.TeeboxId,
+                    var apiHole = apiHoles[i];
+                    dbContext.Holes.Add(new Hole
+                    {
+                        TeeboxId = teebox.TeeboxId,
+                        CourseId = courseId,
+                        HoleNumber = i + 1,
+                        Par = apiHole.Par,
+                        Yardage = apiHole.Yardage,
+                        Handicap = apiHole.Handicap,
+                        CreatedBy = SystemUser,
+                        CreatedOn = today,
+                        UpdatedBy = SystemUser,
+                        UpdatedOn = today,
+                        IsDeleted = false
+                    });
+                }
+            }
+        }
+
+        // Save everything (or Save 2 if we had new teeboxes)
+        await dbContext.SaveChangesAsync(ct);
+    }
+
+    private static void ProcessTeeboxUpdates(
+        ApplicationDbContext dbContext,
+        long courseId,
+        List<GolfCourseApiTeeBox> apiTeeBoxes,
+        bool isWomens,
+        List<Teebox> existingTeeboxes,
+        Dictionary<long, List<Hole>> holesByTeebox,
+        DateOnly today,
+        List<(Teebox, List<GolfCourseApiHole>)> newTeeboxHoles)
+    {
+        var genderTeeboxes = existingTeeboxes.Where(t => t.IsWomens == isWomens).ToList();
+        var existingByName = genderTeeboxes.ToDictionary(t => t.TeeboxName, t => t);
+        var matchedNames = new HashSet<string>();
+
+        foreach (var apiTee in apiTeeBoxes)
+        {
+            var isNineHole = apiTee.NumberOfHoles == 9;
+            var holes = apiTee.Holes;
+
+            int yardageOut, yardageIn;
+            if (isNineHole)
+            {
+                yardageOut = holes.Sum(h => h.Yardage);
+                yardageIn = 0;
+            }
+            else
+            {
+                yardageOut = holes.Take(9).Sum(h => h.Yardage);
+                yardageIn = holes.Skip(9).Sum(h => h.Yardage);
+            }
+
+            if (existingByName.TryGetValue(apiTee.TeeName, out var existingTeebox))
+            {
+                // Update existing teebox in-place
+                matchedNames.Add(apiTee.TeeName);
+
+                existingTeebox.Par = apiTee.ParTotal;
+                existingTeebox.Rating = apiTee.CourseRating;
+                existingTeebox.Slope = apiTee.SlopeRating;
+                existingTeebox.YardageOut = yardageOut;
+                existingTeebox.YardageIn = yardageIn;
+                existingTeebox.YardageTotal = apiTee.TotalYards;
+                existingTeebox.IsNineHole = isNineHole;
+                existingTeebox.UpdatedBy = SystemUser;
+                existingTeebox.UpdatedOn = today;
+
+                // Update holes in-place
+                var teeboxHoles = holesByTeebox.GetValueOrDefault(existingTeebox.TeeboxId, []);
+                var existingByNumber = teeboxHoles.ToDictionary(h => h.HoleNumber, h => h);
+                var matchedNumbers = new HashSet<int>();
+
+                for (var i = 0; i < holes.Count; i++)
+                {
+                    var apiHole = holes[i];
+                    var holeNumber = i + 1;
+
+                    if (existingByNumber.TryGetValue(holeNumber, out var existingHole))
+                    {
+                        matchedNumbers.Add(holeNumber);
+                        existingHole.Par = apiHole.Par;
+                        existingHole.Yardage = apiHole.Yardage;
+                        existingHole.Handicap = apiHole.Handicap;
+                        existingHole.UpdatedBy = SystemUser;
+                        existingHole.UpdatedOn = today;
+                    }
+                    else
+                    {
+                        dbContext.Holes.Add(new Hole
+                        {
+                            TeeboxId = existingTeebox.TeeboxId,
+                            CourseId = courseId,
+                            HoleNumber = holeNumber,
+                            Par = apiHole.Par,
+                            Yardage = apiHole.Yardage,
+                            Handicap = apiHole.Handicap,
+                            CreatedBy = SystemUser,
+                            CreatedOn = today,
+                            UpdatedBy = SystemUser,
+                            UpdatedOn = today,
+                            IsDeleted = false
+                        });
+                    }
+                }
+
+                // Soft-delete removed holes
+                foreach (var hole in teeboxHoles)
+                {
+                    if (matchedNumbers.Contains(hole.HoleNumber)) continue;
+                    hole.IsDeleted = true;
+                    hole.UpdatedBy = SystemUser;
+                    hole.UpdatedOn = today;
+                }
+            }
+            else
+            {
+                // New teebox — add to context, holes added after save (need TeeboxId)
+                var teebox = new Teebox
+                {
                     CourseId = courseId,
-                    HoleNumber = i + 1,
-                    Par = apiHole.Par,
-                    Yardage = apiHole.Yardage,
-                    Handicap = apiHole.Handicap,
+                    TeeboxName = apiTee.TeeName,
+                    Par = apiTee.ParTotal,
+                    Rating = apiTee.CourseRating,
+                    Slope = apiTee.SlopeRating,
+                    YardageOut = yardageOut,
+                    YardageIn = yardageIn,
+                    YardageTotal = apiTee.TotalYards,
+                    IsNineHole = isNineHole,
+                    IsWomens = isWomens,
                     CreatedBy = SystemUser,
                     CreatedOn = today,
                     UpdatedBy = SystemUser,
                     UpdatedOn = today,
                     IsDeleted = false
-                });
-            }
+                };
 
-            await dbContext.SaveChangesAsync(ct);
+                dbContext.Teeboxes.Add(teebox);
+                newTeeboxHoles.Add((teebox, holes));
+            }
+        }
+
+        // Soft-delete teeboxes that no longer exist in the API
+        foreach (var existingTeebox in genderTeeboxes)
+        {
+            if (matchedNames.Contains(existingTeebox.TeeboxName)) continue;
+
+            existingTeebox.IsDeleted = true;
+            existingTeebox.UpdatedBy = SystemUser;
+            existingTeebox.UpdatedOn = today;
+
+            // Soft-delete their holes too
+            var orphanedHoles = holesByTeebox.GetValueOrDefault(existingTeebox.TeeboxId, []);
+            foreach (var hole in orphanedHoles)
+            {
+                hole.IsDeleted = true;
+                hole.UpdatedBy = SystemUser;
+                hole.UpdatedOn = today;
+            }
         }
     }
 
