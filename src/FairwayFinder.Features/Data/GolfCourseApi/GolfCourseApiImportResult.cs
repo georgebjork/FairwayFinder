@@ -3,6 +3,7 @@ namespace FairwayFinder.Features.Data.GolfCourseApi;
 public class GolfCourseApiImportResult
 {
     public int CoursesImported { get; set; }
+    public int CoursesUpdated { get; set; }
     public int CoursesSkipped { get; set; }
     public int TotalPages { get; set; }
     public int PagesProcessed { get; set; }

@@ -1,17 +1,69 @@
+@using FairwayFinder.Data.Entities
 @using FairwayFinder.Features.Data.GolfCourseApi
 @using FairwayFinder.Features.Services.GolfCourseApi
 @inject GolfCourseApiImportService ImportService
 @inject NotificationService NotificationService
 
 <RadzenStack Gap="1rem" class="rz-p-2">
+
+    @* ── Mapping Management ── *@
+    <RadzenCard>
+        <RadzenStack Gap="1rem">
+            <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Add Course Mapping</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                Link an existing local course to an API course ID. Mapped courses will be updated in-place during import.
+            </RadzenText>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End" Wrap="FlexWrap.Wrap">
+                <RadzenStack Gap="0.25rem">
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">API Course ID</RadzenText>
+                    <RadzenNumeric TValue="int" @bind-Value="_newMapApiCourseId" Min="1" Style="width: 160px;" />
+                </RadzenStack>
+                <RadzenStack Gap="0.25rem">
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Local Course ID</RadzenText>
+                    <RadzenNumeric TValue="long" @bind-Value="_newMapLocalCourseId" Min="1" Style="width: 160px;" />
+                </RadzenStack>
+                <RadzenButton Text="Add Mapping" Icon="add" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Small"
+                              Click="OnAddMappingClicked" />
+            </RadzenStack>
+        </RadzenStack>
+    </RadzenCard>
+
+    <RadzenCard>
+        <RadzenStack Gap="1rem">
+            <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Existing Course Mappings</RadzenText>
+            @if (_loadingMappings)
+            {
+                <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+            }
+            else if (_mappings.Count == 0)
+            {
+                <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                    No course mappings yet. Mappings are created automatically during import or manually above.
+                </RadzenText>
+            }
+            else
+            {
+                <RadzenDataGrid TItem="GolfCourseApiCourseMap" Data="_mappings" Density="Density.Compact"
+                                AllowPaging="true" PageSize="10">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="GolfCourseApiCourseMap" Property="ApiCourseId" Title="API Course ID" Width="140px" />
+                        <RadzenDataGridColumn TItem="GolfCourseApiCourseMap" Property="CourseId" Title="Local Course ID" Width="140px" />
+                        <RadzenDataGridColumn TItem="GolfCourseApiCourseMap" Property="Course.CourseName" Title="Course Name" />
+                    </Columns>
+                </RadzenDataGrid>
+            }
+        </RadzenStack>
+    </RadzenCard>
+
+    @* ── Import ── *@
     <RadzenCard>
         <RadzenStack Gap="1rem">
             <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-m-0">
                 Import all golf courses from the GolfCourseAPI into the local database.
             </RadzenText>
             <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
-                This will fetch all courses (page size 100) with a 200ms delay between requests. 
-                Courses already imported will be skipped.
+                This will fetch all courses (page size 100) with a 200ms delay between requests.
+                Mapped courses will be updated in-place. New courses will be inserted.
             </RadzenText>
 
             <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center">
@@ -48,8 +100,8 @@
                         <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Imported</RadzenText>
                     </RadzenStack>
                     <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
-                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-info);">@_progressResult.CoursesSkipped</RadzenText>
-                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Skipped</RadzenText>
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-primary);">@_progressResult.CoursesUpdated</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Updated</RadzenText>
                     </RadzenStack>
                     <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
                         <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-danger);">@_progressResult.Errors.Count</RadzenText>
@@ -72,8 +124,8 @@
                         <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Imported</RadzenText>
                     </RadzenStack>
                     <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
-                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-info);">@_finalResult.CoursesSkipped</RadzenText>
-                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Skipped</RadzenText>
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-primary);">@_finalResult.CoursesUpdated</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Updated</RadzenText>
                     </RadzenStack>
                     <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
                         <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-danger);">@_finalResult.Errors.Count</RadzenText>
@@ -101,6 +153,13 @@
 </RadzenStack>
 
 @code {
+    // Mapping state
+    private int _newMapApiCourseId = 1;
+    private long _newMapLocalCourseId = 1;
+    private List<GolfCourseApiCourseMap> _mappings = [];
+    private bool _loadingMappings = true;
+
+    // Import state
     private bool _importing;
     private GolfCourseApiImportResult? _progressResult;
     private GolfCourseApiImportResult? _finalResult;
@@ -109,6 +168,44 @@
     private double ProgressPercent => _progressResult is { TotalPages: > 0 }
         ? Math.Round((double)_progressResult.PagesProcessed / _progressResult.TotalPages * 100, 1)
         : 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMappingsAsync();
+    }
+
+    private async Task LoadMappingsAsync()
+    {
+        _loadingMappings = true;
+        _mappings = await ImportService.GetMappingsAsync();
+        _loadingMappings = false;
+    }
+
+    private async Task OnAddMappingClicked()
+    {
+        try
+        {
+            await ImportService.AddMappingAsync(_newMapApiCourseId, _newMapLocalCourseId);
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Mapping Added",
+                Detail = $"API Course {_newMapApiCourseId} mapped to local course {_newMapLocalCourseId}.",
+                Duration = 4000
+            });
+            await LoadMappingsAsync();
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Failed to Add Mapping",
+                Detail = ex.Message,
+                Duration = 6000
+            });
+        }
+    }
 
     private async Task OnImportClicked()
     {
@@ -128,13 +225,13 @@
 
             _finalResult = await ImportService.ImportAllCoursesAsync(progress, _cts.Token);
 
-            if (_finalResult.Errors.Count == 0 && _finalResult.CoursesImported > 0)
+            if (_finalResult.Errors.Count == 0 && (_finalResult.CoursesImported > 0 || _finalResult.CoursesUpdated > 0))
             {
                 NotificationService.Notify(new NotificationMessage
                 {
                     Severity = NotificationSeverity.Success,
                     Summary = "Import Complete",
-                    Detail = $"{_finalResult.CoursesImported} course(s) imported successfully.",
+                    Detail = $"{_finalResult.CoursesImported} imported, {_finalResult.CoursesUpdated} updated.",
                     Duration = 5000
                 });
             }
@@ -144,20 +241,23 @@
                 {
                     Severity = NotificationSeverity.Warning,
                     Summary = "Import Complete with Errors",
-                    Detail = $"{_finalResult.CoursesImported} imported, {_finalResult.Errors.Count} error(s).",
+                    Detail = $"{_finalResult.CoursesImported} imported, {_finalResult.CoursesUpdated} updated, {_finalResult.Errors.Count} error(s).",
                     Duration = 5000
                 });
             }
-            else if (_finalResult.CoursesImported == 0 && _finalResult.CoursesSkipped > 0)
+            else if (_finalResult.CoursesImported == 0 && _finalResult.CoursesUpdated == 0)
             {
                 NotificationService.Notify(new NotificationMessage
                 {
                     Severity = NotificationSeverity.Info,
-                    Summary = "No New Courses",
-                    Detail = $"All {_finalResult.CoursesSkipped} course(s) were already imported.",
+                    Summary = "No Changes",
+                    Detail = "No new or updated courses found.",
                     Duration = 5000
                 });
             }
+
+            // Refresh mappings since import creates new ones
+            await LoadMappingsAsync();
         }
         catch (OperationCanceledException)
         {
