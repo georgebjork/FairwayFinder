@@ -170,11 +170,19 @@ public class GolfCourseApiImportService
         {
             try
             {
+                var hasTeeboxes = apiCourse.Tees is not null
+                    && (apiCourse.Tees.Male.Count > 0 || apiCourse.Tees.Female.Count > 0);
+
                 if (existingMappings.TryGetValue(apiCourse.Id, out var localCourseId))
                 {
                     // Mapping exists — update the course in-place
                     await UpdateCourseAsync(dbContext, localCourseId, apiCourse, today, ct);
                     result.CoursesUpdated++;
+                }
+                else if (!hasTeeboxes)
+                {
+                    // No teeboxes — skip importing this course
+                    result.CoursesSkipped++;
                 }
                 else
                 {

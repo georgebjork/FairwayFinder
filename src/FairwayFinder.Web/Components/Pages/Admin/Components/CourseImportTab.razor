@@ -114,6 +114,10 @@
                         <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Updated</RadzenText>
                     </RadzenStack>
                     <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-text-secondary-color);">@progress.CoursesSkipped</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Skipped</RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
                         <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-danger);">@progress.Errors.Count</RadzenText>
                         <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Errors</RadzenText>
                     </RadzenStack>
@@ -139,6 +143,10 @@
                     <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
                         <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-primary);">@result.CoursesUpdated</RadzenText>
                         <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Updated</RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-text-secondary-color);">@result.CoursesSkipped</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Skipped</RadzenText>
                     </RadzenStack>
                     <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
                         <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-danger);">@result.Errors.Count</RadzenText>
