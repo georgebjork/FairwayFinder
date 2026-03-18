@@ -16,6 +16,7 @@
 @inject NavigationManager NavigationManager
 @inject ILogger<Register> Logger
 @inject IdentityRedirectManager RedirectManager
+@inject IConfiguration Configuration
 
 <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 100%;">
     <RadzenStack Gap="2rem" Style="width: 100%; max-width: 420px;">
@@ -114,6 +115,15 @@
     protected override void OnInitialized()
     {
         Input ??= new();
+
+        var registrationEnabled = string.Equals(
+            Configuration["Registration:Enabled"], "true", StringComparison.OrdinalIgnoreCase);
+
+        if (!registrationEnabled)
+        {
+            RedirectManager.RedirectTo("/login");
+            return;
+        }
     }
 
     public async Task RegisterUser()
