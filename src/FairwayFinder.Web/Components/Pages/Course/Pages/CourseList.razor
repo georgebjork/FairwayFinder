@@ -12,6 +12,7 @@
 @inject NotificationService NotificationService
 @inject DialogService DialogService
 @inject BreadcrumbState BreadcrumbState
+@implements IDisposable
 
 <PageTitle>Course Management</PageTitle>
 
@@ -74,7 +75,11 @@
     private bool _loading = true;
     private string _currentUserId = string.Empty;
     private string _searchText = string.Empty;
+    private string _pendingSearchText = string.Empty;
+    private Timer? _debounceTimer;
     private IList<CourseListItem> _selectedCourse = [];
+
+    private const int DebounceMs = 300;
 
     private IEnumerable<CourseListItem> FilteredCourses =>
         string.IsNullOrWhiteSpace(_searchText)
@@ -104,7 +109,21 @@
 
     private void OnSearchInput(ChangeEventArgs args)
     {
-        _searchText = args.Value?.ToString() ?? string.Empty;
+        _pendingSearchText = args.Value?.ToString() ?? string.Empty;
+        _debounceTimer?.Dispose();
+        _debounceTimer = new Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                _searchText = _pendingSearchText;
+                StateHasChanged();
+            });
+        }, null, DebounceMs, Timeout.Infinite);
+    }
+
+    public void Dispose()
+    {
+        _debounceTimer?.Dispose();
     }
 
     private void OnRowClick(DataGridRowMouseEventArgs<CourseListItem> args)
