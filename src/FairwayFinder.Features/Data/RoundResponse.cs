@@ -186,6 +186,7 @@ public class RoundHoleStat
     public bool? HitGreen { get; set; }
     public long? MissGreenType { get; set; }
     public short? NumberOfPutts { get; set; }
+    public int? ApproachYardage { get; set; }
 
     public static RoundHoleStat From(HoleStat holeStat)
     {
@@ -195,7 +196,8 @@ public class RoundHoleStat
             MissFairwayType = holeStat.MissFairwayType,
             HitGreen = holeStat.HitGreen,
             MissGreenType = holeStat.MissGreenType,
-            NumberOfPutts = holeStat.NumberOfPutts
+            NumberOfPutts = holeStat.NumberOfPutts,
+            ApproachYardage = holeStat.ApproachYardage
         };
     }
 }

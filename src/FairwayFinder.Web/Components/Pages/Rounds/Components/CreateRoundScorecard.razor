@@ -228,6 +228,30 @@
                     <td class="total-cell" colspan="2">@BackNineGreensHit</td>
                     <td class="total-cell" colspan="2">@TotalGreensHit / @State.HoleEntries.Count</td>
                 </tr>
+
+                @* Approach Yardage Row (editable) *@
+                <tr>
+                    <th colspan="2">Approach</th>
+                    @foreach (var entry in FrontNineEntries)
+                    {
+                        <td class="hole-cell input-cell">
+                            <input type="text" inputmode="numeric" class="scorecard-input"
+                                   value="@entry.ApproachYardage"
+                                   @onchange="(e) => OnApproachYardageChanged(entry, e)" />
+                        </td>
+                    }
+                    <td class="total-cell" colspan="2">&nbsp;</td>
+                    @foreach (var entry in BackNineEntries)
+                    {
+                        <td class="hole-cell input-cell">
+                            <input type="text" inputmode="numeric" class="scorecard-input"
+                                   value="@entry.ApproachYardage"
+                                   @onchange="(e) => OnApproachYardageChanged(entry, e)" />
+                        </td>
+                    }
+                    <td class="total-cell" colspan="2">&nbsp;</td>
+                    <td class="total-cell" colspan="2">&nbsp;</td>
+                </tr>
             }
         </tbody>
     </table>
@@ -402,6 +426,20 @@
         if (short.TryParse(raw, out var val) && val >= 0 && val <= 10)
         {
             entry.NumberOfPutts = val;
+        }
+    }
+
+    private void OnApproachYardageChanged(HoleScoreEntry entry, ChangeEventArgs e)
+    {
+        var raw = e.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            entry.ApproachYardage = null;
+            return;
+        }
+        if (int.TryParse(raw, out var val) && val >= 0 && val <= 600)
+        {
+            entry.ApproachYardage = val;
         }
     }
 

@@ -234,13 +234,14 @@ public class RoundService : IRoundService
                 HitGreen = h.HitGreen,
                 MissGreenType = h.MissGreenType,
                 NumberOfPutts = h.NumberOfPutts,
+                ApproachYardage = h.ApproachYardage,
                 CreatedBy = userId,
                 CreatedOn = today,
                 UpdatedBy = userId,
                 UpdatedOn = today,
                 IsDeleted = false
             }).ToList();
-            
+
             dbContext.HoleStats.AddRange(holeStats);
         }
         
@@ -389,6 +390,7 @@ public class RoundService : IRoundService
                     existingStat.HitGreen = hole.HitGreen;
                     existingStat.MissGreenType = hole.MissGreenType;
                     existingStat.NumberOfPutts = hole.NumberOfPutts;
+                    existingStat.ApproachYardage = hole.ApproachYardage;
                     existingStat.UpdatedBy = userId;
                     existingStat.UpdatedOn = today;
                 }
@@ -404,6 +406,7 @@ public class RoundService : IRoundService
                         HitGreen = hole.HitGreen,
                         MissGreenType = hole.MissGreenType,
                         NumberOfPutts = hole.NumberOfPutts,
+                        ApproachYardage = hole.ApproachYardage,
                         CreatedBy = userId,
                         CreatedOn = today,
                         UpdatedBy = userId,

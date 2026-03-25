@@ -37,6 +37,7 @@ public class HoleScoreEntry
     public bool? HitGreen { get; set; }
     public long? MissGreenType { get; set; }
     public short? NumberOfPutts { get; set; }
+    public int? ApproachYardage { get; set; }
 }
 
 /// <summary>

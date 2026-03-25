@@ -114,48 +114,53 @@ else
                 @if (Round.UsingHoleStats)
                 {
                     <!-- Fairways Row -->
-                    <tr>
-                        <th colspan="2">Fairways</th>
-                        @foreach (var hole in FrontNine)
-                        {
-                            <td class="hole-cell">
-                                @if (hole.Par <= 3)
-                                {
-                                    <!-- Par 3 or less - no fairway -->
-                                }
-                                else if (hole.Stats?.HitFairway == true)
-                                {
-                                    <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
-                                }
-                                else if (hole.Stats?.HitFairway == false)
-                                {
-                                    @GetMissIcon(hole.Stats?.MissFairwayType)
-                                }
-                            </td>
-                        }
-                        <td class="total-cell" colspan="2">@Round.FairwaysHitOut</td>
-                        @foreach (var hole in BackNine)
-                        {
-                            <td class="hole-cell">
-                                @if (hole.Par <= 3)
-                                {
-                                    <!-- Par 3 or less - no fairway -->
-                                }
-                                else if (hole.Stats?.HitFairway == true)
-                                {
-                                    <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
-                                }
-                                else if (hole.Stats?.HitFairway == false)
-                                {
-                                    @GetMissIcon(hole.Stats?.MissFairwayType)
-                                }
-                            </td>
-                        }
-                        <td class="total-cell" colspan="2">@Round.FairwaysHitIn</td>
-                        <td class="total-cell" colspan="2">@Round.FairwaysHit / @Round.FairwaysTotal</td>
-                    </tr>
-
+                    // If all are null.. then dont display
+                    if (Round.Holes.Any(x => x.Stats != null && x.Stats.HitFairway.HasValue))
+                    {
+                        <tr>
+                            <th colspan="2">Fairways</th>
+                            @foreach (var hole in FrontNine)
+                            {
+                                <td class="hole-cell">
+                                    @if (hole.Par <= 3)
+                                    {
+                                        <!-- Par 3 or less - no fairway -->
+                                    }
+                                    else if (hole.Stats?.HitFairway == true)
+                                    {
+                                        <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
+                                    }
+                                    else if (hole.Stats?.HitFairway == false)
+                                    {
+                                        @GetMissIcon(hole.Stats?.MissFairwayType)
+                                    }
+                                </td>
+                            }
+                            <td class="total-cell" colspan="2">@Round.FairwaysHitOut</td>
+                            @foreach (var hole in BackNine)
+                            {
+                                <td class="hole-cell">
+                                    @if (hole.Par <= 3)
+                                    {
+                                        <!-- Par 3 or less - no fairway -->
+                                    }
+                                    else if (hole.Stats?.HitFairway == true)
+                                    {
+                                        <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
+                                    }
+                                    else if (hole.Stats?.HitFairway == false)
+                                    {
+                                        @GetMissIcon(hole.Stats?.MissFairwayType)
+                                    }
+                                </td>
+                            }
+                            <td class="total-cell" colspan="2">@Round.FairwaysHitIn</td>
+                            <td class="total-cell" colspan="2">@Round.FairwaysHit / @Round.FairwaysTotal</td>
+                        </tr>
+                    }
                     <!-- GIR Row -->
+                    @if (Round.Holes.Any(x => x.Stats != null && x.Stats.HitGreen.HasValue))
+                    {
                     <tr>
                         <th colspan="2">GIR</th>
                         @foreach (var hole in FrontNine)
@@ -188,8 +193,11 @@ else
                         <td class="total-cell" colspan="2">@Round.GreensHitIn</td>
                         <td class="total-cell" colspan="2">@Round.GreensHit / @Round.GreensTotal</td>
                     </tr>
+                    }
 
                     <!-- Putts Row -->
+                    @if (Round.Holes.Any(x => x.Stats != null && x.Stats.NumberOfPutts.HasValue))
+                    {
                     <tr>
                         <th colspan="2">Putts</th>
                         @foreach (var hole in FrontNine)
@@ -204,6 +212,26 @@ else
                         <td class="total-cell" colspan="2">@Round.PuttsIn</td>
                         <td class="total-cell" colspan="2">@Round.TotalPutts</td>
                     </tr>
+                    }
+
+                    @if (Round.Holes.Any(x => x.Stats != null && x.Stats.ApproachYardage.HasValue))
+                    {
+                        <!-- Approach Yardage Row -->
+                        <tr>
+                            <th colspan="2">Approach</th>
+                            @foreach (var hole in FrontNine)
+                            {
+                                <td class="hole-cell">@(hole.Stats?.ApproachYardage?.ToString() ?? "")</td>
+                            }
+                            <td class="total-cell" colspan="2">&nbsp;</td>
+                            @foreach (var hole in BackNine)
+                            {
+                                <td class="hole-cell">@(hole.Stats?.ApproachYardage?.ToString() ?? "")</td>
+                            }
+                            <td class="total-cell" colspan="2">&nbsp;</td>
+                            <td class="total-cell" colspan="2">&nbsp;</td>
+                        </tr>
+                    }
                 }
             </tbody>
         </table>

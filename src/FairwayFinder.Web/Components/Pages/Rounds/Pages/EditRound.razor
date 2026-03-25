@@ -149,7 +149,8 @@ else
                 MissFairwayType = existingHole?.Stats?.MissFairwayType,
                 HitGreen = existingHole?.Stats?.HitGreen,
                 MissGreenType = existingHole?.Stats?.MissGreenType,
-                NumberOfPutts = existingHole?.Stats?.NumberOfPutts ?? (round.UsingHoleStats ? (short)2 : null)
+                NumberOfPutts = existingHole?.Stats?.NumberOfPutts ?? (round.UsingHoleStats ? (short)2 : null),
+                ApproachYardage = existingHole?.Stats?.ApproachYardage
             };
         }).ToList();
 
@@ -238,7 +239,8 @@ else
                 MissFairwayType = preserved?.MissFairwayType,
                 HitGreen = preserved?.HitGreen,
                 MissGreenType = preserved?.MissGreenType,
-                NumberOfPutts = preserved?.NumberOfPutts ?? (_state.TrackAdvancedStats ? (short)2 : null)
+                NumberOfPutts = preserved?.NumberOfPutts ?? (_state.TrackAdvancedStats ? (short)2 : null),
+                ApproachYardage = preserved?.ApproachYardage
             };
         }).ToList();
     }
@@ -301,7 +303,8 @@ else
                     MissFairwayType = e.MissFairwayType,
                     HitGreen = e.HitGreen,
                     MissGreenType = e.MissGreenType,
-                    NumberOfPutts = e.NumberOfPutts
+                    NumberOfPutts = e.NumberOfPutts,
+                    ApproachYardage = e.ApproachYardage
                 } : null
             };
         }).ToList();
