@@ -1,4 +1,8 @@
-# List Page Generator
+---
+name: list-page
+description: Generate a data grid list page with search, pagination, and CRUD actions using RadzenDataGrid. Use when creating a page that shows a list of entities.
+argument-hint: "[EntityName]"
+---
 
 Create a new data grid list page for: $ARGUMENTS
 

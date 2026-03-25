@@ -1,4 +1,8 @@
-# Blazor Page Scaffold
+---
+name: blazor-page
+description: Scaffold a general-purpose Blazor page with loading state, breadcrumbs, and auth. Use when creating a new page that doesn't fit the list or detail patterns.
+argument-hint: "[PageName]"
+---
 
 Create a new Blazor page for: $ARGUMENTS
 

@@ -1,4 +1,8 @@
-# Form Dialog Generator
+---
+name: form-dialog
+description: Generate an Add/Edit form dialog component using Radzen forms. Use when creating a dialog for creating or editing an entity.
+argument-hint: "[EntityName]"
+---
 
 Create a new Add/Edit form dialog for: $ARGUMENTS
 

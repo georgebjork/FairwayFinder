@@ -1,4 +1,8 @@
-# CRUD Service Generator
+---
+name: crud-service
+description: Generate a complete CRUD service for a new domain entity including Entity, DTOs, Interface, Service, DI registration, and DbSet. Use when creating a new domain feature from scratch.
+argument-hint: "[EntityName]"
+---
 
 Create a new CRUD service for the domain: $ARGUMENTS
 

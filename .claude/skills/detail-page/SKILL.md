@@ -1,4 +1,8 @@
-# Detail Page Generator
+---
+name: detail-page
+description: Generate a detail/view page for an entity with edit and delete actions. Use when creating a page that shows full entity details with route parameter.
+argument-hint: "[EntityName]"
+---
 
 Create a new detail/view page for: $ARGUMENTS
 
