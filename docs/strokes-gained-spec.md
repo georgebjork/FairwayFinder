@@ -68,19 +68,21 @@ namespace FairwayFinder.Data.Entities;
 public partial class Shot
 {
     public long ShotId { get; set; }
-    public long ScoreId { get; set; }       // FK to Score — which hole this shot belongs to
+    public long ScoreId { get; set; }           // FK to Score — which hole this shot belongs to
 
-    public int ShotNumber { get; set; }      // 1-based sequence of physical swings on this hole
+    public int ShotNumber { get; set; }          // 1-based sequence of physical swings on this hole
 
     // Starting position (before the swing)
-    public int StartDistance { get; set; }    // yards if not on green, feet if on green
-    public int StartLie { get; set; }         // LieType enum stored as int
+    public int StartDistance { get; set; }            // distance value
+    public string StartDistanceUnit { get; set; } = null!;  // "yards" or "feet"
+    public int StartLie { get; set; }                 // LieType enum stored as int
 
     // Ending position (after the swing) — null if holed out
-    public int? EndDistance { get; set; }     // null = ball is in the hole
-    public int? EndLie { get; set; }          // null = ball is in the hole
+    public int? EndDistance { get; set; }             // null = ball is in the hole
+    public string? EndDistanceUnit { get; set; }     // null = ball is in the hole; "yards" or "feet"
+    public int? EndLie { get; set; }                  // null = ball is in the hole
 
-    public int PenaltyStrokes { get; set; }  // 0 = clean shot, 1 = OB/hazard penalty, 2 = rare
+    public int PenaltyStrokes { get; set; }      // 0 = clean shot, 1 = OB/hazard penalty, 2 = rare
 
     // Audit fields (matching existing entity pattern)
     public string CreatedBy { get; set; } = null!;
@@ -102,7 +104,7 @@ public partial class Shot
 HoleScore = count(shots) + sum(penalty_strokes)
 ```
 
-**Distance units are context-dependent:** When `StartLie` or `EndLie` is `Green`, the corresponding distance is in **feet**. For all other lies, distance is in **yards**. This matches how golfers naturally think ("I'm 150 out" vs "I have a 20-footer").
+**Distance units are explicit:** Each distance field has a corresponding `DistanceUnit` column (`Yards` or `Feet`) stored on the row so the database is unambiguous. Convention: when the lie is `Green`, the unit is `Feet`; for all other lies, the unit is `Yards`. The UI auto-sets this based on lie selection, but the stored unit is the source of truth.
 
 **End position of shot N = Start position of shot N+1.** This is enforced by the UI but stored redundantly per shot so each row is self-contained for SG calculation without joining to adjacent shots.
 
@@ -149,9 +151,26 @@ public enum LieType
     Tee = 0,
     Fairway = 1,
     Rough = 2,
-    Sand = 3,
-    Recovery = 4,   // trees, behind obstruction, severely plugged
-    Green = 5
+    Sand = 3,        // waste area, general sand (not a defined bunker)
+    Bunker = 4,      // greenside or fairway bunker
+    Recovery = 5,    // trees, behind obstruction, severely plugged
+    Green = 6
+}
+```
+
+> **Sand vs Bunker:** `Sand` is for waste areas or general sandy lies that are not a formal bunker. `Bunker` is for greenside and fairway bunkers. Both use the same baseline expected strokes data (Broadie's "Sand" column), but tracking them separately provides more granular analysis.
+
+### DistanceUnit
+
+Stored as a plain string on every distance field so the database is human-readable and unambiguous. Not an int-backed enum — the column contains the literal text `"yards"` or `"feet"`.
+
+```csharp
+namespace FairwayFinder.Features.Enums;
+
+public static class DistanceUnit
+{
+    public const string Yards = "yards";
+    public const string Feet = "feet";
 }
 ```
 
@@ -204,7 +223,7 @@ Static in-code lookup (not database). Reasons:
 
 ### Expected Strokes by Distance and Lie (Scratch Baseline, Selected Data Points)
 
-| Distance | Tee | Fairway | Rough | Sand | Recovery | Green (feet) | Green Exp. Putts |
+| Distance | Tee | Fairway | Rough | Sand/Bunker | Recovery | Green (feet) | Green Exp. Putts |
 |---|---|---|---|---|---|---|---|
 | 600yd | 4.73 | — | — | — | — | — | — |
 | 500yd | 4.40 | 4.57 | 4.73 | — | — | — | — |
@@ -231,6 +250,8 @@ Static in-code lookup (not database). Reasons:
 | — | — | — | — | — | — | 3ft | 1.04 |
 | — | — | — | — | — | — | 2ft | 1.01 |
 
+> `Sand` and `Bunker` lie types share the same baseline column. They are tracked separately for analysis granularity but use identical expected strokes values.
+
 > Full lookup should have entries at every 5–10 yard interval (non-green) and every 1–5 foot interval (green) with linear interpolation between points.
 
 ### Implementation
@@ -242,9 +263,10 @@ public static class StrokesGainedBaseline
 {
     /// <summary>
     /// Returns expected strokes to hole out from a given distance and lie.
-    /// Distance is in yards for non-green lies, feet for Green lie.
+    /// The DistanceUnit specifies whether the distance is in yards or feet.
+    /// Sand and Bunker lie types use the same baseline column.
     /// </summary>
-    public static double GetExpectedStrokes(int distance, LieType lie, BaselineLevel level = BaselineLevel.Scratch)
+    public static double GetExpectedStrokes(int distance, string unit, LieType lie, BaselineLevel level = BaselineLevel.Scratch)
 
     /// <summary>
     /// Returns 0.0 — used when the ball is holed (EndDistance is null).
@@ -271,18 +293,20 @@ public static class StrokesGainedCalculator
 {
     /// <summary>
     /// Calculates strokes gained for a single shot.
+    /// Distance values are interpreted using their DistanceUnit (Yards or Feet).
+    /// Sand and Bunker lie types use the same baseline data.
     /// </summary>
     public static double CalculateShotSg(
-        int startDistance, LieType startLie,
-        int? endDistance, LieType? endLie,
+        int startDistance, string startUnit, LieType startLie,
+        int? endDistance, string? endUnit, LieType? endLie,
         int penaltyStrokes,
         BaselineLevel level = BaselineLevel.Scratch)
     {
-        var expectedStart = StrokesGainedBaseline.GetExpectedStrokes(startDistance, startLie, level);
+        var expectedStart = StrokesGainedBaseline.GetExpectedStrokes(startDistance, startUnit, startLie, level);
 
         var expectedEnd = (endDistance == null || endLie == null)
             ? 0.0  // holed out
-            : StrokesGainedBaseline.GetExpectedStrokes(endDistance.Value, endLie.Value, level);
+            : StrokesGainedBaseline.GetExpectedStrokes(endDistance.Value, endUnit!, endLie.Value, level);
 
         return expectedStart - expectedEnd - (1 + penaltyStrokes);
     }
@@ -366,9 +390,11 @@ public class ShotData
     public int ShotNumber { get; set; }
 
     public int StartDistance { get; set; }
+    public string StartDistanceUnit { get; set; } = DistanceUnit.Yards;
     public LieType StartLie { get; set; }
 
     public int? EndDistance { get; set; }
+    public string? EndDistanceUnit { get; set; }
     public LieType? EndLie { get; set; }
 
     public int PenaltyStrokes { get; set; }
@@ -485,24 +511,26 @@ public class StrokesGainedTrendPoint
 
 ```sql
 CREATE TABLE shot (
-    shot_id          BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-    score_id         BIGINT NOT NULL REFERENCES score(score_id) ON DELETE RESTRICT,
+    shot_id              BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    score_id             BIGINT NOT NULL REFERENCES score(score_id) ON DELETE RESTRICT,
 
-    shot_number      INT NOT NULL,
+    shot_number          INT NOT NULL,
 
-    start_distance   INT NOT NULL,
-    start_lie        INT NOT NULL,
+    start_distance       INT NOT NULL,
+    start_distance_unit  TEXT NOT NULL,     -- 'yards' or 'feet'
+    start_lie            INT NOT NULL,
 
-    end_distance     INT,
-    end_lie          INT,
+    end_distance         INT,
+    end_distance_unit    TEXT,              -- 'yards' or 'feet'; null when holed
+    end_lie              INT,
 
-    penalty_strokes  INT NOT NULL DEFAULT 0,
+    penalty_strokes      INT NOT NULL DEFAULT 0,
 
-    created_by       TEXT NOT NULL,
-    created_on       DATE NOT NULL,
-    updated_by       TEXT NOT NULL,
-    updated_on       DATE NOT NULL,
-    is_deleted       BOOLEAN NOT NULL DEFAULT FALSE
+    created_by           TEXT NOT NULL,
+    created_on           DATE NOT NULL,
+    updated_by           TEXT NOT NULL,
+    updated_on           DATE NOT NULL,
+    is_deleted           BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE INDEX ix_shot_score_id ON shot(score_id);
@@ -520,8 +548,10 @@ modelBuilder.Entity<Shot>(entity =>
     entity.Property(e => e.ScoreId).HasColumnName("score_id");
     entity.Property(e => e.ShotNumber).HasColumnName("shot_number");
     entity.Property(e => e.StartDistance).HasColumnName("start_distance");
+    entity.Property(e => e.StartDistanceUnit).HasColumnName("start_distance_unit");
     entity.Property(e => e.StartLie).HasColumnName("start_lie");
     entity.Property(e => e.EndDistance).HasColumnName("end_distance");
+    entity.Property(e => e.EndDistanceUnit).HasColumnName("end_distance_unit");
     entity.Property(e => e.EndLie).HasColumnName("end_lie");
     entity.Property(e => e.PenaltyStrokes).HasColumnName("penalty_strokes").HasDefaultValue(0);
     entity.Property(e => e.CreatedBy).HasColumnName("created_by");
@@ -692,10 +722,10 @@ Hole 7 — Par 4, 385 yards                    Score: 5 (+1)
 A simple button group or segmented control for lie selection:
 
 ```
-[ Tee ] [ Fairway ] [ Rough ] [ Sand ] [ Recovery ] [ Green ]
+[ Tee ] [ Fairway ] [ Rough ] [ Bunker ] [ Sand ] [ Recovery ] [ Green ]
 ```
 
-When `Green` is selected, the distance label switches from "yards" to "feet".
+When `Green` is selected, the distance unit auto-switches to "feet". For all other lies, defaults to "yards". The unit is stored explicitly on the row via `DistanceUnit`.
 
 #### Compact Scorecard Summary
 
@@ -831,7 +861,8 @@ Each shows a line chart with historical per-round SG values and a trend line.
 |---|---|---|
 | `Entities/Shot.cs` | Data | Shot entity |
 | `Migrations/AddShotTable.cs` | Data | EF migration for shot table + round flag |
-| `Enums/LieType.cs` | Features | Tee/Fairway/Rough/Sand/Recovery/Green |
+| `Enums/LieType.cs` | Features | Tee/Fairway/Rough/Sand/Bunker/Recovery/Green |
+| `Enums/DistanceUnit.cs` | Features | String constants: `"yards"`, `"feet"` |
 | `Enums/BaselineLevel.cs` | Features | Scratch/Bogey/HighHandicap |
 | `Enums/ShotCategory.cs` | Features | OTT/Approach/ARG/Putting |
 | `Helpers/StrokesGainedBaseline.cs` | Features | Static baseline expected strokes lookup |
@@ -887,7 +918,7 @@ For each hole when `UsingShotTracking = true`:
 3. **Shot N EndDistance/EndLie** must equal Shot N+1 StartDistance/StartLie (chain continuity)
 4. **Last shot** must have EndDistance = null and EndLie = null (holed out)
 5. **Score validation:** `count(shots) + sum(penalty_strokes) == hole_score`
-6. **StartLie == Green** → distance is interpreted as feet (UI enforces this)
+6. **DistanceUnit consistency:** When `StartLie == Green`, `StartDistanceUnit` must be `Feet`; for all other lies, `Yards`. Same for end. UI auto-sets this.
 7. **PenaltyStrokes** must be 0, 1, or 2
 8. **Distance** must be > 0 for start, and > 0 or null for end
 
@@ -919,6 +950,7 @@ HoleStat.ApproachShotOb = /* approach shot has penalty */;
 [Fact] Expected_strokes_green_20ft_returns_correct_value()
 [Fact] Expected_strokes_holed_returns_zero()
 [Fact] Different_baseline_levels_return_different_values()
+[Fact] Sand_and_bunker_return_same_expected_strokes()
 [Fact] Edge_case_very_short_distance()
 [Fact] Edge_case_very_long_distance()
 ```
@@ -939,6 +971,8 @@ HoleStat.ApproachShotOb = /* approach shot has penalty */;
 [Fact] Classify_green_shot_returns_putting()
 [Fact] Classify_30yd_rough_returns_around_the_green()
 [Fact] Classify_100yd_fairway_returns_approach()
+[Fact] Classify_40yd_bunker_returns_around_the_green()
+[Fact] Classify_150yd_bunker_returns_approach()
 
 // Per-hole
 [Fact] Hole_sg_sums_all_shots_correctly()
@@ -974,20 +1008,20 @@ HoleStat.ApproachShotOb = /* approach shot has penalty */;
 
 ---
 
-## 13. Open Questions
+## 13. Resolved Design Decisions
 
-| # | Question | Options | Recommendation |
-|---|---|---|---|
-| 1 | **Default baseline?** | Scratch, Bogey | Scratch — industry standard, comparable across users |
-| 2 | **SG on rounds without shot data?** | Show nothing, show SG:Total only (par - score) | Show nothing — SG without shot data is just score-to-par with extra steps |
-| 3 | **Shot entry mobile UX?** | Same layout, simplified layout | Needs design exploration — shot entry is inherently more complex |
-| 4 | **SG on public profiles?** | Yes, No, User choice | Yes — it's valuable context |
-| 5 | **Store computed SG or always recalculate?** | Store per shot, Compute on-the-fly | On-the-fly — baseline can change, matches existing pattern |
-| 6 | **Can users mix modes per round?** | Some holes shot-tracked, others scorecard only | No — a round is either fully shot-tracked or not, to keep data consistent |
-| 7 | **Should shot-tracked rounds auto-derive HoleStat?** | Yes always, Yes but user can override | Yes always — prevents data inconsistency between shots and HoleStat |
-| 8 | **Around the green distance threshold?** | 30 yards, 50 yards, configurable | 50 yards — matches PGA Tour definition |
-| 9 | **How to handle the distance units (yards vs feet)?** | Single field + lie context, Two separate fields | Single field + lie context — `StartLie == Green` means feet, else yards |
-| 10 | **Min rounds for SG trends?** | 3, 5, 10 | 5 — enough for a meaningful trend |
+| # | Decision | Resolution |
+|---|---|---|
+| 1 | **Default baseline** | Scratch (0 HCP) — industry standard, comparable across users |
+| 2 | **SG on rounds without shot data** | Do not display any SG data. SG section only appears for rounds with shot tracking |
+| 3 | **Mobile UX** | Not in scope for initial implementation. Desktop-first |
+| 4 | **SG on public profiles** | Yes — show SG data on public profiles |
+| 5 | **Computed SG storage** | Compute on-the-fly — baseline can change, matches existing stats pattern |
+| 6 | **Mix tracking modes per round** | No — a round is either fully shot-tracked or not. Data must be consistent |
+| 7 | **Auto-derive HoleStat from shots** | Yes, always — prevents data inconsistency between shots and HoleStat. No user override |
+| 8 | **Around the green threshold** | 50 yards — matches PGA Tour definition |
+| 9 | **Distance unit handling** | Single distance field + explicit `TEXT` column stored on every row (`"yards"` or `"feet"`). Human-readable in the database. UI auto-sets based on lie (Green → feet, all others → yards) |
+| 10 | **Min rounds for SG trends** | 3 rounds minimum |
 
 ---
 
@@ -1004,7 +1038,7 @@ HoleStat.ApproachShotOb = /* approach shot has penalty */;
 | **SG: P** | Strokes Gained: Putting — all shots from the green |
 | **SG: T2G** | Strokes Gained: Tee to Green — OTT + APP + ARG |
 | **SG: Total** | Sum of all SG categories for a hole or round |
-| **LieType** | Surface the ball rests on: Tee, Fairway, Rough, Sand, Recovery, Green |
+| **LieType** | Surface the ball rests on: Tee, Fairway, Rough, Sand, Bunker, Recovery, Green |
 | **Shot Chain** | Sequence of shots where each shot's end position = next shot's start position |
 | **Penalty Strokes** | Additional strokes added without a physical swing (OB, hazard) |
 | **Broadie Tables** | Mark Broadie's expected strokes reference data from *Every Shot Counts* |
