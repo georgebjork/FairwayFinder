@@ -13,6 +13,7 @@ public class CreateRoundRequest
     public bool FrontNine { get; set; }
     public bool BackNine { get; set; }
     public bool UsingHoleStats { get; set; }
+    public bool UsingShotTracking { get; set; }
     public List<HoleScoreEntry> Holes { get; set; } = new();
 }
 
@@ -38,6 +39,9 @@ public class HoleScoreEntry
     public long? MissGreenType { get; set; }
     public short? NumberOfPutts { get; set; }
     public int? ApproachYardage { get; set; }
+
+    // Shot-by-shot data (populated when UsingShotTracking = true)
+    public List<ShotData>? Shots { get; set; }
 }
 
 /// <summary>

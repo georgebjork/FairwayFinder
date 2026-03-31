@@ -3,6 +3,7 @@ using System;
 using FairwayFinder.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FairwayFinder.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260330010821_AddShotTable")]
+    partial class AddShotTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -454,30 +457,6 @@ namespace FairwayFinder.Data.Migrations
                     b.Property<long>("RoundId")
                         .HasColumnType("bigint")
                         .HasColumnName("round_id");
-
-                    b.Property<double?>("SgApproach")
-                        .HasColumnType("double precision")
-                        .HasColumnName("sg_approach");
-
-                    b.Property<double?>("SgAroundTheGreen")
-                        .HasColumnType("double precision")
-                        .HasColumnName("sg_around_the_green");
-
-                    b.Property<double?>("SgOffTheTee")
-                        .HasColumnType("double precision")
-                        .HasColumnName("sg_off_the_tee");
-
-                    b.Property<double?>("SgPutting")
-                        .HasColumnType("double precision")
-                        .HasColumnName("sg_putting");
-
-                    b.Property<double?>("SgTeeToGreen")
-                        .HasColumnType("double precision")
-                        .HasColumnName("sg_tee_to_green");
-
-                    b.Property<double?>("SgTotal")
-                        .HasColumnType("double precision")
-                        .HasColumnName("sg_total");
 
                     b.Property<int>("TripleOrWorse")
                         .HasColumnType("integer")

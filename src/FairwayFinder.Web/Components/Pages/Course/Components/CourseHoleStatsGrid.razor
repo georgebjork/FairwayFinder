@@ -102,6 +102,9 @@
     [Parameter]
     public bool ShowYardage { get; set; }
 
+    [Parameter]
+    public StrokesGainedSummary? StrokesGained { get; set; }
+
     private string GetScoreToParColor(decimal scoreToPar)
     {
         if (scoreToPar < 0) return "var(--rz-success)";

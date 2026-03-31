@@ -236,6 +236,7 @@
             ScoreOut = _state.HoleEntries.Where(e => e.HoleNumber <= 9).Sum(e => (int)e.Score),
             ScoreIn = _state.HoleEntries.Where(e => e.HoleNumber > 9).Sum(e => (int)e.Score),
             UsingHoleStats = _state.TrackAdvancedStats,
+            UsingShotTracking = _state.TrackShotByShotStats,
             FullRound = isFullRound,
             CourseId = _state.SelectedCourseId!.Value,
             CourseName = _state.SelectedCourseName,
@@ -298,6 +299,7 @@
                 FrontNine = isFullRound || _state.SelectedNine == "front",
                 BackNine = isFullRound || _state.SelectedNine == "back",
                 UsingHoleStats = _state.TrackAdvancedStats,
+                UsingShotTracking = _state.TrackShotByShotStats,
                 Holes = _state.HoleEntries
             };
 

@@ -123,6 +123,7 @@ else
         _state.SelectedNine = isFrontNine ? "front" : "back";
         _state.DatePlayed = round.DatePlayed;
         _state.TrackAdvancedStats = round.UsingHoleStats;
+        _state.TrackShotByShotStats = round.UsingShotTracking;
 
         // Filter holes for 9-hole rounds
         if (!isFullRound)
@@ -153,6 +154,19 @@ else
                 ApproachYardage = existingHole?.Stats?.ApproachYardage
             };
         }).ToList();
+
+        // Load existing shots for shot-tracked rounds
+        if (round.UsingShotTracking)
+        {
+            var shotsByScoreId = await RoundService.GetShotsByRoundIdAsync(RoundId);
+            foreach (var entry in _state.HoleEntries)
+            {
+                if (entry.ScoreId > 0 && shotsByScoreId.TryGetValue(entry.ScoreId, out var shots))
+                {
+                    entry.Shots = shots;
+                }
+            }
+        }
 
         _previousTeeboxId = round.Teebox.TeeboxId;
 
@@ -240,7 +254,8 @@ else
                 HitGreen = preserved?.HitGreen,
                 MissGreenType = preserved?.MissGreenType,
                 NumberOfPutts = preserved?.NumberOfPutts ?? (_state.TrackAdvancedStats ? (short)2 : null),
-                ApproachYardage = preserved?.ApproachYardage
+                ApproachYardage = preserved?.ApproachYardage,
+                Shots = preserved?.Shots
             };
         }).ToList();
     }
@@ -319,6 +334,7 @@ else
             ScoreOut = _state.HoleEntries.Where(e => e.HoleNumber <= 9).Sum(e => (int)e.Score),
             ScoreIn = _state.HoleEntries.Where(e => e.HoleNumber > 9).Sum(e => (int)e.Score),
             UsingHoleStats = _state.TrackAdvancedStats,
+            UsingShotTracking = _state.TrackShotByShotStats,
             FullRound = _state.SelectedRoundType == "18",
             CourseId = _state.SelectedCourseId!.Value,
             CourseName = _state.SelectedCourseName,
@@ -376,6 +392,7 @@ else
                 TeeboxId = _state.SelectedTeeboxId!.Value,
                 DatePlayed = _state.DatePlayed,
                 UsingHoleStats = _state.TrackAdvancedStats,
+                UsingShotTracking = _state.TrackShotByShotStats,
                 Holes = _state.HoleEntries
             };
 

@@ -20,6 +20,25 @@ public class CreateRoundState
     public string SelectedNine { get; set; } = "front";
     public DateOnly DatePlayed { get; set; } = DateOnly.FromDateTime(DateTime.Today);
     public bool TrackAdvancedStats { get; set; }
+    public bool TrackShotByShotStats { get; set; }
+
+    /// <summary>
+    /// Tracking mode: "scorecard", "advanced", or "shotbyshot"
+    /// </summary>
+    public string TrackingMode
+    {
+        get
+        {
+            if (TrackShotByShotStats) return "shotbyshot";
+            if (TrackAdvancedStats) return "advanced";
+            return "scorecard";
+        }
+        set
+        {
+            TrackShotByShotStats = value == "shotbyshot";
+            TrackAdvancedStats = value == "advanced" || value == "shotbyshot";
+        }
+    }
 
     // Step 2: Scorecard
     public List<HoleInfo> Holes { get; set; } = [];

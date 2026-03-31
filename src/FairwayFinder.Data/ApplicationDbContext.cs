@@ -22,6 +22,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public virtual DbSet<TgtrRoundMap> TgtrRoundMaps { get; set; }
     public virtual DbSet<UserInvitation> UserInvitations { get; set; }
     public virtual DbSet<UserProfile> UserProfiles { get; set; }
+    public virtual DbSet<Shot> Shots { get; set; }
     public virtual DbSet<GolfCourseApiCourseMap> GolfCourseApiCourseMaps { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -144,6 +145,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
             entity.Property(e => e.UserId).HasDefaultValueSql("'unknown'::text").HasColumnName("user_id");
             entity.Property(e => e.UsingHoleStats).HasColumnName("using_hole_stats");
+            entity.Property(e => e.UsingShotTracking).HasDefaultValue(false).HasColumnName("using_shot_tracking");
 
             entity.HasOne(e => e.Course).WithMany().HasForeignKey(e => e.CourseId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.Teebox).WithMany().HasForeignKey(e => e.TeeboxId).OnDelete(DeleteBehavior.Restrict);
@@ -167,6 +169,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.Pars).HasColumnName("pars");
             entity.Property(e => e.RoundId).HasColumnName("round_id");
             entity.Property(e => e.TripleOrWorse).HasColumnName("triple_or_worse");
+            entity.Property(e => e.SgTotal).HasColumnName("sg_total");
+            entity.Property(e => e.SgPutting).HasColumnName("sg_putting");
+            entity.Property(e => e.SgTeeToGreen).HasColumnName("sg_tee_to_green");
+            entity.Property(e => e.SgOffTheTee).HasColumnName("sg_off_the_tee");
+            entity.Property(e => e.SgApproach).HasColumnName("sg_approach");
+            entity.Property(e => e.SgAroundTheGreen).HasColumnName("sg_around_the_green");
             entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
             entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
 
@@ -191,6 +199,32 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
             entity.HasOne(e => e.Round).WithMany().HasForeignKey(e => e.RoundId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.Hole).WithMany().HasForeignKey(e => e.HoleId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Shot
+        modelBuilder.Entity<Shot>(entity =>
+        {
+            entity.HasKey(e => e.ShotId).HasName("shot_pkey");
+            entity.ToTable("shot");
+            entity.Property(e => e.ShotId).HasColumnName("shot_id");
+            entity.Property(e => e.ScoreId).HasColumnName("score_id");
+            entity.Property(e => e.ShotNumber).HasColumnName("shot_number");
+            entity.Property(e => e.StartDistance).HasColumnName("start_distance");
+            entity.Property(e => e.StartDistanceUnit).HasColumnName("start_distance_unit");
+            entity.Property(e => e.StartLie).HasColumnName("start_lie");
+            entity.Property(e => e.EndDistance).HasColumnName("end_distance");
+            entity.Property(e => e.EndDistanceUnit).HasColumnName("end_distance_unit");
+            entity.Property(e => e.EndLie).HasColumnName("end_lie");
+            entity.Property(e => e.PenaltyStrokes).HasColumnName("penalty_strokes").HasDefaultValue(0);
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+            entity.Property(e => e.CreatedOn).HasColumnName("created_on");
+            entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
+            entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+
+            entity.HasOne(e => e.Score).WithMany().HasForeignKey(e => e.ScoreId).OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => e.ScoreId).HasDatabaseName("ix_shot_score_id");
         });
 
         // Teebox

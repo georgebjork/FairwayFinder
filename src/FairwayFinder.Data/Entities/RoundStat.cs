@@ -22,6 +22,14 @@ public partial class RoundStat
 
     public int TripleOrWorse { get; set; }
 
+    // Strokes Gained totals (null for non-shot-tracked rounds)
+    public double? SgTotal { get; set; }
+    public double? SgPutting { get; set; }
+    public double? SgTeeToGreen { get; set; }
+    public double? SgOffTheTee { get; set; }
+    public double? SgApproach { get; set; }
+    public double? SgAroundTheGreen { get; set; }
+
     public string CreatedBy { get; set; } = null!;
 
     public DateOnly CreatedOn { get; set; }

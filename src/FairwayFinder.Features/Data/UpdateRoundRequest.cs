@@ -11,5 +11,6 @@ public class UpdateRoundRequest
     public long TeeboxId { get; set; }
     public DateOnly DatePlayed { get; set; }
     public bool UsingHoleStats { get; set; }
+    public bool UsingShotTracking { get; set; }
     public List<HoleScoreEntry> Holes { get; set; } = new();
 }

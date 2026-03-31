@@ -2,7 +2,7 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{6E4F5D64-A955-4A88-9820-0EF5AB15253D}"
 	ProjectSection(SolutionItems) = preProject
-		src\example.json = src\example.json
+		src\shot_baseline.csv = src\shot_baseline.csv
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{8B331591-6512-406A-B9BE-0A6F16691350}"

@@ -42,6 +42,16 @@ public class CourseStatsResponse
     /// Aggregate scoring distribution across all rounds at this course.
     /// </summary>
     public ScoringDistribution ScoringDistribution { get; set; } = new();
+
+    /// <summary>
+    /// Strokes gained summary across rounds with shot tracking at this course.
+    /// </summary>
+    public StrokesGainedSummary? StrokesGained { get; set; }
+
+    /// <summary>
+    /// Average SG by hole number for rounds with shot tracking.
+    /// </summary>
+    public List<StrokesGainedHoleResult>? PerHoleSg { get; set; }
     
     /// <summary>
     /// All rounds played at this course (for the round history table).

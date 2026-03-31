@@ -27,7 +27,7 @@ public class StatsService : IStatsService
             return new UserStatsResponse();
         }
 
-        return new UserStatsResponse
+        var response = new UserStatsResponse
         {
             TotalRounds = statsRounds.Count,
             Total18HoleRounds = statsRounds.Count(x => x.FullRound),
@@ -50,6 +50,18 @@ public class StatsService : IStatsService
             AdvancedStats = StatsCalculator.CalculateAdvancedStats(statsRounds),
             Rounds = statsRounds
         };
+
+        // Strokes Gained — from stored values on RoundResponse
+        var roundsWithSg = statsRounds.Where(r => r.StrokesGained != null).ToList();
+        if (roundsWithSg.Count > 0)
+        {
+            response.StrokesGained = AggregateStoredSg(roundsWithSg);
+            response.SgTotalTrend = BuildSgTrendFromStored(roundsWithSg, sg => sg.SgTotal);
+            response.SgPuttingTrend = BuildSgTrendFromStored(roundsWithSg, sg => sg.SgPutting);
+            response.SgTeeToGreenTrend = BuildSgTrendFromStored(roundsWithSg, sg => sg.SgTeeToGreen);
+        }
+
+        return response;
     }
     
     public async Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null)
@@ -110,7 +122,7 @@ public class StatsService : IStatsService
 
         var courseName = filteredRounds.First().CourseName;
 
-        return new CourseStatsResponse
+        var response = new CourseStatsResponse
         {
             CourseId = courseId,
             CourseName = courseName,
@@ -125,6 +137,15 @@ public class StatsService : IStatsService
             TeeboxOptions = teeboxOptions,
             SelectedTeeboxId = teeboxId
         };
+
+        // Strokes Gained from stored values
+        var roundsWithSg = filteredRounds.Where(r => r.StrokesGained != null).ToList();
+        if (roundsWithSg.Count > 0)
+        {
+            response.StrokesGained = AggregateStoredSg(roundsWithSg);
+        }
+
+        return response;
     }
     
     public async Task<List<int>> GetAvailableYearsAsync(string userId)
@@ -182,5 +203,71 @@ public class StatsService : IStatsService
         }
         
         return result.ToList();
+    }
+
+    /// <summary>
+    /// Aggregates stored SG values from multiple rounds into an average summary.
+    /// </summary>
+    private static StrokesGainedSummary AggregateStoredSg(List<RoundResponse> rounds)
+    {
+        var count = rounds.Count;
+        var summary = new StrokesGainedSummary
+        {
+            RoundsIncluded = count,
+            HolesWithShots = rounds.Sum(r => r.StrokesGained!.HolesWithShots),
+            SgTotal = Math.Round(rounds.Average(r => r.StrokesGained!.SgTotal), 2),
+            SgPutting = Math.Round(rounds.Average(r => r.StrokesGained!.SgPutting), 2),
+            SgTeeToGreen = Math.Round(rounds.Average(r => r.StrokesGained!.SgTeeToGreen), 2),
+            SgOffTheTee = Math.Round(rounds.Average(r => r.StrokesGained!.SgOffTheTee), 2),
+            SgApproach = Math.Round(rounds.Average(r => r.StrokesGained!.SgApproach), 2),
+            SgAroundTheGreen = Math.Round(rounds.Average(r => r.StrokesGained!.SgAroundTheGreen), 2)
+        };
+
+        if (count >= 3)
+        {
+            var ordered = rounds.OrderBy(r => r.DatePlayed).Select(r => r.StrokesGained!).ToList();
+            summary.SgTotalTrend = CalcSlope(ordered.Select(s => s.SgTotal).ToList());
+            summary.SgPuttingTrend = CalcSlope(ordered.Select(s => s.SgPutting).ToList());
+            summary.SgTeeToGreenTrend = CalcSlope(ordered.Select(s => s.SgTeeToGreen).ToList());
+            summary.SgOffTheTeeTrend = CalcSlope(ordered.Select(s => s.SgOffTheTee).ToList());
+            summary.SgApproachTrend = CalcSlope(ordered.Select(s => s.SgApproach).ToList());
+            summary.SgAroundTheGreenTrend = CalcSlope(ordered.Select(s => s.SgAroundTheGreen).ToList());
+        }
+
+        return summary;
+    }
+
+    /// <summary>
+    /// Builds SG trend points from stored per-round values.
+    /// </summary>
+    private static List<StrokesGainedTrendPoint> BuildSgTrendFromStored(
+        List<RoundResponse> rounds, Func<StrokesGainedSummary, double> valueSelector)
+    {
+        var points = rounds
+            .OrderBy(r => r.DatePlayed)
+            .Select(r => new StrokesGainedTrendPoint
+            {
+                RoundId = r.RoundId,
+                DatePlayed = r.DatePlayed,
+                CourseName = r.CourseName,
+                Value = Math.Round(valueSelector(r.StrokesGained!), 2)
+            })
+            .ToList();
+
+        // 3-round moving average
+        for (int i = 2; i < points.Count; i++)
+        {
+            points[i].MovingAverage = Math.Round(
+                (points[i].Value + points[i - 1].Value + points[i - 2].Value) / 3.0, 2);
+        }
+
+        return points;
+    }
+
+    private static double? CalcSlope(IReadOnlyList<double> values)
+    {
+        if (values.Count < 2) return null;
+        var (slope, _) = StatsCalculator.CalculateLinearRegression(values);
+        return Math.Round(slope, 3);
     }
 }

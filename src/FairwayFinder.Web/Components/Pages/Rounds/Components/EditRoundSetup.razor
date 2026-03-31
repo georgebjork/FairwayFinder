@@ -45,13 +45,30 @@
                               Max="@DateTime.Today" />
         </RadzenStack>
 
-        @* Advanced Stats toggle (editable) *@
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
-            <RadzenSwitch @bind-Value="State.TrackAdvancedStats" />
-            <RadzenStack Gap="0">
-                <RadzenText TextStyle="TextStyle.Body1" class="rz-m-0">Track Advanced Stats</RadzenText>
-                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Putts, fairways hit, greens in regulation</RadzenText>
-            </RadzenStack>
+        @* Tracking Mode (editable) *@
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Subtitle1">Tracking Mode</RadzenText>
+            <RadzenSelectBar TValue="string" @bind-Value="State.TrackingMode" Style="width: 100%;">
+                <Items>
+                    <RadzenSelectBarItem Text="Scorecard Only" Value="@("scorecard")" />
+                    <RadzenSelectBarItem Text="Advanced Stats" Value="@("advanced")" />
+                    <RadzenSelectBarItem Text="Shot-by-Shot" Value="@("shotbyshot")" />
+                </Items>
+            </RadzenSelectBar>
+            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                @switch (State.TrackingMode)
+                {
+                    case "scorecard":
+                        @:Just scores
+                        break;
+                    case "advanced":
+                        @:Scores + FIR, GIR, putts, approach yardage
+                        break;
+                    case "shotbyshot":
+                        @:Full shot tracking with strokes gained analysis
+                        break;
+                }
+            </RadzenText>
         </RadzenStack>
 
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" class="rz-pt-2">

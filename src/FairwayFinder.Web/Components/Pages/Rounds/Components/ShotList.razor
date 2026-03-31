@@ -1,0 +1,114 @@
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Enums
+
+@if (Shots is not null && Shots.Count > 0)
+{
+    <div class="shot-list-wrapper">
+        <table class="shot-list-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Penalty</th>
+                    <th>Category</th>
+                    <th>SG</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var shot in Shots)
+                {
+                    <tr>
+                        <td>@shot.ShotNumber</td>
+                        <td>@FormatLocation(shot.StartDistance, shot.StartDistanceUnit, shot.StartLie)</td>
+                        <td>@FormatEndLocation(shot.EndDistance, shot.EndDistanceUnit, shot.EndLie)</td>
+                        <td>@(shot.PenaltyStrokes > 0 ? $"+{shot.PenaltyStrokes}" : "-")</td>
+                        <td>@FormatCategory(shot.Category)</td>
+                        <td style="@SgColorStyle(shot.StrokesGained)">@FormatSg(shot.StrokesGained)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<style>
+    .shot-list-wrapper {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .shot-list-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8125rem;
+    }
+
+    .shot-list-table th,
+    .shot-list-table td {
+        padding: 0.375rem 0.5rem;
+        text-align: left;
+        border-bottom: 1px solid var(--rz-text-disabled-color);
+    }
+
+    .shot-list-table thead th {
+        font-weight: 600;
+        color: var(--rz-text-secondary-color);
+        border-bottom: 2px solid var(--rz-text-disabled-color);
+    }
+
+    .shot-list-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public List<ShotData>? Shots { get; set; }
+
+    [Parameter]
+    public int Par { get; set; }
+
+    private static string FormatLocation(int distance, string unit, LieType lie)
+    {
+        var unitAbbrev = unit == DistanceUnit.Feet ? "ft" : "yd";
+        var lieName = lie.ToString();
+        return $"{distance}{unitAbbrev} {lieName}";
+    }
+
+    private static string FormatEndLocation(int? distance, string? unit, LieType? lie)
+    {
+        if (distance == null || lie == null)
+            return "Holed";
+
+        var unitAbbrev = unit == DistanceUnit.Feet ? "ft" : "yd";
+        var lieName = lie.Value.ToString();
+        return $"{distance}{unitAbbrev} {lieName}";
+    }
+
+    private static string FormatCategory(ShotCategory? category)
+    {
+        return category switch
+        {
+            ShotCategory.OffTheTee => "OTT",
+            ShotCategory.Approach => "APP",
+            ShotCategory.AroundTheGreen => "ARG",
+            ShotCategory.Putting => "P",
+            _ => "-"
+        };
+    }
+
+    private static string FormatSg(double? sg)
+    {
+        if (sg == null) return "-";
+        return sg.Value >= 0 ? $"+{sg.Value:F2}" : $"{sg.Value:F2}";
+    }
+
+    private static string SgColorStyle(double? sg)
+    {
+        if (sg == null) return "";
+        if (sg.Value > 0) return "color: var(--rz-success); font-weight: 600;";
+        if (sg.Value < 0) return "color: var(--rz-danger); font-weight: 600;";
+        return "font-weight: 600;";
+    }
+}

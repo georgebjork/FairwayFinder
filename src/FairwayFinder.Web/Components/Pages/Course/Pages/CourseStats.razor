@@ -162,7 +162,32 @@ else
             </RadzenStack>
         }
 
-        <CourseHoleStatsGrid HoleStats="@_stats?.HoleStats" ShowYardage="@_hasTeeboxSelected" />
+        @if (_stats?.StrokesGained is not null)
+        {
+            <RadzenCard class="rz-p-4">
+                <RadzenText TextStyle="TextStyle.H5" class="rz-mb-2">Strokes Gained Summary</RadzenText>
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="1.5rem" Wrap="FlexWrap.Wrap">
+                    @foreach (var item in new[] {
+                        ("SG: Total", _stats.StrokesGained.SgTotal),
+                        ("SG: Putting", _stats.StrokesGained.SgPutting),
+                        ("SG: Off the Tee", _stats.StrokesGained.SgOffTheTee),
+                        ("SG: Approach", _stats.StrokesGained.SgApproach),
+                        ("SG: Around the Green", _stats.StrokesGained.SgAroundTheGreen)
+                    })
+                    {
+                        <RadzenStack Gap="0" AlignItems="AlignItems.Center">
+                            <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">@item.Item1</RadzenText>
+                            <RadzenText TextStyle="TextStyle.H6" class="rz-m-0"
+                                        Style="@($"color: {(item.Item2 >= 0 ? "var(--rz-success)" : "var(--rz-danger)")}")">
+                                @item.Item2.ToString("+0.00;-0.00")
+                            </RadzenText>
+                        </RadzenStack>
+                    }
+                </RadzenStack>
+            </RadzenCard>
+        }
+
+        <CourseHoleStatsGrid HoleStats="@_stats?.HoleStats" ShowYardage="@_hasTeeboxSelected" StrokesGained="@_stats?.StrokesGained" />
 
         <RadzenRow Gap="1rem">
             <RadzenColumn Size="12" SizeLG="6">

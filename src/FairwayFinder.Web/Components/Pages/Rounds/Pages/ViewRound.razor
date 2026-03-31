@@ -5,6 +5,8 @@
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
 @using FairwayFinder.Web.Components.Shared.Dialogs
+@using FairwayFinder.Features.Enums
+@using FairwayFinder.Features.Helpers
 @using FairwayFinder.Web.Components.Pages.Rounds.Components
 @using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
 @inject IRoundService RoundService
@@ -114,6 +116,24 @@ else
     {
         _loading = true;
         _round = await RoundService.GetRoundByIdAsync(RoundId);
+
+        if (_round is not null && _round.UsingShotTracking)
+        {
+            await RoundService.LoadShotsForRoundsAsync(new List<RoundResponse> { _round });
+
+            // Compute per-hole SG
+            var holeResults = new List<StrokesGainedHoleResult>();
+            foreach (var hole in _round.Holes.Where(h => h.Shots is { Count: > 0 } && h.Score.HasValue))
+            {
+                var holeSg = StrokesGainedCalculator.CalculateHoleSg(hole.Shots!, hole.Par, hole.HoleNumber, hole.Score!.Value);
+                holeResults.Add(holeSg);
+            }
+            _round.HoleByHoleSg = holeResults;
+
+            // Compute round SG summary
+            _round.StrokesGained = StrokesGainedCalculator.CalculateRoundSg(_round);
+        }
+
         _loading = false;
 
         if (_round is not null)

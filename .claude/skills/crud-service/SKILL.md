@@ -124,6 +124,67 @@ Add the DbSet property to ApplicationDbContext:
 public DbSet<{EntityName}> {EntityName}s { get; set; }
 ```
 
+## Update Pattern — Upsert In Place (CRITICAL)
+
+**Default behavior: update existing records in place. Never delete-and-reinsert.**
+
+When updating a parent entity that has child collections (e.g. a Round has Scores, Scores have Shots), follow this pattern:
+
+1. **Load existing children** from the database for the parent being updated
+2. **Match incoming children to existing ones** by primary key (ID) or by a stable identifier (e.g. position index within a hole)
+3. **Update matched children** — modify their properties in place, set `UpdatedBy`/`UpdatedOn`
+4. **Insert new children** — if the incoming collection has more items than existing, add the new ones
+5. **Soft-delete orphans only** — if existing children are no longer present in the incoming collection (the collection shrank, or a child was explicitly removed), soft-delete those extras
+
+```csharp
+// ✅ CORRECT — upsert in place
+var existingChildren = await dbContext.Children
+    .Where(c => c.ParentId == parentId && !c.IsDeleted)
+    .OrderBy(c => c.SortOrder)
+    .ToListAsync();
+
+for (int i = 0; i < incomingChildren.Count; i++)
+{
+    if (i < existingChildren.Count)
+    {
+        // Update existing
+        existingChildren[i].SomeField = incomingChildren[i].SomeField;
+        existingChildren[i].UpdatedBy = userId;
+        existingChildren[i].UpdatedOn = today;
+    }
+    else
+    {
+        // Insert new
+        dbContext.Children.Add(new Child { /* ... */ });
+    }
+}
+
+// Soft-delete extras that are no longer needed
+for (int i = incomingChildren.Count; i < existingChildren.Count; i++)
+{
+    existingChildren[i].IsDeleted = true;
+    existingChildren[i].UpdatedBy = userId;
+    existingChildren[i].UpdatedOn = today;
+}
+```
+
+```csharp
+// ❌ WRONG — delete-and-reinsert
+foreach (var existing in existingChildren)
+{
+    existing.IsDeleted = true; // deleting everything
+}
+foreach (var incoming in incomingChildren)
+{
+    dbContext.Children.Add(new Child { /* ... */ }); // reinserting everything
+}
+```
+
+**When soft-delete IS appropriate:**
+- `DeleteAsync` — the user explicitly deletes a parent; cascade soft-delete to all children
+- Orphaned children — a child was removed from the collection (not just modified)
+- Switching modes — e.g. a round switches from shot-tracking to scorecard-only, so shots are no longer relevant
+
 ## Important Rules
 
 - File-scoped namespaces everywhere

@@ -1,6 +1,8 @@
 using FairwayFinder.Data;
 using FairwayFinder.Data.Entities;
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Enums;
+using FairwayFinder.Features.Helpers;
 using FairwayFinder.Features.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -187,7 +189,8 @@ public class RoundService : IRoundService
             ScoreOut = scoreOut,
             ScoreIn = scoreIn,
             UserId = userId,
-            UsingHoleStats = request.UsingHoleStats,
+            UsingHoleStats = request.UsingHoleStats || request.UsingShotTracking,
+            UsingShotTracking = request.UsingShotTracking,
             ExcludeFromStats = false,
             FullRound = request.FullRound,
             FrontNine = request.FrontNine,
@@ -219,11 +222,66 @@ public class RoundService : IRoundService
         dbContext.Scores.AddRange(scores);
         await dbContext.SaveChangesAsync(); // Save to get ScoreIds
         
-        // 3. Create HoleStat entities if advanced stats enabled
-        if (request.UsingHoleStats)
+        // 3. Create Shot entities if shot tracking enabled
+        if (request.UsingShotTracking)
         {
             var scoreByHoleId = scores.ToDictionary(s => s.HoleId, s => s.ScoreId);
-            
+
+            foreach (var hole in request.Holes)
+            {
+                if (hole.Shots is not { Count: > 0 }) continue;
+
+                var scoreId = scoreByHoleId[hole.HoleId];
+                var shotNumber = 1;
+                foreach (var shotData in hole.Shots)
+                {
+                    dbContext.Shots.Add(new Shot
+                    {
+                        ScoreId = scoreId,
+                        ShotNumber = shotNumber++,
+                        StartDistance = shotData.StartDistance,
+                        StartDistanceUnit = shotData.StartDistanceUnit,
+                        StartLie = (int)shotData.StartLie,
+                        EndDistance = shotData.EndDistance,
+                        EndDistanceUnit = shotData.EndDistanceUnit,
+                        EndLie = shotData.EndLie.HasValue ? (int)shotData.EndLie.Value : null,
+                        PenaltyStrokes = shotData.PenaltyStrokes,
+                        CreatedBy = userId,
+                        CreatedOn = today,
+                        UpdatedBy = userId,
+                        UpdatedOn = today,
+                        IsDeleted = false
+                    });
+                }
+
+                // Auto-derive HoleStat from shots
+                var (numberOfPutts, hitFairway, hitGreen, approachYardage, teeShotOb, approachShotOb) =
+                    StrokesGainedCalculator.DeriveHoleStatFromShots(hole.Shots, hole.Par);
+
+                dbContext.HoleStats.Add(new HoleStat
+                {
+                    ScoreId = scoreId,
+                    RoundId = round.RoundId,
+                    HoleId = hole.HoleId,
+                    HitFairway = hitFairway,
+                    HitGreen = hitGreen,
+                    NumberOfPutts = numberOfPutts,
+                    ApproachYardage = approachYardage,
+                    TeeShotOb = teeShotOb,
+                    ApproachShotOb = approachShotOb,
+                    CreatedBy = userId,
+                    CreatedOn = today,
+                    UpdatedBy = userId,
+                    UpdatedOn = today,
+                    IsDeleted = false
+                });
+            }
+        }
+        // 3b. Create HoleStat entities if advanced stats enabled (non-shot-tracking)
+        else if (request.UsingHoleStats)
+        {
+            var scoreByHoleId = scores.ToDictionary(s => s.HoleId, s => s.ScoreId);
+
             var holeStats = request.Holes.Select(h => new HoleStat
             {
                 ScoreId = scoreByHoleId[h.HoleId],
@@ -294,9 +352,15 @@ public class RoundService : IRoundService
             }
         }
         
+        // 5. Compute and store SG totals if shot tracking
+        if (request.UsingShotTracking)
+        {
+            ComputeAndStoreStrokesGained(roundStat, request.Holes);
+        }
+
         dbContext.RoundStats.Add(roundStat);
         await dbContext.SaveChangesAsync();
-        
+
         return round.RoundId;
     }
     
@@ -323,7 +387,8 @@ public class RoundService : IRoundService
         
         round.TeeboxId = request.TeeboxId;
         round.DatePlayed = request.DatePlayed;
-        round.UsingHoleStats = request.UsingHoleStats;
+        round.UsingHoleStats = request.UsingHoleStats || request.UsingShotTracking;
+        round.UsingShotTracking = request.UsingShotTracking;
         round.Score = totalScore;
         round.ScoreOut = scoreOut;
         round.ScoreIn = scoreIn;
@@ -376,15 +441,135 @@ public class RoundService : IRoundService
         
         var holeStatsByScoreId = existingHoleStats.ToDictionary(hs => hs.ScoreId);
         
-        if (request.UsingHoleStats)
+        if (request.UsingShotTracking)
+        {
+            // Load existing shots keyed by ScoreId
+            var scoreIds = scoreForHole.Values.Select(s => s.ScoreId).ToList();
+            var existingShots = await dbContext.Shots
+                .Where(s => scoreIds.Contains(s.ScoreId) && !s.IsDeleted)
+                .ToListAsync();
+            var existingShotsByScoreId = existingShots
+                .GroupBy(s => s.ScoreId)
+                .ToDictionary(g => g.Key, g => g.OrderBy(s => s.ShotNumber).ToList());
+
+            // Track which existing shots we've matched so we can soft-delete the rest
+            var matchedShotIds = new HashSet<long>();
+
+            foreach (var hole in request.Holes)
+            {
+                if (hole.Shots is not { Count: > 0 }) continue;
+
+                var score = scoreForHole[hole.HoleId];
+                var existingHoleShots = existingShotsByScoreId.GetValueOrDefault(score.ScoreId) ?? [];
+
+                for (int i = 0; i < hole.Shots.Count; i++)
+                {
+                    var shotData = hole.Shots[i];
+                    var shotNumber = i + 1;
+
+                    if (i < existingHoleShots.Count)
+                    {
+                        // Update existing shot
+                        var existing = existingHoleShots[i];
+                        matchedShotIds.Add(existing.ShotId);
+                        existing.ShotNumber = shotNumber;
+                        existing.StartDistance = shotData.StartDistance;
+                        existing.StartDistanceUnit = shotData.StartDistanceUnit;
+                        existing.StartLie = (int)shotData.StartLie;
+                        existing.EndDistance = shotData.EndDistance;
+                        existing.EndDistanceUnit = shotData.EndDistanceUnit;
+                        existing.EndLie = shotData.EndLie.HasValue ? (int)shotData.EndLie.Value : null;
+                        existing.PenaltyStrokes = shotData.PenaltyStrokes;
+                        existing.UpdatedBy = userId;
+                        existing.UpdatedOn = today;
+                    }
+                    else
+                    {
+                        // New shot
+                        dbContext.Shots.Add(new Shot
+                        {
+                            ScoreId = score.ScoreId,
+                            ShotNumber = shotNumber,
+                            StartDistance = shotData.StartDistance,
+                            StartDistanceUnit = shotData.StartDistanceUnit,
+                            StartLie = (int)shotData.StartLie,
+                            EndDistance = shotData.EndDistance,
+                            EndDistanceUnit = shotData.EndDistanceUnit,
+                            EndLie = shotData.EndLie.HasValue ? (int)shotData.EndLie.Value : null,
+                            PenaltyStrokes = shotData.PenaltyStrokes,
+                            CreatedBy = userId,
+                            CreatedOn = today,
+                            UpdatedBy = userId,
+                            UpdatedOn = today,
+                            IsDeleted = false
+                        });
+                    }
+                }
+
+                // Soft-delete extra existing shots that are no longer needed for this hole
+                for (int i = hole.Shots.Count; i < existingHoleShots.Count; i++)
+                {
+                    existingHoleShots[i].IsDeleted = true;
+                    existingHoleShots[i].UpdatedBy = userId;
+                    existingHoleShots[i].UpdatedOn = today;
+                    matchedShotIds.Add(existingHoleShots[i].ShotId);
+                }
+
+                // Auto-derive HoleStat from shots
+                var (numberOfPutts, hitFairway, hitGreen, approachYardage, teeShotOb, approachShotOb) =
+                    StrokesGainedCalculator.DeriveHoleStatFromShots(hole.Shots, hole.Par);
+
+                if (holeStatsByScoreId.TryGetValue(score.ScoreId, out var existingStat))
+                {
+                    existingStat.HoleId = hole.HoleId;
+                    existingStat.HitFairway = hitFairway;
+                    existingStat.HitGreen = hitGreen;
+                    existingStat.NumberOfPutts = numberOfPutts;
+                    existingStat.ApproachYardage = approachYardage;
+                    existingStat.TeeShotOb = teeShotOb;
+                    existingStat.ApproachShotOb = approachShotOb;
+                    existingStat.UpdatedBy = userId;
+                    existingStat.UpdatedOn = today;
+                }
+                else
+                {
+                    dbContext.HoleStats.Add(new HoleStat
+                    {
+                        ScoreId = score.ScoreId,
+                        RoundId = round.RoundId,
+                        HoleId = hole.HoleId,
+                        HitFairway = hitFairway,
+                        HitGreen = hitGreen,
+                        NumberOfPutts = numberOfPutts,
+                        ApproachYardage = approachYardage,
+                        TeeShotOb = teeShotOb,
+                        ApproachShotOb = approachShotOb,
+                        CreatedBy = userId,
+                        CreatedOn = today,
+                        UpdatedBy = userId,
+                        UpdatedOn = today,
+                        IsDeleted = false
+                    });
+                }
+            }
+
+            // Soft-delete any orphaned shots (holes that no longer have shot data)
+            foreach (var shot in existingShots.Where(s => !matchedShotIds.Contains(s.ShotId)))
+            {
+                shot.IsDeleted = true;
+                shot.UpdatedBy = userId;
+                shot.UpdatedOn = today;
+            }
+        }
+        else if (request.UsingHoleStats)
         {
             foreach (var hole in request.Holes)
             {
                 var score = scoreForHole[hole.HoleId];
-                
+
                 if (holeStatsByScoreId.TryGetValue(score.ScoreId, out var existingStat))
                 {
-                    existingStat.HoleId = hole.HoleId; // Update HoleId in case teebox changed
+                    existingStat.HoleId = hole.HoleId;
                     existingStat.HitFairway = hole.HitFairway;
                     existingStat.MissFairwayType = hole.MissFairwayType;
                     existingStat.HitGreen = hole.HitGreen;
@@ -461,10 +646,15 @@ public class RoundService : IRoundService
             existingRoundStat.TripleOrWorse = tripleOrWorse;
             existingRoundStat.UpdatedBy = userId;
             existingRoundStat.UpdatedOn = today;
+
+            if (request.UsingShotTracking)
+                ComputeAndStoreStrokesGained(existingRoundStat, request.Holes);
+            else
+                ClearStrokesGained(existingRoundStat);
         }
         else
         {
-            dbContext.RoundStats.Add(new RoundStat
+            var newRoundStat = new RoundStat
             {
                 RoundId = round.RoundId,
                 HoleInOne = holeInOne,
@@ -480,11 +670,16 @@ public class RoundService : IRoundService
                 UpdatedBy = userId,
                 UpdatedOn = today,
                 IsDeleted = false
-            });
+            };
+
+            if (request.UsingShotTracking)
+                ComputeAndStoreStrokesGained(newRoundStat, request.Holes);
+
+            dbContext.RoundStats.Add(newRoundStat);
         }
-        
+
         await dbContext.SaveChangesAsync();
-        
+
         return true;
     }
     
@@ -526,6 +721,19 @@ public class RoundService : IRoundService
             hs.IsDeleted = true;
             hs.UpdatedBy = userId;
             hs.UpdatedOn = now;
+        }
+
+        // Soft-delete all shots for this round
+        var scoreIds = scores.Select(s => s.ScoreId).ToList();
+        var shots = await dbContext.Shots
+            .Where(s => scoreIds.Contains(s.ScoreId) && !s.IsDeleted)
+            .ToListAsync();
+
+        foreach (var shot in shots)
+        {
+            shot.IsDeleted = true;
+            shot.UpdatedBy = userId;
+            shot.UpdatedOn = now;
         }
 
         // Soft-delete the round stat
@@ -581,6 +789,126 @@ public class RoundService : IRoundService
             CourseId = x.CourseId,
             CourseName = x.CourseName
         }).ToList();
+    }
 
+    public async Task<Dictionary<long, List<ShotData>>> GetShotsByRoundIdAsync(long roundId)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        var scoreIds = await dbContext.Scores
+            .Where(s => s.RoundId == roundId && !s.IsDeleted)
+            .Select(s => s.ScoreId)
+            .ToListAsync();
+
+        var shots = await dbContext.Shots
+            .Where(s => scoreIds.Contains(s.ScoreId) && !s.IsDeleted)
+            .OrderBy(s => s.ScoreId).ThenBy(s => s.ShotNumber)
+            .ToListAsync();
+
+        return shots.GroupBy(s => s.ScoreId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(s => new ShotData
+                {
+                    ShotId = s.ShotId,
+                    ShotNumber = s.ShotNumber,
+                    StartDistance = s.StartDistance,
+                    StartDistanceUnit = s.StartDistanceUnit,
+                    StartLie = (LieType)s.StartLie,
+                    EndDistance = s.EndDistance,
+                    EndDistanceUnit = s.EndDistanceUnit,
+                    EndLie = s.EndLie.HasValue ? (LieType)s.EndLie.Value : null,
+                    PenaltyStrokes = s.PenaltyStrokes
+                }).ToList()
+            );
+    }
+
+    public async Task LoadShotsForRoundsAsync(List<RoundResponse> rounds)
+    {
+        var shotTrackedRounds = rounds.Where(r => r.UsingShotTracking).ToList();
+        if (shotTrackedRounds.Count == 0) return;
+
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        var roundIds = shotTrackedRounds.Select(r => r.RoundId).ToList();
+
+        // Get all scores for these rounds
+        var scores = await dbContext.Scores
+            .Where(s => roundIds.Contains(s.RoundId) && !s.IsDeleted)
+            .ToListAsync();
+
+        var scoreIds = scores.Select(s => s.ScoreId).ToList();
+
+        // Get all shots for these scores
+        var shots = await dbContext.Shots
+            .Where(s => scoreIds.Contains(s.ScoreId) && !s.IsDeleted)
+            .OrderBy(s => s.ShotNumber)
+            .ToListAsync();
+
+        var shotsByScoreId = shots.GroupBy(s => s.ScoreId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(s => new ShotData
+                {
+                    ShotId = s.ShotId,
+                    ShotNumber = s.ShotNumber,
+                    StartDistance = s.StartDistance,
+                    StartDistanceUnit = s.StartDistanceUnit,
+                    StartLie = (LieType)s.StartLie,
+                    EndDistance = s.EndDistance,
+                    EndDistanceUnit = s.EndDistanceUnit,
+                    EndLie = s.EndLie.HasValue ? (LieType)s.EndLie.Value : null,
+                    PenaltyStrokes = s.PenaltyStrokes
+                }).ToList()
+            );
+
+        // Attach shots to round holes
+        foreach (var round in shotTrackedRounds)
+        {
+            foreach (var hole in round.Holes)
+            {
+                if (hole.ScoreId > 0 && shotsByScoreId.TryGetValue(hole.ScoreId, out var holeShots))
+                {
+                    hole.Shots = holeShots;
+                }
+            }
+        }
+    }
+
+    private static void ComputeAndStoreStrokesGained(RoundStat roundStat, List<HoleScoreEntry> holes)
+    {
+        double sgTotal = 0, sgPutting = 0, sgOtt = 0, sgApproach = 0, sgArg = 0;
+
+        foreach (var hole in holes)
+        {
+            if (hole.Shots is not { Count: > 0 }) continue;
+            // Only count completed holes (last shot is holed)
+            if (hole.Shots[^1].EndDistance != null) continue;
+
+            var holeScore = hole.Shots.Count + hole.Shots.Sum(s => s.PenaltyStrokes);
+            var result = StrokesGainedCalculator.CalculateHoleSg(hole.Shots, hole.Par, hole.HoleNumber, holeScore);
+            sgTotal += result.SgTotal;
+            sgPutting += result.SgPutting;
+            sgOtt += result.SgOffTheTee;
+            sgApproach += result.SgApproach;
+            sgArg += result.SgAroundTheGreen;
+        }
+
+        roundStat.SgTotal = Math.Round(sgTotal, 2);
+        roundStat.SgPutting = Math.Round(sgPutting, 2);
+        roundStat.SgTeeToGreen = Math.Round(sgOtt + sgApproach + sgArg, 2);
+        roundStat.SgOffTheTee = Math.Round(sgOtt, 2);
+        roundStat.SgApproach = Math.Round(sgApproach, 2);
+        roundStat.SgAroundTheGreen = Math.Round(sgArg, 2);
+    }
+
+    private static void ClearStrokesGained(RoundStat roundStat)
+    {
+        roundStat.SgTotal = null;
+        roundStat.SgPutting = null;
+        roundStat.SgTeeToGreen = null;
+        roundStat.SgOffTheTee = null;
+        roundStat.SgApproach = null;
+        roundStat.SgAroundTheGreen = null;
     }
 }
