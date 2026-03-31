@@ -87,12 +87,4 @@ public class StrokesGainedBaselineTests
         }
     }
 
-    [Fact]
-    public void Recovery_falls_back_to_rough()
-    {
-        var recovery = StrokesGainedBaseline.GetExpectedStrokes(150, DistanceUnit.Yards, LieType.Recovery);
-        var rough = StrokesGainedBaseline.GetExpectedStrokes(150, DistanceUnit.Yards, LieType.Rough);
-
-        Assert.Equal(rough, recovery);
-    }
 }

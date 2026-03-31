@@ -27,7 +27,6 @@ public static class StrokesGainedBaseline
             LieType.Fairway => LookupFairway(distance),
             LieType.Rough => LookupRough(distance),
             LieType.Sand => LookupSand(distance),
-            LieType.Recovery => LookupRough(distance), // No Recovery-specific data; use Rough
             _ => LookupFairway(distance)
         };
     }

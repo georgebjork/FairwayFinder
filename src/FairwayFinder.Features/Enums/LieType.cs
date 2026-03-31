@@ -6,6 +6,5 @@ public enum LieType
     Fairway = 1,
     Rough = 2,
     Sand = 3,
-    Recovery = 4,
-    Green = 5
+    Green = 4
 }
