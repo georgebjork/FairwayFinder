@@ -28,7 +28,7 @@ public static class StrokesGainedBaseline
             LieType.Tee => table.Tee,
             LieType.Fairway => table.Fairway,
             LieType.Rough => table.Rough,
-            LieType.Sand or LieType.Bunker => table.Sand,
+            LieType.Sand => table.Sand,
             LieType.Recovery => table.Recovery,
             _ => table.Fairway
         };
