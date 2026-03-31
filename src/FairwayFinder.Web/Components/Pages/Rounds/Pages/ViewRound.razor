@@ -13,6 +13,8 @@
 @inject DialogService DialogService
 @inject NotificationService NotificationService
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IProfileService ProfileService
+@inject IJSRuntime JSRuntime
 
 <PageTitle>View Round</PageTitle>
 
@@ -50,6 +52,12 @@ else
             </RadzenStack>
 
             <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                @if (_isPublic)
+                {
+                    <RadzenButton Text="Share" Icon="share"
+                                  ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                                  Click="CopyShareLink" />
+                }
                 <RadzenButton Text="Edit" Icon="edit"
                               ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
                               Click="@(() => NavigationManager.NavigateTo($"/round/{RoundId}/edit"))" />
@@ -82,11 +90,24 @@ else
     private RoundResponse? _round;
     private bool _loading = true;
     private string _currentUserId = string.Empty;
+    private bool _isPublic;
+    private string _shareableUrl = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+
+        if (!string.IsNullOrEmpty(_currentUserId))
+        {
+            var profile = await ProfileService.GetOrCreateProfileAsync(_currentUserId);
+            _isPublic = profile.IsPublic;
+            if (_isPublic)
+            {
+                var baseUri = NavigationManager.BaseUri.TrimEnd('/');
+                _shareableUrl = $"{baseUri}/profile/{profile.PublicIdentifier}/round/{RoundId}";
+            }
+        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -108,6 +129,31 @@ else
                 new BreadcrumbItem("Home", "/"),
                 new BreadcrumbItem("Round")
             );
+        }
+    }
+
+    private async Task CopyShareLink()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _shareableUrl);
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Copied!",
+                Detail = "Link copied to clipboard.",
+                Duration = 2000
+            });
+        }
+        catch
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Copy Failed",
+                Detail = "Please copy the link manually.",
+                Duration = 3000
+            });
         }
     }
 

@@ -3,10 +3,13 @@
 @layout MainLayout
 @attribute [Authorize]
 @using System.Security.Claims
+@using FairwayFinder.Features.Services.Interfaces
 @using FairwayFinder.Web.Components.Pages.Home.Components
 @using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject BreadcrumbState BreadcrumbState
+@inject IProfileService ProfileService
+@inject NavigationManager NavigationManager
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -14,11 +17,13 @@
 {
     <FairwayFinderDashboard UserId="@_userId"
                             BasePath="/"
-                            ShowTrendDialogs="true" />
+                            ShowTrendDialogs="true"
+                            ShareUrl="@_shareableUrl" />
 }
 
 @code {
     private string? _userId;
+    private string? _shareableUrl;
 
     protected override async Task OnInitializedAsync()
     {
@@ -30,6 +35,16 @@
         if (user.Identity?.IsAuthenticated == true)
         {
             _userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!string.IsNullOrEmpty(_userId))
+            {
+                var profile = await ProfileService.GetOrCreateProfileAsync(_userId);
+                if (profile.IsPublic)
+                {
+                    var baseUri = NavigationManager.BaseUri.TrimEnd('/');
+                    _shareableUrl = $"{baseUri}/profile/{profile.PublicIdentifier}";
+                }
+            }
         }
     }
 }
