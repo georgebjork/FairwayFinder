@@ -293,22 +293,28 @@ else
                     <!-- Strokes Gained Row -->
                     <tr>
                         <th colspan="2">SG</th>
-                        @foreach (var hole in FrontNine)
+                        @if (HasFrontNine)
                         {
-                            var sg = Round.HoleByHoleSg.FirstOrDefault(h => h.HoleNumber == hole.HoleNumber);
-                            <td class="hole-cell" style="@SgColorStyle(sg?.SgTotal); font-size: 0.75rem;">
-                                @(sg != null ? FormatSg(sg.SgTotal) : "")
-                            </td>
+                            @foreach (var hole in FrontNine)
+                            {
+                                var sg = Round.HoleByHoleSg.FirstOrDefault(h => h.HoleNumber == hole.HoleNumber);
+                                <td class="hole-cell" style="@SgColorStyle(sg?.SgTotal); font-size: 0.75rem;">
+                                    @(sg != null ? FormatSg(sg.SgTotal) : "")
+                                </td>
+                            }
+                            <td colspan="2" class="total-cell" style="@SgColorStyle(SgOut); font-size: 0.75rem;">@FormatSg(SgOut)</td>
                         }
-                        <td colspan="2" class="total-cell" style="@SgColorStyle(SgOut); font-size: 0.75rem;">@FormatSg(SgOut)</td>
-                        @foreach (var hole in BackNine)
+                        @if (HasBackNine)
                         {
-                            var sg = Round.HoleByHoleSg.FirstOrDefault(h => h.HoleNumber == hole.HoleNumber);
-                            <td class="hole-cell" style="@SgColorStyle(sg?.SgTotal); font-size: 0.75rem;">
-                                @(sg != null ? FormatSg(sg.SgTotal) : "")
-                            </td>
+                            @foreach (var hole in BackNine)
+                            {
+                                var sg = Round.HoleByHoleSg.FirstOrDefault(h => h.HoleNumber == hole.HoleNumber);
+                                <td class="hole-cell" style="@SgColorStyle(sg?.SgTotal); font-size: 0.75rem;">
+                                    @(sg != null ? FormatSg(sg.SgTotal) : "")
+                                </td>
+                            }
+                            <td class="total-cell" colspan="2" style="@SgColorStyle(SgIn); font-size: 0.75rem;">@FormatSg(SgIn)</td>
                         }
-                        <td class="total-cell" colspan="2" style="@SgColorStyle(SgIn); font-size: 0.75rem;">@FormatSg(SgIn)</td>
                         <td class="total-cell" colspan="2" style="@SgColorStyle(SgTotal); font-size: 0.75rem;">@FormatSg(SgTotal)</td>
                     </tr>
                 }
