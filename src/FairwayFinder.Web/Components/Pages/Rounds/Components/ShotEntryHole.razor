@@ -1,0 +1,265 @@
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Enums
+@using FairwayFinder.Features.Helpers
+
+<RadzenCard class="rz-p-3 rz-mb-2">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" class="rz-mb-2">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+            <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-m-0">Hole @HoleNumber</RadzenText>
+            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0">
+                Par @Par, @Yardage yards
+            </RadzenText>
+        </RadzenStack>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+            <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">
+                Score: <strong style="color: @GetScoreColor();">@CalculatedScore @GetScoreLabel()</strong>
+            </RadzenText>
+            @if (HoleSgTotal.HasValue)
+            {
+                <RadzenBadge Text="@($"SG: {HoleSgTotal:+0.00;-0.00}")"
+                             BadgeStyle="@(HoleSgTotal >= 0 ? BadgeStyle.Success : BadgeStyle.Danger)"
+                             Variant="Variant.Outlined" />
+            }
+        </RadzenStack>
+    </RadzenStack>
+
+    @if (Shots.Count > 0)
+    {
+        <table class="shot-table rz-mb-2">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Penalty</th>
+                    <th>SG</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var shot in Shots)
+                {
+                    <tr>
+                        <td>@shot.ShotNumber</td>
+                        <td>
+                            @shot.StartDistance@(shot.StartDistanceUnit == DistanceUnit.Feet ? "ft" : "yd")
+                            @shot.StartLie
+                        </td>
+                        <td>
+                            @if (shot.EndDistance == null)
+                            {
+                                <strong style="color: var(--rz-success);">Holed</strong>
+                            }
+                            else
+                            {
+                                @($"{shot.EndDistance}{(shot.EndDistanceUnit == DistanceUnit.Feet ? "ft" : "yd")} {shot.EndLie}")
+                            }
+                        </td>
+                        <td>@(shot.PenaltyStrokes > 0 ? $"+{shot.PenaltyStrokes}" : "—")</td>
+                        <td style="color: @(shot.StrokesGained >= 0 ? "var(--rz-success)" : "var(--rz-danger)");">
+                            @(shot.StrokesGained.HasValue ? shot.StrokesGained.Value.ToString("+0.00;-0.00") : "")
+                        </td>
+                        <td>
+                            @if (shot.ShotNumber == Shots.Count && shot.EndDistance != null)
+                            {
+                                <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Text" Size="ButtonSize.ExtraSmall" Click="@UndoLastShot" />
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    @if (!IsHoled)
+    {
+        <RadzenStack Gap="0.5rem" class="rz-p-2" style="background: var(--rz-base-background-color); border-radius: var(--rz-border-radius);">
+            <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                Shot @(Shots.Count + 1) — From: @NextShotStartDistance@(NextShotStartUnit == DistanceUnit.Feet ? "ft" : "yd") @NextShotStartLie
+            </RadzenText>
+
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.End" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+                <RadzenStack Gap="0.125rem" Style="flex: 0 0 auto;">
+                    <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0">Distance</RadzenText>
+                    <RadzenNumeric TValue="int?" @bind-Value="_endDistance" Min="0" Max="600" Style="width: 80px;" />
+                </RadzenStack>
+
+                <RadzenStack Gap="0.125rem" Style="flex: 0 0 auto;">
+                    <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0">Lie</RadzenText>
+                    <RadzenSelectBar TValue="LieType?" @bind-Value="_endLie" Size="ButtonSize.ExtraSmall" Change="@OnLieChanged">
+                        <Items>
+                            <RadzenSelectBarItem Text="FW" Value="@((LieType?)LieType.Fairway)" />
+                            <RadzenSelectBarItem Text="RGH" Value="@((LieType?)LieType.Rough)" />
+                            <RadzenSelectBarItem Text="BNK" Value="@((LieType?)LieType.Bunker)" />
+                            <RadzenSelectBarItem Text="SND" Value="@((LieType?)LieType.Sand)" />
+                            <RadzenSelectBarItem Text="REC" Value="@((LieType?)LieType.Recovery)" />
+                            <RadzenSelectBarItem Text="GRN" Value="@((LieType?)LieType.Green)" />
+                        </Items>
+                    </RadzenSelectBar>
+                </RadzenStack>
+
+                <RadzenStack Gap="0.125rem" Style="flex: 0 0 auto;">
+                    <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0">Penalty</RadzenText>
+                    <RadzenSelectBar TValue="int" @bind-Value="_penaltyStrokes" Size="ButtonSize.ExtraSmall">
+                        <Items>
+                            <RadzenSelectBarItem Text="0" Value="0" />
+                            <RadzenSelectBarItem Text="1" Value="1" />
+                            <RadzenSelectBarItem Text="2" Value="2" />
+                        </Items>
+                    </RadzenSelectBar>
+                </RadzenStack>
+
+                <RadzenButton Text="Add Shot" Icon="add" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small"
+                              Click="@AddShot" Disabled="@(!CanAddShot)" />
+                <RadzenButton Text="Holed" Icon="sports_golf" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Small"
+                              Click="@MarkHoled" />
+            </RadzenStack>
+        </RadzenStack>
+    }
+</RadzenCard>
+
+<style>
+    .shot-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8125rem;
+    }
+    .shot-table th, .shot-table td {
+        padding: 0.25rem 0.5rem;
+        text-align: left;
+        border-bottom: 1px solid var(--rz-border-color);
+    }
+    .shot-table th {
+        font-weight: 600;
+        color: var(--rz-text-secondary-color);
+        font-size: 0.75rem;
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public int HoleNumber { get; set; }
+    [Parameter, EditorRequired] public int Par { get; set; }
+    [Parameter, EditorRequired] public int Yardage { get; set; }
+    [Parameter, EditorRequired] public List<ShotData> Shots { get; set; } = new();
+    [Parameter] public EventCallback OnShotsChanged { get; set; }
+
+    private int? _endDistance;
+    private LieType? _endLie;
+    private int _penaltyStrokes;
+
+    private bool IsHoled => Shots.Count > 0 && Shots[^1].EndDistance == null;
+
+    private int CalculatedScore => Shots.Count + Shots.Sum(s => s.PenaltyStrokes);
+
+    private double? HoleSgTotal
+    {
+        get
+        {
+            if (Shots.Count == 0 || !IsHoled) return null;
+            var result = StrokesGainedCalculator.CalculateHoleSg(Shots, Par, HoleNumber, CalculatedScore);
+            return result.SgTotal;
+        }
+    }
+
+    private LieType NextShotStartLie => Shots.Count == 0 ? LieType.Tee : Shots[^1].EndLie ?? LieType.Tee;
+    private int NextShotStartDistance => Shots.Count == 0 ? Yardage : Shots[^1].EndDistance ?? Yardage;
+    private string NextShotStartUnit => NextShotStartLie == LieType.Green ? DistanceUnit.Feet : DistanceUnit.Yards;
+
+    private bool CanAddShot => _endDistance.HasValue && _endDistance > 0 && _endLie.HasValue;
+
+    private void OnLieChanged()
+    {
+        // Auto-set distance unit hint (visual only, actual unit stored on shot)
+    }
+
+    private async Task AddShot()
+    {
+        if (!CanAddShot) return;
+
+        var endUnit = _endLie == LieType.Green ? DistanceUnit.Feet : DistanceUnit.Yards;
+
+        var shot = new ShotData
+        {
+            ShotNumber = Shots.Count + 1,
+            StartDistance = NextShotStartDistance,
+            StartDistanceUnit = NextShotStartUnit,
+            StartLie = NextShotStartLie,
+            EndDistance = _endDistance,
+            EndDistanceUnit = endUnit,
+            EndLie = _endLie,
+            PenaltyStrokes = _penaltyStrokes
+        };
+
+        // Calculate SG for this shot
+        shot.StrokesGained = Math.Round(StrokesGainedCalculator.CalculateShotSg(
+            shot.StartDistance, shot.StartDistanceUnit, shot.StartLie,
+            shot.EndDistance, shot.EndDistanceUnit, shot.EndLie,
+            shot.PenaltyStrokes), 2);
+        shot.Category = StrokesGainedCalculator.ClassifyShot(shot.StartLie, shot.StartDistance, Par);
+
+        Shots.Add(shot);
+
+        // Reset inputs
+        _endDistance = null;
+        _endLie = null;
+        _penaltyStrokes = 0;
+
+        await OnShotsChanged.InvokeAsync();
+    }
+
+    private async Task MarkHoled()
+    {
+        var shot = new ShotData
+        {
+            ShotNumber = Shots.Count + 1,
+            StartDistance = NextShotStartDistance,
+            StartDistanceUnit = NextShotStartUnit,
+            StartLie = NextShotStartLie,
+            EndDistance = null,
+            EndDistanceUnit = null,
+            EndLie = null,
+            PenaltyStrokes = _penaltyStrokes
+        };
+
+        shot.StrokesGained = Math.Round(StrokesGainedCalculator.CalculateShotSg(
+            shot.StartDistance, shot.StartDistanceUnit, shot.StartLie,
+            null, null, null,
+            shot.PenaltyStrokes), 2);
+        shot.Category = StrokesGainedCalculator.ClassifyShot(shot.StartLie, shot.StartDistance, Par);
+
+        Shots.Add(shot);
+
+        _endDistance = null;
+        _endLie = null;
+        _penaltyStrokes = 0;
+
+        await OnShotsChanged.InvokeAsync();
+    }
+
+    private async Task UndoLastShot()
+    {
+        if (Shots.Count > 0)
+        {
+            Shots.RemoveAt(Shots.Count - 1);
+            await OnShotsChanged.InvokeAsync();
+        }
+    }
+
+    private string GetScoreColor()
+    {
+        if (!IsHoled) return "var(--rz-text-color)";
+        var diff = CalculatedScore - Par;
+        if (diff < 0) return "var(--rz-success)";
+        if (diff == 0) return "var(--rz-text-color)";
+        if (diff == 1) return "var(--rz-warning)";
+        return "var(--rz-danger)";
+    }
+
+    private string GetScoreLabel()
+    {
+        if (!IsHoled) return "";
+        var diff = CalculatedScore - Par;
+        if (diff == 0) return "(E)";
+        return diff > 0 ? $"(+{diff})" : $"({diff})";
+    }
+}

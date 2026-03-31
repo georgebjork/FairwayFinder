@@ -13,6 +13,7 @@ public class RoundResponse
     public int ScoreOut { get; set; }
     public int ScoreIn { get; set; }
     public bool UsingHoleStats { get; set; }
+    public bool UsingShotTracking { get; set; }
     public bool ExcludeFromStats { get; set; }
     public bool FullRound { get; set; }
     
@@ -28,6 +29,10 @@ public class RoundResponse
     
     // Individual hole data
     public List<RoundHole> Holes { get; set; } = new();
+
+    // Shot-by-shot data and SG
+    public StrokesGainedSummary? StrokesGained { get; set; }
+    public List<StrokesGainedHoleResult>? HoleByHoleSg { get; set; }
 
     // Computed properties - Par
     public int ParOut => Holes.Where(h => h.HoleNumber <= 9).Sum(h => h.Par);
@@ -66,6 +71,7 @@ public class RoundResponse
             ScoreOut = round.ScoreOut,
             ScoreIn = round.ScoreIn,
             UsingHoleStats = round.UsingHoleStats,
+            UsingShotTracking = round.UsingShotTracking,
             ExcludeFromStats = round.ExcludeFromStats,
             CourseId = course.CourseId,
             CourseName = course.CourseName,
@@ -126,6 +132,9 @@ public class RoundHole
     
     // Advanced stats (null if not tracking)
     public RoundHoleStat? Stats { get; set; }
+
+    // Shot data (null if not tracking shots)
+    public List<ShotData>? Shots { get; set; }
 
     // Computed property for score relative to par
     public int? ScoreToPar => Score.HasValue ? Score.Value - Par : null;

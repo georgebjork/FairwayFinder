@@ -314,6 +314,24 @@
         }
     }
 
+    <!-- Strokes Gained Section -->
+    @if (_stats?.StrokesGained is not null)
+    {
+        <RadzenStack Gap="1rem">
+            <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Strokes Gained</RadzenText>
+
+            <StrokesGainedCards Summary="@_stats.StrokesGained" OnCardClicked="@OnSgCardClicked" />
+
+            <RadzenCard>
+                <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">SG Trend</RadzenText>
+                <StrokesGainedTrendChart
+                    TotalTrend="@_stats.SgTotalTrend"
+                    PuttingTrend="@_stats.SgPuttingTrend"
+                    TeeToGreenTrend="@_stats.SgTeeToGreenTrend" />
+            </RadzenCard>
+        </RadzenStack>
+    }
+
     <!-- Charts Row -->
     <RadzenRow Gap="1rem">
         <RadzenColumn Size="12" SizeLG="7">
@@ -612,6 +630,78 @@
             new Dictionary<string, object>
             {
                 { "TrendData", _stats.GirTrend }
+            },
+            new DialogOptions
+            {
+                Width = "700px",
+                CloseDialogOnOverlayClick = true,
+                CloseDialogOnEsc = true
+            });
+    }
+
+    private async Task OnSgCardClicked(string category)
+    {
+        if (!ShowTrendDialogs) return;
+
+        switch (category)
+        {
+            case "Total":
+                await ShowSgTotalTrendDialog();
+                break;
+            case "Putting":
+                await ShowSgPuttingTrendDialog();
+                break;
+            case "OTT":
+            case "Approach":
+            case "ARG":
+                // OTT, Approach, and ARG share the Tee to Green trend
+                await ShowSgTeeToGreenTrendDialog();
+                break;
+        }
+    }
+
+    private async Task ShowSgTotalTrendDialog()
+    {
+        if (_stats?.SgTotalTrend is null || _stats.SgTotalTrend.Count < 2) return;
+
+        await DialogService.OpenAsync<SgTotalTrendDialog>("SG:Total Trend",
+            new Dictionary<string, object>
+            {
+                { "TrendData", _stats.SgTotalTrend }
+            },
+            new DialogOptions
+            {
+                Width = "700px",
+                CloseDialogOnOverlayClick = true,
+                CloseDialogOnEsc = true
+            });
+    }
+
+    private async Task ShowSgPuttingTrendDialog()
+    {
+        if (_stats?.SgPuttingTrend is null || _stats.SgPuttingTrend.Count < 2) return;
+
+        await DialogService.OpenAsync<SgPuttingTrendDialog>("SG:Putting Trend",
+            new Dictionary<string, object>
+            {
+                { "TrendData", _stats.SgPuttingTrend }
+            },
+            new DialogOptions
+            {
+                Width = "700px",
+                CloseDialogOnOverlayClick = true,
+                CloseDialogOnEsc = true
+            });
+    }
+
+    private async Task ShowSgTeeToGreenTrendDialog()
+    {
+        if (_stats?.SgTeeToGreenTrend is null || _stats.SgTeeToGreenTrend.Count < 2) return;
+
+        await DialogService.OpenAsync<SgTeeToGreenTrendDialog>("SG:Tee to Green Trend",
+            new Dictionary<string, object>
+            {
+                { "TrendData", _stats.SgTeeToGreenTrend }
             },
             new DialogOptions
             {

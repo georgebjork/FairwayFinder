@@ -1,0 +1,176 @@
+@using FairwayFinder.Features.Data
+@inject NavigationManager NavigationManager
+
+<RadzenStack Gap="1rem">
+    @if (TrendData is null || TrendData.Count < 2)
+    {
+        <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 300px;">
+            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                Not enough rounds with shot data to show SG:Total trend.
+            </RadzenText>
+        </RadzenStack>
+    }
+    else
+    {
+        <RadzenChart Style="height: 300px;" SeriesClick="@OnSeriesClick">
+            <RadzenLineSeries Data="@_chartData"
+                              CategoryProperty="DateLabel"
+                              ValueProperty="Value"
+                              Title="SG:Total"
+                              Smooth="true">
+                <TooltipTemplate Context="data">
+                    <div class="rz-p-2">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-1">@data.CourseName</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">SG: <strong>@FormatSgValue(data.Value)</strong></RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                            @data.DatePlayed.ToString("MMM d, yyyy")
+                        </RadzenText>
+                    </div>
+                </TooltipTemplate>
+            </RadzenLineSeries>
+
+            @if (_movingAverageData is not null && _movingAverageData.Count >= 2)
+            {
+                <RadzenLineSeries Data="@_movingAverageData"
+                                  CategoryProperty="DateLabel"
+                                  ValueProperty="Value"
+                                  Title="Moving Avg"
+                                  LineType="LineType.Dashed"
+                                  Smooth="false"
+                                  StrokeWidth="2">
+                    <ChildContent>
+                        <RadzenMarkers Visible="false" />
+                    </ChildContent>
+                    <TooltipTemplate Context="data">
+                        <div class="rz-p-2">
+                            <RadzenText TextStyle="TextStyle.Body2">Avg: <strong>@FormatSgValue(data.Value)</strong></RadzenText>
+                        </div>
+                    </TooltipTemplate>
+                </RadzenLineSeries>
+            }
+
+            <RadzenValueAxis>
+                <RadzenGridLines Visible="true" />
+                <RadzenAxisTitle Text="Strokes Gained" />
+            </RadzenValueAxis>
+            <RadzenLegend Visible="true" />
+        </RadzenChart>
+    }
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+        <RadzenButton Text="Close"
+                      ButtonStyle="ButtonStyle.Light"
+                      Click="@(() => DialogService.Close())" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter]
+    public List<StrokesGainedTrendPoint>? TrendData { get; set; }
+
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
+
+    private List<SgTrendChartItem>? _chartData;
+    private List<TrendLinePoint>? _movingAverageData;
+
+    private const int MaxVisibleLabels = 6;
+
+    protected override void OnParametersSet()
+    {
+        if (TrendData is not null && TrendData.Count >= 2)
+        {
+            _chartData = GenerateUniqueLabels(TrendData);
+
+            _movingAverageData = _chartData
+                .Where(d => d.MovingAverage.HasValue)
+                .Select(d => new TrendLinePoint
+                {
+                    DateLabel = d.DateLabel,
+                    Value = Math.Round(d.MovingAverage!.Value, 2)
+                })
+                .ToList();
+        }
+    }
+
+    private void OnSeriesClick(SeriesClickEventArgs args)
+    {
+        if (args.Data is SgTrendChartItem item)
+        {
+            NavigationManager.NavigateTo($"/round/{item.RoundId}");
+        }
+    }
+
+    private static string FormatSgValue(double value)
+    {
+        return value >= 0 ? $"+{value:F2}" : $"{value:F2}";
+    }
+
+    private static List<SgTrendChartItem> GenerateUniqueLabels(List<StrokesGainedTrendPoint> trendData)
+    {
+        var n = trendData.Count;
+        var visibleIndices = new HashSet<int>();
+        if (n <= MaxVisibleLabels)
+        {
+            for (int i = 0; i < n; i++) visibleIndices.Add(i);
+        }
+        else
+        {
+            visibleIndices.Add(0);
+            visibleIndices.Add(n - 1);
+            var step = (double)(n - 1) / (MaxVisibleLabels - 1);
+            for (int i = 1; i < MaxVisibleLabels - 1; i++)
+                visibleIndices.Add((int)Math.Round(step * i));
+        }
+
+        var result = new List<SgTrendChartItem>();
+        var labelCounts = new Dictionary<string, int>();
+
+        for (int i = 0; i < n; i++)
+        {
+            var d = trendData[i];
+            string label;
+
+            if (visibleIndices.Contains(i))
+            {
+                var baseLabel = d.DatePlayed.ToString("M/d");
+                if (labelCounts.TryGetValue(baseLabel, out var count))
+                {
+                    labelCounts[baseLabel] = count + 1;
+                    label = $"{baseLabel} ({count + 1})";
+                }
+                else
+                {
+                    labelCounts[baseLabel] = 1;
+                    label = baseLabel;
+                }
+            }
+            else
+            {
+                label = new string('\u00A0', i);
+            }
+
+            result.Add(new SgTrendChartItem
+            {
+                RoundId = d.RoundId,
+                DatePlayed = d.DatePlayed,
+                DateLabel = label,
+                Value = d.Value,
+                MovingAverage = d.MovingAverage,
+                CourseName = d.CourseName
+            });
+        }
+
+        return result;
+    }
+
+    private class SgTrendChartItem
+    {
+        public long RoundId { get; set; }
+        public DateOnly DatePlayed { get; set; }
+        public string DateLabel { get; set; } = string.Empty;
+        public double Value { get; set; }
+        public double? MovingAverage { get; set; }
+        public string CourseName { get; set; } = string.Empty;
+    }
+}

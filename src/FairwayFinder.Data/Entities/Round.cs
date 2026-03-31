@@ -38,6 +38,8 @@ public partial class Round
 
     public bool BackNine { get; set; }
 
+    public bool UsingShotTracking { get; set; }
+
     // Navigation properties
     public virtual Course Course { get; set; } = null!;
     public virtual Teebox Teebox { get; set; } = null!;

@@ -233,6 +233,31 @@ else
                         </tr>
                     }
                 }
+
+                @if (Round.UsingShotTracking && Round.HoleByHoleSg is not null)
+                {
+                    <!-- Strokes Gained Row -->
+                    <tr>
+                        <th colspan="2">SG</th>
+                        @foreach (var hole in FrontNine)
+                        {
+                            var sg = Round.HoleByHoleSg.FirstOrDefault(h => h.HoleNumber == hole.HoleNumber);
+                            <td class="hole-cell" style="@SgColorStyle(sg?.SgTotal); font-size: 0.75rem;">
+                                @(sg != null ? FormatSg(sg.SgTotal) : "")
+                            </td>
+                        }
+                        <td colspan="2" class="total-cell" style="@SgColorStyle(SgOut); font-size: 0.75rem;">@FormatSg(SgOut)</td>
+                        @foreach (var hole in BackNine)
+                        {
+                            var sg = Round.HoleByHoleSg.FirstOrDefault(h => h.HoleNumber == hole.HoleNumber);
+                            <td class="hole-cell" style="@SgColorStyle(sg?.SgTotal); font-size: 0.75rem;">
+                                @(sg != null ? FormatSg(sg.SgTotal) : "")
+                            </td>
+                        }
+                        <td class="total-cell" colspan="2" style="@SgColorStyle(SgIn); font-size: 0.75rem;">@FormatSg(SgIn)</td>
+                        <td class="total-cell" colspan="2" style="@SgColorStyle(SgTotal); font-size: 0.75rem;">@FormatSg(SgTotal)</td>
+                    </tr>
+                }
             </tbody>
         </table>
     </div>
@@ -376,6 +401,26 @@ else
                     <rect x=""20"" y=""20"" width=""60"" height=""60"" stroke-width=""2"" fill=""none"" style=""stroke: {strokeColor};""/>
                 </svg>");
         }
+    }
+
+    // SG computed values
+    private double? SgOut => Round?.HoleByHoleSg?.Where(h => h.HoleNumber <= 9).Sum(h => h.SgTotal);
+    private double? SgIn => Round?.HoleByHoleSg?.Where(h => h.HoleNumber > 9).Sum(h => h.SgTotal);
+    private double? SgTotal => Round?.HoleByHoleSg?.Sum(h => h.SgTotal);
+
+    private static string FormatSg(double? sg)
+    {
+        if (sg == null) return "";
+        var rounded = Math.Round(sg.Value, 2);
+        return rounded >= 0 ? $"+{rounded:F2}" : $"{rounded:F2}";
+    }
+
+    private static string SgColorStyle(double? sg)
+    {
+        if (sg == null) return "";
+        if (sg.Value > 0) return "color: var(--rz-success);";
+        if (sg.Value < 0) return "color: var(--rz-danger);";
+        return "";
     }
 
     private RenderFragment GetMissIcon(long? missType) => builder =>

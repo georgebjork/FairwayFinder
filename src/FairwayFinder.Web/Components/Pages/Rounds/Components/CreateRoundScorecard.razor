@@ -1,5 +1,7 @@
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Enums
+@using FairwayFinder.Features.Helpers
+@using FairwayFinder.Web.Components.Pages.Rounds.Dialogs
 
 <RadzenStack Gap="0.25rem" class="rz-mb-2">
     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
@@ -111,7 +113,94 @@
                 <td class="total-cell" colspan="2">@RunningScoreTotal</td>
             </tr>
 
-            @if (State.TrackAdvancedStats)
+            @if (State.TrackShotByShotStats)
+            {
+                @* Shots Row (clickable cells that open shot entry dialog) *@
+                <tr>
+                    <th colspan="2">Shots</th>
+                    @foreach (var entry in FrontNineEntries)
+                    {
+                        var hole = State.Holes.First(h => h.HoleNumber == entry.HoleNumber);
+                        <td class="hole-cell toggle-cell" @onclick="() => OpenShotDialog(entry, hole)">
+                            @if (entry.Shots is { Count: > 0 } && IsHoleComplete(entry))
+                            {
+                                <span style="@GetShotsCellStyle(entry)">@entry.Shots.Count</span>
+                            }
+                            else if (entry.Shots is { Count: > 0 })
+                            {
+                                <span style="color: var(--rz-warning); cursor: pointer;">@entry.Shots.Count...</span>
+                            }
+                            else
+                            {
+                                <span class="toggle-placeholder">-</span>
+                            }
+                        </td>
+                    }
+                    <td class="total-cell" colspan="2">@FrontNineShotCount</td>
+                    @foreach (var entry in BackNineEntries)
+                    {
+                        var hole = State.Holes.First(h => h.HoleNumber == entry.HoleNumber);
+                        <td class="hole-cell toggle-cell" @onclick="() => OpenShotDialog(entry, hole)">
+                            @if (entry.Shots is { Count: > 0 } && IsHoleComplete(entry))
+                            {
+                                <span style="@GetShotsCellStyle(entry)">@entry.Shots.Count</span>
+                            }
+                            else if (entry.Shots is { Count: > 0 })
+                            {
+                                <span style="color: var(--rz-warning); cursor: pointer;">@entry.Shots.Count...</span>
+                            }
+                            else
+                            {
+                                <span class="toggle-placeholder">-</span>
+                            }
+                        </td>
+                    }
+                    <td class="total-cell" colspan="2">@BackNineShotCount</td>
+                    <td class="total-cell" colspan="2">@TotalShotCount</td>
+                </tr>
+
+                @* SG Row (computed from shots, read-only) *@
+                <tr>
+                    <th colspan="2">SG</th>
+                    @foreach (var entry in FrontNineEntries)
+                    {
+                        <td class="hole-cell">
+                            @if (entry.Shots is { Count: > 0 } && IsHoleComplete(entry))
+                            {
+                                var sg = GetHoleSg(entry);
+                                <span style="@($"color: {(sg >= 0 ? "var(--rz-success)" : "var(--rz-danger)")}"); font-size: 0.75rem;">
+                                    @sg.ToString("+0.00;-0.00")
+                                </span>
+                            }
+                            else
+                            {
+                                <span style="color: var(--rz-text-disabled-color);">-</span>
+                            }
+                        </td>
+                    }
+                    <td class="total-cell" colspan="2" style="font-size: 0.75rem;">@FormatSgTotal(FrontNineEntries)</td>
+                    @foreach (var entry in BackNineEntries)
+                    {
+                        <td class="hole-cell">
+                            @if (entry.Shots is { Count: > 0 } && IsHoleComplete(entry))
+                            {
+                                var sg = GetHoleSg(entry);
+                                <span style="@($"color: {(sg >= 0 ? "var(--rz-success)" : "var(--rz-danger)")}"); font-size: 0.75rem;">
+                                    @sg.ToString("+0.00;-0.00")
+                                </span>
+                            }
+                            else
+                            {
+                                <span style="color: var(--rz-text-disabled-color);">-</span>
+                            }
+                        </td>
+                    }
+                    <td class="total-cell" colspan="2" style="font-size: 0.75rem;">@FormatSgTotal(BackNineEntries)</td>
+                    <td class="total-cell" colspan="2" style="font-size: 0.75rem;">@FormatSgTotal(State.HoleEntries)</td>
+                </tr>
+            }
+
+            @if (State.TrackAdvancedStats && !State.TrackShotByShotStats)
             {
                 @* Putts Row (editable) *@
                 <tr>
@@ -377,6 +466,9 @@
     [Parameter]
     public EventCallback OnScanScorecard { get; set; }
 
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
+
     // Computed: hole/entry splits for front/back nine
     private List<HoleInfo> FrontNineHoles => State.Holes.Where(h => h.HoleNumber <= 9).ToList();
     private List<HoleInfo> BackNineHoles => State.Holes.Where(h => h.HoleNumber > 9).ToList();
@@ -405,6 +497,64 @@
     private async Task OnBackClicked() => await OnBack.InvokeAsync();
     private async Task OnReviewClicked() => await OnReview.InvokeAsync();
     private async Task OnScanScorecardClicked() => await OnScanScorecard.InvokeAsync();
+
+    // Shot tracking helpers
+    private int FrontNineShotCount => FrontNineEntries.Where(e => e.Shots is { Count: > 0 }).Sum(e => e.Shots!.Count);
+    private int BackNineShotCount => BackNineEntries.Where(e => e.Shots is { Count: > 0 }).Sum(e => e.Shots!.Count);
+    private int TotalShotCount => State.HoleEntries.Where(e => e.Shots is { Count: > 0 }).Sum(e => e.Shots!.Count);
+
+    private bool IsHoleComplete(HoleScoreEntry entry)
+        => entry.Shots is { Count: > 0 } && entry.Shots[^1].EndDistance == null;
+
+    private double GetHoleSg(HoleScoreEntry entry)
+    {
+        if (entry.Shots is not { Count: > 0 } || !IsHoleComplete(entry)) return 0;
+        var score = entry.Shots.Count + entry.Shots.Sum(s => s.PenaltyStrokes);
+        return StrokesGainedCalculator.CalculateHoleSg(entry.Shots, entry.Par, entry.HoleNumber, score).SgTotal;
+    }
+
+    private string FormatSgTotal(List<HoleScoreEntry> entries)
+    {
+        var completed = entries.Where(e => e.Shots is { Count: > 0 } && IsHoleComplete(e)).ToList();
+        if (completed.Count == 0) return "-";
+        var total = completed.Sum(e => GetHoleSg(e));
+        return total.ToString("+0.00;-0.00");
+    }
+
+    private string GetShotsCellStyle(HoleScoreEntry entry)
+    {
+        return "cursor: pointer; font-weight: 600;";
+    }
+
+    private async Task OpenShotDialog(HoleScoreEntry entry, HoleInfo hole)
+    {
+        entry.Shots ??= new();
+
+        var result = await DialogService.OpenAsync<ShotEntryDialog>(
+            $"Hole {hole.HoleNumber} — Shots",
+            new Dictionary<string, object>
+            {
+                { "HoleNumber", hole.HoleNumber },
+                { "Par", hole.Par },
+                { "Yardage", hole.Yardage },
+                { "Shots", entry.Shots }
+            },
+            new DialogOptions
+            {
+                Width = "600px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true
+            });
+
+        if (result is List<ShotData> updatedShots)
+        {
+            entry.Shots = updatedShots;
+            if (entry.Shots.Count > 0 && IsHoleComplete(entry))
+            {
+                entry.Score = (short)(entry.Shots.Count + entry.Shots.Sum(s => s.PenaltyStrokes));
+            }
+        }
+    }
 
     // Score/Putt input handlers
     private void OnScoreChanged(HoleScoreEntry entry, ChangeEventArgs e)

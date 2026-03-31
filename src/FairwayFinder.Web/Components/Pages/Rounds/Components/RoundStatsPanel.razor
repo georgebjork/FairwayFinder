@@ -160,6 +160,25 @@
                     </RadzenFieldset>
                 </RadzenColumn>
             }
+
+            @if (Round.UsingShotTracking && Round.StrokesGained is not null)
+            {
+                @* ── Strokes Gained ── *@
+                <RadzenColumn Size="12">
+                    <RadzenFieldset Text="Strokes Gained" class="stat-panel">
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="0">
+                            @foreach (var item in StrokesGainedItems)
+                            {
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="stat-list-item">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" Style="flex: 1;">@item.Label</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0 stat-value" Style="@($"color: {SgColor(item.Total)}; flex: 1; text-align: right;")">@FormatSgValue(item.Total)</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0 stat-value" Style="@($"color: {SgColor(item.PerHoleAvg)}; flex: 1; text-align: right;")">@FormatSgValue(item.PerHoleAvg) /hole</RadzenText>
+                                </RadzenStack>
+                            }
+                        </RadzenStack>
+                    </RadzenFieldset>
+                </RadzenColumn>
+            }
         </RadzenRow>
     </RadzenColumn>
 
@@ -401,6 +420,41 @@
         if (scoreToPar == 0) return "var(--rz-info)";
         return "var(--rz-danger)";
     }
+
+    // Strokes Gained items
+    private List<SgItem> StrokesGainedItems
+    {
+        get
+        {
+            if (Round?.StrokesGained is null) return [];
+
+            var sg = Round.StrokesGained;
+            var holes = sg.HolesWithShots > 0 ? sg.HolesWithShots : 1;
+
+            return new List<SgItem>
+            {
+                new("SG: Total", sg.SgTotal, Math.Round(sg.SgTotal / holes, 2)),
+                new("SG: Putting", sg.SgPutting, Math.Round(sg.SgPutting / holes, 2)),
+                new("SG: Off The Tee", sg.SgOffTheTee, Math.Round(sg.SgOffTheTee / holes, 2)),
+                new("SG: Approach", sg.SgApproach, Math.Round(sg.SgApproach / holes, 2)),
+                new("SG: Around The Green", sg.SgAroundTheGreen, Math.Round(sg.SgAroundTheGreen / holes, 2))
+            };
+        }
+    }
+
+    private static string FormatSgValue(double sg)
+    {
+        return sg >= 0 ? $"+{sg:F2}" : $"{sg:F2}";
+    }
+
+    private static string SgColor(double sg)
+    {
+        if (sg > 0) return "var(--rz-success)";
+        if (sg < 0) return "var(--rz-danger)";
+        return "var(--rz-text-color)";
+    }
+
+    private record SgItem(string Label, double Total, double PerHoleAvg);
 
     private record ScoreCountItem(string Label, int Value, string Color);
 

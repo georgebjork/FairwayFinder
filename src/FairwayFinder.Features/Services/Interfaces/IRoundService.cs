@@ -42,8 +42,18 @@ public interface IRoundService
     Task<bool> UpdateRoundAsync(UpdateRoundRequest request);
 
     /// <summary>
-    /// Soft-deletes a round and all its child records (scores, hole stats, round stats).
+    /// Soft-deletes a round and all its child records (scores, hole stats, round stats, shots).
     /// Returns false if the round was not found.
     /// </summary>
     Task<bool> DeleteRoundAsync(long roundId, string userId);
+
+    /// <summary>
+    /// Gets all shots for a round, grouped by ScoreId (hole).
+    /// </summary>
+    Task<Dictionary<long, List<ShotData>>> GetShotsByRoundIdAsync(long roundId);
+
+    /// <summary>
+    /// Loads shots for rounds that have UsingShotTracking = true and attaches them to RoundResponse objects.
+    /// </summary>
+    Task LoadShotsForRoundsAsync(List<RoundResponse> rounds);
 }

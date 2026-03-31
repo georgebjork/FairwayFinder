@@ -1,0 +1,202 @@
+@using FairwayFinder.Features.Data
+
+@if (Summary is not null)
+{
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+        <RadzenCard class="sg-card" style="@GetCardCursor("Total")" @onclick="@(() => HandleCardClick("Total"))">
+            <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                    SG:Total
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.H3" class="rz-m-0" style="@GetValueColor(Summary.SgTotal)">
+                    @FormatSgValue(Summary.SgTotal)
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                    @Summary.RoundsIncluded rounds
+                </RadzenText>
+                @if (Summary.SgTotalTrend.HasValue)
+                {
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
+                        @if (Summary.SgTotalTrend > 0)
+                        {
+                            <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Success"/>
+                        }
+                        else if (Summary.SgTotalTrend < 0)
+                        {
+                            <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Danger"/>
+                        }
+                        else
+                        {
+                            <RadzenIcon Icon="trending_flat" style="color: var(--rz-text-secondary-color);"/>
+                        }
+                    </RadzenStack>
+                }
+            </RadzenStack>
+        </RadzenCard>
+
+        <RadzenCard class="sg-card" style="@GetCardCursor("Putting")" @onclick="@(() => HandleCardClick("Putting"))">
+            <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                    SG:Putting
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.H3" class="rz-m-0" style="@GetValueColor(Summary.SgPutting)">
+                    @FormatSgValue(Summary.SgPutting)
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                    per round
+                </RadzenText>
+                @if (Summary.SgPuttingTrend.HasValue)
+                {
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
+                        @if (Summary.SgPuttingTrend > 0)
+                        {
+                            <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Success"/>
+                        }
+                        else if (Summary.SgPuttingTrend < 0)
+                        {
+                            <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Danger"/>
+                        }
+                        else
+                        {
+                            <RadzenIcon Icon="trending_flat" style="color: var(--rz-text-secondary-color);"/>
+                        }
+                    </RadzenStack>
+                }
+            </RadzenStack>
+        </RadzenCard>
+
+        <RadzenCard class="sg-card" style="@GetCardCursor("OTT")" @onclick="@(() => HandleCardClick("OTT"))">
+            <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                    SG:OTT
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.H3" class="rz-m-0" style="@GetValueColor(Summary.SgOffTheTee)">
+                    @FormatSgValue(Summary.SgOffTheTee)
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                    per round
+                </RadzenText>
+                @if (Summary.SgOffTheTeeTrend.HasValue)
+                {
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
+                        @if (Summary.SgOffTheTeeTrend > 0)
+                        {
+                            <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Success"/>
+                        }
+                        else if (Summary.SgOffTheTeeTrend < 0)
+                        {
+                            <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Danger"/>
+                        }
+                        else
+                        {
+                            <RadzenIcon Icon="trending_flat" style="color: var(--rz-text-secondary-color);"/>
+                        }
+                    </RadzenStack>
+                }
+            </RadzenStack>
+        </RadzenCard>
+
+        <RadzenCard class="sg-card" style="@GetCardCursor("Approach")" @onclick="@(() => HandleCardClick("Approach"))">
+            <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                    SG:Approach
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.H3" class="rz-m-0" style="@GetValueColor(Summary.SgApproach)">
+                    @FormatSgValue(Summary.SgApproach)
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                    per round
+                </RadzenText>
+                @if (Summary.SgApproachTrend.HasValue)
+                {
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
+                        @if (Summary.SgApproachTrend > 0)
+                        {
+                            <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Success"/>
+                        }
+                        else if (Summary.SgApproachTrend < 0)
+                        {
+                            <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Danger"/>
+                        }
+                        else
+                        {
+                            <RadzenIcon Icon="trending_flat" style="color: var(--rz-text-secondary-color);"/>
+                        }
+                    </RadzenStack>
+                }
+            </RadzenStack>
+        </RadzenCard>
+
+        <RadzenCard class="sg-card" style="@GetCardCursor("ARG")" @onclick="@(() => HandleCardClick("ARG"))">
+            <RadzenStack Gap="0.25rem" AlignItems="AlignItems.Center">
+                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                    SG:ARG
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.H3" class="rz-m-0" style="@GetValueColor(Summary.SgAroundTheGreen)">
+                    @FormatSgValue(Summary.SgAroundTheGreen)
+                </RadzenText>
+                <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                    per round
+                </RadzenText>
+                @if (Summary.SgAroundTheGreenTrend.HasValue)
+                {
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
+                        @if (Summary.SgAroundTheGreenTrend > 0)
+                        {
+                            <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Success"/>
+                        }
+                        else if (Summary.SgAroundTheGreenTrend < 0)
+                        {
+                            <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Danger"/>
+                        }
+                        else
+                        {
+                            <RadzenIcon Icon="trending_flat" style="color: var(--rz-text-secondary-color);"/>
+                        }
+                    </RadzenStack>
+                }
+            </RadzenStack>
+        </RadzenCard>
+    </RadzenStack>
+}
+
+<style>
+    .sg-card {
+        text-align: center;
+        min-width: 150px;
+        flex: 1;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public StrokesGainedSummary? Summary { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnCardClicked { get; set; }
+
+    private string GetValueColor(double value)
+    {
+        if (value > 0) return "color: var(--rz-success);";
+        if (value < 0) return "color: var(--rz-danger);";
+        return "color: var(--rz-text-color);";
+    }
+
+    private static string FormatSgValue(double value)
+    {
+        return value >= 0 ? $"+{value:F2}" : $"{value:F2}";
+    }
+
+    private string GetCardCursor(string category)
+    {
+        return OnCardClicked.HasDelegate ? "cursor: pointer;" : "";
+    }
+
+    private async Task HandleCardClick(string category)
+    {
+        if (OnCardClicked.HasDelegate)
+        {
+            await OnCardClicked.InvokeAsync(category);
+        }
+    }
+}

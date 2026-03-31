@@ -1,4 +1,5 @@
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Enums;
 using FairwayFinder.Features.Helpers;
 using FairwayFinder.Features.Services.Interfaces;
 
@@ -27,7 +28,10 @@ public class StatsService : IStatsService
             return new UserStatsResponse();
         }
 
-        return new UserStatsResponse
+        // Load shots for rounds with shot tracking (lazy load per spec Option B)
+        await _roundService.LoadShotsForRoundsAsync(statsRounds);
+
+        var response = new UserStatsResponse
         {
             TotalRounds = statsRounds.Count,
             Total18HoleRounds = statsRounds.Count(x => x.FullRound),
@@ -50,6 +54,42 @@ public class StatsService : IStatsService
             AdvancedStats = StatsCalculator.CalculateAdvancedStats(statsRounds),
             Rounds = statsRounds
         };
+
+        // Strokes Gained — only for rounds with shot tracking
+        var roundsWithShots = statsRounds.Where(r => r.UsingShotTracking).ToList();
+        if (roundsWithShots.Count > 0)
+        {
+            response.StrokesGained = StrokesGainedCalculator.CalculateAverageSg(roundsWithShots);
+
+            var (totalTrend, _) = StrokesGainedCalculator.CalculateSgTrend(roundsWithShots, null);
+            response.SgTotalTrend = totalTrend;
+
+            var (puttingTrend, _) = StrokesGainedCalculator.CalculateSgTrend(roundsWithShots, ShotCategory.Putting);
+            response.SgPuttingTrend = puttingTrend;
+
+            // T2G = combined OTT + APP + ARG, represented as null category with T2G value
+            var t2gTrend = new List<StrokesGainedTrendPoint>();
+            var orderedRounds = roundsWithShots.OrderBy(r => r.DatePlayed).ToList();
+            foreach (var round in orderedRounds)
+            {
+                var roundSg = StrokesGainedCalculator.CalculateRoundSg(round);
+                t2gTrend.Add(new StrokesGainedTrendPoint
+                {
+                    RoundId = round.RoundId,
+                    DatePlayed = round.DatePlayed,
+                    CourseName = round.CourseName,
+                    Value = Math.Round(roundSg.SgTeeToGreen, 2)
+                });
+            }
+            // Calculate moving average
+            for (int i = 2; i < t2gTrend.Count; i++)
+            {
+                t2gTrend[i].MovingAverage = Math.Round((t2gTrend[i].Value + t2gTrend[i - 1].Value + t2gTrend[i - 2].Value) / 3.0, 2);
+            }
+            response.SgTeeToGreenTrend = t2gTrend;
+        }
+
+        return response;
     }
     
     public async Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null)
@@ -110,7 +150,10 @@ public class StatsService : IStatsService
 
         var courseName = filteredRounds.First().CourseName;
 
-        return new CourseStatsResponse
+        // Load shots for rounds with shot tracking
+        await _roundService.LoadShotsForRoundsAsync(filteredRounds);
+
+        var response = new CourseStatsResponse
         {
             CourseId = courseId,
             CourseName = courseName,
@@ -125,6 +168,15 @@ public class StatsService : IStatsService
             TeeboxOptions = teeboxOptions,
             SelectedTeeboxId = teeboxId
         };
+
+        // Strokes Gained for course stats
+        var roundsWithShots = filteredRounds.Where(r => r.UsingShotTracking).ToList();
+        if (roundsWithShots.Count > 0)
+        {
+            response.StrokesGained = StrokesGainedCalculator.CalculateAverageSg(roundsWithShots);
+        }
+
+        return response;
     }
     
     public async Task<List<int>> GetAvailableYearsAsync(string userId)
