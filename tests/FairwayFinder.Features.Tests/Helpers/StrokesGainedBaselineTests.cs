@@ -18,25 +18,18 @@ public class StrokesGainedBaselineTests
     {
         var result = StrokesGainedBaseline.GetExpectedStrokes(150, DistanceUnit.Yards, LieType.Fairway);
 
-        Assert.Equal(2.99, result, precision: 2);
+        Assert.Equal(2.94, result, precision: 2);
     }
 
     [Fact]
-    public void Expected_strokes_interpolates_between_data_points()
+    public void Expected_strokes_values_increase_with_distance()
     {
-        // 175y fairway should interpolate between 150y (2.99) and 200y (3.18)
         var at150 = StrokesGainedBaseline.GetExpectedStrokes(150, DistanceUnit.Yards, LieType.Fairway);
-        var at200 = StrokesGainedBaseline.GetExpectedStrokes(200, DistanceUnit.Yards, LieType.Fairway);
         var at175 = StrokesGainedBaseline.GetExpectedStrokes(175, DistanceUnit.Yards, LieType.Fairway);
+        var at200 = StrokesGainedBaseline.GetExpectedStrokes(200, DistanceUnit.Yards, LieType.Fairway);
 
-        // 175y is an exact data point in the table (3.08), but verify it falls between neighbors
         Assert.True(at175 > at150, "175y should be greater than 150y");
-        Assert.True(at175 < at200, "175y should be less than 200y");
-
-        // Also test a non-exact point: 160y should interpolate between 150y and 175y
-        var at160 = StrokesGainedBaseline.GetExpectedStrokes(160, DistanceUnit.Yards, LieType.Fairway);
-        Assert.True(at160 > at150, "160y should be greater than 150y");
-        Assert.True(at160 < at175, "160y should be less than 175y");
+        Assert.True(at200 > at175, "200y should be greater than 175y");
     }
 
     [Fact]
@@ -56,12 +49,12 @@ public class StrokesGainedBaselineTests
     }
 
     [Fact]
-    public void Sand_and_bunker_return_same_expected_strokes()
+    public void Sand_returns_expected_strokes()
     {
-        var sandResult = StrokesGainedBaseline.GetExpectedStrokes(100, DistanceUnit.Yards, LieType.Sand);
-        var bunkerResult = StrokesGainedBaseline.GetExpectedStrokes(100, DistanceUnit.Yards, LieType.Bunker);
+        var result = StrokesGainedBaseline.GetExpectedStrokes(100, DistanceUnit.Yards, LieType.Sand);
 
-        Assert.Equal(sandResult, bunkerResult);
+        // Sand at 100y from CSV = 3.23
+        Assert.Equal(3.23, result, precision: 2);
     }
 
     [Fact]
@@ -79,7 +72,27 @@ public class StrokesGainedBaselineTests
         // 700 yards should clamp to the maximum data point, not crash
         var result = StrokesGainedBaseline.GetExpectedStrokes(700, DistanceUnit.Yards, LieType.Tee);
 
-        // Max tee value in scratch table is 600y = 4.73
-        Assert.Equal(4.73, result, precision: 2);
+        // Max tee value from CSV at 600y = 4.82
+        Assert.Equal(4.82, result, precision: 2);
+    }
+
+    [Fact]
+    public void Green_every_foot_has_data()
+    {
+        // Verify we have data for every foot 1-90
+        for (int feet = 1; feet <= 90; feet++)
+        {
+            var result = StrokesGainedBaseline.GetExpectedStrokes(feet, DistanceUnit.Feet, LieType.Green);
+            Assert.True(result >= 1.0 && result <= 2.5, $"Green at {feet}ft should be between 1.0 and 2.5, got {result}");
+        }
+    }
+
+    [Fact]
+    public void Recovery_falls_back_to_rough()
+    {
+        var recovery = StrokesGainedBaseline.GetExpectedStrokes(150, DistanceUnit.Yards, LieType.Recovery);
+        var rough = StrokesGainedBaseline.GetExpectedStrokes(150, DistanceUnit.Yards, LieType.Rough);
+
+        Assert.Equal(rough, recovery);
     }
 }

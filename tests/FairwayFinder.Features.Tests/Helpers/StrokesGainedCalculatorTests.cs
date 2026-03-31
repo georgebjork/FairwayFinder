@@ -12,15 +12,15 @@ public class StrokesGainedCalculatorTests
     public void Shot_sg_approach_to_green_positive_when_good()
     {
         // 150yd fairway -> 10ft green
-        // Expected(150yd fairway) = 2.99, Expected(10ft green) = 1.61
-        // SG = 2.99 - 1.61 - 1 = +0.38
+        // Expected(150yd fairway) = 2.94, Expected(10ft green) = 1.61
+        // SG = 2.94 - 1.61 - 1 = +0.33
         var sg = StrokesGainedCalculator.CalculateShotSg(
             startDistance: 150, startUnit: DistanceUnit.Yards, startLie: LieType.Fairway,
             endDistance: 10, endUnit: DistanceUnit.Feet, endLie: LieType.Green,
             penaltyStrokes: 0);
 
         Assert.True(sg > 0, "A good approach to 10ft should have positive SG");
-        Assert.Equal(0.38, sg, precision: 2);
+        Assert.Equal(0.33, sg, precision: 2);
     }
 
     [Fact]
@@ -40,30 +40,30 @@ public class StrokesGainedCalculatorTests
     [Fact]
     public void Shot_sg_holed_shot_uses_zero_expected()
     {
-        // Putt from 4ft holed: Expected(4ft green) = 1.08, End = holed = 0.0
-        // SG = 1.08 - 0 - 1 = +0.08
+        // Putt from 4ft holed: Expected(4ft green) = 1.13, End = holed = 0.0
+        // SG = 1.13 - 0 - 1 = +0.13
         var sg = StrokesGainedCalculator.CalculateShotSg(
             startDistance: 4, startUnit: DistanceUnit.Feet, startLie: LieType.Green,
             endDistance: null, endUnit: null, endLie: null,
             penaltyStrokes: 0);
 
-        Assert.Equal(0.08, sg, precision: 2);
+        Assert.Equal(0.13, sg, precision: 2);
     }
 
     [Fact]
     public void Shot_sg_three_putt_returns_negative()
     {
         // Putt 1: 20ft -> 5ft (miss)
-        // Expected(20ft) = 1.87, Expected(5ft) = 1.15
-        // SG1 = 1.87 - 1.15 - 1 = -0.28
+        // Expected(20ft) = 1.87, Expected(5ft) = 1.23
+        // SG1 = 1.87 - 1.23 - 1 = -0.36
         var sg1 = StrokesGainedCalculator.CalculateShotSg(
             startDistance: 20, startUnit: DistanceUnit.Feet, startLie: LieType.Green,
             endDistance: 5, endUnit: DistanceUnit.Feet, endLie: LieType.Green,
             penaltyStrokes: 0);
 
         // Putt 2: 5ft -> holed
-        // Expected(5ft) = 1.15, End = 0.0
-        // SG2 = 1.15 - 0 - 1 = +0.15
+        // Expected(5ft) = 1.23, End = 0.0
+        // SG2 = 1.23 - 0 - 1 = +0.23
         var sg2 = StrokesGainedCalculator.CalculateShotSg(
             startDistance: 5, startUnit: DistanceUnit.Feet, startLie: LieType.Green,
             endDistance: null, endUnit: null, endLie: null,
