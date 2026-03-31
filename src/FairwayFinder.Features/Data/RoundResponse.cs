@@ -78,7 +78,20 @@ public class RoundResponse
             Teebox = RoundTeebox.From(teebox),
             Stats = roundStat != null ? RoundStats.From(roundStat) : null,
             Holes = holes ?? new(),
-            FullRound = round.FullRound
+            FullRound = round.FullRound,
+            StrokesGained = roundStat?.SgTotal.HasValue == true
+                ? new StrokesGainedSummary
+                {
+                    SgTotal = roundStat.SgTotal.Value,
+                    SgPutting = roundStat.SgPutting ?? 0,
+                    SgTeeToGreen = roundStat.SgTeeToGreen ?? 0,
+                    SgOffTheTee = roundStat.SgOffTheTee ?? 0,
+                    SgApproach = roundStat.SgApproach ?? 0,
+                    SgAroundTheGreen = roundStat.SgAroundTheGreen ?? 0,
+                    RoundsIncluded = 1,
+                    HolesWithShots = holes?.Count(h => h.Shots is { Count: > 0 }) ?? 0
+                }
+                : null
         };
     }
 }

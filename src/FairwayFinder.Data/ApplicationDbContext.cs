@@ -169,6 +169,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.Pars).HasColumnName("pars");
             entity.Property(e => e.RoundId).HasColumnName("round_id");
             entity.Property(e => e.TripleOrWorse).HasColumnName("triple_or_worse");
+            entity.Property(e => e.SgTotal).HasColumnName("sg_total");
+            entity.Property(e => e.SgPutting).HasColumnName("sg_putting");
+            entity.Property(e => e.SgTeeToGreen).HasColumnName("sg_tee_to_green");
+            entity.Property(e => e.SgOffTheTee).HasColumnName("sg_off_the_tee");
+            entity.Property(e => e.SgApproach).HasColumnName("sg_approach");
+            entity.Property(e => e.SgAroundTheGreen).HasColumnName("sg_around_the_green");
             entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
             entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
 
