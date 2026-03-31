@@ -5,6 +5,8 @@
 @inject IStatsService StatsService
 @inject NavigationManager NavigationManager
 @inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject IJSRuntime JSRuntime
 
 <RadzenStack Gap="1.5rem">
     <!-- Optional Header -->
@@ -69,6 +71,15 @@
                               ButtonStyle="ButtonStyle.Primary"
                               Size="ButtonSize.Medium"
                               Click="@ClearFilters" />
+            }
+
+            @if (!string.IsNullOrEmpty(ShareUrl))
+            {
+                <RadzenButton Text="Share" Icon="share"
+                              ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                              Size="ButtonSize.Medium"
+                              Click="CopyShareLink"
+                              Style="margin-left: auto;" />
             }
         </RadzenStack>
     </RadzenCard>
@@ -411,6 +422,12 @@
     [Parameter]
     public string? HeaderText { get; set; }
 
+    /// <summary>
+    /// Optional shareable URL. When set, a Share button appears in the filter bar.
+    /// </summary>
+    [Parameter]
+    public string? ShareUrl { get; set; }
+
     private UserStatsResponse? _stats;
     private bool _loading = true;
 
@@ -619,6 +636,31 @@
                 CloseDialogOnOverlayClick = true,
                 CloseDialogOnEsc = true
             });
+    }
+
+    private async Task CopyShareLink()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", ShareUrl);
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Copied!",
+                Detail = "Link copied to clipboard.",
+                Duration = 2000
+            });
+        }
+        catch
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Copy Failed",
+                Detail = "Please copy the link manually.",
+                Duration = 3000
+            });
+        }
     }
 
     private async Task ShowGirTrendDialog()

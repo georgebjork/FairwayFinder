@@ -13,16 +13,22 @@ else
             <thead>
                 <tr>
                     <th colspan="2">Hole</th>
-                    @foreach (var hole in FrontNine)
+                    @if (HasFrontNine)
                     {
-                        <th class="hole-cell">@hole.HoleNumber</th>
+                        @foreach (var hole in FrontNine)
+                        {
+                            <th class="hole-cell">@hole.HoleNumber</th>
+                        }
+                        <th class="total-cell" colspan="2">Out</th>
                     }
-                    <th class="total-cell" colspan="2">Out</th>
-                    @foreach (var hole in BackNine)
+                    @if (HasBackNine)
                     {
-                        <th class="hole-cell">@hole.HoleNumber</th>
+                        @foreach (var hole in BackNine)
+                        {
+                            <th class="hole-cell">@hole.HoleNumber</th>
+                        }
+                        <th class="total-cell" colspan="2">In</th>
                     }
-                    <th class="total-cell" colspan="2">In</th>
                     <th class="total-cell" colspan="2">Total</th>
                 </tr>
             </thead>
@@ -30,84 +36,108 @@ else
                 <!-- Yardage Row -->
                 <tr>
                     <th colspan="2">@Round.Teebox.TeeboxName</th>
-                    @foreach (var hole in FrontNine)
+                    @if (HasFrontNine)
                     {
-                        <td class="hole-cell">@hole.Yardage</td>
+                        @foreach (var hole in FrontNine)
+                        {
+                            <td class="hole-cell">@hole.Yardage</td>
+                        }
+                        <td class="total-cell" colspan="2">@Round.Teebox.YardageOut</td>
                     }
-                    <td class="total-cell" colspan="2">@Round.Teebox.YardageOut</td>
-                    @foreach (var hole in BackNine)
+                    @if (HasBackNine)
                     {
-                        <td class="hole-cell">@hole.Yardage</td>
+                        @foreach (var hole in BackNine)
+                        {
+                            <td class="hole-cell">@hole.Yardage</td>
+                        }
+                        <td class="total-cell" colspan="2">@Round.Teebox.YardageIn</td>
                     }
-                    <td class="total-cell" colspan="2">@Round.Teebox.YardageIn</td>
                     <td class="total-cell" colspan="2">@Round.Teebox.YardageTotal</td>
                 </tr>
 
                 <!-- Handicap Row -->
                 <tr>
                     <th colspan="2">Handicap</th>
-                    @foreach (var hole in FrontNine)
+                    @if (HasFrontNine)
                     {
-                        <td class="hole-cell">@hole.Handicap</td>
+                        @foreach (var hole in FrontNine)
+                        {
+                            <td class="hole-cell">@hole.Handicap</td>
+                        }
+                        <td class="total-cell" colspan="2">&nbsp;</td>
                     }
-                    <td class="total-cell" colspan="2">&nbsp;</td>
-                    @foreach (var hole in BackNine)
+                    @if (HasBackNine)
                     {
-                        <td class="hole-cell">@hole.Handicap</td>
+                        @foreach (var hole in BackNine)
+                        {
+                            <td class="hole-cell">@hole.Handicap</td>
+                        }
+                        <td class="total-cell" colspan="2">&nbsp;</td>
                     }
-                    <td class="total-cell" colspan="2">&nbsp;</td>
                     <td class="total-cell" colspan="2">@Round.Teebox.Slope / @Round.Teebox.Rating</td>
                 </tr>
 
                 <!-- Par Row -->
                 <tr>
                     <th colspan="2">Par</th>
-                    @foreach (var hole in FrontNine)
+                    @if (HasFrontNine)
                     {
-                        <td class="hole-cell">@hole.Par</td>
+                        @foreach (var hole in FrontNine)
+                        {
+                            <td class="hole-cell">@hole.Par</td>
+                        }
+                        <td class="total-cell" colspan="2">@Round.ParOut</td>
                     }
-                    <td class="total-cell" colspan="2">@Round.ParOut</td>
-                    @foreach (var hole in BackNine)
+                    @if (HasBackNine)
                     {
-                        <td class="hole-cell">@hole.Par</td>
+                        @foreach (var hole in BackNine)
+                        {
+                            <td class="hole-cell">@hole.Par</td>
+                        }
+                        <td class="total-cell" colspan="2">@Round.ParIn</td>
                     }
-                    <td class="total-cell" colspan="2">@Round.ParIn</td>
                     <td class="total-cell" colspan="2">@Round.Teebox.Par</td>
                 </tr>
 
                 <!-- Score Row -->
                 <tr class="score-row">
                     <th colspan="2">Score</th>
-                    @foreach (var hole in FrontNine)
+                    @if (HasFrontNine)
                     {
-                        <td class="hole-cell score-cell">
-                            @if (hole.Score.HasValue)
-                            {
-                                <span class="score-value">@hole.Score</span>
-                                @GetScoreIndicatorSvg(hole.ScoreToPar)
-                            }
-                            else
-                            {
-                                <span>-</span>
-                            }
-                        </td>
+                        @foreach (var hole in FrontNine)
+                        {
+                            <td class="hole-cell score-cell">
+                                @if (hole.Score.HasValue)
+                                {
+                                    <span class="score-value">@hole.Score</span>
+                                    @GetScoreIndicatorSvg(hole.ScoreToPar)
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </td>
+                        }
+                        <td class="total-cell" colspan="2">@(Round.ScoreOut > 0 ? Round.ScoreOut : "-")</td>
                     }
-                    <td class="total-cell" colspan="2">@(Round.ScoreOut > 0 ? Round.ScoreOut : "-")</td>
-                    @foreach (var hole in BackNine)
+                    @if (HasBackNine)
                     {
-                        <td class="hole-cell score-cell">
-                            @if (hole.Score.HasValue)
-                            {
-                                <span class="score-value">@hole.Score</span>
-                                @GetScoreIndicatorSvg(hole.ScoreToPar)
-                            }
-                            else
-                            {
-                                <span>-</span>
-                            }
-                        </td>
+                        @foreach (var hole in BackNine)
+                        {
+                            <td class="hole-cell score-cell">
+                                @if (hole.Score.HasValue)
+                                {
+                                    <span class="score-value">@hole.Score</span>
+                                    @GetScoreIndicatorSvg(hole.ScoreToPar)
+                                }
+                                else
+                                {
+                                    <span>-</span>
+                                }
+                            </td>
+                        }
+                        <td class="total-cell" colspan="2">@(Round.ScoreIn > 0 ? Round.ScoreIn : "-")</td>
                     }
-                    <td class="total-cell" colspan="2">@(Round.ScoreIn > 0 ? Round.ScoreIn : "-")</td>
                     <td class="total-cell" colspan="2">@Round.Score</td>
                 </tr>
 
@@ -119,42 +149,48 @@ else
                     {
                         <tr>
                             <th colspan="2">Fairways</th>
-                            @foreach (var hole in FrontNine)
+                            @if (HasFrontNine)
                             {
-                                <td class="hole-cell">
-                                    @if (hole.Par <= 3)
-                                    {
-                                        <!-- Par 3 or less - no fairway -->
-                                    }
-                                    else if (hole.Stats?.HitFairway == true)
-                                    {
-                                        <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
-                                    }
-                                    else if (hole.Stats?.HitFairway == false)
-                                    {
-                                        @GetMissIcon(hole.Stats?.MissFairwayType)
-                                    }
-                                </td>
+                                @foreach (var hole in FrontNine)
+                                {
+                                    <td class="hole-cell">
+                                        @if (hole.Par <= 3)
+                                        {
+                                            <!-- Par 3 or less - no fairway -->
+                                        }
+                                        else if (hole.Stats?.HitFairway == true)
+                                        {
+                                            <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
+                                        }
+                                        else if (hole.Stats?.HitFairway == false)
+                                        {
+                                            @GetMissIcon(hole.Stats?.MissFairwayType)
+                                        }
+                                    </td>
+                                }
+                                <td class="total-cell" colspan="2">@Round.FairwaysHitOut</td>
                             }
-                            <td class="total-cell" colspan="2">@Round.FairwaysHitOut</td>
-                            @foreach (var hole in BackNine)
+                            @if (HasBackNine)
                             {
-                                <td class="hole-cell">
-                                    @if (hole.Par <= 3)
-                                    {
-                                        <!-- Par 3 or less - no fairway -->
-                                    }
-                                    else if (hole.Stats?.HitFairway == true)
-                                    {
-                                        <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
-                                    }
-                                    else if (hole.Stats?.HitFairway == false)
-                                    {
-                                        @GetMissIcon(hole.Stats?.MissFairwayType)
-                                    }
-                                </td>
+                                @foreach (var hole in BackNine)
+                                {
+                                    <td class="hole-cell">
+                                        @if (hole.Par <= 3)
+                                        {
+                                            <!-- Par 3 or less - no fairway -->
+                                        }
+                                        else if (hole.Stats?.HitFairway == true)
+                                        {
+                                            <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
+                                        }
+                                        else if (hole.Stats?.HitFairway == false)
+                                        {
+                                            @GetMissIcon(hole.Stats?.MissFairwayType)
+                                        }
+                                    </td>
+                                }
+                                <td class="total-cell" colspan="2">@Round.FairwaysHitIn</td>
                             }
-                            <td class="total-cell" colspan="2">@Round.FairwaysHitIn</td>
                             <td class="total-cell" colspan="2">@Round.FairwaysHit / @Round.FairwaysTotal</td>
                         </tr>
                     }
@@ -163,34 +199,40 @@ else
                     {
                     <tr>
                         <th colspan="2">GIR</th>
-                        @foreach (var hole in FrontNine)
+                        @if (HasFrontNine)
                         {
-                            <td class="hole-cell">
-                                @if (hole.Stats?.HitGreen == true)
-                                {
-                                    <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
-                                }
-                                else if (hole.Stats?.HitGreen == false)
-                                {
-                                    @GetMissIcon(hole.Stats?.MissGreenType)
-                                }
-                            </td>
+                            @foreach (var hole in FrontNine)
+                            {
+                                <td class="hole-cell">
+                                    @if (hole.Stats?.HitGreen == true)
+                                    {
+                                        <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
+                                    }
+                                    else if (hole.Stats?.HitGreen == false)
+                                    {
+                                        @GetMissIcon(hole.Stats?.MissGreenType)
+                                    }
+                                </td>
+                            }
+                            <td class="total-cell" colspan="2">@Round.GreensHitOut</td>
                         }
-                        <td class="total-cell" colspan="2">@Round.GreensHitOut</td>
-                        @foreach (var hole in BackNine)
+                        @if (HasBackNine)
                         {
-                            <td class="hole-cell">
-                                @if (hole.Stats?.HitGreen == true)
-                                {
-                                    <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
-                                }
-                                else if (hole.Stats?.HitGreen == false)
-                                {
-                                    @GetMissIcon(hole.Stats?.MissGreenType)
-                                }
-                            </td>
+                            @foreach (var hole in BackNine)
+                            {
+                                <td class="hole-cell">
+                                    @if (hole.Stats?.HitGreen == true)
+                                    {
+                                        <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
+                                    }
+                                    else if (hole.Stats?.HitGreen == false)
+                                    {
+                                        @GetMissIcon(hole.Stats?.MissGreenType)
+                                    }
+                                </td>
+                            }
+                            <td class="total-cell" colspan="2">@Round.GreensHitIn</td>
                         }
-                        <td class="total-cell" colspan="2">@Round.GreensHitIn</td>
                         <td class="total-cell" colspan="2">@Round.GreensHit / @Round.GreensTotal</td>
                     </tr>
                     }
@@ -200,16 +242,22 @@ else
                     {
                     <tr>
                         <th colspan="2">Putts</th>
-                        @foreach (var hole in FrontNine)
+                        @if (HasFrontNine)
                         {
-                            <td class="hole-cell">@(hole.Stats?.NumberOfPutts?.ToString() ?? "")</td>
+                            @foreach (var hole in FrontNine)
+                            {
+                                <td class="hole-cell">@(hole.Stats?.NumberOfPutts?.ToString() ?? "")</td>
+                            }
+                            <td class="total-cell" colspan="2">@Round.PuttsOut</td>
                         }
-                        <td class="total-cell" colspan="2">@Round.PuttsOut</td>
-                        @foreach (var hole in BackNine)
+                        @if (HasBackNine)
                         {
-                            <td class="hole-cell">@(hole.Stats?.NumberOfPutts?.ToString() ?? "")</td>
+                            @foreach (var hole in BackNine)
+                            {
+                                <td class="hole-cell">@(hole.Stats?.NumberOfPutts?.ToString() ?? "")</td>
+                            }
+                            <td class="total-cell" colspan="2">@Round.PuttsIn</td>
                         }
-                        <td class="total-cell" colspan="2">@Round.PuttsIn</td>
                         <td class="total-cell" colspan="2">@Round.TotalPutts</td>
                     </tr>
                     }
@@ -219,16 +267,22 @@ else
                         <!-- Approach Yardage Row -->
                         <tr>
                             <th colspan="2">Approach</th>
-                            @foreach (var hole in FrontNine)
+                            @if (HasFrontNine)
                             {
-                                <td class="hole-cell">@(hole.Stats?.ApproachYardage?.ToString() ?? "")</td>
+                                @foreach (var hole in FrontNine)
+                                {
+                                    <td class="hole-cell">@(hole.Stats?.ApproachYardage?.ToString() ?? "")</td>
+                                }
+                                <td class="total-cell" colspan="2">&nbsp;</td>
                             }
-                            <td class="total-cell" colspan="2">&nbsp;</td>
-                            @foreach (var hole in BackNine)
+                            @if (HasBackNine)
                             {
-                                <td class="hole-cell">@(hole.Stats?.ApproachYardage?.ToString() ?? "")</td>
+                                @foreach (var hole in BackNine)
+                                {
+                                    <td class="hole-cell">@(hole.Stats?.ApproachYardage?.ToString() ?? "")</td>
+                                }
+                                <td class="total-cell" colspan="2">&nbsp;</td>
                             }
-                            <td class="total-cell" colspan="2">&nbsp;</td>
                             <td class="total-cell" colspan="2">&nbsp;</td>
                         </tr>
                     }
@@ -355,6 +409,8 @@ else
 
     private IEnumerable<RoundHole> FrontNine => Round?.Holes.Where(h => h.HoleNumber <= 9) ?? Enumerable.Empty<RoundHole>();
     private IEnumerable<RoundHole> BackNine => Round?.Holes.Where(h => h.HoleNumber > 9) ?? Enumerable.Empty<RoundHole>();
+    private bool HasFrontNine => FrontNine.Any();
+    private bool HasBackNine => BackNine.Any();
 
     private MarkupString GetScoreIndicatorSvg(int? scoreToPar)
     {

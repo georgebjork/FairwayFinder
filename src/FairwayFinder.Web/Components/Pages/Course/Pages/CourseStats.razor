@@ -11,6 +11,9 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @inject BreadcrumbState BreadcrumbState
+@inject IProfileService ProfileService
+@inject NotificationService NotificationService
+@inject IJSRuntime JSRuntime
 
 <PageTitle>@(_courseName ?? "Course Stats")</PageTitle>
 
@@ -36,13 +39,21 @@ else if (_noData)
 else
 {
     <RadzenStack Gap="1.5rem">
-        <RadzenStack Gap="0.25rem">
-            <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">@_courseName</RadzenText>
-            @if (_stats is not null)
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Start">
+            <RadzenStack Gap="0.25rem">
+                <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">@_courseName</RadzenText>
+                @if (_stats is not null)
+                {
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                        @_stats.TotalRounds round@(_stats.TotalRounds != 1 ? "s" : "") played
+                    </RadzenText>
+                }
+            </RadzenStack>
+            @if (_isPublic)
             {
-                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
-                    @_stats.TotalRounds round@(_stats.TotalRounds != 1 ? "s" : "") played
-                </RadzenText>
+                <RadzenButton Text="Share" Icon="share"
+                              ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                              Click="CopyShareLink" />
             }
         </RadzenStack>
 
@@ -275,6 +286,8 @@ else
     private CourseStatsResponse? _stats;
     private List<HoleAggregateStats> _hardestHoles = new();
     private string? _userId;
+    private bool _isPublic;
+    private string _shareableUrl = string.Empty;
 
     // Stable state — survives filter reloads so the header/filter don't flicker
     private string? _courseName;
@@ -312,6 +325,14 @@ else
         {
             NavigationManager.NavigateTo("/");
             return;
+        }
+
+        var profile = await ProfileService.GetOrCreateProfileAsync(_userId);
+        _isPublic = profile.IsPublic;
+        if (_isPublic)
+        {
+            var baseUri = NavigationManager.BaseUri.TrimEnd('/');
+            _shareableUrl = $"{baseUri}/profile/{profile.PublicIdentifier}/course/{CourseId}";
         }
 
         await LoadStats();
@@ -364,6 +385,31 @@ else
         _startDate = null;
         _endDate = null;
         await OnFilterChanged();
+    }
+
+    private async Task CopyShareLink()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", _shareableUrl);
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Copied!",
+                Detail = "Link copied to clipboard.",
+                Duration = 2000
+            });
+        }
+        catch
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Copy Failed",
+                Detail = "Please copy the link manually.",
+                Duration = 3000
+            });
+        }
     }
 
     private void NavigateToRound(long roundId)
