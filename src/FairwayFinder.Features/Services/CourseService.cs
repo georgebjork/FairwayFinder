@@ -170,6 +170,7 @@ public class CourseService : ICourseService
 
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
+
         var course = await dbContext.Courses
             .Where(c => c.CourseId == request.CourseId && !c.IsDeleted)
             .FirstOrDefaultAsync();
@@ -189,6 +190,7 @@ public class CourseService : ICourseService
     public async Task<bool> DeleteCourseAsync(long courseId, string userId)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
 
         var now = DateOnly.FromDateTime(DateTime.UtcNow);
 
@@ -331,6 +333,7 @@ public class CourseService : ICourseService
 
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
+
         var now = DateOnly.FromDateTime(DateTime.UtcNow);
 
         var teebox = await dbContext.Teeboxes
@@ -409,6 +412,7 @@ public class CourseService : ICourseService
     public async Task<bool> DeleteTeeboxAsync(long teeboxId, string userId)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
 
         var now = DateOnly.FromDateTime(DateTime.UtcNow);
 

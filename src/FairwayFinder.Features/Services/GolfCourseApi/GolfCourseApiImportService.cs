@@ -15,6 +15,7 @@ public class GolfCourseApiImportService
 
     private const int PageSize = 100;
     private const int RateLimitDelayMs = 200;
+    private const int MaxErrors = 200;
     private const string SystemUser = "system";
 
     public GolfCourseApiImportService(
@@ -76,7 +77,7 @@ public class GolfCourseApiImportService
         if (firstPage is null)
         {
             _logger.LogError("Failed to fetch first page from GolfCourseAPI");
-            result.Errors.Add(new GolfCourseApiImportError
+            AddError(result, new GolfCourseApiImportError
             {
                 Reason = "Failed to fetch first page from the API."
             });
@@ -127,7 +128,7 @@ public class GolfCourseApiImportService
             catch (HttpRequestException ex)
             {
                 _logger.LogError(ex, "Failed to fetch page {Page}, skipping", page);
-                result.Errors.Add(new GolfCourseApiImportError
+                AddError(result, new GolfCourseApiImportError
                 {
                     Reason = $"Failed to fetch page {page}: {ex.Message}"
                 });
@@ -194,7 +195,7 @@ public class GolfCourseApiImportService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to import/update course {ApiCourseId} ({CourseName})", apiCourse.Id, apiCourse.CourseName);
-                result.Errors.Add(new GolfCourseApiImportError
+                AddError(result, new GolfCourseApiImportError
                 {
                     ApiCourseId = apiCourse.Id,
                     CourseName = apiCourse.CourseName,
@@ -514,6 +515,14 @@ public class GolfCourseApiImportService
     }
 
     // ── Helpers ──
+
+    private static void AddError(GolfCourseApiImportResult result, GolfCourseApiImportError error)
+    {
+        if (result.Errors.Count < MaxErrors)
+        {
+            result.Errors.Add(error);
+        }
+    }
 
     private static GolfCourseApiImportResult CloneResult(GolfCourseApiImportResult source)
     {

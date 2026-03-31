@@ -52,4 +52,19 @@ public class GolfCourseApiImportState
             WasCancelled = false;
         }
     }
+
+    /// <summary>
+    /// Clears the last result to free memory after it has been displayed.
+    /// </summary>
+    public void ClearLastResult()
+    {
+        lock (_lock)
+        {
+            if (!IsRunning)
+            {
+                LastResult = null;
+                CurrentProgress = null;
+            }
+        }
+    }
 }

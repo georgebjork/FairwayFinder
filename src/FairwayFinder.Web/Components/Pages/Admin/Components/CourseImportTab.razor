@@ -345,5 +345,6 @@
     public void Dispose()
     {
         StopPolling();
+        ImportState.ClearLastResult();
     }
 }

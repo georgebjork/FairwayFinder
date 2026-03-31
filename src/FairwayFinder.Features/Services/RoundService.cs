@@ -367,10 +367,10 @@ public class RoundService : IRoundService
     public async Task<bool> UpdateRoundAsync(UpdateRoundRequest request)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        
+
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var userId = request.UserId;
-        
+
         var round = await dbContext.Rounds
             .FirstOrDefaultAsync(r => r.RoundId == request.RoundId && !r.IsDeleted);
         
