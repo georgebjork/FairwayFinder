@@ -58,8 +58,12 @@ else
         </RadzenStack>
 
         <!-- Filters — always rendered -->
-        <RadzenCard class="rz-p-3">
-            <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End" Wrap="FlexWrap.Wrap">
+        <StatsFilterBar @bind-StartDate="_startDate"
+                        @bind-EndDate="_endDate"
+                        HasActiveFilters="_hasActiveFilters"
+                        OnClearFilters="ClearFilters"
+                        OnFilterChanged="OnFilterChanged">
+            <AdditionalFilters>
                 @if (_teeboxOptions.Count > 1)
                 {
                     <RadzenStack Gap="0.25rem">
@@ -75,37 +79,8 @@ else
                                         Change="@OnFilterChanged" />
                     </RadzenStack>
                 }
-                <RadzenStack Gap="0.25rem">
-                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">From</RadzenText>
-                    <RadzenDatePicker TValue="DateOnly?"
-                                      @bind-Value="_startDate"
-                                      DateFormat="MM/dd/yyyy"
-                                      AllowClear="true"
-                                      Placeholder="Start date"
-                                      Style="width: 160px;"
-                                      Change="@OnFilterChanged" />
-                </RadzenStack>
-                <RadzenStack Gap="0.25rem">
-                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">To</RadzenText>
-                    <RadzenDatePicker TValue="DateOnly?"
-                                      @bind-Value="_endDate"
-                                      DateFormat="MM/dd/yyyy"
-                                      AllowClear="true"
-                                      Placeholder="End date"
-                                      Style="width: 160px;"
-                                      Change="@OnFilterChanged" />
-                </RadzenStack>
-                @if (_hasActiveFilters)
-                {
-                    <RadzenButton Text="Clear Filters"
-                                  ButtonStyle="ButtonStyle.Light"
-                                  Variant="Variant.Text"
-                                  Size="ButtonSize.Small"
-                                  Icon="clear"
-                                  Click="@ClearFilters" />
-                }
-            </RadzenStack>
-        </RadzenCard>
+            </AdditionalFilters>
+        </StatsFilterBar>
 
         @if (_loading)
         {
