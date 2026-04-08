@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Include="..\..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\FairwayFinder.Data\FairwayFinder.Data.csproj" />
+      <ProjectReference Include="..\FairwayFinder.Features\FairwayFinder.Features.csproj" />
+      <ProjectReference Include="..\FairwayFinder.Identity\FairwayFinder.Identity.csproj" />
+      <ProjectReference Include="..\FairwayFinder.Shared\FairwayFinder.Shared.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -14,4 +14,9 @@ builder.AddProject<Projects.FairwayFinder_Web>("fairwayfinder-web")
     .WithReference(dbFairwayfinder)
     .WaitFor(dbFairwayfinder);
 
+builder.AddProject<Projects.FairwayFinder_Api>("fairwayfinder-api")
+    .WithReference(dbFairwayfinder)
+    .WaitFor(dbFairwayfinder);
+
+
 builder.Build().Run();
