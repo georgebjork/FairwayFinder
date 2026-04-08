@@ -46,12 +46,6 @@ else
                     <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
                         Date: @_round.DatePlayed.ToString("M/d/yy")
                     </RadzenText>
-                    @if (_profile is not null)
-                    {
-                        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
-                            Player: @_profile.DisplayName
-                        </RadzenText>
-                    }
                 </RadzenStack>
             </RadzenStack>
 
