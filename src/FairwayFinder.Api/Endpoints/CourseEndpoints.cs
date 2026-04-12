@@ -1,5 +1,7 @@
 using FairwayFinder.Api.Extensions;
 using FairwayFinder.Features.Services.Interfaces;
+using FairwayFinder.Identity;
+using Microsoft.AspNetCore.Identity;
 
 namespace FairwayFinder.Api.Endpoints;
 
@@ -17,9 +19,21 @@ public static class CourseEndpoints
             return Results.Ok(results);
         });
 
-        group.MapGet("/{courseId:long}/teeboxes", async (long courseId, ICourseService courseService) =>
+        group.MapGet("/{courseId:long}/teeboxes", async (
+            long courseId,
+            bool? usePreferredTees,
+            HttpContext ctx,
+            ICourseService courseService,
+            UserManager<ApplicationUser> userManager) =>
         {
-            var teeboxes = await courseService.GetTeeboxesAsync(courseId);
+            PreferredTees? filter = null;
+            if (usePreferredTees == true)
+            {
+                var user = await userManager.FindByIdAsync(ctx.User.GetUserId());
+                filter = user!.PreferredTees;
+            }
+
+            var teeboxes = await courseService.GetTeeboxesAsync(courseId, filter);
             return Results.Ok(teeboxes);
         });
 

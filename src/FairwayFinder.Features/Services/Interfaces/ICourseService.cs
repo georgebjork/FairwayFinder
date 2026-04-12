@@ -1,4 +1,5 @@
 using FairwayFinder.Features.Data;
+using FairwayFinder.Identity;
 
 namespace FairwayFinder.Features.Services.Interfaces;
 
@@ -12,9 +13,10 @@ public interface ICourseService
     Task<List<CourseSearchResult>> SearchCoursesAsync(string query);
     
     /// <summary>
-    /// Gets all teeboxes for a course.
+    /// Gets teeboxes for a course. When <paramref name="filterByPreferredTees"/> is supplied,
+    /// only teeboxes matching that preference are returned; otherwise all teeboxes are returned.
     /// </summary>
-    Task<List<TeeboxOption>> GetTeeboxesAsync(long courseId);
+    Task<List<TeeboxOption>> GetTeeboxesAsync(long courseId, PreferredTees? filterByPreferredTees = null);
     
     /// <summary>
     /// Gets all holes for a teebox, ordered by hole number.

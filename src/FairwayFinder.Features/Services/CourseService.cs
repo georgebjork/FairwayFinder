@@ -2,6 +2,7 @@ using FairwayFinder.Data;
 using FairwayFinder.Data.Entities;
 using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Services.Interfaces;
+using FairwayFinder.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace FairwayFinder.Features.Services;
@@ -41,12 +42,20 @@ public class CourseService : ICourseService
             .ToListAsync();
     }
 
-    public async Task<List<TeeboxOption>> GetTeeboxesAsync(long courseId)
+    public async Task<List<TeeboxOption>> GetTeeboxesAsync(long courseId, PreferredTees? filterByPreferredTees = null)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
-        return await dbContext.Teeboxes
-            .Where(t => t.CourseId == courseId && !t.IsDeleted)
+        var query = dbContext.Teeboxes
+            .Where(t => t.CourseId == courseId && !t.IsDeleted);
+
+        if (filterByPreferredTees is not null)
+        {
+            var wantsWomens = filterByPreferredTees == PreferredTees.Womens;
+            query = query.Where(t => t.IsWomens == wantsWomens);
+        }
+
+        return await query
             .OrderBy(t => t.YardageTotal)
             .Select(t => new TeeboxOption
             {
