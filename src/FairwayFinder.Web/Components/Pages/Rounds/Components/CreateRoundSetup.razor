@@ -46,12 +46,12 @@
             </RadzenStack>
         }
 
-        @if (State.SelectedCourseId.HasValue && State.FilteredTeeboxes.Count > 0)
+        @if (State.SelectedCourseId.HasValue && State.TeeboxOptions.Count > 0)
         {
             <RadzenStack Gap="0.25rem">
                 <RadzenText TextStyle="TextStyle.Subtitle1">Teebox</RadzenText>
                 <RadzenDropDown TValue="long?"
-                                Data="@State.FilteredTeeboxes"
+                                Data="@State.TeeboxOptions"
                                 TextProperty="DisplayLabel"
                                 ValueProperty="TeeboxId"
                                 @bind-Value="State.SelectedTeeboxId"

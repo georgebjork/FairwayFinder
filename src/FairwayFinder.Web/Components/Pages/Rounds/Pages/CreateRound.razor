@@ -52,6 +52,7 @@
 
 @code {
     private string? _userId;
+    private PreferredTees _preferredTees;
     private int _currentStep;
     private bool _saving;
     private readonly CreateRoundState _state = new();
@@ -78,7 +79,7 @@
         }
 
         var appUser = await UserManager.FindByIdAsync(_userId);
-        _state.UserPreferredTees = appUser!.PreferredTees;
+        _preferredTees = appUser!.PreferredTees;
     }
 
     // ===== Step Navigation =====
@@ -130,7 +131,7 @@
         _state.LoadingTeeboxes = true;
         StateHasChanged();
 
-        _state.TeeboxOptions = await CourseService.GetTeeboxesAsync(_state.SelectedCourseId.Value);
+        _state.TeeboxOptions = await CourseService.GetTeeboxesAsync(_state.SelectedCourseId.Value, _preferredTees);
         _state.LoadingTeeboxes = false;
     }
 
