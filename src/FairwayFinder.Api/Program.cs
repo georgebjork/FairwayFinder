@@ -36,6 +36,11 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 
 // ── JWT Authentication ──────────────────────────────────────
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()!;
+
+if (string.IsNullOrWhiteSpace(jwtSettings.Secret) || jwtSettings.Secret.Length < 32)
+    throw new InvalidOperationException(
+        "Jwt:Secret is not configured. Set via user-secrets (dev) or environment variable Jwt__Secret (prod).");
+
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 builder.Services.AddSingleton<JwtTokenService>();
 

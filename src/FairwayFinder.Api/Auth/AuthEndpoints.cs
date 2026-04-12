@@ -22,7 +22,14 @@ public static class AuthEndpoints
             if (user is null)
                 return Results.Unauthorized();
 
-            var result = await signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: false);
+            var result = await signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: true);
+
+            if (result.IsLockedOut)
+                return Results.Problem(
+                    statusCode: StatusCodes.Status423Locked,
+                    title: "Account locked",
+                    detail: "This account has been locked due to too many failed attempts. Please try again later.");
+
             if (!result.Succeeded)
                 return Results.Unauthorized();
 
