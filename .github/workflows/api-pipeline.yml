@@ -1,4 +1,4 @@
-name: Deploy Images to GHCR
+name: Deploy Api Image to GHCR
 
 on:
   push:
