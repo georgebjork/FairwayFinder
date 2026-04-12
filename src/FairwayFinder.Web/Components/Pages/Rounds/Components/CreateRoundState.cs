@@ -1,4 +1,5 @@
 using FairwayFinder.Features.Data;
+using FairwayFinder.Identity;
 
 namespace FairwayFinder.Web.Components.Pages.Rounds.Components;
 
@@ -21,6 +22,7 @@ public class CreateRoundState
     public DateOnly DatePlayed { get; set; } = DateOnly.FromDateTime(DateTime.Today);
     public bool TrackAdvancedStats { get; set; }
     public bool TrackShotByShotStats { get; set; }
+    public PreferredTees UserPreferredTees { get; set; }
 
     /// <summary>
     /// Tracking mode: "scorecard", "advanced", or "shotbyshot"
@@ -48,6 +50,16 @@ public class CreateRoundState
     public RoundResponse? PreviewRound { get; set; }
 
     // Computed helpers
-    public List<TeeboxOption> FilteredTeeboxes => TeeboxOptions;
+    public List<TeeboxOption> FilteredTeeboxes
+    {
+        get
+        {
+            var teeboxPreference = UserPreferredTees == PreferredTees.Womens;
+            return TeeboxOptions
+                .Where(t => t.IsWomens == teeboxPreference || t.TeeboxId == SelectedTeeboxId)
+                .ToList();
+        }
+    }
+
     public bool IsSetupValid => SelectedCourseId.HasValue && SelectedTeeboxId.HasValue;
 }

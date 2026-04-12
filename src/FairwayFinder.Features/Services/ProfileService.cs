@@ -47,7 +47,7 @@ public class ProfileService : IProfileService
             await dbContext.SaveChangesAsync();
         }
 
-        var displayName = await GetDisplayNameAsync(userId);
+        var user = await _userManager.FindByIdAsync(userId);
 
         return new UserProfileResponse
         {
@@ -55,7 +55,8 @@ public class ProfileService : IProfileService
             UserId = profile.UserId,
             PublicIdentifier = profile.PublicIdentifier,
             IsPublic = profile.IsPublic,
-            DisplayName = displayName
+            DisplayName = BuildDisplayName(user),
+            PreferredTees = user?.PreferredTees ?? PreferredTees.Mens
         };
     }
 
@@ -71,7 +72,7 @@ public class ProfileService : IProfileService
             return null;
         }
 
-        var displayName = await GetDisplayNameAsync(profile.UserId);
+        var user = await _userManager.FindByIdAsync(profile.UserId);
 
         return new UserProfileResponse
         {
@@ -79,7 +80,8 @@ public class ProfileService : IProfileService
             UserId = profile.UserId,
             PublicIdentifier = profile.PublicIdentifier,
             IsPublic = profile.IsPublic,
-            DisplayName = displayName
+            DisplayName = BuildDisplayName(user),
+            PreferredTees = user?.PreferredTees ?? PreferredTees.Mens
         };
     }
 
@@ -102,6 +104,15 @@ public class ProfileService : IProfileService
         await dbContext.SaveChangesAsync();
     }
 
+    public async Task UpdatePreferredTeesAsync(string userId, PreferredTees preferredTees)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user is null) return;
+
+        user.PreferredTees = preferredTees;
+        await _userManager.UpdateAsync(user);
+    }
+
     public async Task<string?> GetUserIdByPublicIdAsync(Guid publicIdentifier)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
@@ -112,9 +123,8 @@ public class ProfileService : IProfileService
         return profile?.UserId;
     }
 
-    private async Task<string?> GetDisplayNameAsync(string userId)
+    private static string? BuildDisplayName(ApplicationUser? user)
     {
-        var user = await _userManager.FindByIdAsync(userId);
         if (user is null) return null;
 
         if (!string.IsNullOrWhiteSpace(user.FirstName) || !string.IsNullOrWhiteSpace(user.LastName))

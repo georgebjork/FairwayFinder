@@ -5,6 +5,7 @@
 @using System.Security.Claims
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Identity
 @using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
 @inject IProfileService ProfileService
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -23,6 +24,23 @@ else if (_profile is not null)
 {
     <RadzenStack Gap="1.5rem" Style="max-width: 600px;">
         <RadzenText TextStyle="TextStyle.H3">Settings</RadzenText>
+
+        <!-- Tee Preference -->
+        <RadzenCard class="rz-p-5">
+            <RadzenStack Gap="1rem">
+                <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Tee Preference</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                    Which tees do you typically play? We'll filter teebox options when you create a round.
+                </RadzenText>
+
+                <RadzenRadioButtonList @bind-Value="_preferredTees" TValue="PreferredTees" Orientation="Orientation.Horizontal" Change="OnPreferredTeesChanged">
+                    <Items>
+                        <RadzenRadioButtonListItem Text="Men's tees" Value="PreferredTees.Mens" />
+                        <RadzenRadioButtonListItem Text="Women's tees" Value="PreferredTees.Womens" />
+                    </Items>
+                </RadzenRadioButtonList>
+            </RadzenStack>
+        </RadzenCard>
 
         <!-- Profile Visibility -->
         <RadzenCard class="rz-p-5">
@@ -65,6 +83,7 @@ else if (_profile is not null)
     private UserProfileResponse? _profile;
     private bool _loading = true;
     private bool _isPublic;
+    private PreferredTees _preferredTees;
     private string _shareableUrl = string.Empty;
 
     protected override async Task OnInitializedAsync()
@@ -81,6 +100,7 @@ else if (_profile is not null)
         {
             _profile = await ProfileService.GetOrCreateProfileAsync(_userId);
             _isPublic = _profile.IsPublic;
+            _preferredTees = _profile.PreferredTees;
             BuildShareableUrl();
         }
 
@@ -107,6 +127,23 @@ else if (_profile is not null)
             Severity = value ? NotificationSeverity.Success : NotificationSeverity.Info,
             Summary = "Profile Updated",
             Detail = message,
+            Duration = 3000
+        });
+    }
+
+    private async Task OnPreferredTeesChanged(PreferredTees value)
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+
+        await ProfileService.UpdatePreferredTeesAsync(_userId, value);
+        _preferredTees = value;
+
+        var label = value == PreferredTees.Womens ? "Women's tees" : "Men's tees";
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = NotificationSeverity.Success,
+            Summary = "Tee Preference Updated",
+            Detail = $"Your default tees are now {label}.",
             Duration = 3000
         });
     }

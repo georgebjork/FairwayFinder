@@ -1,3 +1,5 @@
+using FairwayFinder.Identity;
+
 namespace FairwayFinder.Features.Data;
 
 public class UserProfileResponse
@@ -7,4 +9,5 @@ public class UserProfileResponse
     public Guid PublicIdentifier { get; set; }
     public bool IsPublic { get; set; }
     public string? DisplayName { get; set; }
+    public PreferredTees PreferredTees { get; set; }
 }

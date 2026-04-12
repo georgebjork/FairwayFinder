@@ -33,6 +33,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         modelBuilder.Entity<ApplicationUser>().Property(e => e.FirstName).HasMaxLength(250);
         modelBuilder.Entity<ApplicationUser>().Property(e => e.LastName).HasMaxLength(250);
         modelBuilder.Entity<ApplicationUser>()
+            .Property(e => e.PreferredTees)
+            .HasColumnName("preferred_tees")
+            .HasConversion<int>()
+            .HasDefaultValue(PreferredTees.Mens);
+        modelBuilder.Entity<ApplicationUser>()
             .Property(e => e.CreatedOn)
             .HasDefaultValueSql("NOW()");
         modelBuilder.Entity<ApplicationUser>()

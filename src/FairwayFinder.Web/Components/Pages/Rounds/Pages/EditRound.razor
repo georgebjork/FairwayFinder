@@ -5,10 +5,13 @@
 @using FairwayFinder.Agents.Agents
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Identity
 @using FairwayFinder.Web.Components.Pages.Rounds.Components
 @using FairwayFinder.Web.Components.Pages.Rounds.Dialogs
 @using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
+@using Microsoft.AspNetCore.Identity
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
 @inject ICourseService CourseService
 @inject IRoundService RoundService
 @inject NavigationManager NavigationManager
@@ -93,6 +96,9 @@ else
             NavigationManager.NavigateTo("/");
             return;
         }
+
+        var appUser = await UserManager.FindByIdAsync(_userId);
+        _state.UserPreferredTees = appUser!.PreferredTees;
 
         // Load the existing round
         var round = await RoundService.GetRoundByIdAsync(RoundId);

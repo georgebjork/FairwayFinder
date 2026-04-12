@@ -1,4 +1,5 @@
 using FairwayFinder.Features.Data;
+using FairwayFinder.Identity;
 
 namespace FairwayFinder.Features.Services.Interfaces;
 
@@ -20,6 +21,11 @@ public interface IProfileService
     /// Toggles the user's profile between public and private.
     /// </summary>
     Task UpdateProfileVisibilityAsync(string userId, bool isPublic);
+
+    /// <summary>
+    /// Updates the user's preferred tee type used to filter teebox dropdowns.
+    /// </summary>
+    Task UpdatePreferredTeesAsync(string userId, PreferredTees preferredTees);
 
     /// <summary>
     /// Resolves a public identifier to a user ID, but only if the profile is public.

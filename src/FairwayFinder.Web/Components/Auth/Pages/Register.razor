@@ -68,6 +68,19 @@
                         <ValidationMessage For="() => Input.Email" />
                     </RadzenFormField>
 
+                    <RadzenStack Gap="0.5rem">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-m-0">Which tees do you typically play?</RadzenText>
+                        <RadzenRadioButtonList @bind-Value="Input!.PreferredTees" TValue="PreferredTees" Orientation="Orientation.Horizontal">
+                            <Items>
+                                <RadzenRadioButtonListItem Text="Men's tees" Value="PreferredTees.Mens" />
+                                <RadzenRadioButtonListItem Text="Women's tees" Value="PreferredTees.Womens" />
+                            </Items>
+                        </RadzenRadioButtonList>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                            We'll filter teebox options to match. You can change this later in Settings.
+                        </RadzenText>
+                    </RadzenStack>
+
                     @* Honeypot: hidden from real users, bots will fill it. Must NOT use display:none/visibility:hidden as bots skip those. *@
                     <div style="position: absolute; left: -9999px; opacity: 0; height: 0; overflow: hidden;" aria-hidden="true">
                         <label for="website">Website</label>
@@ -146,6 +159,7 @@
         var user = CreateUser();
         user.FirstName = Input.FirstName;
         user.LastName = Input.LastName;
+        user.PreferredTees = Input.PreferredTees;
         
         await UserStore.SetUserNameAsync(user, Input!.Email, CancellationToken.None);
         var emailStore = GetEmailStore();
@@ -207,7 +221,10 @@
         [Required]
         [EmailAddress]
         public string Email { get; set; } = "";
-        
+
+        [Required]
+        public PreferredTees PreferredTees { get; set; } = PreferredTees.Mens;
+
         [Required]
         [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
         [DataType(DataType.Password)]
