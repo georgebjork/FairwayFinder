@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
@@ -37,6 +38,11 @@ public static class Extensions
 
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
+        // Bridge OpenTelemetry:Otlp appsettings → OTEL_EXPORTER_OTLP_* env vars for the OTel SDK.
+        // In dev Aspire injects these env vars directly (dashboard endpoint) and we don't override;
+        // in prod the appsettings values flow through when no env var is set.
+        BridgeOtlpConfigToEnvironment(builder.Configuration);
+
         builder.ConfigureOpenTelemetry();
         builder.AddDefaultHealthChecks();
         builder.Services.AddServiceDiscovery();
@@ -48,6 +54,20 @@ public static class Extensions
         });
 
         return builder;
+    }
+
+    private static void BridgeOtlpConfigToEnvironment(IConfiguration configuration)
+    {
+        SetEnvIfMissing("OTEL_EXPORTER_OTLP_ENDPOINT", configuration["OpenTelemetry:Otlp:Endpoint"]);
+        SetEnvIfMissing("OTEL_EXPORTER_OTLP_HEADERS",  configuration["OpenTelemetry:Otlp:Headers"]);
+        SetEnvIfMissing("OTEL_EXPORTER_OTLP_PROTOCOL", configuration["OpenTelemetry:Otlp:Protocol"]);
+    }
+
+    private static void SetEnvIfMissing(string name, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return;
+        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(name))) return;
+        Environment.SetEnvironmentVariable(name, value);
     }
 
     public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
@@ -106,8 +126,10 @@ public static class Extensions
 
     private static TBuilder AddOpenTelemetryExporters<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
-        var useOtlpExporter = !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
-        if (useOtlpExporter)
+        // Read the env var directly — BridgeOtlpConfigToEnvironment has already populated it from appsettings
+        // when no host-level env var was present. IConfiguration's env-var source snapshot is stale at this point.
+        var endpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
+        if (!string.IsNullOrWhiteSpace(endpoint))
         {
             builder.Services.AddOpenTelemetry().UseOtlpExporter();
         }
