@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using FairwayFinder.Agents.Diagnostics;
 using FairwayFinder.Agents.Factory.Interface;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
@@ -53,9 +55,11 @@ public abstract class BaseAgent<T>
         AgentSession? session = null,
         CancellationToken cancellationToken = default)
     {
-        var agent = GetAgent();
-        session ??= await agent.CreateSessionAsync(cancellationToken);
-        return await agent.RunAsync<T>(message, session, cancellationToken: cancellationToken);
+        return await RunWithTelemetryAsync(async agent =>
+        {
+            session ??= await agent.CreateSessionAsync(cancellationToken);
+            return await agent.RunAsync<T>(message, session, cancellationToken: cancellationToken);
+        });
     }
 
     /// <summary>
@@ -66,8 +70,40 @@ public abstract class BaseAgent<T>
         AgentSession? session = null,
         CancellationToken cancellationToken = default)
     {
-        var agent = GetAgent();
-        session ??= await agent.CreateSessionAsync(cancellationToken);
-        return await agent.RunAsync<T>(messages, session, cancellationToken: cancellationToken);
+        return await RunWithTelemetryAsync(async agent =>
+        {
+            session ??= await agent.CreateSessionAsync(cancellationToken);
+            return await agent.RunAsync<T>(messages, session, cancellationToken: cancellationToken);
+        });
+    }
+
+    private async Task<AgentResponse<T>> RunWithTelemetryAsync(Func<AIAgent, Task<AgentResponse<T>>> run)
+    {
+        using var activity = AgentDiagnostics.Activity.StartActivity(name: AgentDiagnostics.ActivityNames.AgentRun);
+        activity?.SetTag(AgentDiagnostics.ActivityTags.AgentIdentifier, AgentIdentifier);
+
+        var tags = new TagList { { AgentDiagnostics.Tags.Agent, AgentIdentifier } };
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            var agent = GetAgent();
+            var response = await run(agent);
+            AgentDiagnostics.AgentCalls.Add(1, tags);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            AgentDiagnostics.AgentCallErrors.Add(1, new TagList
+            {
+                { AgentDiagnostics.Tags.Agent, AgentIdentifier },
+                { AgentDiagnostics.Tags.Error, ex.GetType().Name }
+            });
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            throw;
+        }
+        finally
+        {
+            AgentDiagnostics.AgentCallDuration.Record(stopwatch.Elapsed.TotalMilliseconds, tags);
+        }
     }
 }

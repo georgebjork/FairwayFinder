@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using FairwayFinder.Data;
 using FairwayFinder.Data.Entities;
 using FairwayFinder.Features.Data.TGTR;
+using FairwayFinder.Features.Diagnostics;
 using FairwayFinder.Features.HttpClients;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -25,8 +27,15 @@ public class TgtrTransferService
 
     public async Task<TgtrTransferResult> TransferRoundsAsync(int tgtrPlayerId)
     {
+        using var activity = FairwayFinderDiagnostics.ImportsActivity.StartActivity(name: FairwayFinderDiagnostics.ActivityNames.ImportsTgtrTransfer);
+        var stopwatch = Stopwatch.StartNew();
+        activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.TgtrPlayerId, tgtrPlayerId);
+
         var result = new TgtrTransferResult();
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        try
+        {
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
         // 1. Look up player mapping
         var playerMap = await dbContext.TgtrPlayerMaps
@@ -86,6 +95,7 @@ public class TgtrTransferService
             if (importedTgtrRoundIds.Contains(tgtrRound.Id))
             {
                 result.RoundsSkipped++;
+                FairwayFinderDiagnostics.TgtrSkipped.Add(1);
                 continue;
             }
 
@@ -239,6 +249,7 @@ public class TgtrTransferService
                 // Track this round ID as imported so subsequent iterations skip it if the API returns duplicates
                 importedTgtrRoundIds.Add(tgtrRound.Id);
                 result.RoundsImported++;
+                FairwayFinderDiagnostics.TgtrImported.Add(1);
 
                 _logger.LogInformation(
                     "Imported TGTR round {TgtrRoundId} as local round {LocalRoundId} for user {UserId}",
@@ -252,14 +263,29 @@ public class TgtrTransferService
                     TgtrRoundId = tgtrRound.Id,
                     Reason = $"Unexpected error: {ex.Message}"
                 });
+                FairwayFinderDiagnostics.TgtrErrors.Add(1);
             }
         }
 
-        _logger.LogInformation(
-            "TGTR transfer complete for player {TgtrPlayerId}: {Imported} imported, {Skipped} skipped, {Errors} errors",
-            tgtrPlayerId, result.RoundsImported, result.RoundsSkipped, result.Errors.Count);
+            _logger.LogInformation(
+                "TGTR transfer complete for player {TgtrPlayerId}: {Imported} imported, {Skipped} skipped, {Errors} errors",
+                tgtrPlayerId, result.RoundsImported, result.RoundsSkipped, result.Errors.Count);
 
-        return result;
+            activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.TgtrImported, result.RoundsImported);
+            activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.TgtrSkipped, result.RoundsSkipped);
+            activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.TgtrErrors, result.Errors.Count);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            throw;
+        }
+        finally
+        {
+            FairwayFinderDiagnostics.TgtrTransferDuration.Record(stopwatch.Elapsed.TotalMilliseconds);
+        }
     }
 
     private async Task<long?> ResolveCourseAsync(
