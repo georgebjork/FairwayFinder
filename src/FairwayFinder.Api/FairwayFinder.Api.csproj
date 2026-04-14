@@ -26,6 +26,7 @@
       <ProjectReference Include="..\FairwayFinder.Data\FairwayFinder.Data.csproj" />
       <ProjectReference Include="..\FairwayFinder.Features\FairwayFinder.Features.csproj" />
       <ProjectReference Include="..\FairwayFinder.Identity\FairwayFinder.Identity.csproj" />
+      <ProjectReference Include="..\FairwayFinder.ServiceDefaults\FairwayFinder.ServiceDefaults.csproj" />
       <ProjectReference Include="..\FairwayFinder.Shared\FairwayFinder.Shared.csproj" />
     </ItemGroup>
 

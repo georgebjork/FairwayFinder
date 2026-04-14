@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using FairwayFinder.Features.Diagnostics;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Shared.Settings;
 using Microsoft.Extensions.Logging;
@@ -34,7 +36,7 @@ public class ResendEmailSender : IEmailSender
         };
         message.To.Add(toEmail);
 
-        await SendAsync(message);
+        await SendAsync(message, FairwayFinderDiagnostics.TagValues.EmailKindConfirmation);
     }
 
     public async Task SendPasswordResetEmailAsync(string toEmail, string resetLink)
@@ -52,22 +54,34 @@ public class ResendEmailSender : IEmailSender
         };
         message.To.Add(toEmail);
 
-        await SendAsync(message);
+        await SendAsync(message, FairwayFinderDiagnostics.TagValues.EmailKindPasswordReset);
     }
 
-    private async Task SendAsync(EmailMessage message)
+    private async Task SendAsync(EmailMessage message, string kind)
     {
+        var stopwatch = Stopwatch.StartNew();
+        var tags = new TagList { { FairwayFinderDiagnostics.Tags.Kind, kind } };
         try
         {
             await _resend.EmailSendAsync(message);
             _logger.LogInformation("Email sent to {To} with subject '{Subject}'",
                 message.To.FirstOrDefault(), message.Subject);
+            FairwayFinderDiagnostics.EmailSent.Add(1, tags);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to send email to {To} with subject '{Subject}'",
                 message.To.FirstOrDefault(), message.Subject);
+            FairwayFinderDiagnostics.EmailFailed.Add(1, new TagList
+            {
+                { FairwayFinderDiagnostics.Tags.Kind, kind },
+                { FairwayFinderDiagnostics.Tags.Reason, ex.GetType().Name }
+            });
             throw;
+        }
+        finally
+        {
+            FairwayFinderDiagnostics.EmailSendDuration.Record(stopwatch.Elapsed.TotalMilliseconds, tags);
         }
     }
 }

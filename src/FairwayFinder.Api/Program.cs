@@ -5,6 +5,7 @@ using FairwayFinder.Api.Exceptions;
 using FairwayFinder.Data;
 using FairwayFinder.Features;
 using FairwayFinder.Identity;
+using FairwayFinder.ServiceDefaults;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -12,6 +13,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
 
 // ── Database ────────────────────────────────────────────────
 var connectionString = builder.Configuration.GetConnectionString("fairwayfinder")
@@ -81,6 +84,8 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+app.MapDefaultEndpoints();
 
 // ── Middleware Pipeline ─────────────────────────────────────
 app.UseExceptionHandler();

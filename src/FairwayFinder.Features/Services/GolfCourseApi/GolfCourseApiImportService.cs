@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using FairwayFinder.Data;
 using FairwayFinder.Data.Entities;
 using FairwayFinder.Features.Data.GolfCourseApi;
+using FairwayFinder.Features.Diagnostics;
 using FairwayFinder.Features.HttpClients;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -69,8 +71,15 @@ public class GolfCourseApiImportService
         IProgress<GolfCourseApiImportResult>? progress = null,
         CancellationToken ct = default)
     {
+        using var activity = FairwayFinderDiagnostics.ImportsActivity.StartActivity(name: FairwayFinderDiagnostics.ActivityNames.ImportsGcaRun);
+        var stopwatch = Stopwatch.StartNew();
+        activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.GcaStartPage, startPage);
+
         var result = new GolfCourseApiImportResult();
         startPage = Math.Max(1, startPage);
+
+        try
+        {
 
         // Fetch the first page to get metadata
         var firstPage = await _httpClient.GetCoursesAsync(1, PageSize, ct);
@@ -145,11 +154,27 @@ public class GolfCourseApiImportService
             }
         }
 
-        _logger.LogInformation(
-            "GolfCourseAPI import complete: {Imported} imported, {Updated} updated, {Skipped} skipped, {Errors} errors",
-            result.CoursesImported, result.CoursesUpdated, result.CoursesSkipped, result.Errors.Count);
+            _logger.LogInformation(
+                "GolfCourseAPI import complete: {Imported} imported, {Updated} updated, {Skipped} skipped, {Errors} errors",
+                result.CoursesImported, result.CoursesUpdated, result.CoursesSkipped, result.Errors.Count);
 
-        return result;
+            activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.GcaImported, result.CoursesImported);
+            activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.GcaUpdated, result.CoursesUpdated);
+            activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.GcaSkipped, result.CoursesSkipped);
+            activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.GcaErrors, result.Errors.Count);
+            activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.GcaPagesProcessed, result.PagesProcessed);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            throw;
+        }
+        finally
+        {
+            FairwayFinderDiagnostics.GcaImportDuration.Record(stopwatch.Elapsed.TotalMilliseconds);
+        }
     }
 
     private async Task ProcessPageAsync(GolfCourseApiCoursesResponse pageResponse, GolfCourseApiImportResult result, CancellationToken ct)
@@ -179,17 +204,20 @@ public class GolfCourseApiImportService
                     // Mapping exists — update the course in-place
                     await UpdateCourseAsync(dbContext, localCourseId, apiCourse, today, ct);
                     result.CoursesUpdated++;
+                    FairwayFinderDiagnostics.GcaUpdated.Add(1);
                 }
                 else if (!hasTeeboxes)
                 {
                     // No teeboxes — skip importing this course
                     result.CoursesSkipped++;
+                    FairwayFinderDiagnostics.GcaSkipped.Add(1);
                 }
                 else
                 {
                     // No mapping — insert new course
                     await InsertCourseAsync(dbContext, apiCourse, today, ct);
                     result.CoursesImported++;
+                    FairwayFinderDiagnostics.GcaImported.Add(1);
                 }
             }
             catch (Exception ex)
@@ -201,6 +229,7 @@ public class GolfCourseApiImportService
                     CourseName = apiCourse.CourseName,
                     Reason = ex.Message
                 });
+                FairwayFinderDiagnostics.GcaErrors.Add(1);
             }
         }
     }

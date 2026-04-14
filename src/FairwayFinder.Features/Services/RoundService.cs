@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using FairwayFinder.Data;
 using FairwayFinder.Data.Entities;
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Diagnostics;
 using FairwayFinder.Features.Enums;
 using FairwayFinder.Features.Helpers;
 using FairwayFinder.Features.Services.Interfaces;
@@ -167,10 +169,16 @@ public class RoundService : IRoundService
     
     public async Task<long> CreateRoundAsync(CreateRoundRequest request)
     {
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var userId = request.UserId;
+        using var activity = FairwayFinderDiagnostics.RoundsActivity.StartActivity(name: FairwayFinderDiagnostics.ActivityNames.RoundCreate);
+        var stopwatch = Stopwatch.StartNew();
+        var holeCount = request.FullRound ? 18 : 9;
+
+        try
+        {
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var userId = request.UserId;
         
         // Compute scores
         var frontHoles = request.Holes.Where(h => h.HoleNumber <= 9).ToList();
@@ -358,26 +366,67 @@ public class RoundService : IRoundService
             ComputeAndStoreStrokesGained(roundStat, request.Holes);
         }
 
-        dbContext.RoundStats.Add(roundStat);
-        await dbContext.SaveChangesAsync();
+            dbContext.RoundStats.Add(roundStat);
+            await dbContext.SaveChangesAsync();
 
-        return round.RoundId;
+            var shotCount = request.UsingShotTracking
+                ? request.Holes.Sum(h => h.Shots?.Count ?? 0)
+                : 0;
+
+            var tags = new TagList
+            {
+                { FairwayFinderDiagnostics.Tags.Holes, holeCount },
+                { FairwayFinderDiagnostics.Tags.ShotTracking, request.UsingShotTracking },
+                { FairwayFinderDiagnostics.Tags.HoleStats, request.UsingHoleStats }
+            };
+            FairwayFinderDiagnostics.RoundsCreated.Add(1, tags);
+            if (shotCount > 0)
+            {
+                FairwayFinderDiagnostics.ShotsLogged.Add(shotCount, tags);
+            }
+            activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundId, round.RoundId);
+            activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundHoles, holeCount);
+            activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundShotTracking, request.UsingShotTracking);
+
+            return round.RoundId;
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            throw;
+        }
+        finally
+        {
+            FairwayFinderDiagnostics.RoundSaveDuration.Record(stopwatch.Elapsed.TotalMilliseconds, new TagList
+            {
+                { FairwayFinderDiagnostics.Tags.Holes, holeCount },
+                { FairwayFinderDiagnostics.Tags.ShotTracking, request.UsingShotTracking },
+                { FairwayFinderDiagnostics.Tags.HoleStats, request.UsingHoleStats },
+                { FairwayFinderDiagnostics.Tags.Operation, FairwayFinderDiagnostics.TagValues.OperationCreate }
+            });
+        }
     }
-    
+
     public async Task<bool> UpdateRoundAsync(UpdateRoundRequest request)
     {
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        using var activity = FairwayFinderDiagnostics.RoundsActivity.StartActivity(name: FairwayFinderDiagnostics.ActivityNames.RoundUpdate);
+        var stopwatch = Stopwatch.StartNew();
+        var updateHoleCount = request.Holes.Count > 9 ? 18 : 9;
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var userId = request.UserId;
-
-        var round = await dbContext.Rounds
-            .FirstOrDefaultAsync(r => r.RoundId == request.RoundId && !r.IsDeleted);
-        
-        if (round is null || round.UserId != userId)
+        try
         {
-            return false;
-        }
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var userId = request.UserId;
+
+            var round = await dbContext.Rounds
+                .FirstOrDefaultAsync(r => r.RoundId == request.RoundId && !r.IsDeleted);
+
+            if (round is null || round.UserId != userId)
+            {
+                return false;
+            }
         
         var frontHoles = request.Holes.Where(h => h.HoleNumber <= 9).ToList();
         var backHoles = request.Holes.Where(h => h.HoleNumber > 9).ToList();
@@ -678,11 +727,37 @@ public class RoundService : IRoundService
             dbContext.RoundStats.Add(newRoundStat);
         }
 
-        await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync();
 
-        return true;
+            FairwayFinderDiagnostics.RoundsUpdated.Add(1, new TagList
+            {
+                { FairwayFinderDiagnostics.Tags.Holes, updateHoleCount },
+                { FairwayFinderDiagnostics.Tags.ShotTracking, request.UsingShotTracking },
+                { FairwayFinderDiagnostics.Tags.HoleStats, request.UsingHoleStats }
+            });
+            activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundId, round.RoundId);
+            activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundHoles, updateHoleCount);
+            activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundShotTracking, request.UsingShotTracking);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            throw;
+        }
+        finally
+        {
+            FairwayFinderDiagnostics.RoundSaveDuration.Record(stopwatch.Elapsed.TotalMilliseconds, new TagList
+            {
+                { FairwayFinderDiagnostics.Tags.Holes, updateHoleCount },
+                { FairwayFinderDiagnostics.Tags.ShotTracking, request.UsingShotTracking },
+                { FairwayFinderDiagnostics.Tags.HoleStats, request.UsingHoleStats },
+                { FairwayFinderDiagnostics.Tags.Operation, FairwayFinderDiagnostics.TagValues.OperationUpdate }
+            });
+        }
     }
-    
+
     public async Task<bool> DeleteRoundAsync(long roundId, string userId)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
@@ -748,6 +823,9 @@ public class RoundService : IRoundService
         }
 
         await dbContext.SaveChangesAsync();
+
+        FairwayFinderDiagnostics.RoundsDeleted.Add(1);
+
         return true;
     }
 

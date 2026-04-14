@@ -2,6 +2,7 @@ using FairwayFinder.Agents;
 using FairwayFinder.Data;
 using FairwayFinder.Features;
 using FairwayFinder.Identity;
+using FairwayFinder.ServiceDefaults;
 using FairwayFinder.Shared;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,8 @@ using FairwayFinder.Web.Startup;
 using Radzen;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
 
 var connectionString = builder.Configuration.GetConnectionString("fairwayfinder") ??
                        throw new InvalidOperationException("Connection string 'fairwayfinder' not found.");
@@ -39,6 +42,8 @@ builder.Services.AddHealthChecks()
         tags: ["db", "sql", "FairwayFinderAppDb"]);
 
 var app = builder.Build();
+
+app.MapDefaultEndpoints();
 
 using (var scope = app.Services.CreateScope())
 {
