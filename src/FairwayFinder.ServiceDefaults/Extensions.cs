@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
@@ -35,6 +36,8 @@ public static class Extensions
 
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
+        BridgeOtlpConfigToEnvironment(builder.Configuration);
+
         builder.ConfigureOpenTelemetry();
         builder.AddDefaultHealthChecks();
         builder.Services.AddServiceDiscovery();
@@ -46,6 +49,20 @@ public static class Extensions
         });
 
         return builder;
+    }
+
+    private static void BridgeOtlpConfigToEnvironment(IConfiguration configuration)
+    {
+        var endpoint = configuration["OpenTelemetry:Otlp:Endpoint"];
+        var headers = configuration["OpenTelemetry:Otlp:Headers"];
+        var proto = configuration["OpenTelemetry:Otlp:Protocol"];
+
+        // If endpoint is blank, we're local — Aspire handles env vars automatically.
+        if (string.IsNullOrWhiteSpace(endpoint)) return;
+
+        Environment.SetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT", endpoint);
+        Environment.SetEnvironmentVariable("OTEL_EXPORTER_OTLP_HEADERS", headers);
+        Environment.SetEnvironmentVariable("OTEL_EXPORTER_OTLP_PROTOCOL", proto);
     }
 
     public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
