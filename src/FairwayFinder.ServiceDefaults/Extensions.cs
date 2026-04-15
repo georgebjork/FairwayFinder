@@ -61,8 +61,6 @@ public static class Extensions
         SetEnvIfMissing("OTEL_EXPORTER_OTLP_ENDPOINT", configuration["OpenTelemetry:Otlp:Endpoint"]);
         SetEnvIfMissing("OTEL_EXPORTER_OTLP_HEADERS",  configuration["OpenTelemetry:Otlp:Headers"]);
         SetEnvIfMissing("OTEL_EXPORTER_OTLP_PROTOCOL", configuration["OpenTelemetry:Otlp:Protocol"]);
-        SetEnvIfMissing("OTEL_SERVICE_NAME", configuration["OpenTelemetry:Otlp:ServiceName"]);
-        SetEnvIfMissing("OTEL_RESOURCE_ATTRIBUTES", configuration["OpenTelemetry:Otlp:ResourceAttributes"]);
     }
 
     private static void SetEnvIfMissing(string name, string? value)
