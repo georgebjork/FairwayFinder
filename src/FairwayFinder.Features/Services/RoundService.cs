@@ -110,61 +110,81 @@ public class RoundService : IRoundService
 
     public async Task<RoundResponse?> GetRoundByIdAsync(long roundId)
     {
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        RoundResponse? response;
 
-        // 1. Get round with course and teebox
-        var roundData = await dbContext.Rounds
-            .Where(r => r.RoundId == roundId && !r.IsDeleted)
-            .Join(dbContext.Courses, r => r.CourseId, c => c.CourseId, (r, c) => new { Round = r, Course = c })
-            .Join(dbContext.Teeboxes, rc => rc.Round.TeeboxId, t => t.TeeboxId, (rc, t) => new { rc.Round, rc.Course, Teebox = t })
-            .FirstOrDefaultAsync();
-
-        if (roundData is null)
+        await using (var dbContext = await _dbContextFactory.CreateDbContextAsync())
         {
-            return null;
+            // 1. Get round with course and teebox
+            var roundData = await dbContext.Rounds
+                .Where(r => r.RoundId == roundId && !r.IsDeleted)
+                .Join(dbContext.Courses, r => r.CourseId, c => c.CourseId, (r, c) => new { Round = r, Course = c })
+                .Join(dbContext.Teeboxes, rc => rc.Round.TeeboxId, t => t.TeeboxId, (rc, t) => new { rc.Round, rc.Course, Teebox = t })
+                .FirstOrDefaultAsync();
+
+            if (roundData is null)
+            {
+                return null;
+            }
+
+            // 2. Get round stats
+            var roundStat = await dbContext.RoundStats
+                .Where(rs => rs.RoundId == roundId && !rs.IsDeleted)
+                .FirstOrDefaultAsync();
+
+            // 3. Get scores
+            var scores = await dbContext.Scores
+                .Where(s => s.RoundId == roundId && !s.IsDeleted)
+                .ToListAsync();
+
+            // 4. Get holes for all scores
+            var holeIds = scores.Select(s => s.HoleId).Distinct().ToList();
+            var holes = await dbContext.Holes
+                .Where(h => holeIds.Contains(h.HoleId) && !h.IsDeleted)
+                .ToDictionaryAsync(h => h.HoleId);
+
+            // 5. Get hole stats
+            var holeStats = await dbContext.HoleStats
+                .Where(hs => hs.RoundId == roundId && !hs.IsDeleted)
+                .ToDictionaryAsync(hs => hs.HoleId);
+
+            // Build hole list
+            var roundHoles = scores
+                .Select(s => holes.GetValueOrDefault(s.HoleId))
+                .Where(h => h != null)
+                .OrderBy(h => h!.HoleNumber)
+                .Select(h =>
+                {
+                    var score = scores.FirstOrDefault(s => s.HoleId == h!.HoleId);
+                    var holeStat = holeStats.GetValueOrDefault(h!.HoleId);
+                    return RoundHole.From(h, score, holeStat);
+                })
+                .ToList();
+
+            response = RoundResponse.From(
+                roundData.Round,
+                roundData.Course,
+                roundData.Teebox,
+                roundStat,
+                roundHoles
+            );
         }
 
-        // 2. Get round stats
-        var roundStat = await dbContext.RoundStats
-            .Where(rs => rs.RoundId == roundId && !rs.IsDeleted)
-            .FirstOrDefaultAsync();
+        // For shot-tracked rounds, attach shot data and compute per-hole + summary strokes gained.
+        if (response.UsingShotTracking)
+        {
+            await LoadShotsForRoundsAsync(new List<RoundResponse> { response });
 
-        // 3. Get scores
-        var scores = await dbContext.Scores
-            .Where(s => s.RoundId == roundId && !s.IsDeleted)
-            .ToListAsync();
-
-        // 4. Get holes for all scores
-        var holeIds = scores.Select(s => s.HoleId).Distinct().ToList();
-        var holes = await dbContext.Holes
-            .Where(h => holeIds.Contains(h.HoleId) && !h.IsDeleted)
-            .ToDictionaryAsync(h => h.HoleId);
-
-        // 5. Get hole stats
-        var holeStats = await dbContext.HoleStats
-            .Where(hs => hs.RoundId == roundId && !hs.IsDeleted)
-            .ToDictionaryAsync(hs => hs.HoleId);
-
-        // Build hole list
-        var roundHoles = scores
-            .Select(s => holes.GetValueOrDefault(s.HoleId))
-            .Where(h => h != null)
-            .OrderBy(h => h!.HoleNumber)
-            .Select(h =>
+            var holeResults = new List<StrokesGainedHoleResult>();
+            foreach (var hole in response.Holes.Where(h => h.Shots is { Count: > 0 } && h.Score.HasValue))
             {
-                var score = scores.FirstOrDefault(s => s.HoleId == h!.HoleId);
-                var holeStat = holeStats.GetValueOrDefault(h!.HoleId);
-                return RoundHole.From(h, score, holeStat);
-            })
-            .ToList();
+                holeResults.Add(StrokesGainedCalculator.CalculateHoleSg(
+                    hole.Shots!, hole.Par, hole.HoleNumber, hole.Score!.Value));
+            }
+            response.HoleByHoleSg = holeResults;
+            response.StrokesGained = StrokesGainedCalculator.CalculateRoundSg(response);
+        }
 
-        return RoundResponse.From(
-            roundData.Round,
-            roundData.Course,
-            roundData.Teebox,
-            roundStat,
-            roundHoles
-        );
+        return response;
     }
     
     public async Task<long> CreateRoundAsync(CreateRoundRequest request)
