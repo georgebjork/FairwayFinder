@@ -37,7 +37,23 @@ public class RoundResponse
     // Computed properties - Par
     public int ParOut => Holes.Where(h => h.HoleNumber <= 9).Sum(h => h.Par);
     public int ParIn => Holes.Where(h => h.HoleNumber > 9).Sum(h => h.Par);
-    public int ScoreToPar => Score - Teebox.Par;
+    public int ScoreToPar
+    {
+        get
+        {
+            if (FullRound || Teebox.IsNineHole) return Score - Teebox.Par;
+            // 9-hole round on an 18-hole teebox: use exact front/back par if holes are loaded,
+            // otherwise fall back to half of teebox par (correct for standard 36/36 courses).
+            if (Holes.Count > 0)
+            {
+                var hasFront = Holes.Any(h => h.HoleNumber <= 9);
+                var hasBack = Holes.Any(h => h.HoleNumber > 9);
+                if (hasFront && !hasBack) return Score - ParOut;
+                if (hasBack && !hasFront) return Score - ParIn;
+            }
+            return Score - Teebox.Par / 2;
+        }
+    }
 
     // Computed properties - Fairways (only par 4/5 holes have fairways)
     public int FairwaysHitOut => Holes.Count(h => h.HoleNumber <= 9 && h.Stats?.HitFairway == true);
