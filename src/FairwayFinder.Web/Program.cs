@@ -74,6 +74,15 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapStaticAssets().AllowAnonymous();
+
+// Apple Password AutoFill — associates the FairwayFinder-iOS app with this domain so that
+// credentials saved for fairwayfinder.pro in password managers surface on the iOS login screen.
+app.MapGet("/.well-known/apple-app-site-association", () =>
+{
+    const string json = """{"webcredentials":{"apps":["J2J8V2R7F8.BjorkTech.FairwayFinder-iOS"]}}""";
+    return Results.Content(json, "application/json");
+}).AllowAnonymous();
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
