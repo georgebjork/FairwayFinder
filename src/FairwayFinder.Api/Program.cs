@@ -106,5 +106,6 @@ app.MapRoundEndpoints();
 app.MapStatsEndpoints();
 app.MapLookupEndpoints();
 app.MapProfileEndpoints();
+app.MapFriendEndpoints();
 
 app.Run();

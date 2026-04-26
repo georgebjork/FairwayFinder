@@ -1,0 +1,421 @@
+@page "/friends"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.Security.Claims
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Web.Components.Pages.Friends.Dialogs
+@using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
+@inject IFriendService FriendService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+@inject BreadcrumbState BreadcrumbState
+@implements IDisposable
+
+<PageTitle>Friends - FairwayFinder</PageTitle>
+
+<RadzenStack Gap="1rem" class="rz-mx-auto rz-p-4" Style="max-width: 1100px;">
+    <RadzenText TextStyle="TextStyle.H4">Friends</RadzenText>
+
+    <RadzenTabs @bind-SelectedIndex="_selectedTab" RenderMode="TabRenderMode.Client">
+        <Tabs>
+            <RadzenTabsItem>
+                <Template>
+                    <RadzenIcon Icon="group" /> My Friends (@_friends.Count)
+                </Template>
+                <ChildContent>
+                    @if (_loading)
+                    {
+                        <RadzenStack AlignItems="AlignItems.Center" class="rz-p-8">
+                            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+                        </RadzenStack>
+                    }
+                    else if (_friends.Count == 0)
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+                            You haven't added any friends yet. Use "Find Friends" to search and send a request.
+                        </RadzenAlert>
+                    }
+                    else
+                    {
+                        <RadzenDataGrid Data="@_friends" TItem="FriendResponse"
+                                        AllowSorting="true" AllowPaging="true" PageSize="10"
+                                        PagerHorizontalAlign="HorizontalAlign.Right">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="FriendResponse" Title="" Width="60px" Sortable="false" Filterable="false">
+                                    <Template Context="friend">
+                                        <RadzenGravatar Email="@friend.Email" />
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="FriendResponse" Property="DisplayName" Title="Name" />
+                                <RadzenDataGridColumn TItem="FriendResponse" Property="FriendsSince" Title="Friends Since" Width="180px"
+                                                      FormatString="{0:MMM d, yyyy}" />
+                                <RadzenDataGridColumn TItem="FriendResponse" Title="Actions" Width="240px" Sortable="false">
+                                    <Template Context="friend">
+                                        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.25rem">
+                                            <RadzenButton Text="View" Icon="visibility" ButtonStyle="ButtonStyle.Primary"
+                                                          Variant="Variant.Outlined" Size="ButtonSize.Small"
+                                                          Click="@(() => NavigationManager.NavigateTo($"/friends/{friend.PublicIdentifier}"))" />
+                                            <RadzenButton Text="Remove" Icon="person_remove" ButtonStyle="ButtonStyle.Danger"
+                                                          Variant="Variant.Outlined" Size="ButtonSize.Small"
+                                                          Click="@(() => OnRemoveFriend(friend))" />
+                                        </RadzenStack>
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                    }
+                </ChildContent>
+            </RadzenTabsItem>
+
+            <RadzenTabsItem>
+                <Template>
+                    <RadzenIcon Icon="mark_email_unread" /> Incoming
+                    @if (_incoming.Count > 0)
+                    {
+                        <RadzenBadge BadgeStyle="BadgeStyle.Danger" Text="@_incoming.Count.ToString()" class="rz-ms-1" />
+                    }
+                </Template>
+                <ChildContent>
+                    @if (_incoming.Count == 0)
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+                            No pending friend requests.
+                        </RadzenAlert>
+                    }
+                    else
+                    {
+                        <RadzenDataGrid Data="@_incoming" TItem="FriendRequestResponse"
+                                        AllowSorting="true" AllowPaging="true" PageSize="10">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="FriendRequestResponse" Title="" Width="60px" Sortable="false" Filterable="false">
+                                    <Template Context="request">
+                                        <RadzenGravatar Email="@request.OtherEmail" />
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="FriendRequestResponse" Property="OtherDisplayName" Title="From" />
+                                <RadzenDataGridColumn TItem="FriendRequestResponse" Property="RequestedOn" Title="Sent" Width="180px"
+                                                      FormatString="{0:MMM d, yyyy}" />
+                                <RadzenDataGridColumn TItem="FriendRequestResponse" Title="Actions" Width="220px" Sortable="false">
+                                    <Template Context="request">
+                                        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.25rem">
+                                            <RadzenButton Text="Accept" Icon="check" ButtonStyle="ButtonStyle.Success"
+                                                          Size="ButtonSize.Small"
+                                                          Click="@(() => OnAccept(request))" />
+                                            <RadzenButton Text="Reject" Icon="close" ButtonStyle="ButtonStyle.Danger"
+                                                          Variant="Variant.Outlined" Size="ButtonSize.Small"
+                                                          Click="@(() => OnReject(request))" />
+                                        </RadzenStack>
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                    }
+                </ChildContent>
+            </RadzenTabsItem>
+
+            <RadzenTabsItem>
+                <Template>
+                    <RadzenIcon Icon="outgoing_mail" /> Outgoing (@_outgoing.Count)
+                </Template>
+                <ChildContent>
+                    @if (_outgoing.Count == 0)
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+                            No outgoing requests.
+                        </RadzenAlert>
+                    }
+                    else
+                    {
+                        <RadzenDataGrid Data="@_outgoing" TItem="FriendRequestResponse"
+                                        AllowSorting="true" AllowPaging="true" PageSize="10">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="FriendRequestResponse" Title="" Width="60px" Sortable="false" Filterable="false">
+                                    <Template Context="request">
+                                        <RadzenGravatar Email="@request.OtherEmail" />
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="FriendRequestResponse" Property="OtherDisplayName" Title="To" />
+                                <RadzenDataGridColumn TItem="FriendRequestResponse" Property="RequestedOn" Title="Sent" Width="180px"
+                                                      FormatString="{0:MMM d, yyyy}" />
+                                <RadzenDataGridColumn TItem="FriendRequestResponse" Title="Actions" Width="160px" Sortable="false">
+                                    <Template Context="request">
+                                        <RadzenButton Text="Cancel" Icon="cancel" ButtonStyle="ButtonStyle.Light"
+                                                      Variant="Variant.Outlined" Size="ButtonSize.Small"
+                                                      Click="@(() => OnCancel(request))" />
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                    }
+                </ChildContent>
+            </RadzenTabsItem>
+
+            <RadzenTabsItem>
+                <Template>
+                    <RadzenIcon Icon="person_search" /> Find Friends
+                </Template>
+                <ChildContent>
+                    <RadzenStack Gap="1rem">
+                        <RadzenTextBox Placeholder="Search by first or last name (min 2 chars)..."
+                                       Value="@_searchText" @oninput="@OnSearchInput" Style="width: 100%;" />
+
+                        @if (_searching)
+                        {
+                            <RadzenStack AlignItems="AlignItems.Center" class="rz-p-4">
+                                <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small" />
+                            </RadzenStack>
+                        }
+                        else if (string.IsNullOrWhiteSpace(_searchText) || _searchText.Trim().Length < 2)
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+                                Type at least 2 characters to search.
+                            </RadzenAlert>
+                        }
+                        else if (_searchResults.Count == 0)
+                        {
+                            <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
+                                No users found matching "@_searchText".
+                            </RadzenAlert>
+                        }
+                        else
+                        {
+                            <RadzenDataGrid Data="@_searchResults" TItem="UserSearchResultResponse"
+                                            AllowSorting="false" AllowPaging="false">
+                                <Columns>
+                                    <RadzenDataGridColumn TItem="UserSearchResultResponse" Title="" Width="60px" Sortable="false" Filterable="false">
+                                        <Template Context="result">
+                                            <RadzenGravatar Email="@result.Email" />
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="UserSearchResultResponse" Property="DisplayName" Title="Name" />
+                                    <RadzenDataGridColumn TItem="UserSearchResultResponse" Title="Status" Width="180px" Sortable="false">
+                                        <Template Context="result">
+                                            @switch (result.FriendshipState)
+                                            {
+                                                case FriendshipState.Accepted:
+                                                    <RadzenBadge BadgeStyle="BadgeStyle.Success" Text="Friends" />
+                                                    break;
+                                                case FriendshipState.PendingOutgoing:
+                                                    <RadzenBadge BadgeStyle="BadgeStyle.Info" Text="Request sent" />
+                                                    break;
+                                                case FriendshipState.PendingIncoming:
+                                                    <RadzenBadge BadgeStyle="BadgeStyle.Warning" Text="Awaiting your reply" />
+                                                    break;
+                                                default:
+                                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-color-secondary">—</RadzenText>
+                                                    break;
+                                            }
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="UserSearchResultResponse" Title="Actions" Width="220px" Sortable="false">
+                                        <Template Context="result">
+                                            @switch (result.FriendshipState)
+                                            {
+                                                case FriendshipState.None:
+                                                    <RadzenButton Text="Send Request" Icon="person_add" ButtonStyle="ButtonStyle.Primary"
+                                                                  Size="ButtonSize.Small" Click="@(() => OnSendRequest(result))" />
+                                                    break;
+                                                case FriendshipState.PendingOutgoing:
+                                                    <RadzenButton Text="Cancel" Icon="cancel" ButtonStyle="ButtonStyle.Light"
+                                                                  Variant="Variant.Outlined" Size="ButtonSize.Small"
+                                                                  Click="@(() => OnCancelById(result.FriendshipId))" />
+                                                    break;
+                                                case FriendshipState.PendingIncoming:
+                                                    <RadzenButton Text="Accept" Icon="check" ButtonStyle="ButtonStyle.Success"
+                                                                  Size="ButtonSize.Small"
+                                                                  Click="@(() => OnAcceptById(result.FriendshipId))" />
+                                                    break;
+                                                case FriendshipState.Accepted:
+                                                    <RadzenButton Text="View" Icon="visibility" ButtonStyle="ButtonStyle.Primary"
+                                                                  Variant="Variant.Outlined" Size="ButtonSize.Small"
+                                                                  Click="@(() => NavigationManager.NavigateTo($"/friends/{result.PublicIdentifier}"))" />
+                                                    break;
+                                            }
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                </Columns>
+                            </RadzenDataGrid>
+                        }
+                    </RadzenStack>
+                </ChildContent>
+            </RadzenTabsItem>
+        </Tabs>
+    </RadzenTabs>
+</RadzenStack>
+
+@code {
+    private string _currentUserId = string.Empty;
+    private bool _loading = true;
+    private int _selectedTab;
+
+    private List<FriendResponse> _friends = new();
+    private List<FriendRequestResponse> _incoming = new();
+    private List<FriendRequestResponse> _outgoing = new();
+
+    private string _searchText = string.Empty;
+    private string _pendingSearchText = string.Empty;
+    private List<UserSearchResultResponse> _searchResults = new();
+    private bool _searching;
+    private Timer? _debounceTimer;
+    private const int DebounceMs = 300;
+
+    protected override async Task OnInitializedAsync()
+    {
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem("Friends")
+        );
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+
+        await ReloadAllAsync();
+        _loading = false;
+    }
+
+    private async Task ReloadAllAsync()
+    {
+        var friends = FriendService.GetFriendsAsync(_currentUserId);
+        var incoming = FriendService.GetIncomingRequestsAsync(_currentUserId);
+        var outgoing = FriendService.GetOutgoingRequestsAsync(_currentUserId);
+        await Task.WhenAll(friends, incoming, outgoing);
+
+        _friends = friends.Result;
+        _incoming = incoming.Result;
+        _outgoing = outgoing.Result;
+    }
+
+    private void OnSearchInput(ChangeEventArgs args)
+    {
+        _pendingSearchText = args.Value?.ToString() ?? string.Empty;
+        _debounceTimer?.Dispose();
+        _debounceTimer = new Timer(_ =>
+        {
+            InvokeAsync(async () =>
+            {
+                _searchText = _pendingSearchText;
+                await RunSearchAsync();
+                StateHasChanged();
+            });
+        }, null, DebounceMs, Timeout.Infinite);
+    }
+
+    private async Task RunSearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_searchText) || _searchText.Trim().Length < 2)
+        {
+            _searchResults = new();
+            return;
+        }
+        _searching = true;
+        try
+        {
+            _searchResults = await FriendService.SearchUsersAsync(_currentUserId, _searchText);
+        }
+        finally
+        {
+            _searching = false;
+        }
+    }
+
+    private async Task OnSendRequest(UserSearchResultResponse target)
+    {
+        var result = await DialogService.OpenAsync<SendFriendRequestDialog>($"Send request to {target.DisplayName}",
+            new Dictionary<string, object> { { "Target", target }, { "CurrentUserId", _currentUserId } },
+            new DialogOptions { Width = "450px", CloseDialogOnEsc = true });
+
+        if (result is long)
+        {
+            Toast(NotificationSeverity.Success, "Request sent", $"Friend request sent to {target.DisplayName}.");
+            await ReloadAllAsync();
+            await RunSearchAsync();
+        }
+    }
+
+    private async Task OnAccept(FriendRequestResponse request)
+    {
+        var ok = await FriendService.AcceptRequestAsync(request.FriendshipId, _currentUserId);
+        if (ok)
+        {
+            Toast(NotificationSeverity.Success, "Friend added", $"You're now friends with {request.OtherDisplayName}.");
+            await ReloadAllAsync();
+        }
+        else
+        {
+            Toast(NotificationSeverity.Error, "Action failed", "Could not accept request.");
+        }
+    }
+
+    private async Task OnAcceptById(long? friendshipId)
+    {
+        if (friendshipId is null) return;
+        await FriendService.AcceptRequestAsync(friendshipId.Value, _currentUserId);
+        Toast(NotificationSeverity.Success, "Friend added", "You're now friends.");
+        await ReloadAllAsync();
+        await RunSearchAsync();
+    }
+
+    private async Task OnReject(FriendRequestResponse request)
+    {
+        var ok = await FriendService.RejectRequestAsync(request.FriendshipId, _currentUserId);
+        if (ok)
+        {
+            Toast(NotificationSeverity.Info, "Request rejected", string.Empty);
+            await ReloadAllAsync();
+        }
+    }
+
+    private async Task OnCancel(FriendRequestResponse request)
+    {
+        var ok = await FriendService.CancelRequestAsync(request.FriendshipId, _currentUserId);
+        if (ok)
+        {
+            Toast(NotificationSeverity.Info, "Request cancelled", string.Empty);
+            await ReloadAllAsync();
+        }
+    }
+
+    private async Task OnCancelById(long? friendshipId)
+    {
+        if (friendshipId is null) return;
+        await FriendService.CancelRequestAsync(friendshipId.Value, _currentUserId);
+        Toast(NotificationSeverity.Info, "Request cancelled", string.Empty);
+        await ReloadAllAsync();
+        await RunSearchAsync();
+    }
+
+    private async Task OnRemoveFriend(FriendResponse friend)
+    {
+        var confirmed = await DialogService.Confirm($"Remove {friend.DisplayName} from your friends?",
+            "Remove friend",
+            new ConfirmOptions { OkButtonText = "Remove", CancelButtonText = "Cancel" });
+
+        if (confirmed != true) return;
+
+        var ok = await FriendService.RemoveFriendAsync(friend.FriendshipId, _currentUserId);
+        if (ok)
+        {
+            Toast(NotificationSeverity.Info, "Friend removed", $"{friend.DisplayName} has been removed.");
+            await ReloadAllAsync();
+        }
+    }
+
+    private void Toast(NotificationSeverity severity, string summary, string detail)
+    {
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = severity,
+            Summary = summary,
+            Detail = detail,
+            Duration = 4000
+        });
+    }
+
+    public void Dispose()
+    {
+        _debounceTimer?.Dispose();
+    }
+}
