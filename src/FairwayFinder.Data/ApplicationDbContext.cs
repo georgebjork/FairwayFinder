@@ -24,6 +24,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public virtual DbSet<UserProfile> UserProfiles { get; set; }
     public virtual DbSet<Shot> Shots { get; set; }
     public virtual DbSet<GolfCourseApiCourseMap> GolfCourseApiCourseMaps { get; set; }
+    public virtual DbSet<Friendship> Friendships { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -359,6 +360,26 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
             entity.HasIndex(e => e.UserId).IsUnique().HasDatabaseName("ix_user_profile_user_id");
             entity.HasIndex(e => e.PublicIdentifier).IsUnique().HasDatabaseName("ix_user_profile_public_identifier");
+        });
+
+        // Friendship
+        modelBuilder.Entity<Friendship>(entity =>
+        {
+            entity.HasKey(e => e.FriendshipId).HasName("friendship_pkey");
+            entity.ToTable("friendship");
+            entity.Property(e => e.FriendshipId).HasColumnName("friendship_id");
+            entity.Property(e => e.RequesterUserId).HasColumnName("requester_user_id");
+            entity.Property(e => e.AddresseeUserId).HasColumnName("addressee_user_id");
+            entity.Property(e => e.Status).HasColumnName("status").HasConversion<int>();
+            entity.Property(e => e.RespondedOn).HasColumnName("responded_on");
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+            entity.Property(e => e.CreatedOn).HasColumnName("created_on");
+            entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
+            entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+
+            entity.HasIndex(e => new { e.AddresseeUserId, e.Status }).HasDatabaseName("ix_friendship_addressee_status");
+            entity.HasIndex(e => new { e.RequesterUserId, e.Status }).HasDatabaseName("ix_friendship_requester_status");
         });
 
         // GolfCourseApiCourseMap (lookup table)

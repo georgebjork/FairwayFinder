@@ -23,6 +23,7 @@ public static class ServiceRegistration
         services.AddTransient<IStatsService, StatsService>();
         services.AddTransient<ICourseService, CourseService>();
         services.AddTransient<IProfileService, ProfileService>();
+        services.AddTransient<IFriendService, FriendService>();
 
         // TGTR integration
         services.AddHttpClient<TgtrHttpClient>(client =>

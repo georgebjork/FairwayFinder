@@ -12,13 +12,16 @@ public class ProfileService : IProfileService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IFriendService _friendService;
 
     public ProfileService(
         IDbContextFactory<ApplicationDbContext> dbContextFactory,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        IFriendService friendService)
     {
         _dbContextFactory = dbContextFactory;
         _userManager = userManager;
+        _friendService = friendService;
     }
 
     public async Task<UserProfileResponse> GetOrCreateProfileAsync(string userId)
@@ -56,6 +59,7 @@ public class ProfileService : IProfileService
             PublicIdentifier = profile.PublicIdentifier,
             IsPublic = profile.IsPublic,
             DisplayName = BuildDisplayName(user),
+            Email = user?.Email,
             PreferredTees = user?.PreferredTees ?? PreferredTees.Mens
         };
     }
@@ -81,6 +85,7 @@ public class ProfileService : IProfileService
             PublicIdentifier = profile.PublicIdentifier,
             IsPublic = profile.IsPublic,
             DisplayName = BuildDisplayName(user),
+            Email = user?.Email,
             PreferredTees = user?.PreferredTees ?? PreferredTees.Mens
         };
     }
@@ -121,6 +126,52 @@ public class ProfileService : IProfileService
             .FirstOrDefaultAsync(p => p.PublicIdentifier == publicIdentifier && p.IsPublic && !p.IsDeleted);
 
         return profile?.UserId;
+    }
+
+    public async Task<string?> GetUserIdByPublicIdIgnoringVisibilityAsync(Guid publicIdentifier)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        var profile = await dbContext.UserProfiles
+            .FirstOrDefaultAsync(p => p.PublicIdentifier == publicIdentifier && !p.IsDeleted);
+
+        return profile?.UserId;
+    }
+
+    public async Task<UserProfileResponse?> GetProfileForViewerAsync(Guid publicIdentifier, string? viewerUserId)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        var profile = await dbContext.UserProfiles
+            .FirstOrDefaultAsync(p => p.PublicIdentifier == publicIdentifier && !p.IsDeleted);
+
+        if (profile is null)
+        {
+            return null;
+        }
+
+        var visible = profile.IsPublic
+                      || (!string.IsNullOrEmpty(viewerUserId)
+                          && (viewerUserId == profile.UserId
+                              || await _friendService.AreFriendsAsync(viewerUserId, profile.UserId)));
+
+        if (!visible)
+        {
+            return null;
+        }
+
+        var user = await _userManager.FindByIdAsync(profile.UserId);
+
+        return new UserProfileResponse
+        {
+            UserProfileId = profile.UserProfileId,
+            UserId = profile.UserId,
+            PublicIdentifier = profile.PublicIdentifier,
+            IsPublic = profile.IsPublic,
+            DisplayName = BuildDisplayName(user),
+            Email = user?.Email,
+            PreferredTees = user?.PreferredTees ?? PreferredTees.Mens
+        };
     }
 
     private static string? BuildDisplayName(ApplicationUser? user)

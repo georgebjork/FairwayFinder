@@ -1,17 +1,17 @@
-@page "/profile/{PublicId:guid}"
+@page "/friends/{PublicId:guid}"
 @rendermode InteractiveServer
-@layout MainLayout
-@attribute [AllowAnonymous]
+@attribute [Authorize]
 @using System.Security.Claims
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
 @using FairwayFinder.Web.Components.Pages.Home.Components
 @using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
 @inject IProfileService ProfileService
+@inject IFriendService FriendService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject BreadcrumbState BreadcrumbState
 
-<PageTitle>@(_profile?.DisplayName ?? "Profile") - FairwayFinder</PageTitle>
+<PageTitle>@(_profile?.DisplayName ?? "Friend") - FairwayFinder</PageTitle>
 
 @if (_loading)
 {
@@ -23,21 +23,25 @@ else if (_profile is null)
 {
     <RadzenCard class="rz-p-5">
         <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
-            This profile is not available. It may be private or may not exist.
+            This profile is not available. You may need to send and have a friend request accepted to view it.
         </RadzenAlert>
     </RadzenCard>
 }
 else
 {
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem" class="rz-p-4">
+        <RadzenGravatar Email="@_profile.Email" />
+        <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">@_profile.DisplayName</RadzenText>
+    </RadzenStack>
+
     <FairwayFinderDashboard UserId="@_profile.UserId"
-                            BasePath="@($"/profile/{PublicId}")"
-                            RoundUrlPrefix="@($"/profile/{PublicId}")"
-                            ShowTrendDialogs="false"/>
+                            BasePath="@($"/friends/{PublicId}")"
+                            RoundUrlPrefix="@($"/friends/{PublicId}")"
+                            ShowTrendDialogs="false" />
 }
 
 @code {
-    [Parameter]
-    public Guid PublicId { get; set; }
+    [Parameter] public Guid PublicId { get; set; }
 
     private UserProfileResponse? _profile;
     private bool _loading = true;
@@ -48,6 +52,13 @@ else
         var viewerUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         _profile = await ProfileService.GetProfileForViewerAsync(PublicId, viewerUserId);
+
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem("Friends", "/friends"),
+            new BreadcrumbItem(_profile?.DisplayName ?? "Profile")
+        );
+
         _loading = false;
     }
 }

@@ -1,4 +1,9 @@
+@using System.Security.Claims
+@using FairwayFinder.Features.Services.Interfaces
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IFriendService FriendService
+@implements IDisposable
 
 <RadzenHeader>
     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Gap="0" class="rz-p-2">
@@ -13,6 +18,15 @@
                 <Authorized>
                     <RadzenButton Text="Add Round" Icon="add" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small"
                                   Click="@(() => NavigationManager.NavigateTo("/round/new"))" />
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem">
+                        <RadzenButton Text="Friends" Icon="group" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small"
+                                      Variant="Variant.Outlined"
+                                      Click="@(() => NavigationManager.NavigateTo("/friends"))" />
+                        @if (_pendingCount > 0)
+                        {
+                            <RadzenBadge BadgeStyle="BadgeStyle.Danger" Text="@_pendingCount.ToString()" />
+                        }
+                    </RadzenStack>
                 </Authorized>
             </AuthorizeView>
             <AuthorizeView Roles="Admin">
@@ -27,7 +41,8 @@
                 <Authorized>
                     <RadzenProfileMenu>
                         <Template>
-                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem">
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                <RadzenGravatar Email="@context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value" />
                                 <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@context.User.Identity?.Name</RadzenText>
                                 <RadzenIcon Icon="arrow_drop_down" />
                             </RadzenStack>
@@ -51,4 +66,44 @@
 
 @code {
     [Parameter] public EventCallback OnToggleSidebar { get; set; }
+
+    private int _pendingCount;
+    private string? _userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            _userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            await RefreshPendingCountAsync();
+        }
+
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+        await RefreshPendingCountAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task RefreshPendingCountAsync()
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+        try
+        {
+            _pendingCount = await FriendService.GetIncomingRequestCountAsync(_userId);
+        }
+        catch
+        {
+            _pendingCount = 0;
+        }
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
 }

@@ -1,0 +1,54 @@
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services.Interfaces
+@inject IFriendService FriendService
+@inject DialogService DialogService
+
+<RadzenStack Gap="1rem">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+        <RadzenGravatar Email="@Target.Email" />
+        <RadzenText TextStyle="TextStyle.Body1">
+            Send a friend request to <strong>@Target.DisplayName</strong>?
+        </RadzenText>
+    </RadzenStack>
+
+    @if (!string.IsNullOrEmpty(_error))
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Danger" AllowClose="false" Shade="Shade.Lighter">
+            @_error
+        </RadzenAlert>
+    }
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+        <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light"
+                      Click="@(() => DialogService.Close(null))" Disabled="_submitting" />
+        <RadzenButton Text="Send Request" Icon="person_add" ButtonStyle="ButtonStyle.Primary"
+                      Click="OnSubmit" IsBusy="_submitting" BusyText="Sending..." />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter] public UserSearchResultResponse Target { get; set; } = null!;
+    [Parameter] public string CurrentUserId { get; set; } = string.Empty;
+
+    private bool _submitting;
+    private string? _error;
+
+    private async Task OnSubmit()
+    {
+        _submitting = true;
+        _error = null;
+        try
+        {
+            var friendshipId = await FriendService.SendRequestAsync(CurrentUserId, Target.UserId);
+            DialogService.Close(friendshipId);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+}

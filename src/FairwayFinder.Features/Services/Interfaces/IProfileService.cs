@@ -32,4 +32,17 @@ public interface IProfileService
     /// Returns null if the profile doesn't exist or is private.
     /// </summary>
     Task<string?> GetUserIdByPublicIdAsync(Guid publicIdentifier);
+
+    /// <summary>
+    /// Resolves a public identifier to a user ID regardless of the profile's IsPublic flag.
+    /// Returns null only if the profile doesn't exist or is soft-deleted.
+    /// Used by friend-aware lookups where the caller is responsible for the visibility gate.
+    /// </summary>
+    Task<string?> GetUserIdByPublicIdIgnoringVisibilityAsync(Guid publicIdentifier);
+
+    /// <summary>
+    /// Returns the profile if it is public, OR if the supplied viewer is an accepted friend of the target.
+    /// Returns null otherwise.
+    /// </summary>
+    Task<UserProfileResponse?> GetProfileForViewerAsync(Guid publicIdentifier, string? viewerUserId);
 }
