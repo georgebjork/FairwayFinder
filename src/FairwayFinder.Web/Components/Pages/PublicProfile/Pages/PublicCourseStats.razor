@@ -6,6 +6,7 @@
 @using System.Security.Claims
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Web.Components.Error
 @using FairwayFinder.Web.Components.Pages.Home.Components
 @using FairwayFinder.Web.Components.Pages.Course.Components
 @using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
@@ -25,11 +26,7 @@
 }
 else if (_profile is null)
 {
-    <RadzenCard class="rz-p-5">
-        <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
-            This profile is not available. It may be private or may not exist.
-        </RadzenAlert>
-    </RadzenCard>
+    <NotFound />
 }
 else if (_noData)
 {

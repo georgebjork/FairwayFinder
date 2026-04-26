@@ -142,7 +142,7 @@ public static class FriendEndpoints
 
         var areFriends = await friendService.AreFriendsAsync(viewerUserId, targetUserId);
         if (!areFriends)
-            throw new ForbiddenException("Profile", publicId);
+            throw new NotFoundException("Profile", publicId);
 
         return targetUserId;
     }

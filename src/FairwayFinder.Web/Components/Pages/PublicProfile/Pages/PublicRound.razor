@@ -6,6 +6,7 @@
 @using System.Security.Claims
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Web.Components.Error
 @using FairwayFinder.Web.Components.Pages.Rounds.Components
 @using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
 @inject IProfileService ProfileService
@@ -24,16 +25,7 @@
 }
 else if (_round is null)
 {
-    <RadzenCard class="rz-p-5">
-        <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
-            @_errorMessage
-        </RadzenAlert>
-        @if (_profile is not null)
-        {
-            <RadzenButton Text="Back to Profile" Icon="arrow_back" ButtonStyle="ButtonStyle.Secondary"
-                          Click="@(() => NavigationManager.NavigateTo(_basePath))" class="rz-mt-4" />
-        }
-    </RadzenCard>
+    <NotFound />
 }
 else
 {
@@ -80,7 +72,6 @@ else
     private UserProfileResponse? _profile;
     private RoundResponse? _round;
     private bool _loading = true;
-    private string _errorMessage = "Round not found.";
     private bool _isFriendRoute;
     private string _basePath = string.Empty;
     private string _backLabel = "Back to Profile";
@@ -101,7 +92,6 @@ else
 
         if (_profile is null)
         {
-            _errorMessage = "This profile is not available. It may be private or may not exist.";
             _loading = false;
             return;
         }
@@ -116,7 +106,6 @@ else
             if (!isOwned)
             {
                 _round = null;
-                _errorMessage = "Round not found or does not belong to this profile.";
             }
         }
 
