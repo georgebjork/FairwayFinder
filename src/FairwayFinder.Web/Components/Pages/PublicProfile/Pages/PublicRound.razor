@@ -1,7 +1,9 @@
 @page "/profile/{PublicId:guid}/round/{RoundId:long}"
+@page "/friends/{PublicId:guid}/round/{RoundId:long}"
 @rendermode InteractiveServer
 @layout MainLayout
 @attribute [AllowAnonymous]
+@using System.Security.Claims
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
 @using FairwayFinder.Web.Components.Pages.Rounds.Components
@@ -9,6 +11,7 @@
 @inject IProfileService ProfileService
 @inject IRoundService RoundService
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject BreadcrumbState BreadcrumbState
 
 <PageTitle>View Round</PageTitle>
@@ -28,7 +31,7 @@ else if (_round is null)
         @if (_profile is not null)
         {
             <RadzenButton Text="Back to Profile" Icon="arrow_back" ButtonStyle="ButtonStyle.Secondary"
-                          Click="@(() => NavigationManager.NavigateTo($"/profile/{PublicId}"))" class="rz-mt-4" />
+                          Click="@(() => NavigationManager.NavigateTo(_basePath))" class="rz-mt-4" />
         }
     </RadzenCard>
 }
@@ -49,9 +52,9 @@ else
                 </RadzenStack>
             </RadzenStack>
 
-            <RadzenButton Text="Back to Profile" Icon="arrow_back" ButtonStyle="ButtonStyle.Light"
+            <RadzenButton Text="@_backLabel" Icon="arrow_back" ButtonStyle="ButtonStyle.Light"
                           Variant="Variant.Outlined"
-                          Click="@(() => NavigationManager.NavigateTo($"/profile/{PublicId}"))" />
+                          Click="@(() => NavigationManager.NavigateTo(_basePath))" />
         </RadzenStack>
 
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Start">
@@ -78,13 +81,24 @@ else
     private RoundResponse? _round;
     private bool _loading = true;
     private string _errorMessage = "Round not found.";
+    private bool _isFriendRoute;
+    private string _basePath = string.Empty;
+    private string _backLabel = "Back to Profile";
 
     protected override async Task OnParametersSetAsync()
     {
         _loading = true;
 
-        // 1. Validate the public profile
-        _profile = await ProfileService.GetPublicProfileAsync(PublicId);
+        _isFriendRoute = NavigationManager.ToBaseRelativePath(NavigationManager.Uri)
+            .StartsWith("friends/", StringComparison.OrdinalIgnoreCase);
+        _basePath = _isFriendRoute ? $"/friends/{PublicId}" : $"/profile/{PublicId}";
+        _backLabel = _isFriendRoute ? "Back to Friend" : "Back to Profile";
+
+        // 1. Validate the profile (friend-aware when on the /friends route)
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var viewerUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        _profile = await ProfileService.GetProfileForViewerAsync(PublicId, viewerUserId);
+
         if (_profile is null)
         {
             _errorMessage = "This profile is not available. It may be private or may not exist.";
@@ -106,10 +120,21 @@ else
             }
         }
 
-        BreadcrumbState.Set(
-            new BreadcrumbItem("Dashboard", $"/profile/{PublicId}"),
-            new BreadcrumbItem($"{_round?.CourseName} - {_round?.DatePlayed:M/d/yy}")
-        );
+        if (_isFriendRoute)
+        {
+            BreadcrumbState.Set(
+                new BreadcrumbItem("Friends", "/friends"),
+                new BreadcrumbItem(_profile.DisplayName ?? "Friend", _basePath),
+                new BreadcrumbItem($"{_round?.CourseName} - {_round?.DatePlayed:M/d/yy}")
+            );
+        }
+        else
+        {
+            BreadcrumbState.Set(
+                new BreadcrumbItem("Dashboard", _basePath),
+                new BreadcrumbItem($"{_round?.CourseName} - {_round?.DatePlayed:M/d/yy}")
+            );
+        }
 
         _loading = false;
     }
