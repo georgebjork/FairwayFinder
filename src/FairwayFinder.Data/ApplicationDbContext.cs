@@ -106,6 +106,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.MissFairwayType).HasColumnName("miss_fairway_type");
             entity.Property(e => e.MissGreenType).HasColumnName("miss_green_type");
             entity.Property(e => e.NumberOfPutts).HasColumnName("number_of_putts");
+            entity.Property(e => e.TeeShotOutOfPosition).HasColumnName("tee_shot_out_of_position");
+            entity.Property(e => e.ApproachShotOutOfPosition).HasColumnName("approach_shot_out_of_position");
             entity.Property(e => e.RoundId).HasColumnName("round_id");
             entity.Property(e => e.ScoreId).HasColumnName("score_id");
             entity.Property(e => e.TeeShotOb).HasColumnName("tee_shot_ob");

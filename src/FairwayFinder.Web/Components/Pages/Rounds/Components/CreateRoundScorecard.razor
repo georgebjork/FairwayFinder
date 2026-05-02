@@ -276,6 +276,48 @@
                     <td class="total-cell" colspan="2">@TotalFairwaysHit / @TotalFairwaysTotal</td>
                 </tr>
 
+                @* Drive Out of Position Row (clickable toggle) *@
+                <tr>
+                    <th colspan="2">Drive OoP</th>
+                    @foreach (var entry in FrontNineEntries)
+                    {
+                        <td class="hole-cell toggle-cell" @onclick="() => ToggleTeeShotOutOfPosition(entry)">
+                            @if (entry.Par <= 3)
+                            {
+                                <span>&nbsp;</span>
+                            }
+                            else if (entry.TeeShotOutOfPosition)
+                            {
+                                <RadzenIcon Icon="report_problem" Style="color: var(--rz-warning); cursor: pointer;" />
+                            }
+                            else
+                            {
+                                <span class="toggle-placeholder">-</span>
+                            }
+                        </td>
+                    }
+                    <td class="total-cell" colspan="2">@FrontNineTeeShotOutOfPositionCount</td>
+                    @foreach (var entry in BackNineEntries)
+                    {
+                        <td class="hole-cell toggle-cell" @onclick="() => ToggleTeeShotOutOfPosition(entry)">
+                            @if (entry.Par <= 3)
+                            {
+                                <span>&nbsp;</span>
+                            }
+                            else if (entry.TeeShotOutOfPosition)
+                            {
+                                <RadzenIcon Icon="report_problem" Style="color: var(--rz-warning); cursor: pointer;" />
+                            }
+                            else
+                            {
+                                <span class="toggle-placeholder">-</span>
+                            }
+                        </td>
+                    }
+                    <td class="total-cell" colspan="2">@BackNineTeeShotOutOfPositionCount</td>
+                    <td class="total-cell" colspan="2">@TotalTeeShotOutOfPositionCount</td>
+                </tr>
+
                 @* GIR Row (clickable toggles with miss direction) *@
                 <tr>
                     <th colspan="2">GIR</th>
@@ -316,6 +358,40 @@
                     }
                     <td class="total-cell" colspan="2">@BackNineGreensHit</td>
                     <td class="total-cell" colspan="2">@TotalGreensHit / @State.HoleEntries.Count</td>
+                </tr>
+
+                @* Approach Out of Position Row (clickable toggle) *@
+                <tr>
+                    <th colspan="2">Approach OoP</th>
+                    @foreach (var entry in FrontNineEntries)
+                    {
+                        <td class="hole-cell toggle-cell" @onclick="() => ToggleApproachShotOutOfPosition(entry)">
+                            @if (entry.ApproachShotOutOfPosition)
+                            {
+                                <RadzenIcon Icon="report_problem" Style="color: var(--rz-warning); cursor: pointer;" />
+                            }
+                            else
+                            {
+                                <span class="toggle-placeholder">-</span>
+                            }
+                        </td>
+                    }
+                    <td class="total-cell" colspan="2">@FrontNineApproachShotOutOfPositionCount</td>
+                    @foreach (var entry in BackNineEntries)
+                    {
+                        <td class="hole-cell toggle-cell" @onclick="() => ToggleApproachShotOutOfPosition(entry)">
+                            @if (entry.ApproachShotOutOfPosition)
+                            {
+                                <RadzenIcon Icon="report_problem" Style="color: var(--rz-warning); cursor: pointer;" />
+                            }
+                            else
+                            {
+                                <span class="toggle-placeholder">-</span>
+                            }
+                        </td>
+                    }
+                    <td class="total-cell" colspan="2">@BackNineApproachShotOutOfPositionCount</td>
+                    <td class="total-cell" colspan="2">@TotalApproachShotOutOfPositionCount</td>
                 </tr>
 
                 @* Approach Yardage Row (editable) *@
@@ -493,6 +569,16 @@
     private int BackNineGreensHit => BackNineEntries.Count(e => e.HitGreen == true);
     private int TotalGreensHit => State.HoleEntries.Count(e => e.HitGreen == true);
 
+    // Drive out-of-position totals (only on par 4+ holes)
+    private int FrontNineTeeShotOutOfPositionCount => FrontNineEntries.Count(e => e.TeeShotOutOfPosition);
+    private int BackNineTeeShotOutOfPositionCount => BackNineEntries.Count(e => e.TeeShotOutOfPosition);
+    private int TotalTeeShotOutOfPositionCount => State.HoleEntries.Count(e => e.TeeShotOutOfPosition);
+
+    // Approach out-of-position totals
+    private int FrontNineApproachShotOutOfPositionCount => FrontNineEntries.Count(e => e.ApproachShotOutOfPosition);
+    private int BackNineApproachShotOutOfPositionCount => BackNineEntries.Count(e => e.ApproachShotOutOfPosition);
+    private int TotalApproachShotOutOfPositionCount => State.HoleEntries.Count(e => e.ApproachShotOutOfPosition);
+
     // Event handlers
     private async Task OnBackClicked() => await OnBack.InvokeAsync();
     private async Task OnReviewClicked() => await OnReview.InvokeAsync();
@@ -656,6 +742,17 @@
                 entry.MissGreenType = null;
             }
         }
+    }
+
+    private void ToggleTeeShotOutOfPosition(HoleScoreEntry entry)
+    {
+        if (entry.Par <= 3) return;
+        entry.TeeShotOutOfPosition = !entry.TeeShotOutOfPosition;
+    }
+
+    private void ToggleApproachShotOutOfPosition(HoleScoreEntry entry)
+    {
+        entry.ApproachShotOutOfPosition = !entry.ApproachShotOutOfPosition;
     }
 
     /// <summary>

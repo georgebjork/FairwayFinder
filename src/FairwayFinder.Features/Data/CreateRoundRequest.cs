@@ -39,6 +39,8 @@ public class HoleScoreEntry
     public long? MissGreenType { get; set; }
     public short? NumberOfPutts { get; set; }
     public int? ApproachYardage { get; set; }
+    public bool TeeShotOutOfPosition { get; set; }
+    public bool ApproachShotOutOfPosition { get; set; }
 
     // Shot-by-shot data (populated when UsingShotTracking = true)
     public List<ShotData>? Shots { get; set; }

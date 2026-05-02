@@ -3,6 +3,7 @@ using System;
 using FairwayFinder.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FairwayFinder.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260502173645_AddOutOfPositionToHoleStats")]
+    partial class AddOutOfPositionToHoleStats
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -264,10 +267,6 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("approach_shot_ob");
 
-                    b.Property<bool>("ApproachShotOutOfPosition")
-                        .HasColumnType("boolean")
-                        .HasColumnName("approach_shot_out_of_position");
-
                     b.Property<int?>("ApproachYardage")
                         .HasColumnType("integer")
                         .HasColumnName("approach_yardage");
@@ -309,6 +308,10 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("smallint")
                         .HasColumnName("number_of_putts");
 
+                    b.Property<bool>("OutOfPosition")
+                        .HasColumnType("boolean")
+                        .HasColumnName("out_of_position");
+
                     b.Property<long>("RoundId")
                         .HasColumnType("bigint")
                         .HasColumnName("round_id");
@@ -320,10 +323,6 @@ namespace FairwayFinder.Data.Migrations
                     b.Property<bool?>("TeeShotOb")
                         .HasColumnType("boolean")
                         .HasColumnName("tee_shot_ob");
-
-                    b.Property<bool>("TeeShotOutOfPosition")
-                        .HasColumnType("boolean")
-                        .HasColumnName("tee_shot_out_of_position");
 
                     b.Property<string>("UpdatedBy")
                         .IsRequired()

@@ -36,6 +36,10 @@ public partial class HoleStat
 
     public bool? ApproachShotOb { get; set; }
 
+    public bool TeeShotOutOfPosition { get; set; }
+
+    public bool ApproachShotOutOfPosition { get; set; }
+
     // Navigation properties
     public virtual Score Score { get; set; } = null!;
     public virtual Round Round { get; set; } = null!;

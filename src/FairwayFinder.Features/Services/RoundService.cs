@@ -321,6 +321,8 @@ public class RoundService : IRoundService
                 MissGreenType = h.MissGreenType,
                 NumberOfPutts = h.NumberOfPutts,
                 ApproachYardage = h.ApproachYardage,
+                TeeShotOutOfPosition = h.TeeShotOutOfPosition,
+                ApproachShotOutOfPosition = h.ApproachShotOutOfPosition,
                 CreatedBy = userId,
                 CreatedOn = today,
                 UpdatedBy = userId,
@@ -645,6 +647,8 @@ public class RoundService : IRoundService
                     existingStat.MissGreenType = hole.MissGreenType;
                     existingStat.NumberOfPutts = hole.NumberOfPutts;
                     existingStat.ApproachYardage = hole.ApproachYardage;
+                    existingStat.TeeShotOutOfPosition = hole.TeeShotOutOfPosition;
+                    existingStat.ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition;
                     existingStat.UpdatedBy = userId;
                     existingStat.UpdatedOn = today;
                 }
@@ -661,6 +665,8 @@ public class RoundService : IRoundService
                         MissGreenType = hole.MissGreenType,
                         NumberOfPutts = hole.NumberOfPutts,
                         ApproachYardage = hole.ApproachYardage,
+                        TeeShotOutOfPosition = hole.TeeShotOutOfPosition,
+                        ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition,
                         CreatedBy = userId,
                         CreatedOn = today,
                         UpdatedBy = userId,

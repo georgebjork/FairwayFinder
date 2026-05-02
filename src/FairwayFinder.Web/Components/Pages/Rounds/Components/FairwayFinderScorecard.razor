@@ -286,6 +286,76 @@ else
                             <td class="total-cell" colspan="2">&nbsp;</td>
                         </tr>
                     }
+
+                    <!-- Drive Out of Position Row -->
+                    @if (Round.Holes.Any(x => x.Stats?.TeeShotOutOfPosition == true))
+                    {
+                        <tr>
+                            <th colspan="2">Drive OoP</th>
+                            @if (HasFrontNine)
+                            {
+                                @foreach (var hole in FrontNine)
+                                {
+                                    <td class="hole-cell">
+                                        @if (hole.Stats?.TeeShotOutOfPosition == true)
+                                        {
+                                            <RadzenIcon Icon="report_problem" Style="color: var(--rz-warning);" />
+                                        }
+                                    </td>
+                                }
+                                <td class="total-cell" colspan="2">@FrontNine.Count(h => h.Stats?.TeeShotOutOfPosition == true)</td>
+                            }
+                            @if (HasBackNine)
+                            {
+                                @foreach (var hole in BackNine)
+                                {
+                                    <td class="hole-cell">
+                                        @if (hole.Stats?.TeeShotOutOfPosition == true)
+                                        {
+                                            <RadzenIcon Icon="report_problem" Style="color: var(--rz-warning);" />
+                                        }
+                                    </td>
+                                }
+                                <td class="total-cell" colspan="2">@BackNine.Count(h => h.Stats?.TeeShotOutOfPosition == true)</td>
+                            }
+                            <td class="total-cell" colspan="2">@Round.Holes.Count(h => h.Stats?.TeeShotOutOfPosition == true)</td>
+                        </tr>
+                    }
+
+                    <!-- Approach Out of Position Row -->
+                    @if (Round.Holes.Any(x => x.Stats?.ApproachShotOutOfPosition == true))
+                    {
+                        <tr>
+                            <th colspan="2">Approach OoP</th>
+                            @if (HasFrontNine)
+                            {
+                                @foreach (var hole in FrontNine)
+                                {
+                                    <td class="hole-cell">
+                                        @if (hole.Stats?.ApproachShotOutOfPosition == true)
+                                        {
+                                            <RadzenIcon Icon="report_problem" Style="color: var(--rz-warning);" />
+                                        }
+                                    </td>
+                                }
+                                <td class="total-cell" colspan="2">@FrontNine.Count(h => h.Stats?.ApproachShotOutOfPosition == true)</td>
+                            }
+                            @if (HasBackNine)
+                            {
+                                @foreach (var hole in BackNine)
+                                {
+                                    <td class="hole-cell">
+                                        @if (hole.Stats?.ApproachShotOutOfPosition == true)
+                                        {
+                                            <RadzenIcon Icon="report_problem" Style="color: var(--rz-warning);" />
+                                        }
+                                    </td>
+                                }
+                                <td class="total-cell" colspan="2">@BackNine.Count(h => h.Stats?.ApproachShotOutOfPosition == true)</td>
+                            }
+                            <td class="total-cell" colspan="2">@Round.Holes.Count(h => h.Stats?.ApproachShotOutOfPosition == true)</td>
+                        </tr>
+                    }
                 }
 
                 @if (Round.UsingShotTracking && Round.HoleByHoleSg is not null)
