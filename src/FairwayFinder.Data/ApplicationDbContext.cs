@@ -25,6 +25,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public virtual DbSet<Shot> Shots { get; set; }
     public virtual DbSet<GolfCourseApiCourseMap> GolfCourseApiCourseMaps { get; set; }
     public virtual DbSet<Friendship> Friendships { get; set; }
+    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -382,6 +383,26 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
             entity.HasIndex(e => new { e.AddresseeUserId, e.Status }).HasDatabaseName("ix_friendship_addressee_status");
             entity.HasIndex(e => new { e.RequesterUserId, e.Status }).HasDatabaseName("ix_friendship_requester_status");
+        });
+
+        // RefreshToken
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasKey(e => e.RefreshTokenId).HasName("refresh_token_pkey");
+            entity.ToTable("refresh_token");
+            entity.Property(e => e.RefreshTokenId).HasColumnName("refresh_token_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.TokenHash).HasColumnName("token_hash").HasMaxLength(128);
+            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
+            entity.Property(e => e.RevokedAt).HasColumnName("revoked_at");
+            entity.Property(e => e.ReplacedByTokenHash).HasColumnName("replaced_by_token_hash").HasMaxLength(128);
+            entity.Property(e => e.DeviceName).HasColumnName("device_name").HasMaxLength(200);
+            entity.Ignore(e => e.IsActive);
+
+            entity.HasIndex(e => e.TokenHash).IsUnique().HasDatabaseName("ix_refresh_token_token_hash");
+            entity.HasIndex(e => e.UserId).HasDatabaseName("ix_refresh_token_user_id");
+            entity.HasIndex(e => e.ExpiresAt).HasDatabaseName("ix_refresh_token_expires_at");
         });
 
         // GolfCourseApiCourseMap (lookup table)

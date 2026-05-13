@@ -45,7 +45,7 @@ if (string.IsNullOrWhiteSpace(jwtSettings.Secret) || jwtSettings.Secret.Length <
         "Jwt:Secret is not configured. Set via user-secrets (dev) or environment variable Jwt__Secret (prod).");
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
-builder.Services.AddSingleton<JwtTokenService>();
+builder.Services.AddScoped<JwtTokenService>();
 
 builder.Services.AddAuthentication(options =>
 {

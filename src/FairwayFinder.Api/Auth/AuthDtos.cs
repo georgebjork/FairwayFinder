@@ -4,6 +4,7 @@ public class LoginRequest
 {
     public string Email { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
+    public string? DeviceName { get; set; }
 }
 
 public class LoginResponse

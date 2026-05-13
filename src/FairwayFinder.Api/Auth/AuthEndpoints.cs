@@ -35,7 +35,7 @@ public static class AuthEndpoints
 
             var roles = await userManager.GetRolesAsync(user);
             var (accessToken, expiresAt) = tokenService.GenerateAccessToken(user, roles);
-            var refreshToken = tokenService.GenerateRefreshToken(user.Id);
+            var refreshToken = await tokenService.IssueRefreshTokenAsync(user.Id, request.DeviceName);
 
             return Results.Ok(BuildLoginResponse(accessToken, refreshToken, expiresAt, user));
         });
@@ -45,19 +45,26 @@ public static class AuthEndpoints
             UserManager<ApplicationUser> userManager,
             JwtTokenService tokenService) =>
         {
-            var userId = tokenService.ValidateRefreshToken(request.RefreshToken);
-            if (userId is null)
+            var rotation = await tokenService.RotateRefreshTokenAsync(request.RefreshToken);
+            if (rotation is null)
                 return Results.Unauthorized();
 
-            var user = await userManager.FindByIdAsync(userId);
+            var user = await userManager.FindByIdAsync(rotation.UserId);
             if (user is null)
                 return Results.Unauthorized();
 
             var roles = await userManager.GetRolesAsync(user);
             var (accessToken, expiresAt) = tokenService.GenerateAccessToken(user, roles);
-            var newRefreshToken = tokenService.GenerateRefreshToken(user.Id);
 
-            return Results.Ok(BuildLoginResponse(accessToken, newRefreshToken, expiresAt, user));
+            return Results.Ok(BuildLoginResponse(accessToken, rotation.RefreshToken, expiresAt, user));
+        });
+
+        group.MapPost("/logout", async (
+            RefreshRequest request,
+            JwtTokenService tokenService) =>
+        {
+            await tokenService.RevokeRefreshTokenAsync(request.RefreshToken);
+            return Results.NoContent();
         });
 
         return app;
