@@ -130,7 +130,17 @@ public class HoleAggregateStats
     /// Average number of putts. Null if no putting data.
     /// </summary>
     public decimal? AveragePutts { get; set; }
-    
+
+    /// <summary>
+    /// Tee shot out-of-position percentage. Null on par 3 or if no hole-stat data.
+    /// </summary>
+    public decimal? TeeShotOutOfPositionPercent { get; set; }
+
+    /// <summary>
+    /// Approach shot out-of-position percentage. Null if no hole-stat data.
+    /// </summary>
+    public decimal? ApproachShotOutOfPositionPercent { get; set; }
+
     /// <summary>
     /// Fairway miss direction breakdown. Null if no fairway miss data or par 3.
     /// </summary>

@@ -159,6 +159,76 @@
                         </RadzenStack>
                     </RadzenFieldset>
                 </RadzenColumn>
+
+                @* ── Avg. Score Drive In Pos ── *@
+                <RadzenColumn Size="6">
+                    <RadzenFieldset Text="Avg. Score Drive In Pos" class="stat-panel">
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="0">
+                            @foreach (var pt in ParTypeStats)
+                            {
+                                if (pt.Par <= 3) { continue; }
+                                var holes = HolesForPar(pt.Par).Where(h => h.Stats?.TeeShotOutOfPosition == false).ToList();
+                                var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="stat-list-item">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">Par @pt.Par:</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0 stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</RadzenText>
+                                </RadzenStack>
+                            }
+                        </RadzenStack>
+                    </RadzenFieldset>
+                </RadzenColumn>
+
+                @* ── Avg. Score Drive OoP ── *@
+                <RadzenColumn Size="6">
+                    <RadzenFieldset Text="Avg. Score Drive OoP" class="stat-panel">
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="0">
+                            @foreach (var pt in ParTypeStats)
+                            {
+                                if (pt.Par <= 3) { continue; }
+                                var holes = HolesForPar(pt.Par).Where(h => h.Stats?.TeeShotOutOfPosition == true).ToList();
+                                var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="stat-list-item">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">Par @pt.Par:</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0 stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</RadzenText>
+                                </RadzenStack>
+                            }
+                        </RadzenStack>
+                    </RadzenFieldset>
+                </RadzenColumn>
+
+                @* ── Avg. Score App In Pos ── *@
+                <RadzenColumn Size="6">
+                    <RadzenFieldset Text="Avg. Score App In Pos" class="stat-panel">
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="0">
+                            @foreach (var pt in ParTypeStats)
+                            {
+                                var holes = HolesForPar(pt.Par).Where(h => h.Stats?.ApproachShotOutOfPosition == false).ToList();
+                                var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="stat-list-item">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">Par @pt.Par:</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0 stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</RadzenText>
+                                </RadzenStack>
+                            }
+                        </RadzenStack>
+                    </RadzenFieldset>
+                </RadzenColumn>
+
+                @* ── Avg. Score App OoP ── *@
+                <RadzenColumn Size="6">
+                    <RadzenFieldset Text="Avg. Score App OoP" class="stat-panel">
+                        <RadzenStack Orientation="Orientation.Vertical" Gap="0">
+                            @foreach (var pt in ParTypeStats)
+                            {
+                                var holes = HolesForPar(pt.Par).Where(h => h.Stats?.ApproachShotOutOfPosition == true).ToList();
+                                var avg = holes.Count > 0 ? holes.Average(h => (double)h.Score!.Value) : 0;
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" class="stat-list-item">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">Par @pt.Par:</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0 stat-value">@(holes.Count > 0 ? $"{avg:F2}" : "0") (@holes.Count)</RadzenText>
+                                </RadzenStack>
+                            }
+                        </RadzenStack>
+                    </RadzenFieldset>
+                </RadzenColumn>
             }
 
             @if (Round.UsingShotTracking && Round.StrokesGained is not null)

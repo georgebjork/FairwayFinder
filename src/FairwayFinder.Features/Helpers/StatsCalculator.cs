@@ -558,6 +558,21 @@ public static class StatsCalculator
                     result.AveragePutts = Math.Round((decimal)puttHoles.Average(h => h.Stats!.NumberOfPutts!.Value), 2);
                 }
 
+                // Out-of-position stats — tracked when a round used hole stats.
+                var oopHoles = holes.Where(h => h.Stats != null).ToList();
+
+                if (oopHoles.Count > 0)
+                {
+                    if (par > 3)
+                    {
+                        var teeOop = oopHoles.Count(h => h.Stats!.TeeShotOutOfPosition);
+                        result.TeeShotOutOfPositionPercent = Math.Round((decimal)teeOop / oopHoles.Count * 100, 1);
+                    }
+
+                    var approachOop = oopHoles.Count(h => h.Stats!.ApproachShotOutOfPosition);
+                    result.ApproachShotOutOfPositionPercent = Math.Round((decimal)approachOop / oopHoles.Count * 100, 1);
+                }
+
                 return result;
             })
             .ToList();

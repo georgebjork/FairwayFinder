@@ -39,12 +39,38 @@
                         }
                     </Template>
                 </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="HoleAggregateStats" Title="Tee OoP%" Width="110px" TextAlign="TextAlign.Center" Sortable="true"
+                                      SortProperty="TeeShotOutOfPositionPercent">
+                    <Template Context="hole">
+                        @if (hole.TeeShotOutOfPositionPercent.HasValue)
+                        {
+                            <span>@hole.TeeShotOutOfPositionPercent.Value.ToString("F0")%</span>
+                        }
+                        else
+                        {
+                            <span style="color: var(--rz-text-disabled-color);">-</span>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="HoleAggregateStats" Title="GIR%" Width="90px" TextAlign="TextAlign.Center" Sortable="true"
                                       SortProperty="GirPercent">
                     <Template Context="hole">
                         @if (hole.GirPercent.HasValue)
                         {
                             <span>@hole.GirPercent.Value.ToString("F0")%</span>
+                        }
+                        else
+                        {
+                            <span style="color: var(--rz-text-disabled-color);">-</span>
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="HoleAggregateStats" Title="App OoP%" Width="110px" TextAlign="TextAlign.Center" Sortable="true"
+                                      SortProperty="ApproachShotOutOfPositionPercent">
+                    <Template Context="hole">
+                        @if (hole.ApproachShotOutOfPositionPercent.HasValue)
+                        {
+                            <span>@hole.ApproachShotOutOfPositionPercent.Value.ToString("F0")%</span>
                         }
                         else
                         {
