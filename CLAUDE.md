@@ -80,7 +80,7 @@ Services are grouped by domain (e.g., `Rounds`, `Players`, `Stats`, `Clubs`, `Co
 ### Render Modes
 
 - **Interactive Server** — default for all pages.
-- **Static SSR** — only for authentication pages (`Components/Autg/`).
+- **Static SSR** — only for authentication pages (`Components/Auth/`).
 
 ### Component Organization
 
@@ -95,6 +95,8 @@ src/FairwayFinder.Web/Components/
 │   ├── Course/
 │   │   ├── Pages/
 │   │   └── Dialogs/
+│   ├── Friends/
+│   │   └── Pages/
 │   ├── Home/
 │   │   ├── Pages/
 │   │   ├── Components/             # Reusable child components
@@ -195,9 +197,6 @@ var(--rz-warning)    var(--rz-info)
 </RadzenCard>
 
 @code {
-    [CascadingParameter(Name = NamedParameters.OrganizationIdParameter)]
-    public int OrganizationId { get; set; }
-
     // Call injected services — never DbContext directly from pages
 }
 ```
