@@ -27,27 +27,35 @@ Golf stat tracker built with ASP.NET Core 10.0 Blazor Server, Radzen components,
 | Project | Role |
 |---|---|
 | **FairwayFinder.Web** | Blazor Server UI (interactive server mode, static SSR for auth pages) |
-| **FairwayFinder.Features** | Services, DTOs, and business logic |
+| **FairwayFinder.Api** | JWT-secured REST API (Minimal APIs) consumed by the iOS app |
+| **FairwayFinder.Features** | Services, DTOs, and business logic shared by Web and Api |
 | **FairwayFinder.Data** | EF Core DbContext, entity configurations, migrations |
-| **FairwayFinder.Identity** | ASP.NET Core Identity auth configuration |
-| **FairwayFinder.Shared** | Shared models and utilities |
+| **FairwayFinder.Identity** | ASP.NET Core Identity user/role types and password policy |
+| **FairwayFinder.Agents** | OpenAI agent integration (e.g., `ScorecardScoresReaderAgent` for scorecard OCR) |
+| **FairwayFinder.Shared** | Shared settings/models |
+| **FairwayFinder.ServiceDefaults** | Aspire service defaults (telemetry, health checks) shared by Web and Api |
 | **FairwayFinder.AppHost** | .NET Aspire orchestration for local dev |
 
 ### Dependency Flow
 
 ```
 Web → Features → Data → Shared
-Web → Identity → Data
-AppHost orchestrates Web + PostgreSQL
+Web → Identity, Agents, ServiceDefaults
+Api → Features → Data → Shared
+Api → Identity, ServiceDefaults
+AppHost orchestrates PostgreSQL (+ PgWeb) + Web + Api
 ```
+
+Both Web and Api reuse `RegisterFeatureServices()` from Features for the domain layer. Authentication differs: Web uses cookies (ASP.NET Core Identity UI), Api uses JWT bearer tokens.
 
 ### Layering Rules
 
-- **Web** calls **Services**. Pages/components never touch DbContext or EF directly.
+- **Web** and **Api** call **Services**. Pages/components/endpoints never touch DbContext or EF directly.
 - **Services** (in Features) contain business logic and query EF Core directly via injected `DbContext`.
 - **Data** owns the `DbContext`, entity configurations, and migrations. No repository classes.
-- **DTOs** live alongside their services in Features. Services return DTOs to the Web layer, not EF entities.
+- **DTOs** live alongside their services in Features. Services return DTOs to the Web/Api layers, not EF entities.
 - **No UI code** in Features or Data (no Radzen references).
+- **Web/Services** is for UI-layer infrastructure only (`NotificationService`, `CircuitTrackingService`, `ApplicationStartupService` for migrations + role seeding). Domain services belong in Features.
 
 ## Services (FairwayFinder.Features)
 
