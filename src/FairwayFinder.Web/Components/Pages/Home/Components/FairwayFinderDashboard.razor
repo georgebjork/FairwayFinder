@@ -3,6 +3,7 @@
 @using FairwayFinder.Web.Components.Pages.Home.Dialogs
 @using Microsoft.AspNetCore.WebUtilities
 @inject IStatsService StatsService
+@inject IRoundService RoundService
 @inject NavigationManager NavigationManager
 @inject DialogService DialogService
 @inject NotificationService NotificationService
@@ -340,7 +341,7 @@
         <RadzenColumn Size="12" SizeLG="8">
             <RadzenCard Style="height: 100%;">
                 <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Recent Rounds</RadzenText>
-                <FairwayFinderRoundsList Rounds="@_stats?.Rounds" RoundUrlPrefix="@RoundUrlPrefix" />
+                <FairwayFinderRoundsList Rounds="@_rounds" RoundUrlPrefix="@RoundUrlPrefix" />
             </RadzenCard>
         </RadzenColumn>
         <RadzenColumn Size="12" SizeLG="4">
@@ -405,6 +406,7 @@
     public string? ShareUrl { get; set; }
 
     private UserStatsResponse? _stats;
+    private List<RoundResponse> _rounds = new();
     private bool _loading = true;
 
     // Filter state
@@ -514,7 +516,11 @@
     private async Task LoadStats()
     {
         var filter = BuildFilter();
-        _stats = await StatsService.GetUserStatsAsync(UserId, filter);
+        var statsTask = StatsService.GetUserStatsAsync(UserId, filter);
+        var roundsTask = RoundService.GetRoundsByUserIdAsync(UserId, filter);
+        await Task.WhenAll(statsTask, roundsTask);
+        _stats = statsTask.Result;
+        _rounds = roundsTask.Result;
     }
 
     private async Task OnFilterChanged()

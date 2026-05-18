@@ -8,6 +8,7 @@
 @using FairwayFinder.Web.Components.Pages.Course.Components
 @using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
 @inject IStatsService StatsService
+@inject IRoundService RoundService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @inject BreadcrumbState BreadcrumbState
@@ -225,7 +226,7 @@ else
             </RadzenColumn>
         </RadzenRow>
 
-        <CourseRoundHistoryGrid Rounds="@_stats?.Rounds" />
+        <CourseRoundHistoryGrid Rounds="@_rounds" />
     </RadzenStack>
 }
 
@@ -259,6 +260,7 @@ else
     public long CourseId { get; set; }
 
     private CourseStatsResponse? _stats;
+    private List<RoundResponse> _rounds = new();
     private List<HoleAggregateStats> _hardestHoles = new();
     private string? _userId;
     private bool _isPublic;
@@ -318,7 +320,21 @@ else
     {
         if (string.IsNullOrEmpty(_userId)) return;
 
-        _stats = await StatsService.GetCourseStatsAsync(_userId, CourseId, _selectedTeeboxId, _startDate, _endDate);
+        var filter = new StatsFilter
+        {
+            CourseId = CourseId,
+            StartDate = _startDate,
+            EndDate = _endDate
+        };
+
+        var statsTask = StatsService.GetCourseStatsAsync(_userId, CourseId, _selectedTeeboxId, _startDate, _endDate);
+        var roundsTask = RoundService.GetRoundsByUserIdAsync(_userId, filter);
+        await Task.WhenAll(statsTask, roundsTask);
+        _stats = statsTask.Result;
+
+        _rounds = _selectedTeeboxId.HasValue
+            ? roundsTask.Result.Where(r => r.Teebox.TeeboxId == _selectedTeeboxId.Value).ToList()
+            : roundsTask.Result;
 
         if (_stats is not null)
         {

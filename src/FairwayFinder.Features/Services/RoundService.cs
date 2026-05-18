@@ -35,13 +35,78 @@ public class RoundService : IRoundService
             .ToList();
     }
 
-    public async Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId)
+    public async Task<List<RoundResponse>> GetRoundsByUserIdAsync(string userId, StatsFilter? filter)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
+        var query = dbContext.Rounds
+            .Where(r => r.UserId == userId && !r.IsDeleted && !r.ExcludeFromStats);
+
+        if (filter is not null)
+        {
+            if (filter.FullRoundOnly.HasValue)
+            {
+                query = query.Where(r => r.FullRound == filter.FullRoundOnly.Value);
+            }
+            if (filter.StartDate.HasValue)
+            {
+                query = query.Where(r => r.DatePlayed >= filter.StartDate.Value);
+            }
+            if (filter.EndDate.HasValue)
+            {
+                query = query.Where(r => r.DatePlayed <= filter.EndDate.Value);
+            }
+            if (filter.CourseId.HasValue)
+            {
+                query = query.Where(r => r.CourseId == filter.CourseId.Value);
+            }
+        }
+
+        var roundsData = await query
+            .Join(dbContext.Courses, r => r.CourseId, c => c.CourseId, (r, c) => new { Round = r, Course = c })
+            .Join(dbContext.Teeboxes, rc => rc.Round.TeeboxId, t => t.TeeboxId, (rc, t) => new { rc.Round, rc.Course, Teebox = t })
+            .OrderByDescending(x => x.Round.DatePlayed)
+            .ToListAsync();
+
+        return roundsData
+            .Select(x => RoundResponse.From(x.Round, x.Course, x.Teebox))
+            .ToList();
+    }
+
+    public Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId)
+        => GetRoundsWithDetailsAsync(userId, filter: null);
+
+    public async Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId, StatsFilter? filter)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        var query = dbContext.Rounds
+            .Where(r => r.UserId == userId && !r.IsDeleted);
+
+        if (filter is not null)
+        {
+            query = query.Where(r => !r.ExcludeFromStats);
+
+            if (filter.FullRoundOnly.HasValue)
+            {
+                query = query.Where(r => r.FullRound == filter.FullRoundOnly.Value);
+            }
+            if (filter.StartDate.HasValue)
+            {
+                query = query.Where(r => r.DatePlayed >= filter.StartDate.Value);
+            }
+            if (filter.EndDate.HasValue)
+            {
+                query = query.Where(r => r.DatePlayed <= filter.EndDate.Value);
+            }
+            if (filter.CourseId.HasValue)
+            {
+                query = query.Where(r => r.CourseId == filter.CourseId.Value);
+            }
+        }
+
         // 1. Get rounds with course and teebox
-        var roundsData = await dbContext.Rounds
-            .Where(r => r.UserId == userId && !r.IsDeleted)
+        var roundsData = await query
             .Join(dbContext.Courses, r => r.CourseId, c => c.CourseId, (r, c) => new { Round = r, Course = c })
             .Join(dbContext.Teeboxes, rc => rc.Round.TeeboxId, t => t.TeeboxId, (rc, t) => new { rc.Round, rc.Course, Teebox = t })
             .OrderByDescending(x => x.Round.DatePlayed)

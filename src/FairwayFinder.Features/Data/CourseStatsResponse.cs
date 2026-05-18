@@ -52,12 +52,7 @@ public class CourseStatsResponse
     /// Average SG by hole number for rounds with shot tracking.
     /// </summary>
     public List<StrokesGainedHoleResult>? PerHoleSg { get; set; }
-    
-    /// <summary>
-    /// All rounds played at this course (for the round history table).
-    /// </summary>
-    public List<RoundResponse> Rounds { get; set; } = new();
-    
+
     /// <summary>
     /// Available teeboxes the user has played at this course (for filter dropdown).
     /// </summary>

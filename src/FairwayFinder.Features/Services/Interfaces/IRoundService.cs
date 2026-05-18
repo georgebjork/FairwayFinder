@@ -8,11 +8,25 @@ public interface IRoundService
     /// Gets a lightweight list of rounds for a user (for display in lists)
     /// </summary>
     Task<List<RoundResponse>> GetRoundsByUserIdAsync(string userId);
-    
+
+    /// <summary>
+    /// Lightweight list of rounds for a user with stats-style filtering applied in the database
+    /// (round type, date range, course). Rounds marked ExcludeFromStats are omitted so the list
+    /// matches what stats endpoints aggregate over.
+    /// </summary>
+    Task<List<RoundResponse>> GetRoundsByUserIdAsync(string userId, StatsFilter? filter);
+
     /// <summary>
     /// Gets fully loaded rounds with all related data (holes, scores, stats)
     /// </summary>
     Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId);
+
+    /// <summary>
+    /// Fully loaded rounds with all related data, filtered at the database level by round type,
+    /// date range, and/or course. Child collections (scores, holes, hole stats) are loaded only
+    /// for the filtered round set. Rounds marked ExcludeFromStats are omitted.
+    /// </summary>
+    Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId, StatsFilter? filter);
     
     /// <summary>
     /// Gets a single round with all related data (holes, scores, stats)

@@ -37,12 +37,6 @@ public class UserStatsResponse
     public List<StrokesGainedTrendPoint> SgTotalTrend { get; set; } = new();
     public List<StrokesGainedTrendPoint> SgPuttingTrend { get; set; } = new();
     public List<StrokesGainedTrendPoint> SgTeeToGreenTrend { get; set; } = new();
-
-    /// <summary>
-    /// The filtered rounds used to calculate these stats.
-    /// Useful for displaying a rounds list alongside stats with matching filters.
-    /// </summary>
-    public List<RoundResponse> Rounds { get; set; } = new();
 }
 
 /// <summary>

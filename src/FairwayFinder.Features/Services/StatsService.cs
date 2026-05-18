@@ -60,8 +60,7 @@ public class StatsService : IStatsService
                 MostPlayedCourses = StatsCalculator.CalculateCourseStats(statsRounds, coursesCount),
                 ScoringDistribution = StatsCalculator.AggregateScoringDistribution(statsRounds),
                 ParTypeScoring = StatsCalculator.CalculateParTypeScoring(statsRounds),
-                AdvancedStats = StatsCalculator.CalculateAdvancedStats(statsRounds),
-                Rounds = statsRounds
+                AdvancedStats = StatsCalculator.CalculateAdvancedStats(statsRounds)
             };
 
             // Strokes Gained — from stored values on RoundResponse
@@ -175,7 +174,6 @@ public class StatsService : IStatsService
                 Best9HoleRound = StatsCalculator.FindBestRound(filteredRounds, false),
                 HoleStats = StatsCalculator.CalculateHoleAggregateStats(filteredRounds),
                 ScoringDistribution = StatsCalculator.AggregateScoringDistribution(filteredRounds),
-                Rounds = filteredRounds,
                 TeeboxOptions = teeboxOptions,
                 SelectedTeeboxId = teeboxId
             };

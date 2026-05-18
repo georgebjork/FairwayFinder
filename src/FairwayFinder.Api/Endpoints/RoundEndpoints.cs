@@ -14,17 +14,49 @@ public static class RoundEndpoints
             .WithTags("Rounds")
             .RequireAuthorization();
 
-        group.MapGet("/", async (HttpContext ctx, IRoundService roundService) =>
+        group.MapGet("/", async (
+            long? courseId,
+            bool? fullRoundOnly,
+            DateOnly? startDate,
+            DateOnly? endDate,
+            HttpContext ctx,
+            IRoundService roundService) =>
         {
             var userId = ctx.User.GetUserId();
-            var rounds = await roundService.GetRoundsByUserIdAsync(userId);
+            var filter = new StatsFilter
+            {
+                CourseId = courseId,
+                FullRoundOnly = fullRoundOnly,
+                StartDate = startDate,
+                EndDate = endDate
+            };
+
+            var rounds = filter.HasFilters
+                ? await roundService.GetRoundsByUserIdAsync(userId, filter)
+                : await roundService.GetRoundsByUserIdAsync(userId);
             return Results.Ok(rounds);
         });
 
-        group.MapGet("/details", async (HttpContext ctx, IRoundService roundService) =>
+        group.MapGet("/details", async (
+            long? courseId,
+            bool? fullRoundOnly,
+            DateOnly? startDate,
+            DateOnly? endDate,
+            HttpContext ctx,
+            IRoundService roundService) =>
         {
             var userId = ctx.User.GetUserId();
-            var rounds = await roundService.GetRoundsWithDetailsAsync(userId);
+            var filter = new StatsFilter
+            {
+                CourseId = courseId,
+                FullRoundOnly = fullRoundOnly,
+                StartDate = startDate,
+                EndDate = endDate
+            };
+
+            var rounds = filter.HasFilters
+                ? await roundService.GetRoundsWithDetailsAsync(userId, filter)
+                : await roundService.GetRoundsWithDetailsAsync(userId);
             return Results.Ok(rounds);
         });
 
