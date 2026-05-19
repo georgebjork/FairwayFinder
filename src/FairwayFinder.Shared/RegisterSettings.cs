@@ -8,6 +8,7 @@ public static class RegisterSettings
 {
     public static IServiceCollection RegisterSharedSettings(this IServiceCollection services, ConfigurationManager config)
     {
+        services.Configure<ApnsSettings>(config.GetSection("Apns"));
         services.Configure<ClaudeSettings>(config.GetSection("Claude"));
         services.Configure<OpenAiSettings>(config.GetSection("OpenAI"));
         services.Configure<ResendSettings>(config.GetSection("Resend"));

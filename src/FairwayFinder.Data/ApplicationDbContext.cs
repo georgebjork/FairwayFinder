@@ -26,6 +26,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public virtual DbSet<GolfCourseApiCourseMap> GolfCourseApiCourseMaps { get; set; }
     public virtual DbSet<Friendship> Friendships { get; set; }
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
+    public virtual DbSet<UserDevice> UserDevices { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -403,6 +404,25 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasIndex(e => e.TokenHash).IsUnique().HasDatabaseName("ix_refresh_token_token_hash");
             entity.HasIndex(e => e.UserId).HasDatabaseName("ix_refresh_token_user_id");
             entity.HasIndex(e => e.ExpiresAt).HasDatabaseName("ix_refresh_token_expires_at");
+        });
+
+        // UserDevice
+        modelBuilder.Entity<UserDevice>(entity =>
+        {
+            entity.HasKey(e => e.DeviceId).HasName("user_device_pkey");
+            entity.ToTable("user_device");
+            entity.Property(e => e.DeviceId).HasColumnName("device_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.DeviceToken).HasColumnName("device_token").HasMaxLength(256);
+            entity.Property(e => e.DeviceName).HasColumnName("device_name").HasMaxLength(200);
+            entity.Property(e => e.Platform).HasColumnName("platform").HasMaxLength(20).HasDefaultValue("ios");
+            entity.Property(e => e.CreatedAt).HasColumnName("created_at").HasDefaultValueSql("NOW()");
+            entity.Property(e => e.UpdatedAt).HasColumnName("updated_at").HasDefaultValueSql("NOW()");
+            entity.Property(e => e.LastSeenAt).HasColumnName("last_seen_at").HasDefaultValueSql("NOW()");
+            entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+
+            entity.HasIndex(e => e.DeviceToken).IsUnique().HasDatabaseName("ix_user_device_device_token");
+            entity.HasIndex(e => new { e.UserId, e.IsActive }).HasDatabaseName("ix_user_device_user_id_is_active");
         });
 
         // GolfCourseApiCourseMap (lookup table)
