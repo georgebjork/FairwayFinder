@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using dotAPNS;
 using FairwayFinder.Features.HttpClients;
 using FairwayFinder.Features.Services;
 using FairwayFinder.Features.Services.Email;
@@ -6,8 +7,10 @@ using FairwayFinder.Features.Services.Admin;
 using FairwayFinder.Features.Services.GolfCourseApi;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Features.Services.TGTR;
+using FairwayFinder.Shared.Settings;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace FairwayFinder.Features;
 
@@ -49,6 +52,23 @@ public static class ServiceRegistration
         services.AddSingleton<GolfCourseApiImportState>();
         services.AddSingleton<GolfCourseApiImportJob>();
         services.AddHostedService(sp => sp.GetRequiredService<GolfCourseApiImportJob>());
+
+        // APNS push notifications
+        services.AddHttpClient("apns");
+        services.AddSingleton<IApnsClient>(sp =>
+        {
+            var settings = sp.GetRequiredService<IOptions<ApnsSettings>>().Value;
+            var httpFactory = sp.GetRequiredService<IHttpClientFactory>();
+            var jwtOptions = new ApnsJwtOptions
+            {
+                BundleId = settings.BundleId,
+                CertContent = settings.P8Contents,
+                KeyId = settings.KeyId,
+                TeamId = settings.TeamId
+            };
+            return ApnsClient.CreateUsingJwt(httpFactory.CreateClient("apns"), jwtOptions);
+        });
+        services.AddScoped<IPushNotificationService, PushNotificationService>();
 
         // Email — use dev sender locally to avoid sending real emails
         if (isDevelopment)

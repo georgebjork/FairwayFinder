@@ -7,6 +7,8 @@ using FairwayFinder.Data;
 using FairwayFinder.Features;
 using FairwayFinder.Identity;
 using FairwayFinder.ServiceDefaults;
+using FairwayFinder.Shared;
+using FairwayFinder.Shared.Settings;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -72,6 +74,19 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// ── Settings ────────────────────────────────────────────────
+builder.Services.RegisterSharedSettings(builder.Configuration);
+
+var apnsSettings = builder.Configuration.GetSection("Apns").Get<ApnsSettings>()!;
+if (string.IsNullOrWhiteSpace(apnsSettings.BundleId)
+    || string.IsNullOrWhiteSpace(apnsSettings.KeyId)
+    || string.IsNullOrWhiteSpace(apnsSettings.TeamId)
+    || string.IsNullOrWhiteSpace(apnsSettings.P8Contents))
+{
+    throw new InvalidOperationException(
+        "Apns configuration is incomplete. Set BundleId, KeyId, TeamId, and P8Contents via user-secrets (dev) or environment variables (prod).");
+}
+
 // ── Domain Services (reuse existing registration) ───────────
 builder.Services.RegisterFeatureServices(builder.Configuration, builder.Environment.IsDevelopment());
 
@@ -119,5 +134,6 @@ app.MapStatsEndpoints();
 app.MapLookupEndpoints();
 app.MapProfileEndpoints();
 app.MapFriendEndpoints();
+app.MapDeviceEndpoints();
 
 app.Run();
