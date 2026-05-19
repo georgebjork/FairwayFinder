@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 namespace FairwayFinder.Features.Services;
 
 public class PushNotificationService(
-    ApplicationDbContext db,
+    IDbContextFactory<ApplicationDbContext> dbContextFactory,
     IApnsClient apnsClient,
     IOptions<ApnsSettings> apnsSettings,
     ILogger<PushNotificationService> logger) : IPushNotificationService
@@ -19,6 +19,8 @@ public class PushNotificationService(
 
     public async Task RegisterDeviceAsync(string userId, string deviceToken, string? deviceName, CancellationToken ct = default)
     {
+        await using var db = await dbContextFactory.CreateDbContextAsync(ct);
+
         var now = DateTime.UtcNow;
         var existing = await db.UserDevices.FirstOrDefaultAsync(d => d.DeviceToken == deviceToken, ct);
 
@@ -50,6 +52,8 @@ public class PushNotificationService(
 
     public async Task UnregisterDeviceAsync(string deviceToken, CancellationToken ct = default)
     {
+        await using var db = await dbContextFactory.CreateDbContextAsync(ct);
+
         var device = await db.UserDevices.FirstOrDefaultAsync(d => d.DeviceToken == deviceToken, ct);
         if (device is null) return;
 
@@ -60,6 +64,8 @@ public class PushNotificationService(
 
     public async Task<int> SendToUserAsync(string userId, string title, string body, int? badge = null, CancellationToken ct = default)
     {
+        await using var db = await dbContextFactory.CreateDbContextAsync(ct);
+
         var devices = await db.UserDevices
             .Where(d => d.UserId == userId && d.IsActive)
             .ToListAsync(ct);

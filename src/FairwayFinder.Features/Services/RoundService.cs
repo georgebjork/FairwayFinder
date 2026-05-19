@@ -7,16 +7,27 @@ using FairwayFinder.Features.Enums;
 using FairwayFinder.Features.Helpers;
 using FairwayFinder.Features.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Features.Services;
 
 public class RoundService : IRoundService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
+    private readonly IFriendService _friendService;
+    private readonly IPushNotificationService _pushService;
+    private readonly ILogger<RoundService> _logger;
 
-    public RoundService(IDbContextFactory<ApplicationDbContext> dbContextFactory)
+    public RoundService(
+        IDbContextFactory<ApplicationDbContext> dbContextFactory,
+        IFriendService friendService,
+        IPushNotificationService pushService,
+        ILogger<RoundService> logger)
     {
         _dbContextFactory = dbContextFactory;
+        _friendService = friendService;
+        _pushService = pushService;
+        _logger = logger;
     }
 
     public async Task<List<RoundResponse>> GetRoundsByUserIdAsync(string userId)
@@ -475,6 +486,8 @@ public class RoundService : IRoundService
             activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundHoles, holeCount);
             activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundShotTracking, request.UsingShotTracking);
 
+            await NotifyFriendsOfNewRoundAsync(dbContext, userId, request.CourseId, totalScore);
+
             return round.RoundId;
         }
         catch (Exception ex)
@@ -491,6 +504,33 @@ public class RoundService : IRoundService
                 { FairwayFinderDiagnostics.Tags.HoleStats, request.UsingHoleStats },
                 { FairwayFinderDiagnostics.Tags.Operation, FairwayFinderDiagnostics.TagValues.OperationCreate }
             });
+        }
+    }
+
+    private async Task NotifyFriendsOfNewRoundAsync(ApplicationDbContext dbContext, string userId, long courseId, int score)
+    {
+        try
+        {
+            var friends = await _friendService.GetFriendsAsync(userId);
+            if (friends.Count == 0) return;
+
+            var user = await dbContext.Users.FindAsync(userId);
+            var course = await dbContext.Courses.FindAsync(courseId);
+
+            var posterName = !string.IsNullOrWhiteSpace(user?.FirstName) ? user!.FirstName : "A friend";
+            var courseName = !string.IsNullOrWhiteSpace(course?.CourseName) ? course!.CourseName : "a course";
+
+            var title = $"{posterName} posted a round";
+            var body = $"Shot {score} at {courseName}";
+
+            foreach (var friend in friends)
+            {
+                await _pushService.SendToUserAsync(friend.UserId, title, body);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to notify friends of new round for user {UserId}", userId);
         }
     }
 
