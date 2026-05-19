@@ -79,7 +79,8 @@ public class PushNotificationService(
         {
             var push = new ApplePush(ApplePushType.Alert)
                 .AddToken(device.DeviceToken)
-                .AddAlert(title, body);
+                .AddAlert(title, body)
+                .AddSound(); 
 
             if (badge.HasValue)
                 push.AddBadge(badge.Value);
