@@ -1,0 +1,41 @@
+@using FairwayFinder.Features.Data
+
+@*
+    Average-by-par-type stat cards (Par 3 / 4 / 5).
+    Shared by the user dashboard and the course stats pages.
+*@
+
+@if (Stats.Par3Average.HasValue || Stats.Par4Average.HasValue || Stats.Par5Average.HasValue)
+{
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+        @if (Stats.Par3Average.HasValue)
+        {
+            <FairwayFinderStatsCard
+                Label="Par 3 Avg"
+                Value="@($"{Stats.Par3Average:F2}")"
+                SubText="@($"{Stats.Par3Count} holes")" />
+        }
+
+        @if (Stats.Par4Average.HasValue)
+        {
+            <FairwayFinderStatsCard
+                Label="Par 4 Avg"
+                Value="@($"{Stats.Par4Average:F2}")"
+                SubText="@($"{Stats.Par4Count} holes")" />
+        }
+
+        @if (Stats.Par5Average.HasValue)
+        {
+            <FairwayFinderStatsCard
+                Label="Par 5 Avg"
+                Value="@($"{Stats.Par5Average:F2}")"
+                SubText="@($"{Stats.Par5Count} holes")" />
+        }
+    </RadzenStack>
+}
+
+@code {
+    /// <summary>Average scoring by par type to display.</summary>
+    [Parameter, EditorRequired]
+    public ParTypeScoring Stats { get; set; } = new();
+}

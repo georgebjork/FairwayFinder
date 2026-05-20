@@ -1,67 +1,99 @@
 namespace FairwayFinder.Features.Data;
 
 /// <summary>
-/// Complete course-specific stats for a user at a particular course.
+/// Complete course-specific stats for a user at a particular course, grouped by
+/// area of the game. Each group carries its own <c>RoundsIncluded</c> count.
 /// </summary>
 public class CourseStatsResponse
 {
     public long CourseId { get; set; }
     public string CourseName { get; set; } = string.Empty;
-    
+
     /// <summary>
     /// Total number of rounds played at this course (excluding ExcludeFromStats rounds).
     /// </summary>
     public int TotalRounds { get; set; }
-    
+
     /// <summary>
-    /// Average 18-hole score at this course. Null if no 18-hole rounds.
+    /// Scoring — averages and best rounds at this course.
     /// </summary>
-    public double? Average18HoleScore { get; set; }
-    
-    /// <summary>
-    /// Average 9-hole score at this course. Null if no 9-hole rounds.
-    /// </summary>
-    public double? Average9HoleScore { get; set; }
-    
-    /// <summary>
-    /// Best 18-hole score at this course. Null if no 18-hole rounds.
-    /// </summary>
-    public BestRound? Best18HoleRound { get; set; }
-    
-    /// <summary>
-    /// Best 9-hole score at this course. Null if no 9-hole rounds.
-    /// </summary>
-    public BestRound? Best9HoleRound { get; set; }
-    
-    /// <summary>
-    /// Per-hole aggregate stats across all rounds at this course.
-    /// </summary>
-    public List<HoleAggregateStats> HoleStats { get; set; } = new();
-    
+    public CourseScoringStats Scoring { get; set; } = new();
+
     /// <summary>
     /// Aggregate scoring distribution across all rounds at this course.
     /// </summary>
     public ScoringDistribution ScoringDistribution { get; set; } = new();
 
     /// <summary>
-    /// Strokes gained summary across rounds with shot tracking at this course.
+    /// Strokes gained. Backed by rounds with shot-by-shot tracking at this course.
     /// </summary>
-    public StrokesGainedSummary? StrokesGained { get; set; }
+    public CourseStrokesGainedStats StrokesGained { get; set; } = new();
 
     /// <summary>
-    /// Average SG by hole number for rounds with shot tracking.
+    /// Ball striking — FIR and GIR at this course. Backed by rounds with hole-by-hole tracking.
     /// </summary>
-    public List<StrokesGainedHoleResult>? PerHoleSg { get; set; }
+    public BallStrikingStats BallStriking { get; set; } = new();
+
+    /// <summary>
+    /// Short game — putting, 3-putts, and up-and-down at this course. Backed by rounds with hole-by-hole tracking.
+    /// </summary>
+    public ShortGameStats ShortGame { get; set; } = new();
+
+    /// <summary>
+    /// Average scoring by par type (Par 3, 4, 5) at this course.
+    /// </summary>
+    public ParTypeScoring ParTypeScoring { get; set; } = new();
+
+    /// <summary>
+    /// Per-hole aggregate stats across all rounds at this course.
+    /// </summary>
+    public List<HoleAggregateStats> HoleStats { get; set; } = new();
 
     /// <summary>
     /// Available teeboxes the user has played at this course (for filter dropdown).
     /// </summary>
     public List<CourseTeeboxOption> TeeboxOptions { get; set; } = new();
-    
+
     /// <summary>
     /// The teebox ID currently being filtered on. Null = all teeboxes.
     /// </summary>
     public long? SelectedTeeboxId { get; set; }
+}
+
+/// <summary>
+/// Scoring stats for a course — averages and best rounds.
+/// </summary>
+public class CourseScoringStats
+{
+    /// <summary>Number of rounds backing these stats.</summary>
+    public int RoundsIncluded { get; set; }
+
+    /// <summary>Average 18-hole score at this course. Null if no 18-hole rounds.</summary>
+    public double? Average18HoleScore { get; set; }
+
+    /// <summary>Average 9-hole score at this course. Null if no 9-hole rounds.</summary>
+    public double? Average9HoleScore { get; set; }
+
+    /// <summary>Best 18-hole round at this course. Null if no 18-hole rounds.</summary>
+    public BestRound? Best18HoleRound { get; set; }
+
+    /// <summary>Best 9-hole round at this course. Null if no 9-hole rounds.</summary>
+    public BestRound? Best9HoleRound { get; set; }
+}
+
+/// <summary>
+/// Strokes gained stats for a course. Backed by rounds with shot-by-shot tracking.
+/// </summary>
+public class CourseStrokesGainedStats
+{
+    /// <summary>Number of shot-tracked rounds backing these stats.</summary>
+    public int RoundsIncluded { get; set; }
+
+    /// <summary>Aggregate SG summary. Null when no shot-tracked rounds are included.</summary>
+    public StrokesGainedSummary? Summary { get; set; }
+
+    /// <summary>Average SG by hole number for rounds with shot tracking.</summary>
+    public List<StrokesGainedHoleResult> PerHole { get; set; } = new();
 }
 
 /// <summary>

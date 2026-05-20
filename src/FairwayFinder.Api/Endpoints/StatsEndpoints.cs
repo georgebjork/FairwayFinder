@@ -40,11 +40,12 @@ public static class StatsEndpoints
             long? teeboxId,
             DateOnly? startDate,
             DateOnly? endDate,
+            bool? fullRoundOnly,
             HttpContext ctx,
             IStatsService statsService) =>
         {
             var userId = ctx.User.GetUserId();
-            var stats = await statsService.GetCourseStatsAsync(userId, courseId, teeboxId, startDate, endDate);
+            var stats = await statsService.GetCourseStatsAsync(userId, courseId, teeboxId, startDate, endDate, fullRoundOnly);
             if (stats is null)
                 throw new NotFoundException("CourseStats", courseId);
 
