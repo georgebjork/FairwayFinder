@@ -185,8 +185,10 @@ public static class StatsCalculator
         foreach (var round in roundsWithStats)
         {
             var upAndDownHoles = round.Holes
-                .Where(h => h.Stats?.HitGreen.HasValue == true && h.Stats?.NumberOfPutts.HasValue == true)
-                .ToList();
+                .Where(h => h.Stats != null 
+                            && h.Stats?.HitGreen == false 
+                            && h.Stats?.NumberOfPutts.HasValue == true 
+                            && h.Score.HasValue).ToList();
 
             if (upAndDownHoles.Count > 0)
             {
