@@ -280,7 +280,7 @@ public static class StatsCalculator
             Bogeys = roundsWithStats.Sum(r => r.Stats!.Bogeys),
             DoubleBogeys = roundsWithStats.Sum(r => r.Stats!.DoubleBogeys),
             TripleOrWorse = roundsWithStats.Sum(r => r.Stats!.TripleOrWorse),
-            RoundCount = roundsWithStats.Count
+            RoundsIncluded = roundsWithStats.Count
         };
     }
 
@@ -300,7 +300,8 @@ public static class StatsCalculator
 
         return new ParTypeScoring
         {
-            Par3Average = par3Holes.Count > 0 
+            RoundsIncluded = rounds.Count(r => r.Holes.Any(h => h.Score.HasValue)),
+            Par3Average = par3Holes.Count > 0
                 ? Math.Round(par3Holes.Average(h => (double)h.Score!.Value), 2) 
                 : null,
             Par3Count = par3Holes.Count,
@@ -316,17 +317,18 @@ public static class StatsCalculator
     }
 
     /// <summary>
-    /// Calculates advanced stats (FIR%, GIR%, average putts) with trends
+    /// Calculates ball-striking stats (FIR%, GIR%) with trends.
+    /// Uses rounds that opted into hole-by-hole stat tracking.
     /// </summary>
-    public static AdvancedStats CalculateAdvancedStats(IReadOnlyList<RoundResponse> rounds)
+    public static BallStrikingStats CalculateBallStriking(IReadOnlyList<RoundResponse> rounds)
     {
         var roundsWithHoleStats = rounds
             .Where(r => r.UsingHoleStats)
             .ToList();
 
-        var result = new AdvancedStats
+        var result = new BallStrikingStats
         {
-            RoundsWithStats = roundsWithHoleStats.Count
+            RoundsIncluded = roundsWithHoleStats.Count
         };
 
         if (roundsWithHoleStats.Count == 0)
@@ -334,61 +336,94 @@ public static class StatsCalculator
             return result;
         }
 
-        // All hole stats (for FIR/GIR - these are per-hole percentages, so combine all rounds)
+        // FIR/GIR are per-hole percentages, so combine holes across all rounds.
+        var allHoles = roundsWithHoleStats
+            .SelectMany(r => r.Holes)
+            .Where(h => h.Stats != null)
+            .ToList();
+
+        // FIR % (only par 4/5 holes)
+        var fairwayHoles = allHoles
+            .Where(h => h.Par > 3 && h.Stats!.HitFairway.HasValue)
+            .ToList();
+
+        if (fairwayHoles.Count > 0)
+        {
+            var fairwaysHit = fairwayHoles.Count(h => h.Stats!.HitFairway == true);
+            result.FirPercent = Math.Round((double)fairwaysHit / fairwayHoles.Count * 100, 1);
+        }
+
+        // GIR % (all holes)
+        var greenHoles = allHoles
+            .Where(h => h.Stats!.HitGreen.HasValue)
+            .ToList();
+
+        if (greenHoles.Count > 0)
+        {
+            var greensHit = greenHoles.Count(h => h.Stats!.HitGreen == true);
+            result.GirPercent = Math.Round((double)greensHit / greenHoles.Count * 100, 1);
+        }
+
+        // Trends using linear regression (need at least 2 rounds)
+        if (roundsWithHoleStats.Count >= 2)
+        {
+            CalculateBallStrikingTrends(result, roundsWithHoleStats);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Calculates short-game stats (up-and-down%, putts, 3-putts) with trends.
+    /// Uses rounds that opted into hole-by-hole stat tracking.
+    /// </summary>
+    public static ShortGameStats CalculateShortGame(IReadOnlyList<RoundResponse> rounds)
+    {
+        var roundsWithHoleStats = rounds
+            .Where(r => r.UsingHoleStats)
+            .ToList();
+
+        var result = new ShortGameStats
+        {
+            RoundsIncluded = roundsWithHoleStats.Count
+        };
+
+        if (roundsWithHoleStats.Count == 0)
+        {
+            return result;
+        }
+
         var allHoleStats = roundsWithHoleStats
             .SelectMany(r => r.Holes.Select(h => new { r.RoundId, Hole = h }))
             .Where(x => x.Hole.Stats != null)
             .ToList();
-        
+
         var allHoleStats18Holes = roundsWithHoleStats.Where(x => x.FullRound)
             .SelectMany(r => r.Holes.Select(h => new { r.RoundId, Hole = h }))
             .Where(x => x.Hole.Stats != null)
             .ToList();
-        
+
         var allHoleStats9Holes = roundsWithHoleStats.Where(x => !x.FullRound)
             .SelectMany(r => r.Holes.Select(h => new { r.RoundId, Hole = h }))
             .Where(x => x.Hole.Stats != null)
             .ToList();
-        
 
-        // FIR % (only par 4/5 holes) - uses all rounds
-        var fairwayHoles = allHoleStats
-            .Where(x => x.Hole.Par > 3 && x.Hole.Stats!.HitFairway.HasValue)
-            .ToList();
-        
-        if (fairwayHoles.Count > 0)
-        {
-            var fairwaysHit = fairwayHoles.Count(x => x.Hole.Stats!.HitFairway == true);
-            result.FirPercent = Math.Round((double)fairwaysHit / fairwayHoles.Count * 100, 1);
-        }
-
-        // GIR % (all holes) - uses all rounds
-        var greenHoles = allHoleStats
-            .Where(x => x.Hole.Stats!.HitGreen.HasValue)
-            .ToList();
-        
-        if (greenHoles.Count > 0)
-        {
-            var greensHit = greenHoles.Count(x => x.Hole.Stats!.HitGreen == true);
-            result.GirPercent = Math.Round((double)greensHit / greenHoles.Count * 100, 1);
-        }
-        
-        // Up and down % (all holes) - uses all rounds
+        // Up and down % (all holes)
         var upAndDownHoles = allHoleStats
-            .Where(x => x.Hole.Stats!.HitGreen.HasValue && x.Hole.Stats!.NumberOfPutts.HasValue)
+            .Where(h => h.Hole.Stats != null &&  h.Hole.Stats?.HitGreen == false && h.Hole.Stats?.NumberOfPutts.HasValue == true)
             .ToList();
-        
+
         if (upAndDownHoles.Count > 0)
         {
             var upAndDowns = upAndDownHoles.Count(x => x.Hole.Stats!.HitGreen == false && x.Hole.Stats.NumberOfPutts <= 1 && x.Hole.ScoreToPar <= 0);
             result.UpAndDownPercent = Math.Round((double)upAndDowns / upAndDownHoles.Count * 100, 1);
         }
 
-        // Average putts per round
+        // Average putts per round — 18-hole
         var holesWithPutts18Holes = allHoleStats18Holes
             .Where(x => x.Hole.Stats!.NumberOfPutts.HasValue)
             .ToList();
-        
+
         if (holesWithPutts18Holes.Count > 0)
         {
             var puttsByRound18Holes = holesWithPutts18Holes
@@ -408,11 +443,12 @@ public static class StatsCalculator
 
             result.Average18HoleThreePutts = Math.Round(threePuttsByRound18Holes.Average(), 1);
         }
-        
+
+        // Average putts per round — 9-hole
         var holesWithPutts9Holes = allHoleStats9Holes
             .Where(x => x.Hole.Stats!.NumberOfPutts.HasValue)
             .ToList();
-        
+
         if (holesWithPutts9Holes.Count > 0)
         {
             var puttsByRound9Holes = holesWithPutts9Holes
@@ -433,10 +469,10 @@ public static class StatsCalculator
             result.Average9HoleThreePutts = Math.Round(threePuttsByRound9Holes.Average(), 1);
         }
 
-        // Calculate trends using linear regression (need at least 2 rounds)
+        // Trends using linear regression (need at least 2 rounds)
         if (roundsWithHoleStats.Count >= 2)
         {
-            CalculateAdvancedStatsTrends(result, roundsWithHoleStats);
+            CalculateShortGameTrends(result, roundsWithHoleStats);
         }
 
         return result;
@@ -707,8 +743,8 @@ public static class StatsCalculator
         };
     }
 
-    private static void CalculateAdvancedStatsTrends(
-        AdvancedStats result,
+    private static void CalculateBallStrikingTrends(
+        BallStrikingStats result,
         List<RoundResponse> roundsWithHoleStats)
     {
         // FIR% Trend — compute per-round FIR%, then regress (oldest first)
@@ -748,7 +784,12 @@ public static class StatsCalculator
             var (slope, _) = CalculateLinearRegression(girPerRound);
             result.GirPercentTrend = Math.Round(slope, 2);
         }
+    }
 
+    private static void CalculateShortGameTrends(
+        ShortGameStats result,
+        List<RoundResponse> roundsWithHoleStats)
+    {
         // Up & Down% Trend — compute per-round up-and-down%, then regress (oldest first)
         var upAndDownPerRound = roundsWithHoleStats
             .AsEnumerable().Reverse()

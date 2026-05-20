@@ -1115,7 +1115,7 @@ public class StatsCalculatorTests
 
         var result = StatsCalculator.AggregateScoringDistribution(rounds);
 
-        Assert.Equal(0, result.RoundCount);
+        Assert.Equal(0, result.RoundsIncluded);
         Assert.Equal(0, result.TotalHoles);
     }
 
@@ -1130,7 +1130,7 @@ public class StatsCalculatorTests
 
         var result = StatsCalculator.AggregateScoringDistribution(rounds);
 
-        Assert.Equal(0, result.RoundCount);
+        Assert.Equal(0, result.RoundsIncluded);
     }
 
     [Fact]
@@ -1148,7 +1148,7 @@ public class StatsCalculatorTests
 
         var result = StatsCalculator.AggregateScoringDistribution(rounds);
 
-        Assert.Equal(1, result.RoundCount);
+        Assert.Equal(1, result.RoundsIncluded);
         Assert.Equal(2, result.Birdies);
         Assert.Equal(10, result.Pars);
         Assert.Equal(5, result.Bogeys);
@@ -1177,7 +1177,7 @@ public class StatsCalculatorTests
 
         var result = StatsCalculator.AggregateScoringDistribution(rounds);
 
-        Assert.Equal(2, result.RoundCount);
+        Assert.Equal(2, result.RoundsIncluded);
         Assert.Equal(1, result.Eagles);
         Assert.Equal(4, result.Birdies);
         Assert.Equal(20, result.Pars);
@@ -1325,24 +1325,35 @@ public class StatsCalculatorTests
 
     #endregion
 
-    #region CalculateAdvancedStats Tests
+    #region CalculateBallStriking & CalculateShortGame Tests
 
     [Fact]
-    public void CalculateAdvancedStats_EmptyList_ReturnsEmptyStats()
+    public void CalculateBallStriking_EmptyList_ReturnsEmptyStats()
     {
         var rounds = new List<RoundResponse>();
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateBallStriking(rounds);
 
-        Assert.Equal(0, result.RoundsWithStats);
+        Assert.Equal(0, result.RoundsIncluded);
         Assert.Null(result.FirPercent);
         Assert.Null(result.GirPercent);
-        Assert.Null(result.Average18HolePutts);
-        Assert.Null(result.Average9HolePutts);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_NoRoundsWithHoleStats_ReturnsEmptyStats()
+    public void CalculateShortGame_EmptyList_ReturnsEmptyStats()
+    {
+        var rounds = new List<RoundResponse>();
+
+        var result = StatsCalculator.CalculateShortGame(rounds);
+
+        Assert.Equal(0, result.RoundsIncluded);
+        Assert.Null(result.Average18HolePutts);
+        Assert.Null(result.Average9HolePutts);
+        Assert.Null(result.UpAndDownPercent);
+    }
+
+    [Fact]
+    public void CalculateBallStriking_NoRoundsWithHoleStats_ReturnsEmptyStats()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1350,13 +1361,27 @@ public class StatsCalculatorTests
             CreateRound(2, 82, usingHoleStats: false)
         };
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateBallStriking(rounds);
 
-        Assert.Equal(0, result.RoundsWithStats);
+        Assert.Equal(0, result.RoundsIncluded);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_FirPercentage_CalculatesFromAllRounds()
+    public void CalculateShortGame_NoRoundsWithHoleStats_ReturnsEmptyStats()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: false),
+            CreateRound(2, 82, usingHoleStats: false)
+        };
+
+        var result = StatsCalculator.CalculateShortGame(rounds);
+
+        Assert.Equal(0, result.RoundsIncluded);
+    }
+
+    [Fact]
+    public void CalculateBallStriking_FirPercentage_CalculatesFromAllRounds()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1377,14 +1402,14 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateBallStriking(rounds);
 
         // All rounds: 4 out of 6 = 66.7%
         Assert.Equal(66.7, result.FirPercent);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_GirPercentage_CalculatesFromAllRounds()
+    public void CalculateBallStriking_GirPercentage_CalculatesFromAllRounds()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1405,14 +1430,14 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateBallStriking(rounds);
 
         // All rounds: 5 out of 7 = 71.4%
         Assert.Equal(71.4, result.GirPercent);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_Average18HolePutts_CalculatesCorrectly()
+    public void CalculateShortGame_Average18HolePutts_CalculatesCorrectly()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1430,7 +1455,7 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // Round 1: 5 putts, Round 2: 7 putts, avg = 6.0
         Assert.Equal(6.0, result.Average18HolePutts);
@@ -1438,7 +1463,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_Average9HolePutts_CalculatesCorrectly()
+    public void CalculateShortGame_Average9HolePutts_CalculatesCorrectly()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1456,7 +1481,7 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // Round 1: 5 putts, Round 2: 6 putts, avg = 5.5
         Assert.Equal(5.5, result.Average9HolePutts);
@@ -1464,7 +1489,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_MixedRoundTypes_CalculatesPuttsSeparately()
+    public void CalculateShortGame_MixedRoundTypes_CalculatesPuttsSeparately()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1492,7 +1517,7 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // 18-hole: Round 1 = 4, Round 2 = 6, avg = 5.0
         Assert.Equal(5.0, result.Average18HolePutts);
@@ -1501,7 +1526,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_LessThan10Rounds_StillCalculatesTrendsWithLinearRegression()
+    public void CalculateBallStriking_LessThan10Rounds_StillCalculatesTrendsWithLinearRegression()
     {
         // With linear regression, trends are calculated with 2+ rounds (not 10).
         // 9 identical rounds → slope = 0 for all trends.
@@ -1514,17 +1539,36 @@ public class StatsCalculatorTests
             }));
         }
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateBallStriking(rounds);
 
         // All identical data → slope = 0
         Assert.Equal(0.0, result.FirPercentTrend);
         Assert.Equal(0.0, result.GirPercentTrend);
+    }
+
+    [Fact]
+    public void CalculateShortGame_LessThan10Rounds_StillCalculatesTrendsWithLinearRegression()
+    {
+        // With linear regression, trends are calculated with 2+ rounds (not 10).
+        // 9 identical rounds → slope = 0 for all trends.
+        var rounds = new List<RoundResponse>();
+        for (int i = 1; i <= 9; i++)
+        {
+            rounds.Add(CreateRound(i, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitFairway: true, hitGreen: true, numberOfPutts: 2)
+            }));
+        }
+
+        var result = StatsCalculator.CalculateShortGame(rounds);
+
+        // All identical data → slope = 0
         Assert.Equal(0.0, result.Average18HolePuttsTrend);
         Assert.Null(result.Average9HolePuttsTrend); // No 9-hole rounds
     }
 
     [Fact]
-    public void CalculateAdvancedStats_10OrMoreRounds_CalculatesFirGirTrends()
+    public void CalculateBallStriking_10OrMoreRounds_CalculatesFirGirTrends()
     {
         var rounds = new List<RoundResponse>();
 
@@ -1546,7 +1590,7 @@ public class StatsCalculatorTests
             }));
         }
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateBallStriking(rounds);
 
         // Reversed oldest-first: [0,0,0,0,0,100,100,100,100,100]
         // n=10, sumX=45, sumY=500, sumXY=3500, sumX2=285
@@ -1556,7 +1600,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_10OrMore18HoleRounds_Calculates18HolePuttsTrend()
+    public void CalculateShortGame_10OrMore18HoleRounds_Calculates18HolePuttsTrend()
     {
         var rounds = new List<RoundResponse>();
 
@@ -1578,7 +1622,7 @@ public class StatsCalculatorTests
             }));
         }
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // Reversed oldest-first: [3,3,3,3,3,1,1,1,1,1]
         // n=10, sumX=45, sumY=20, sumXY=65, sumX2=285
@@ -1587,7 +1631,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_10OrMore9HoleRounds_Calculates9HolePuttsTrend()
+    public void CalculateShortGame_10OrMore9HoleRounds_Calculates9HolePuttsTrend()
     {
         var rounds = new List<RoundResponse>();
 
@@ -1609,7 +1653,7 @@ public class StatsCalculatorTests
             }));
         }
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // Reversed oldest-first: [3,3,3,3,3,1,1,1,1,1]
         // slope = -250/825 ≈ -0.30
@@ -1617,7 +1661,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_MixedRoundTypes_CalculatesTrendsSeparately()
+    public void CalculateShortGame_MixedRoundTypes_CalculatesTrendsSeparately()
     {
         var rounds = new List<RoundResponse>();
 
@@ -1654,7 +1698,7 @@ public class StatsCalculatorTests
             }));
         }
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // 18-hole putts: reversed oldest-first [3,3,3,3,3,1,1,1,1,1], slope = -0.3
         Assert.Equal(-0.3, result.Average18HolePuttsTrend);
@@ -1663,7 +1707,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_MixedRoundsWithAndWithoutStats_OnlyCountsWithStats()
+    public void CalculateBallStriking_MixedRoundsWithAndWithoutStats_OnlyCountsWithStats()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1678,15 +1722,15 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateBallStriking(rounds);
 
-        Assert.Equal(2, result.RoundsWithStats);
+        Assert.Equal(2, result.RoundsIncluded);
         // 1 out of 2 = 50%
         Assert.Equal(50.0, result.GirPercent);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_Only9HoleRounds_CalculatesFirGirStats()
+    public void CalculateBallStriking_Only9HoleRounds_CalculatesFirGirStats()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1700,17 +1744,36 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateBallStriking(rounds);
 
-        // FIR/GIR now calculated from all rounds including 9-hole
+        // FIR/GIR calculated from all rounds including 9-hole
         Assert.Equal(50.0, result.FirPercent); // 1 out of 2
         Assert.Equal(50.0, result.GirPercent); // 1 out of 2
-        // 9-hole putts should be calculated
+    }
+
+    [Fact]
+    public void CalculateShortGame_Only9HoleRounds_CalculatesPutts()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 40, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitFairway: true, hitGreen: true, numberOfPutts: 2)
+            }),
+            CreateRound(2, 42, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitFairway: false, hitGreen: false, numberOfPutts: 3)
+            })
+        };
+
+        var result = StatsCalculator.CalculateShortGame(rounds);
+
+        // 9-hole putts: round 1 = 2, round 2 = 3, avg = 2.5
         Assert.Equal(2.5, result.Average9HolePutts);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_UpAndDownPercent_CountsMissedGreensSavedForPar()
+    public void CalculateShortGame_UpAndDownPercent_CountsMissedGreensSavedForPar()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1723,14 +1786,14 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // 2 up-and-downs out of 4 holes with green + putt data = 50%
         Assert.Equal(50.0, result.UpAndDownPercent);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_UpAndDownPercent_CountsMissedGreenSavedForBirdie()
+    public void CalculateShortGame_UpAndDownPercent_CountsMissedGreenSavedForBirdie()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1741,14 +1804,14 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // Par-or-better counts: 1 up-and-down out of 2 = 50%
         Assert.Equal(50.0, result.UpAndDownPercent);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_UpAndDownPercent_NoGreenAndPuttData_ReturnsNull()
+    public void CalculateShortGame_UpAndDownPercent_NoGreenAndPuttData_ReturnsNull()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1758,13 +1821,13 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         Assert.Null(result.UpAndDownPercent);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_UpAndDownTrend_IdenticalRounds_ReturnsZero()
+    public void CalculateShortGame_UpAndDownTrend_IdenticalRounds_ReturnsZero()
     {
         var rounds = new List<RoundResponse>();
         for (int i = 1; i <= 5; i++)
@@ -1775,14 +1838,14 @@ public class StatsCalculatorTests
             }));
         }
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // All identical data → slope = 0
         Assert.Equal(0.0, result.UpAndDownPercentTrend);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_UpAndDownTrend_ImprovingScrambling_ReturnsPositiveSlope()
+    public void CalculateShortGame_UpAndDownTrend_ImprovingScrambling_ReturnsPositiveSlope()
     {
         var rounds = new List<RoundResponse>();
 
@@ -1804,7 +1867,7 @@ public class StatsCalculatorTests
             }));
         }
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // Reversed oldest-first: [0,0,0,0,0,100,100,100,100,100]
         // n=10, sumX=45, sumY=500, sumXY=3500, sumX2=285
@@ -1813,7 +1876,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_UpAndDownTrend_SingleRound_ReturnsNull()
+    public void CalculateShortGame_UpAndDownTrend_SingleRound_ReturnsNull()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1823,14 +1886,14 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // Trends need at least 2 rounds
         Assert.Null(result.UpAndDownPercentTrend);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_Average18HoleThreePutts_CalculatesCorrectly()
+    public void CalculateShortGame_Average18HoleThreePutts_CalculatesCorrectly()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1848,7 +1911,7 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // Round 1: 2 three-putts, Round 2: 0 → avg = 1.0
         Assert.Equal(1.0, result.Average18HoleThreePutts);
@@ -1856,7 +1919,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_Average9HoleThreePutts_CountsThreePuttsAndWorse()
+    public void CalculateShortGame_Average9HoleThreePutts_CountsThreePuttsAndWorse()
     {
         var rounds = new List<RoundResponse>
         {
@@ -1874,7 +1937,7 @@ public class StatsCalculatorTests
             })
         };
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // Round 1: 2 (the 3-putt and 4-putt), Round 2: 1 → avg = 1.5
         Assert.Equal(1.5, result.Average9HoleThreePutts);
@@ -1882,7 +1945,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_ThreePuttsTrend_IdenticalRounds_ReturnsZero()
+    public void CalculateShortGame_ThreePuttsTrend_IdenticalRounds_ReturnsZero()
     {
         var rounds = new List<RoundResponse>();
         for (int i = 1; i <= 5; i++)
@@ -1893,14 +1956,14 @@ public class StatsCalculatorTests
             }));
         }
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // All identical data → slope = 0
         Assert.Equal(0.0, result.Average18HoleThreePuttsTrend);
     }
 
     [Fact]
-    public void CalculateAdvancedStats_Average18HoleThreePuttsTrend_FewerThreePutts_ReturnsNegativeSlope()
+    public void CalculateShortGame_Average18HoleThreePuttsTrend_FewerThreePutts_ReturnsNegativeSlope()
     {
         var rounds = new List<RoundResponse>();
 
@@ -1922,7 +1985,7 @@ public class StatsCalculatorTests
             }));
         }
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // Reversed oldest-first: [1,1,1,1,1,0,0,0,0,0]
         // n=10, sumX=45, sumY=5, sumXY=10, sumX2=285
@@ -1931,7 +1994,7 @@ public class StatsCalculatorTests
     }
 
     [Fact]
-    public void CalculateAdvancedStats_Average9HoleThreePuttsTrend_FewerThreePutts_ReturnsNegativeSlope()
+    public void CalculateShortGame_Average9HoleThreePuttsTrend_FewerThreePutts_ReturnsNegativeSlope()
     {
         var rounds = new List<RoundResponse>();
 
@@ -1953,7 +2016,7 @@ public class StatsCalculatorTests
             }));
         }
 
-        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+        var result = StatsCalculator.CalculateShortGame(rounds);
 
         // Reversed oldest-first: [1,1,1,1,1,0,0,0,0,0], slope ≈ -0.15
         Assert.Equal(-0.15, result.Average9HoleThreePuttsTrend);

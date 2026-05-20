@@ -40,11 +40,11 @@ public class StatsService : IStatsService
             }
             hasRounds = true;
 
-            var response = new UserStatsResponse
+            var scoring = new ScoringStats
             {
-                TotalRounds = statsRounds.Count,
-                Total18HoleRounds = statsRounds.Count(x => x.FullRound),
-                Total9HoleRounds = statsRounds.Count(x => !x.FullRound),
+                RoundsIncluded = statsRounds.Count,
+                Rounds18Hole = statsRounds.Count(x => x.FullRound),
+                Rounds9Hole = statsRounds.Count(x => !x.FullRound),
                 Average18HoleScore = StatsCalculator.CalculateAverageScore(statsRounds),
                 Average9HoleScore = StatsCalculator.CalculateAverageScore(statsRounds, false),
                 Average18HoleScoreTrend = StatsCalculator.CalculateScoreTrend(statsRounds),
@@ -52,18 +52,29 @@ public class StatsService : IStatsService
                 Best18HoleRound = StatsCalculator.FindBestRound(statsRounds),
                 Best9HoleRound = StatsCalculator.FindBestRound(statsRounds, false),
                 ScoreTrend18Hole = StatsCalculator.BuildScoreTrend(statsRounds),
-                ScoreTrend9Hole = StatsCalculator.BuildScoreTrend(statsRounds, fullRound: false),
-                PuttsTrend18Hole = StatsCalculator.BuildPuttsTrend(statsRounds),
-                PuttsTrend9Hole = StatsCalculator.BuildPuttsTrend(statsRounds, fullRound: false),
-                FirTrend = StatsCalculator.BuildFirTrend(statsRounds),
-                GirTrend = StatsCalculator.BuildGirTrend(statsRounds),
-                UpAndDownTrend = StatsCalculator.BuildUpAndDownTrend(statsRounds),
-                ThreePuttsTrend18Hole = StatsCalculator.BuildThreePuttsTrend(statsRounds),
-                ThreePuttsTrend9Hole = StatsCalculator.BuildThreePuttsTrend(statsRounds, fullRound: false),
-                MostPlayedCourses = StatsCalculator.CalculateCourseStats(statsRounds, coursesCount),
-                ScoringDistribution = StatsCalculator.AggregateScoringDistribution(statsRounds),
+                ScoreTrend9Hole = StatsCalculator.BuildScoreTrend(statsRounds, fullRound: false)
+            };
+
+            var ballStriking = StatsCalculator.CalculateBallStriking(statsRounds);
+            ballStriking.FirTrend = StatsCalculator.BuildFirTrend(statsRounds);
+            ballStriking.GirTrend = StatsCalculator.BuildGirTrend(statsRounds);
+
+            var shortGame = StatsCalculator.CalculateShortGame(statsRounds);
+            shortGame.PuttsTrend18Hole = StatsCalculator.BuildPuttsTrend(statsRounds);
+            shortGame.PuttsTrend9Hole = StatsCalculator.BuildPuttsTrend(statsRounds, fullRound: false);
+            shortGame.ThreePuttsTrend18Hole = StatsCalculator.BuildThreePuttsTrend(statsRounds);
+            shortGame.ThreePuttsTrend9Hole = StatsCalculator.BuildThreePuttsTrend(statsRounds, fullRound: false);
+            shortGame.UpAndDownTrend = StatsCalculator.BuildUpAndDownTrend(statsRounds);
+
+            var response = new UserStatsResponse
+            {
+                TotalRounds = statsRounds.Count,
+                Scoring = scoring,
+                BallStriking = ballStriking,
+                ShortGame = shortGame,
                 ParTypeScoring = StatsCalculator.CalculateParTypeScoring(statsRounds),
-                AdvancedStats = StatsCalculator.CalculateAdvancedStats(statsRounds)
+                ScoringDistribution = StatsCalculator.AggregateScoringDistribution(statsRounds),
+                MostPlayedCourses = StatsCalculator.CalculateCourseStats(statsRounds, coursesCount)
             };
 
             // Strokes Gained — from stored values on RoundResponse
@@ -71,10 +82,14 @@ public class StatsService : IStatsService
             if (roundsWithSg.Count > 0)
             {
                 hasSg = true;
-                response.StrokesGained = AggregateStoredSg(roundsWithSg);
-                response.SgTotalTrend = BuildSgTrendFromStored(roundsWithSg, sg => sg.SgTotal);
-                response.SgPuttingTrend = BuildSgTrendFromStored(roundsWithSg, sg => sg.SgPutting);
-                response.SgTeeToGreenTrend = BuildSgTrendFromStored(roundsWithSg, sg => sg.SgTeeToGreen);
+                response.StrokesGained = new StrokesGainedStats
+                {
+                    RoundsIncluded = roundsWithSg.Count,
+                    Summary = AggregateStoredSg(roundsWithSg),
+                    TotalTrend = BuildSgTrendFromStored(roundsWithSg, sg => sg.SgTotal),
+                    PuttingTrend = BuildSgTrendFromStored(roundsWithSg, sg => sg.SgPutting),
+                    TeeToGreenTrend = BuildSgTrendFromStored(roundsWithSg, sg => sg.SgTeeToGreen)
+                };
             }
 
             return response;
@@ -171,10 +186,14 @@ public class StatsService : IStatsService
                 CourseId = courseId,
                 CourseName = courseName,
                 TotalRounds = filteredRounds.Count,
-                Average18HoleScore = StatsCalculator.CalculateAverageScore(filteredRounds),
-                Average9HoleScore = StatsCalculator.CalculateAverageScore(filteredRounds, false),
-                Best18HoleRound = StatsCalculator.FindBestRound(filteredRounds),
-                Best9HoleRound = StatsCalculator.FindBestRound(filteredRounds, false),
+                Scoring = new CourseScoringStats
+                {
+                    RoundsIncluded = filteredRounds.Count,
+                    Average18HoleScore = StatsCalculator.CalculateAverageScore(filteredRounds),
+                    Average9HoleScore = StatsCalculator.CalculateAverageScore(filteredRounds, false),
+                    Best18HoleRound = StatsCalculator.FindBestRound(filteredRounds),
+                    Best9HoleRound = StatsCalculator.FindBestRound(filteredRounds, false)
+                },
                 HoleStats = StatsCalculator.CalculateHoleAggregateStats(filteredRounds),
                 ScoringDistribution = StatsCalculator.AggregateScoringDistribution(filteredRounds),
                 TeeboxOptions = teeboxOptions,
@@ -186,7 +205,11 @@ public class StatsService : IStatsService
             if (roundsWithSg.Count > 0)
             {
                 hasSg = true;
-                response.StrokesGained = AggregateStoredSg(roundsWithSg);
+                response.StrokesGained = new CourseStrokesGainedStats
+                {
+                    RoundsIncluded = roundsWithSg.Count,
+                    Summary = AggregateStoredSg(roundsWithSg)
+                };
             }
 
             result = FairwayFinderDiagnostics.TagValues.ResultOk;

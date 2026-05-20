@@ -108,36 +108,36 @@ else
                     Label="Rounds Played"
                     Value="@_stats.TotalRounds.ToString()" />
 
-                @if (_stats.Average18HoleScore.HasValue)
+                @if (_stats.Scoring.Average18HoleScore.HasValue)
                 {
                     <FairwayFinderStatsCard
                         Label="Avg Score (18)"
-                        Value="@_stats.Average18HoleScore.Value.ToString("F1")" />
+                        Value="@_stats.Scoring.Average18HoleScore.Value.ToString("F1")" />
                 }
 
-                @if (_stats.Average9HoleScore.HasValue)
+                @if (_stats.Scoring.Average9HoleScore.HasValue)
                 {
                     <FairwayFinderStatsCard
                         Label="Avg Score (9)"
-                        Value="@_stats.Average9HoleScore.Value.ToString("F1")" />
+                        Value="@_stats.Scoring.Average9HoleScore.Value.ToString("F1")" />
                 }
 
-                @if (_stats.Best18HoleRound is not null)
+                @if (_stats.Scoring.Best18HoleRound is not null)
                 {
                     <FairwayFinderStatsCard
                         Label="Best Round (18)"
-                        Value="@_stats.Best18HoleRound.Score.ToString()"
-                        SubText="@_stats.Best18HoleRound.DatePlayed.ToString("MMM d, yyyy")"
-                        OnClick="@(() => NavigateToRound(_stats.Best18HoleRound.RoundId))" />
+                        Value="@_stats.Scoring.Best18HoleRound.Score.ToString()"
+                        SubText="@_stats.Scoring.Best18HoleRound.DatePlayed.ToString("MMM d, yyyy")"
+                        OnClick="@(() => NavigateToRound(_stats.Scoring.Best18HoleRound.RoundId))" />
                 }
 
-                @if (_stats.Best9HoleRound is not null)
+                @if (_stats.Scoring.Best9HoleRound is not null)
                 {
                     <FairwayFinderStatsCard
                         Label="Best Round (9)"
-                        Value="@_stats.Best9HoleRound.Score.ToString()"
-                        SubText="@_stats.Best9HoleRound.DatePlayed.ToString("MMM d, yyyy")"
-                        OnClick="@(() => NavigateToRound(_stats.Best9HoleRound.RoundId))" />
+                        Value="@_stats.Scoring.Best9HoleRound.Score.ToString()"
+                        SubText="@_stats.Scoring.Best9HoleRound.DatePlayed.ToString("MMM d, yyyy")"
+                        OnClick="@(() => NavigateToRound(_stats.Scoring.Best9HoleRound.RoundId))" />
                 }
             </RadzenStack>
         }

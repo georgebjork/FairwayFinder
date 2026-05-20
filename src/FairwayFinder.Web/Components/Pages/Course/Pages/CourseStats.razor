@@ -104,51 +104,51 @@ else
                     Label="Rounds Played"
                     Value="@_stats.TotalRounds.ToString()" />
 
-                @if (_stats.Average18HoleScore.HasValue)
+                @if (_stats.Scoring.Average18HoleScore.HasValue)
                 {
                     <FairwayFinderStatsCard
                         Label="Avg Score (18)"
-                        Value="@_stats.Average18HoleScore.Value.ToString("F1")" />
+                        Value="@_stats.Scoring.Average18HoleScore.Value.ToString("F1")" />
                 }
 
-                @if (_stats.Average9HoleScore.HasValue)
+                @if (_stats.Scoring.Average9HoleScore.HasValue)
                 {
                     <FairwayFinderStatsCard
                         Label="Avg Score (9)"
-                        Value="@_stats.Average9HoleScore.Value.ToString("F1")" />
+                        Value="@_stats.Scoring.Average9HoleScore.Value.ToString("F1")" />
                 }
 
-                @if (_stats.Best18HoleRound is not null)
+                @if (_stats.Scoring.Best18HoleRound is not null)
                 {
                     <FairwayFinderStatsCard
                         Label="Best Round (18)"
-                        Value="@_stats.Best18HoleRound.Score.ToString()"
-                        SubText="@_stats.Best18HoleRound.DatePlayed.ToString("MMM d, yyyy")"
-                        OnClick="@(() => NavigateToRound(_stats.Best18HoleRound.RoundId))" />
+                        Value="@_stats.Scoring.Best18HoleRound.Score.ToString()"
+                        SubText="@_stats.Scoring.Best18HoleRound.DatePlayed.ToString("MMM d, yyyy")"
+                        OnClick="@(() => NavigateToRound(_stats.Scoring.Best18HoleRound.RoundId))" />
                 }
 
-                @if (_stats.Best9HoleRound is not null)
+                @if (_stats.Scoring.Best9HoleRound is not null)
                 {
                     <FairwayFinderStatsCard
                         Label="Best Round (9)"
-                        Value="@_stats.Best9HoleRound.Score.ToString()"
-                        SubText="@_stats.Best9HoleRound.DatePlayed.ToString("MMM d, yyyy")"
-                        OnClick="@(() => NavigateToRound(_stats.Best9HoleRound.RoundId))" />
+                        Value="@_stats.Scoring.Best9HoleRound.Score.ToString()"
+                        SubText="@_stats.Scoring.Best9HoleRound.DatePlayed.ToString("MMM d, yyyy")"
+                        OnClick="@(() => NavigateToRound(_stats.Scoring.Best9HoleRound.RoundId))" />
                 }
             </RadzenStack>
         }
 
-        @if (_stats?.StrokesGained is not null)
+        @if (_stats?.StrokesGained.Summary is not null)
         {
             <RadzenCard class="rz-p-4">
                 <RadzenText TextStyle="TextStyle.H5" class="rz-mb-2">Strokes Gained Summary</RadzenText>
                 <RadzenStack Orientation="Orientation.Horizontal" Gap="1.5rem" Wrap="FlexWrap.Wrap">
                     @foreach (var item in new[] {
-                        ("SG: Total", _stats.StrokesGained.SgTotal),
-                        ("SG: Putting", _stats.StrokesGained.SgPutting),
-                        ("SG: Off the Tee", _stats.StrokesGained.SgOffTheTee),
-                        ("SG: Approach", _stats.StrokesGained.SgApproach),
-                        ("SG: Around the Green", _stats.StrokesGained.SgAroundTheGreen)
+                        ("SG: Total", _stats.StrokesGained.Summary!.SgTotal),
+                        ("SG: Putting", _stats.StrokesGained.Summary!.SgPutting),
+                        ("SG: Off the Tee", _stats.StrokesGained.Summary!.SgOffTheTee),
+                        ("SG: Approach", _stats.StrokesGained.Summary!.SgApproach),
+                        ("SG: Around the Green", _stats.StrokesGained.Summary!.SgAroundTheGreen)
                     })
                     {
                         <RadzenStack Gap="0" AlignItems="AlignItems.Center">
@@ -163,7 +163,7 @@ else
             </RadzenCard>
         }
 
-        <CourseHoleStatsGrid HoleStats="@_stats?.HoleStats" ShowYardage="@_hasTeeboxSelected" StrokesGained="@_stats?.StrokesGained" />
+        <CourseHoleStatsGrid HoleStats="@_stats?.HoleStats" ShowYardage="@_hasTeeboxSelected" StrokesGained="@_stats?.StrokesGained.Summary" />
 
         <RadzenRow Gap="1rem">
             <RadzenColumn Size="12" SizeLG="6">
