@@ -5,6 +5,7 @@ using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Features.Services;
 
@@ -12,13 +13,19 @@ public class FriendService : IFriendService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IPushNotificationService _pushService;
+    private readonly ILogger<FriendService> _logger;
 
     public FriendService(
         IDbContextFactory<ApplicationDbContext> dbContextFactory,
-        UserManager<ApplicationUser> userManager)
+        UserManager<ApplicationUser> userManager,
+        IPushNotificationService pushService,
+        ILogger<FriendService> logger)
     {
         _dbContextFactory = dbContextFactory;
         _userManager = userManager;
+        _pushService = pushService;
+        _logger = logger;
     }
 
     public async Task<List<UserSearchResultResponse>> SearchUsersAsync(string viewerUserId, string query, int take = 20)
@@ -215,6 +222,7 @@ public class FriendService : IFriendService
                         existing.UpdatedBy = requesterUserId;
                         existing.UpdatedOn = today;
                         await dbContext.SaveChangesAsync();
+                        await NotifyFriendRequestAcceptedAsync(dbContext, requesterUserId, addresseeUserId);
                         return existing.FriendshipId;
                     }
                     throw new InvalidOperationException("A friend request is already pending.");
@@ -229,6 +237,7 @@ public class FriendService : IFriendService
                     existing.UpdatedBy = requesterUserId;
                     existing.UpdatedOn = today;
                     await dbContext.SaveChangesAsync();
+                    await NotifyFriendRequestSentAsync(dbContext, requesterUserId, addresseeUserId);
                     return existing.FriendshipId;
             }
         }
@@ -248,6 +257,7 @@ public class FriendService : IFriendService
 
         dbContext.Friendships.Add(friendship);
         await dbContext.SaveChangesAsync();
+        await NotifyFriendRequestSentAsync(dbContext, requesterUserId, addresseeUserId);
         return friendship.FriendshipId;
     }
 
@@ -270,6 +280,7 @@ public class FriendService : IFriendService
         friendship.UpdatedBy = userId;
         friendship.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
         await dbContext.SaveChangesAsync();
+        await NotifyFriendRequestAcceptedAsync(dbContext, userId, friendship.RequesterUserId);
         return true;
     }
 
@@ -428,6 +439,45 @@ public class FriendService : IFriendService
             Direction = direction,
             RequestedOn = r.CreatedOn
         }).ToList();
+    }
+
+    private async Task NotifyFriendRequestSentAsync(ApplicationDbContext dbContext, string requesterUserId, string addresseeUserId)
+    {
+        try
+        {
+            var name = await GetDisplayNameAsync(dbContext, requesterUserId);
+            await _pushService.SendToUserAsync(
+                addresseeUserId,
+                $"{name} sent you a friend request",
+                "Tap to view and respond.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send friend-request notification to {UserId}", addresseeUserId);
+        }
+    }
+
+    private async Task NotifyFriendRequestAcceptedAsync(ApplicationDbContext dbContext, string accepterUserId, string requesterUserId)
+    {
+        try
+        {
+            var name = await GetDisplayNameAsync(dbContext, accepterUserId);
+            await _pushService.SendToUserAsync(
+                requesterUserId,
+                $"{name} accepted your friend request",
+                "You're now friends.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send friend-accept notification to {UserId}", requesterUserId);
+        }
+    }
+
+    private static async Task<string> GetDisplayNameAsync(ApplicationDbContext dbContext, string userId)
+    {
+        var user = await dbContext.Users.FindAsync(userId);
+        var name = user is null ? string.Empty : BuildDisplayName(user.FirstName, user.LastName, user.UserName);
+        return string.IsNullOrWhiteSpace(name) ? "Someone" : name;
     }
 
     private static string BuildDisplayName(string? firstName, string? lastName, string? userName)
