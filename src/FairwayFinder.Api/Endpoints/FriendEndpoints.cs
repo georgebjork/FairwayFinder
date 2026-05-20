@@ -110,6 +110,28 @@ public static class FriendEndpoints
             return Results.Ok(rounds);
         });
 
+        group.MapGet("/{publicId:guid}/rounds/{roundId:long}", async (
+            Guid publicId,
+            long roundId,
+            HttpContext ctx,
+            IFriendService friendService,
+            IProfileService profileService,
+            IRoundService roundService) =>
+        {
+            var userId = ctx.User.GetUserId();
+            var targetUserId = await EnsureFriendAccessAsync(publicId, userId, friendService, profileService);
+
+            var isOwner = await roundService.IsRoundOwnedByUserAsync(roundId, targetUserId);
+            if (!isOwner)
+                throw new NotFoundException("Round", roundId);
+
+            var round = await roundService.GetRoundByIdAsync(roundId);
+            if (round is null)
+                throw new NotFoundException("Round", roundId);
+
+            return Results.Ok(round);
+        });
+
         group.MapGet("/{publicId:guid}/stats", async (
             Guid publicId,
             HttpContext ctx,
