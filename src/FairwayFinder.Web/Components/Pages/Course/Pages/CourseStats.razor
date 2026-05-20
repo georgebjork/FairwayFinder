@@ -65,6 +65,16 @@ else
                         OnClearFilters="ClearFilters"
                         OnFilterChanged="OnFilterChanged">
             <AdditionalFilters>
+                <RadzenStack Gap="0.25rem">
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Round Type</RadzenText>
+                    <RadzenDropDown TValue="string"
+                                    Data="@_roundTypeOptions"
+                                    TextProperty="Text"
+                                    ValueProperty="Value"
+                                    @bind-Value="_selectedRoundType"
+                                    Style="width: 140px;"
+                                    Change="@OnFilterChanged" />
+                </RadzenStack>
                 @if (_teeboxOptions.Count > 1)
                 {
                     <RadzenStack Gap="0.25rem">
@@ -283,7 +293,21 @@ else
     private bool _hasTeeboxSelected => _selectedTeeboxId.HasValue;
     private DateOnly? _startDate;
     private DateOnly? _endDate;
-    private bool _hasActiveFilters => _selectedTeeboxId.HasValue || _startDate.HasValue || _endDate.HasValue;
+    private string _selectedRoundType = "all";
+    private bool? _fullRoundOnly => _selectedRoundType switch
+    {
+        "18" => true,
+        "9" => false,
+        _ => null
+    };
+    private bool _hasActiveFilters => _selectedTeeboxId.HasValue || _startDate.HasValue || _endDate.HasValue || _selectedRoundType != "all";
+
+    private readonly List<object> _roundTypeOptions = new()
+    {
+        new { Text = "All Rounds", Value = "all" },
+        new { Text = "18 Hole", Value = "18" },
+        new { Text = "9 Hole", Value = "9" }
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -328,10 +352,11 @@ else
         {
             CourseId = CourseId,
             StartDate = _startDate,
-            EndDate = _endDate
+            EndDate = _endDate,
+            FullRoundOnly = _fullRoundOnly
         };
 
-        var statsTask = StatsService.GetCourseStatsAsync(_userId, CourseId, _selectedTeeboxId, _startDate, _endDate);
+        var statsTask = StatsService.GetCourseStatsAsync(_userId, CourseId, _selectedTeeboxId, _startDate, _endDate, _fullRoundOnly);
         var roundsTask = RoundService.GetRoundsByUserIdAsync(_userId, filter);
         await Task.WhenAll(statsTask, roundsTask);
         _stats = statsTask.Result;
@@ -379,6 +404,7 @@ else
         _selectedTeeboxId = null;
         _startDate = null;
         _endDate = null;
+        _selectedRoundType = "all";
         await OnFilterChanged();
     }
 

@@ -100,7 +100,7 @@ public class StatsService : IStatsService
         }
     }
 
-    public async Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null)
+    public async Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null)
     {
         using var activity = FairwayFinderDiagnostics.StatsActivity.StartActivity(name: FairwayFinderDiagnostics.ActivityNames.StatsCourseGenerate);
         var stopwatch = Stopwatch.StartNew();
@@ -152,6 +152,14 @@ public class StatsService : IStatsService
             {
                 filteredRounds = filteredRounds
                     .Where(r => r.DatePlayed <= endDate.Value)
+                    .ToList();
+            }
+
+            // Apply round-type filter (18-hole vs 9-hole)
+            if (fullRoundOnly.HasValue)
+            {
+                filteredRounds = filteredRounds
+                    .Where(r => r.FullRound == fullRoundOnly.Value)
                     .ToList();
             }
 
