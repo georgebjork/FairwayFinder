@@ -1781,15 +1781,15 @@ public class StatsCalculatorTests
             {
                 CreateHole(1, 4, score: 4, hitGreen: false, numberOfPutts: 1), // up-and-down
                 CreateHole(2, 4, score: 5, hitGreen: false, numberOfPutts: 2), // missed green, bogey - no
-                CreateHole(3, 4, score: 4, hitGreen: true, numberOfPutts: 2),  // hit green - no
+                CreateHole(3, 4, score: 4, hitGreen: true, numberOfPutts: 2),  // hit green - not a scrambling chance, excluded
                 CreateHole(4, 3, score: 3, hitGreen: false, numberOfPutts: 1)  // up-and-down
             })
         };
 
         var result = StatsCalculator.CalculateShortGame(rounds);
 
-        // 2 up-and-downs out of 4 holes with green + putt data = 50%
-        Assert.Equal(50.0, result.UpAndDownPercent);
+        // 2 up-and-downs out of 3 missed-green holes = 66.7%
+        Assert.Equal(66.7, result.UpAndDownPercent);
     }
 
     [Fact]

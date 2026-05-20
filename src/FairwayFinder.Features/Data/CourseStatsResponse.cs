@@ -30,6 +30,21 @@ public class CourseStatsResponse
     public CourseStrokesGainedStats StrokesGained { get; set; } = new();
 
     /// <summary>
+    /// Ball striking — FIR and GIR at this course. Backed by rounds with hole-by-hole tracking.
+    /// </summary>
+    public BallStrikingStats BallStriking { get; set; } = new();
+
+    /// <summary>
+    /// Short game — putting, 3-putts, and up-and-down at this course. Backed by rounds with hole-by-hole tracking.
+    /// </summary>
+    public ShortGameStats ShortGame { get; set; } = new();
+
+    /// <summary>
+    /// Average scoring by par type (Par 3, 4, 5) at this course.
+    /// </summary>
+    public ParTypeScoring ParTypeScoring { get; set; } = new();
+
+    /// <summary>
     /// Per-hole aggregate stats across all rounds at this course.
     /// </summary>
     public List<HoleAggregateStats> HoleStats { get; set; } = new();

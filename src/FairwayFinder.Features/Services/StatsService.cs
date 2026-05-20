@@ -55,23 +55,12 @@ public class StatsService : IStatsService
                 ScoreTrend9Hole = StatsCalculator.BuildScoreTrend(statsRounds, fullRound: false)
             };
 
-            var ballStriking = StatsCalculator.CalculateBallStriking(statsRounds);
-            ballStriking.FirTrend = StatsCalculator.BuildFirTrend(statsRounds);
-            ballStriking.GirTrend = StatsCalculator.BuildGirTrend(statsRounds);
-
-            var shortGame = StatsCalculator.CalculateShortGame(statsRounds);
-            shortGame.PuttsTrend18Hole = StatsCalculator.BuildPuttsTrend(statsRounds);
-            shortGame.PuttsTrend9Hole = StatsCalculator.BuildPuttsTrend(statsRounds, fullRound: false);
-            shortGame.ThreePuttsTrend18Hole = StatsCalculator.BuildThreePuttsTrend(statsRounds);
-            shortGame.ThreePuttsTrend9Hole = StatsCalculator.BuildThreePuttsTrend(statsRounds, fullRound: false);
-            shortGame.UpAndDownTrend = StatsCalculator.BuildUpAndDownTrend(statsRounds);
-
             var response = new UserStatsResponse
             {
                 TotalRounds = statsRounds.Count,
                 Scoring = scoring,
-                BallStriking = ballStriking,
-                ShortGame = shortGame,
+                BallStriking = BuildBallStriking(statsRounds),
+                ShortGame = BuildShortGame(statsRounds),
                 ParTypeScoring = StatsCalculator.CalculateParTypeScoring(statsRounds),
                 ScoringDistribution = StatsCalculator.AggregateScoringDistribution(statsRounds),
                 MostPlayedCourses = StatsCalculator.CalculateCourseStats(statsRounds, coursesCount)
@@ -194,6 +183,9 @@ public class StatsService : IStatsService
                     Best18HoleRound = StatsCalculator.FindBestRound(filteredRounds),
                     Best9HoleRound = StatsCalculator.FindBestRound(filteredRounds, false)
                 },
+                BallStriking = BuildBallStriking(filteredRounds),
+                ShortGame = BuildShortGame(filteredRounds),
+                ParTypeScoring = StatsCalculator.CalculateParTypeScoring(filteredRounds),
                 HoleStats = StatsCalculator.CalculateHoleAggregateStats(filteredRounds),
                 ScoringDistribution = StatsCalculator.AggregateScoringDistribution(filteredRounds),
                 TeeboxOptions = teeboxOptions,
@@ -319,6 +311,33 @@ public class StatsService : IStatsService
         }
 
         return summary;
+    }
+
+    /// <summary>
+    /// Builds the ball-striking group (FIR/GIR + per-round trend chart data) for a set of rounds.
+    /// Shared by user-wide and course-scoped stats.
+    /// </summary>
+    private static BallStrikingStats BuildBallStriking(IReadOnlyList<RoundResponse> rounds)
+    {
+        var ballStriking = StatsCalculator.CalculateBallStriking(rounds);
+        ballStriking.FirTrend = StatsCalculator.BuildFirTrend(rounds);
+        ballStriking.GirTrend = StatsCalculator.BuildGirTrend(rounds);
+        return ballStriking;
+    }
+
+    /// <summary>
+    /// Builds the short-game group (putting/3-putts/up-and-down + per-round trend chart data)
+    /// for a set of rounds. Shared by user-wide and course-scoped stats.
+    /// </summary>
+    private static ShortGameStats BuildShortGame(IReadOnlyList<RoundResponse> rounds)
+    {
+        var shortGame = StatsCalculator.CalculateShortGame(rounds);
+        shortGame.PuttsTrend18Hole = StatsCalculator.BuildPuttsTrend(rounds);
+        shortGame.PuttsTrend9Hole = StatsCalculator.BuildPuttsTrend(rounds, fullRound: false);
+        shortGame.ThreePuttsTrend18Hole = StatsCalculator.BuildThreePuttsTrend(rounds);
+        shortGame.ThreePuttsTrend9Hole = StatsCalculator.BuildThreePuttsTrend(rounds, fullRound: false);
+        shortGame.UpAndDownTrend = StatsCalculator.BuildUpAndDownTrend(rounds);
+        return shortGame;
     }
 
     /// <summary>

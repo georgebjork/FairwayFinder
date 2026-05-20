@@ -140,6 +140,10 @@ else
                         OnClick="@(() => NavigateToRound(_stats.Scoring.Best9HoleRound.RoundId))" />
                 }
             </RadzenStack>
+
+            <BallStrikingCards Stats="@_stats.BallStriking" ShowTrendDialogs="false" />
+            <ShortGameCards Stats="@_stats.ShortGame" ShowTrendDialogs="false" />
+            <ParTypeCards Stats="@_stats.ParTypeScoring" />
         }
 
         <CourseHoleStatsGrid HoleStats="@_stats?.HoleStats" ShowYardage="@_hasTeeboxSelected" />

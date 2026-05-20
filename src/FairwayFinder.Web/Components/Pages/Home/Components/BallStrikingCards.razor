@@ -1,0 +1,118 @@
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Web.Components.Pages.Home.Dialogs
+@inject DialogService DialogService
+
+@*
+    Ball-striking stat cards (FIR, GIR) with trend indicators.
+    Shared by the user dashboard and the course stats pages.
+    Set ShowTrendDialogs="false" to disable the trend dialogs (public viewers).
+*@
+
+@if (Stats.RoundsIncluded > 0)
+{
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Wrap="FlexWrap.Wrap">
+        @if (Stats.FirPercent.HasValue)
+        {
+            <FairwayFinderStatsCard
+                Label="Fairways"
+                Value="@($"{Stats.FirPercent:F1}%")"
+                SubText="@($"{Stats.RoundsIncluded} rounds")"
+                OnClick="ShowFirTrendDialog">
+                @if (Stats.FirPercentTrend.HasValue)
+                {
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
+                        @if (Stats.FirPercentTrend > 0)
+                        {
+                            <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Success"/>
+                            <RadzenText TextStyle="TextStyle.Caption">
+                                + @Stats.FirPercentTrend.Value.ToString("F1")%
+                            </RadzenText>
+                        }
+                        else
+                        {
+                            <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Danger"/>
+                            <RadzenText TextStyle="TextStyle.Caption">
+                                @Stats.FirPercentTrend.Value.ToString("F1")%
+                            </RadzenText>
+                        }
+                    </RadzenStack>
+                }
+            </FairwayFinderStatsCard>
+        }
+
+        @if (Stats.GirPercent.HasValue)
+        {
+            <FairwayFinderStatsCard
+                Label="Greens"
+                Value="@($"{Stats.GirPercent:F1}%")"
+                SubText="@($"{Stats.RoundsIncluded} rounds")"
+                OnClick="ShowGirTrendDialog">
+                @if (Stats.GirPercentTrend.HasValue)
+                {
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
+                        @if (Stats.GirPercentTrend > 0)
+                        {
+                            <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Success"/>
+                            <RadzenText TextStyle="TextStyle.Caption">
+                                + @Stats.GirPercentTrend.Value.ToString("F1")%
+                            </RadzenText>
+                        }
+                        else
+                        {
+                            <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Danger"/>
+                            <RadzenText TextStyle="TextStyle.Caption">
+                                @Stats.GirPercentTrend.Value.ToString("F1")%
+                            </RadzenText>
+                        }
+                    </RadzenStack>
+                }
+            </FairwayFinderStatsCard>
+        }
+    </RadzenStack>
+}
+
+@code {
+    /// <summary>Ball-striking stats to display.</summary>
+    [Parameter, EditorRequired]
+    public BallStrikingStats Stats { get; set; } = new();
+
+    /// <summary>When false, clicking a card does not open a trend dialog (public viewers).</summary>
+    [Parameter]
+    public bool ShowTrendDialogs { get; set; } = true;
+
+    private async Task ShowFirTrendDialog()
+    {
+        if (!ShowTrendDialogs) return;
+        if (Stats.FirTrend.Count < 2) return;
+
+        await DialogService.OpenAsync<FirTrendDialog>("Fairways In Regulation Trend",
+            new Dictionary<string, object>
+            {
+                { "TrendData", Stats.FirTrend }
+            },
+            new DialogOptions
+            {
+                Width = "700px",
+                CloseDialogOnOverlayClick = true,
+                CloseDialogOnEsc = true
+            });
+    }
+
+    private async Task ShowGirTrendDialog()
+    {
+        if (!ShowTrendDialogs) return;
+        if (Stats.GirTrend.Count < 2) return;
+
+        await DialogService.OpenAsync<GirTrendDialog>("Greens In Regulation Trend",
+            new Dictionary<string, object>
+            {
+                { "TrendData", Stats.GirTrend }
+            },
+            new DialogOptions
+            {
+                Width = "700px",
+                CloseDialogOnOverlayClick = true,
+                CloseDialogOnEsc = true
+            });
+    }
+}
