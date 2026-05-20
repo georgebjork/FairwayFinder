@@ -11,6 +11,7 @@ public class UserAdminDto
     public bool IsAdmin => Roles.Contains("Admin");
     public bool IsLockedOut { get; set; }
     public bool IsEmailConfirmed { get; set; }
+    public bool IsSearchHidden { get; set; }
     public DateTime CreatedOn { get; set; }
 }
 

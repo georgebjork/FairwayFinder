@@ -39,6 +39,7 @@ public class FriendService : IFriendService
             join profile in dbContext.UserProfiles.AsNoTracking()
                 on user.Id equals profile.UserId
             where profile.IsDeleted == false
+                  && user.IsSearchHidden == false
                   && user.Id != viewerUserId
                   && (
                       EF.Functions.ILike(user.FirstName ?? string.Empty, pattern)

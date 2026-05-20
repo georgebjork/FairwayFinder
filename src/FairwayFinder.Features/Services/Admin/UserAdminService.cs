@@ -24,6 +24,7 @@ public class UserAdminService(UserManager<ApplicationUser> userManager)
                 Roles = roles.ToList(),
                 IsLockedOut = isLockedOut,
                 IsEmailConfirmed = user.EmailConfirmed,
+                IsSearchHidden = user.IsSearchHidden,
                 CreatedOn = user.CreatedOn
             });
         }
@@ -48,6 +49,7 @@ public class UserAdminService(UserManager<ApplicationUser> userManager)
             Roles = roles.ToList(),
             IsLockedOut = isLockedOut,
             IsEmailConfirmed = user.EmailConfirmed,
+            IsSearchHidden = user.IsSearchHidden,
             CreatedOn = user.CreatedOn
         };
     }
@@ -82,6 +84,17 @@ public class UserAdminService(UserManager<ApplicationUser> userManager)
         return isAdmin
             ? await userManager.RemoveFromRoleAsync(user, "Admin")
             : await userManager.AddToRoleAsync(user, "Admin");
+    }
+
+    public async Task<IdentityResult> SetSearchHiddenAsync(string userId, bool hidden)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        if (user is null) return IdentityResult.Failed(new IdentityError { Description = "User not found." });
+
+        user.IsSearchHidden = hidden;
+        user.UpdatedOn = DateTime.UtcNow;
+
+        return await userManager.UpdateAsync(user);
     }
 
     public async Task<IdentityResult> SetLockoutAsync(string userId, bool lockout)

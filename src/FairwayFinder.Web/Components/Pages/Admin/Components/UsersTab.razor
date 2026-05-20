@@ -81,8 +81,20 @@
                                 }
                             </Template>
                         </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="UserAdminDto" Title="Searchable" Width="120px" Sortable="false" Filterable="false" TextAlign="TextAlign.Center">
+                            <Template Context="user">
+                                @if (user.IsSearchHidden)
+                                {
+                                    <RadzenIcon Icon="visibility_off" Style="color: var(--rz-danger); font-size: 1.25rem;" Title="Hidden from search" />
+                                }
+                                else
+                                {
+                                    <RadzenIcon Icon="visibility" Style="color: var(--rz-success); font-size: 1.25rem;" Title="Visible in search" />
+                                }
+                            </Template>
+                        </RadzenDataGridColumn>
                         <RadzenDataGridColumn TItem="UserAdminDto" Property="CreatedOn" Title="Created" Width="140px" FormatString="{0:MMM d, yyyy}" />
-                        <RadzenDataGridColumn TItem="UserAdminDto" Title="Actions" Width="220px" Sortable="false" Filterable="false">
+                        <RadzenDataGridColumn TItem="UserAdminDto" Title="Actions" Width="260px" Sortable="false" Filterable="false">
                             <Template Context="user">
                                 <RadzenStack Orientation="Orientation.Horizontal" Gap="0.25rem">
                                     <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.ExtraSmall"
@@ -98,6 +110,11 @@
                                                   Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
                                                   Title="@(user.IsLockedOut ? "Unlock user" : "Lock user")"
                                                   Click="@(() => OnToggleLockoutClicked(user))" />
+                                    <RadzenButton Icon="@(user.IsSearchHidden ? "visibility" : "visibility_off")"
+                                                  ButtonStyle="@(user.IsSearchHidden ? ButtonStyle.Success : ButtonStyle.Warning)"
+                                                  Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
+                                                  Title="@(user.IsSearchHidden ? "Show in search" : "Hide from search")"
+                                                  Click="@(() => OnToggleSearchHiddenClicked(user))" />
                                     <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.ExtraSmall"
                                                   Variant="Variant.Outlined" Title="Delete user"
                                                   Click="@(() => OnDeleteUserClicked(user))" />
@@ -239,6 +256,40 @@
                 Severity = NotificationSeverity.Success,
                 Summary = user.IsLockedOut ? "User Unlocked" : "User Locked",
                 Detail = $"{user.FullName} has been {(user.IsLockedOut ? "unlocked" : "locked")}.",
+                Duration = 4000
+            });
+        }
+        else
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Action Failed",
+                Detail = string.Join(", ", result.Errors.Select(e => e.Description)),
+                Duration = 6000
+            });
+        }
+    }
+
+    private async Task OnToggleSearchHiddenClicked(UserAdminDto user)
+    {
+        var action = user.IsSearchHidden ? "show" : "hide";
+        var confirmed = await DialogService.Confirm(
+            $"Are you sure you want to {action} {user.FullName} {(user.IsSearchHidden ? "in" : "from")} user search?",
+            $"Confirm {(user.IsSearchHidden ? "Show" : "Hide")}",
+            new ConfirmOptions { OkButtonText = "Yes", CancelButtonText = "Cancel" });
+
+        if (confirmed != true) return;
+
+        var result = await UserAdminService.SetSearchHiddenAsync(user.Id, !user.IsSearchHidden);
+        if (result.Succeeded)
+        {
+            await LoadUsersAsync();
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = user.IsSearchHidden ? "User Shown" : "User Hidden",
+                Detail = $"{user.FullName} is now {(user.IsSearchHidden ? "visible in" : "hidden from")} user search.",
                 Duration = 4000
             });
         }

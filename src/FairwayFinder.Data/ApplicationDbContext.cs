@@ -41,6 +41,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasConversion<int>()
             .HasDefaultValue(PreferredTees.Mens);
         modelBuilder.Entity<ApplicationUser>()
+            .Property(e => e.IsSearchHidden)
+            .HasDefaultValue(false);
+        modelBuilder.Entity<ApplicationUser>()
             .Property(e => e.CreatedOn)
             .HasDefaultValueSql("NOW()");
         modelBuilder.Entity<ApplicationUser>()
