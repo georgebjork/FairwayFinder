@@ -72,6 +72,13 @@ public class RoundResponse
     public int PuttsIn => Holes.Where(h => h.HoleNumber > 9 && h.Stats?.NumberOfPutts.HasValue == true).Sum(h => h.Stats!.NumberOfPutts!.Value);
     public int TotalPutts => PuttsOut + PuttsIn;
 
+    // Computed properties - Up and Down (scrambling): missed greens saved for par or better
+    public int UpAndDowns => Holes.Count(h => h.IsUpAndDown);
+    public int UpAndDownAttempts => Holes.Count(h => h.IsUpAndDownAttempt);
+    public double? UpAndDownPercentage => UpAndDownAttempts > 0
+        ? Math.Round((double)UpAndDowns / UpAndDownAttempts * 100, 1)
+        : null;
+
     public static RoundResponse From(
         Round round,
         Course course,
@@ -167,6 +174,14 @@ public class RoundHole
 
     // Computed property for score relative to par
     public int? ScoreToPar => Score.HasValue ? Score.Value - Par : null;
+
+    // A scrambling opportunity: a missed green where putts and score are tracked.
+    public bool IsUpAndDownAttempt => Stats != null && Stats.HitGreen == false
+        && Stats.NumberOfPutts.HasValue && Score.HasValue;
+
+    // A converted up-and-down: missed the green, 1 putt or fewer, par or better.
+    public bool IsUpAndDown => Stats != null && Stats.HitGreen == false
+        && Stats.NumberOfPutts <= 1 && ScoreToPar <= 0;
 
     public static RoundHole From(Hole hole, Score? score, HoleStat? holeStat)
     {

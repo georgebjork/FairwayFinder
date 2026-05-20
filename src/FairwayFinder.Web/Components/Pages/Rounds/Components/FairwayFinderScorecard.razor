@@ -262,6 +262,51 @@ else
                     </tr>
                     }
 
+                    <!-- Up & Down Row -->
+                    @if (Round.Holes.Any(x => x.IsUpAndDownAttempt))
+                    {
+                    <tr>
+                        <th colspan="2">Up &amp; Down</th>
+                        @if (HasFrontNine)
+                        {
+                            @foreach (var hole in FrontNine)
+                            {
+                                <td class="hole-cell">
+                                    @if (hole.IsUpAndDown)
+                                    {
+                                        <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
+                                    }
+                                    else if (hole.IsUpAndDownAttempt)
+                                    {
+                                        <RadzenIcon Icon="cancel" Style="color: var(--rz-danger);" />
+                                    }
+                                </td>
+                            }
+                            <td class="total-cell" colspan="2">@FrontNine.Count(h => h.IsUpAndDown)</td>
+                        }
+                        @if (HasBackNine)
+                        {
+                            @foreach (var hole in BackNine)
+                            {
+                                <td class="hole-cell">
+                                    @if (hole.IsUpAndDown)
+                                    {
+                                        <RadzenIcon Icon="check_circle" Style="color: var(--rz-success);" />
+                                    }
+                                    else if (hole.IsUpAndDownAttempt)
+                                    {
+                                        <RadzenIcon Icon="cancel" Style="color: var(--rz-danger);" />
+                                    }
+                                </td>
+                            }
+                            <td class="total-cell" colspan="2">@BackNine.Count(h => h.IsUpAndDown)</td>
+                        }
+                        <td class="total-cell" colspan="2">
+                            @Round.UpAndDowns / @Round.UpAndDownAttempts@(Round.UpAndDownPercentage.HasValue ? $" ({Round.UpAndDownPercentage}%)" : "")
+                        </td>
+                    </tr>
+                    }
+
                     @if (Round.Holes.Any(x => x.Stats != null && x.Stats.ApproachYardage.HasValue))
                     {
                         <!-- Approach Yardage Row -->
