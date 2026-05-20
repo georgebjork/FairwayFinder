@@ -171,6 +171,66 @@ public static class StatsCalculator
     }
 
     /// <summary>
+    /// Builds the up-and-down% trend data for charting (oldest to newest).
+    /// Only includes rounds that have hole stats with green + putt data.
+    /// </summary>
+    public static List<UpAndDownTrendPoint> BuildUpAndDownTrend(IReadOnlyList<RoundResponse> rounds)
+    {
+        var result = new List<UpAndDownTrendPoint>();
+
+        var roundsWithStats = rounds
+            .Where(x => x.UsingHoleStats)
+            .ToList();
+
+        foreach (var round in roundsWithStats)
+        {
+            var upAndDownHoles = round.Holes
+                .Where(h => h.Stats?.HitGreen.HasValue == true && h.Stats?.NumberOfPutts.HasValue == true)
+                .ToList();
+
+            if (upAndDownHoles.Count > 0)
+            {
+                var upAndDowns = upAndDownHoles.Count(h =>
+                    h.Stats!.HitGreen == false && h.Stats!.NumberOfPutts <= 1 && h.ScoreToPar <= 0);
+                result.Add(new UpAndDownTrendPoint
+                {
+                    RoundId = round.RoundId,
+                    DatePlayed = round.DatePlayed,
+                    UpAndDownPercent = Math.Round((double)upAndDowns / upAndDownHoles.Count * 100, 1),
+                    UpAndDowns = upAndDowns,
+                    Attempts = upAndDownHoles.Count,
+                    CourseName = round.CourseName
+                });
+            }
+        }
+
+        // Reverse to get oldest first for chart display
+        result.Reverse();
+        return result;
+    }
+
+    /// <summary>
+    /// Builds the 3-putts trend data for charting (oldest to newest).
+    /// Counts 3-putt-or-worse holes per round. Only includes rounds with putt data.
+    /// </summary>
+    public static List<ThreePuttsTrendPoint> BuildThreePuttsTrend(IReadOnlyList<RoundResponse> rounds, bool fullRound = true)
+    {
+        var filteredRounds = rounds
+            .Where(x => x.FullRound == fullRound && x.UsingHoleStats && x.TotalPutts > 0);
+
+        return filteredRounds
+            .Reverse() // Oldest first for chart display
+            .Select(r => new ThreePuttsTrendPoint
+            {
+                RoundId = r.RoundId,
+                DatePlayed = r.DatePlayed,
+                ThreePutts = r.Holes.Count(h => h.Stats?.NumberOfPutts >= 3),
+                CourseName = r.CourseName
+            })
+            .ToList();
+    }
+
+    /// <summary>
     /// Calculates stats per course (most played courses)
     /// </summary>
     public static List<CourseStats> CalculateCourseStats(IReadOnlyList<RoundResponse> rounds, int count)
@@ -310,6 +370,17 @@ public static class StatsCalculator
             var greensHit = greenHoles.Count(x => x.Hole.Stats!.HitGreen == true);
             result.GirPercent = Math.Round((double)greensHit / greenHoles.Count * 100, 1);
         }
+        
+        // Up and down % (all holes) - uses all rounds
+        var upAndDownHoles = allHoleStats
+            .Where(x => x.Hole.Stats!.HitGreen.HasValue && x.Hole.Stats!.NumberOfPutts.HasValue)
+            .ToList();
+        
+        if (upAndDownHoles.Count > 0)
+        {
+            var upAndDowns = upAndDownHoles.Count(x => x.Hole.Stats!.HitGreen == false && x.Hole.Stats.NumberOfPutts <= 1 && x.Hole.ScoreToPar <= 0);
+            result.UpAndDownPercent = Math.Round((double)upAndDowns / upAndDownHoles.Count * 100, 1);
+        }
 
         // Average putts per round
         var holesWithPutts18Holes = allHoleStats18Holes
@@ -327,6 +398,13 @@ public static class StatsCalculator
             {
                 result.Average18HolePutts = Math.Round(puttsByRound18Holes.Average(), 1);
             }
+
+            var threePuttsByRound18Holes = holesWithPutts18Holes
+                .GroupBy(x => x.RoundId)
+                .Select(g => g.Count(x => x.Hole.Stats!.NumberOfPutts >= 3))
+                .ToList();
+
+            result.Average18HoleThreePutts = Math.Round(threePuttsByRound18Holes.Average(), 1);
         }
         
         var holesWithPutts9Holes = allHoleStats9Holes
@@ -344,6 +422,13 @@ public static class StatsCalculator
             {
                 result.Average9HolePutts = Math.Round(puttsByRound9Holes.Average(), 1);
             }
+
+            var threePuttsByRound9Holes = holesWithPutts9Holes
+                .GroupBy(x => x.RoundId)
+                .Select(g => g.Count(x => x.Hole.Stats!.NumberOfPutts >= 3))
+                .ToList();
+
+            result.Average9HoleThreePutts = Math.Round(threePuttsByRound9Holes.Average(), 1);
         }
 
         // Calculate trends using linear regression (need at least 2 rounds)
@@ -447,6 +532,28 @@ public static class StatsCalculator
     {
         if (trendPoints.Count < 2) return new List<TrendLinePoint>();
         var values = trendPoints.Select(p => p.GirPercent).ToList();
+        var defaultLabels = labels ?? trendPoints.Select(p => p.DatePlayed.ToString("M/d")).ToList();
+        return BuildTrendLine(values, defaultLabels);
+    }
+
+    /// <summary>
+    /// Builds trend line for up-and-down% chart. Input should be oldest-to-newest.
+    /// </summary>
+    public static List<TrendLinePoint> BuildUpAndDownTrendLine(IReadOnlyList<UpAndDownTrendPoint> trendPoints, IReadOnlyList<string>? labels = null)
+    {
+        if (trendPoints.Count < 2) return new List<TrendLinePoint>();
+        var values = trendPoints.Select(p => p.UpAndDownPercent).ToList();
+        var defaultLabels = labels ?? trendPoints.Select(p => p.DatePlayed.ToString("M/d")).ToList();
+        return BuildTrendLine(values, defaultLabels);
+    }
+
+    /// <summary>
+    /// Builds trend line for 3-putts chart. Input should be oldest-to-newest.
+    /// </summary>
+    public static List<TrendLinePoint> BuildThreePuttsTrendLine(IReadOnlyList<ThreePuttsTrendPoint> trendPoints, IReadOnlyList<string>? labels = null)
+    {
+        if (trendPoints.Count < 2) return new List<TrendLinePoint>();
+        var values = trendPoints.Select(p => (double)p.ThreePutts).ToList();
         var defaultLabels = labels ?? trendPoints.Select(p => p.DatePlayed.ToString("M/d")).ToList();
         return BuildTrendLine(values, defaultLabels);
     }
@@ -640,6 +747,28 @@ public static class StatsCalculator
             result.GirPercentTrend = Math.Round(slope, 2);
         }
 
+        // Up & Down% Trend — compute per-round up-and-down%, then regress (oldest first)
+        var upAndDownPerRound = roundsWithHoleStats
+            .AsEnumerable().Reverse()
+            .Select(r =>
+            {
+                var upAndDownHoles = r.Holes
+                    .Where(h => h.Stats?.HitGreen.HasValue == true && h.Stats?.NumberOfPutts.HasValue == true)
+                    .ToList();
+                if (upAndDownHoles.Count == 0) return (double?)null;
+                var upAndDowns = upAndDownHoles.Count(h => h.Stats!.HitGreen == false && h.Stats!.NumberOfPutts <= 1 && h.ScoreToPar <= 0);
+                return (double)upAndDowns / upAndDownHoles.Count * 100;
+            })
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .ToList();
+
+        if (upAndDownPerRound.Count >= 2)
+        {
+            var (slope, _) = CalculateLinearRegression(upAndDownPerRound);
+            result.UpAndDownPercentTrend = Math.Round(slope, 2);
+        }
+
         // Putts Trend 18 Hole — total putts per round, then regress (oldest first)
         var putts18PerRound = roundsWithHoleStats
             .Where(x => x.FullRound)
@@ -676,6 +805,46 @@ public static class StatsCalculator
         {
             var (slope, _) = CalculateLinearRegression(putts9PerRound);
             result.Average9HolePuttsTrend = Math.Round(slope, 2);
+        }
+
+        // 3-Putts Trend 18 Hole — 3-putt count per round, then regress (oldest first)
+        var threePutts18PerRound = roundsWithHoleStats
+            .Where(x => x.FullRound)
+            .AsEnumerable().Reverse()
+            .Select(r =>
+            {
+                var holesWithPutts = r.Holes.Where(h => h.Stats?.NumberOfPutts.HasValue == true).ToList();
+                if (holesWithPutts.Count == 0) return (double?)null;
+                return (double)holesWithPutts.Count(h => h.Stats!.NumberOfPutts >= 3);
+            })
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .ToList();
+
+        if (threePutts18PerRound.Count >= 2)
+        {
+            var (slope, _) = CalculateLinearRegression(threePutts18PerRound);
+            result.Average18HoleThreePuttsTrend = Math.Round(slope, 2);
+        }
+
+        // 3-Putts Trend 9 Hole — 3-putt count per round, then regress (oldest first)
+        var threePutts9PerRound = roundsWithHoleStats
+            .Where(x => !x.FullRound)
+            .AsEnumerable().Reverse()
+            .Select(r =>
+            {
+                var holesWithPutts = r.Holes.Where(h => h.Stats?.NumberOfPutts.HasValue == true).ToList();
+                if (holesWithPutts.Count == 0) return (double?)null;
+                return (double)holesWithPutts.Count(h => h.Stats!.NumberOfPutts >= 3);
+            })
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .ToList();
+
+        if (threePutts9PerRound.Count >= 2)
+        {
+            var (slope, _) = CalculateLinearRegression(threePutts9PerRound);
+            result.Average9HoleThreePuttsTrend = Math.Round(slope, 2);
         }
     }
 }

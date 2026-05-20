@@ -29,6 +29,9 @@ public class UserStatsResponse
     public List<PuttsTrendPoint> PuttsTrend9Hole { get; set; } = new();
     public List<FirTrendPoint> FirTrend { get; set; } = new();
     public List<GirTrendPoint> GirTrend { get; set; } = new();
+    public List<UpAndDownTrendPoint> UpAndDownTrend { get; set; } = new();
+    public List<ThreePuttsTrendPoint> ThreePuttsTrend18Hole { get; set; } = new();
+    public List<ThreePuttsTrendPoint> ThreePuttsTrend9Hole { get; set; } = new();
     public ScoringDistribution ScoringDistribution { get; set; } = new();
     public List<CourseStats> MostPlayedCourses { get; set; } = new();
     
@@ -109,6 +112,30 @@ public class GirTrendPoint
 }
 
 /// <summary>
+/// A single data point for up-and-down% trend
+/// </summary>
+public class UpAndDownTrendPoint
+{
+    public long RoundId { get; set; }
+    public DateOnly DatePlayed { get; set; }
+    public double UpAndDownPercent { get; set; }
+    public int UpAndDowns { get; set; }
+    public int Attempts { get; set; }
+    public string CourseName { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// A single data point for 3-putts trend (count of 3-putt-or-worse holes in a round)
+/// </summary>
+public class ThreePuttsTrendPoint
+{
+    public long RoundId { get; set; }
+    public DateOnly DatePlayed { get; set; }
+    public int ThreePutts { get; set; }
+    public string CourseName { get; set; } = string.Empty;
+}
+
+/// <summary>
 /// Advanced stats (FIR, GIR, Putting) aggregated across rounds
 /// </summary>
 public class AdvancedStats
@@ -134,6 +161,17 @@ public class AdvancedStats
     public double? GirPercentTrend { get; set; }
     
     /// <summary>
+    /// Up and Down percentage (all holes)
+    /// </summary>
+    public double? UpAndDownPercent { get; set; }
+    
+    /// <summary>
+    /// Up and Down% trend (linear regression slope). Positive = improvement.
+    /// </summary>
+    public double? UpAndDownPercentTrend { get; set; }
+
+
+    /// <summary>
     /// Average putts per round
     /// </summary>
     public double? Average18HolePutts { get; set; }
@@ -144,7 +182,19 @@ public class AdvancedStats
     /// </summary>
     public double? Average18HolePuttsTrend { get; set; }
     public double? Average9HolePuttsTrend { get; set; }
-    
+
+    /// <summary>
+    /// Average number of 3-putts (or worse) per round
+    /// </summary>
+    public double? Average18HoleThreePutts { get; set; }
+    public double? Average9HoleThreePutts { get; set; }
+
+    /// <summary>
+    /// Average 3-putts trend (linear regression slope). Negative = improvement.
+    /// </summary>
+    public double? Average18HoleThreePuttsTrend { get; set; }
+    public double? Average9HoleThreePuttsTrend { get; set; }
+
     /// <summary>
     /// Number of rounds that have advanced stats tracked
     /// </summary>

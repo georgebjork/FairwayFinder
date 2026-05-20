@@ -1,0 +1,171 @@
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Helpers
+@inject NavigationManager NavigationManager
+
+<RadzenStack Gap="1rem">
+    @if (TrendData is null || TrendData.Count < 2)
+    {
+        <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 300px;">
+            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                Not enough rounds with green and putting data to show trend.
+            </RadzenText>
+        </RadzenStack>
+    }
+    else
+    {
+        <RadzenChart Style="height: 300px;" SeriesClick="@OnSeriesClick">
+            <RadzenLineSeries Data="@_chartData"
+                              CategoryProperty="DateLabel"
+                              ValueProperty="UpAndDownPercent"
+                              Title="Up &amp; Down%"
+                              Smooth="true">
+                <TooltipTemplate Context="data">
+                    <div class="rz-p-2">
+                        <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-mb-1">@data.CourseName</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2">Up &amp; Down: <strong>@data.UpAndDownPercent.ToString("F1")%</strong></RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                            @data.UpAndDowns / @data.Attempts saves
+                        </RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                            @data.DatePlayed.ToString("MMM d, yyyy")
+                        </RadzenText>
+                    </div>
+                </TooltipTemplate>
+            </RadzenLineSeries>
+
+            @if (_trendLineData is not null && _trendLineData.Count >= 2)
+            {
+                <RadzenLineSeries Data="@_trendLineData"
+                                  CategoryProperty="DateLabel"
+                                  ValueProperty="Value"
+                                  Title="Trend"
+                                  LineType="LineType.Dashed"
+                                  Smooth="false"
+                                  StrokeWidth="2">
+                    <ChildContent>
+                        <RadzenMarkers Visible="false" />
+                    </ChildContent>
+                    <TooltipTemplate Context="data">
+                        <div class="rz-p-2">
+                            <RadzenText TextStyle="TextStyle.Body2">Trend: <strong>@data.Value.ToString("F1")%</strong></RadzenText>
+                        </div>
+                    </TooltipTemplate>
+                </RadzenLineSeries>
+            }
+
+            <RadzenValueAxis Min="0" Max="100" Step="20">
+                <RadzenGridLines Visible="true" />
+                <RadzenAxisTitle Text="Up &amp; Down %" />
+            </RadzenValueAxis>
+            <RadzenLegend Visible="true" />
+        </RadzenChart>
+    }
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End">
+        <RadzenButton Text="Close"
+                      ButtonStyle="ButtonStyle.Light"
+                      Click="@(() => DialogService.Close())" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    [Parameter]
+    public List<UpAndDownTrendPoint>? TrendData { get; set; }
+
+    [Inject]
+    public DialogService DialogService { get; set; } = default!;
+
+    private List<UpAndDownTrendChartItem>? _chartData;
+    private List<TrendLinePoint>? _trendLineData;
+
+    private const int MaxVisibleLabels = 6;
+
+    protected override void OnParametersSet()
+    {
+        if (TrendData is not null && TrendData.Count >= 2)
+        {
+            _chartData = GenerateUniqueLabels(TrendData);
+
+            var labels = _chartData.Select(d => d.DateLabel).ToList();
+            _trendLineData = StatsCalculator.BuildUpAndDownTrendLine(TrendData, labels);
+        }
+    }
+
+    private void OnSeriesClick(SeriesClickEventArgs args)
+    {
+        if (args.Data is UpAndDownTrendChartItem item)
+        {
+            NavigationManager.NavigateTo($"/round/{item.RoundId}");
+        }
+    }
+
+    private static List<UpAndDownTrendChartItem> GenerateUniqueLabels(List<UpAndDownTrendPoint> trendData)
+    {
+        var n = trendData.Count;
+        var visibleIndices = new HashSet<int>();
+        if (n <= MaxVisibleLabels)
+        {
+            for (int i = 0; i < n; i++) visibleIndices.Add(i);
+        }
+        else
+        {
+            visibleIndices.Add(0);
+            visibleIndices.Add(n - 1);
+            var step = (double)(n - 1) / (MaxVisibleLabels - 1);
+            for (int i = 1; i < MaxVisibleLabels - 1; i++)
+                visibleIndices.Add((int)Math.Round(step * i));
+        }
+
+        var result = new List<UpAndDownTrendChartItem>();
+        var labelCounts = new Dictionary<string, int>();
+
+        for (int i = 0; i < n; i++)
+        {
+            var d = trendData[i];
+            string label;
+
+            if (visibleIndices.Contains(i))
+            {
+                var baseLabel = d.DatePlayed.ToString("M/d");
+                if (labelCounts.TryGetValue(baseLabel, out var count))
+                {
+                    labelCounts[baseLabel] = count + 1;
+                    label = $"{baseLabel} ({count + 1})";
+                }
+                else
+                {
+                    labelCounts[baseLabel] = 1;
+                    label = baseLabel;
+                }
+            }
+            else
+            {
+                label = new string(' ', i + 1);
+            }
+
+            result.Add(new UpAndDownTrendChartItem
+            {
+                RoundId = d.RoundId,
+                DatePlayed = d.DatePlayed,
+                DateLabel = label,
+                UpAndDownPercent = d.UpAndDownPercent,
+                UpAndDowns = d.UpAndDowns,
+                Attempts = d.Attempts,
+                CourseName = d.CourseName
+            });
+        }
+
+        return result;
+    }
+
+    private class UpAndDownTrendChartItem
+    {
+        public long RoundId { get; set; }
+        public DateOnly DatePlayed { get; set; }
+        public string DateLabel { get; set; } = string.Empty;
+        public double UpAndDownPercent { get; set; }
+        public int UpAndDowns { get; set; }
+        public int Attempts { get; set; }
+        public string CourseName { get; set; } = string.Empty;
+    }
+}

@@ -1709,6 +1709,256 @@ public class StatsCalculatorTests
         Assert.Equal(2.5, result.Average9HolePutts);
     }
 
+    [Fact]
+    public void CalculateAdvancedStats_UpAndDownPercent_CountsMissedGreensSavedForPar()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, score: 4, hitGreen: false, numberOfPutts: 1), // up-and-down
+                CreateHole(2, 4, score: 5, hitGreen: false, numberOfPutts: 2), // missed green, bogey - no
+                CreateHole(3, 4, score: 4, hitGreen: true, numberOfPutts: 2),  // hit green - no
+                CreateHole(4, 3, score: 3, hitGreen: false, numberOfPutts: 1)  // up-and-down
+            })
+        };
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // 2 up-and-downs out of 4 holes with green + putt data = 50%
+        Assert.Equal(50.0, result.UpAndDownPercent);
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_UpAndDownPercent_CountsMissedGreenSavedForBirdie()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 5, score: 4, hitGreen: false, numberOfPutts: 1), // missed green, birdie - up-and-down
+                CreateHole(2, 4, score: 5, hitGreen: false, numberOfPutts: 2)   // missed green, bogey - no
+            })
+        };
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // Par-or-better counts: 1 up-and-down out of 2 = 50%
+        Assert.Equal(50.0, result.UpAndDownPercent);
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_UpAndDownPercent_NoGreenAndPuttData_ReturnsNull()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, hitFairway: true) // no green/putt data
+            })
+        };
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        Assert.Null(result.UpAndDownPercent);
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_UpAndDownTrend_IdenticalRounds_ReturnsZero()
+    {
+        var rounds = new List<RoundResponse>();
+        for (int i = 1; i <= 5; i++)
+        {
+            rounds.Add(CreateRound(i, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, score: 4, hitGreen: false, numberOfPutts: 1)
+            }));
+        }
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // All identical data → slope = 0
+        Assert.Equal(0.0, result.UpAndDownPercentTrend);
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_UpAndDownTrend_ImprovingScrambling_ReturnsPositiveSlope()
+    {
+        var rounds = new List<RoundResponse>();
+
+        // Recent 5 rounds: 100% up-and-down (missed green, saved par)
+        for (int i = 1; i <= 5; i++)
+        {
+            rounds.Add(CreateRound(i, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, score: 4, hitGreen: false, numberOfPutts: 1)
+            }));
+        }
+
+        // Previous 5 rounds: 0% up-and-down (missed green, bogey)
+        for (int i = 6; i <= 10; i++)
+        {
+            rounds.Add(CreateRound(i, 85, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, score: 5, hitGreen: false, numberOfPutts: 2)
+            }));
+        }
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // Reversed oldest-first: [0,0,0,0,0,100,100,100,100,100]
+        // n=10, sumX=45, sumY=500, sumXY=3500, sumX2=285
+        // slope = (35000-22500)/(2850-2025) = 12500/825 ≈ 15.15
+        Assert.Equal(15.15, result.UpAndDownPercentTrend);
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_UpAndDownTrend_SingleRound_ReturnsNull()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, score: 4, hitGreen: false, numberOfPutts: 1)
+            })
+        };
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // Trends need at least 2 rounds
+        Assert.Null(result.UpAndDownPercentTrend);
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_Average18HoleThreePutts_CalculatesCorrectly()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 3),
+                CreateHole(2, 4, numberOfPutts: 2),
+                CreateHole(3, 4, numberOfPutts: 3)
+            }),
+            CreateRound(2, 82, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 2),
+                CreateHole(2, 4, numberOfPutts: 2),
+                CreateHole(3, 4, numberOfPutts: 1)
+            })
+        };
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // Round 1: 2 three-putts, Round 2: 0 → avg = 1.0
+        Assert.Equal(1.0, result.Average18HoleThreePutts);
+        Assert.Null(result.Average9HoleThreePutts); // No 9-hole rounds
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_Average9HoleThreePutts_CountsThreePuttsAndWorse()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 40, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 3),
+                CreateHole(2, 4, numberOfPutts: 4), // 4-putt counts as 3-putt-or-worse
+                CreateHole(3, 4, numberOfPutts: 2)
+            }),
+            CreateRound(2, 42, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 2),
+                CreateHole(2, 4, numberOfPutts: 3),
+                CreateHole(3, 4, numberOfPutts: 2)
+            })
+        };
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // Round 1: 2 (the 3-putt and 4-putt), Round 2: 1 → avg = 1.5
+        Assert.Equal(1.5, result.Average9HoleThreePutts);
+        Assert.Null(result.Average18HoleThreePutts); // No 18-hole rounds
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_ThreePuttsTrend_IdenticalRounds_ReturnsZero()
+    {
+        var rounds = new List<RoundResponse>();
+        for (int i = 1; i <= 5; i++)
+        {
+            rounds.Add(CreateRound(i, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 3)
+            }));
+        }
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // All identical data → slope = 0
+        Assert.Equal(0.0, result.Average18HoleThreePuttsTrend);
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_Average18HoleThreePuttsTrend_FewerThreePutts_ReturnsNegativeSlope()
+    {
+        var rounds = new List<RoundResponse>();
+
+        // Recent 5 18-hole rounds: 0 three-putts (1 putt per hole)
+        for (int i = 1; i <= 5; i++)
+        {
+            rounds.Add(CreateRound(i, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 1)
+            }));
+        }
+
+        // Previous 5 18-hole rounds: 1 three-putt each
+        for (int i = 6; i <= 10; i++)
+        {
+            rounds.Add(CreateRound(i, 85, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 3)
+            }));
+        }
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // Reversed oldest-first: [1,1,1,1,1,0,0,0,0,0]
+        // n=10, sumX=45, sumY=5, sumXY=10, sumX2=285
+        // slope = (100-225)/(2850-2025) = -125/825 ≈ -0.15
+        Assert.Equal(-0.15, result.Average18HoleThreePuttsTrend);
+    }
+
+    [Fact]
+    public void CalculateAdvancedStats_Average9HoleThreePuttsTrend_FewerThreePutts_ReturnsNegativeSlope()
+    {
+        var rounds = new List<RoundResponse>();
+
+        // Recent 5 9-hole rounds: 0 three-putts
+        for (int i = 1; i <= 5; i++)
+        {
+            rounds.Add(CreateRound(i, 40, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 2)
+            }));
+        }
+
+        // Previous 5 9-hole rounds: 1 three-putt each
+        for (int i = 6; i <= 10; i++)
+        {
+            rounds.Add(CreateRound(i, 45, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 3)
+            }));
+        }
+
+        var result = StatsCalculator.CalculateAdvancedStats(rounds);
+
+        // Reversed oldest-first: [1,1,1,1,1,0,0,0,0,0], slope ≈ -0.15
+        Assert.Equal(-0.15, result.Average9HoleThreePuttsTrend);
+    }
+
     #endregion
 
     #region BuildFirTrend Tests
@@ -2061,6 +2311,276 @@ public class StatsCalculatorTests
         Assert.Equal(100.0, result[0].GirPercent);
         Assert.Equal(4, result[0].GreensHit);
         Assert.Equal(4, result[0].GreenAttempts);
+    }
+
+    #endregion
+
+    #region BuildUpAndDownTrend Tests
+
+    [Fact]
+    public void BuildUpAndDownTrend_EmptyList_ReturnsEmptyList()
+    {
+        var result = StatsCalculator.BuildUpAndDownTrend(new List<RoundResponse>());
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildUpAndDownTrend_NoRoundsWithHoleStats_ReturnsEmptyList()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: false)
+        };
+
+        var result = StatsCalculator.BuildUpAndDownTrend(rounds);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildUpAndDownTrend_MultipleRounds_ReturnsCorrectDataReversed()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            // Round 2 (most recent): 1 up-and-down of 2 = 50%
+            CreateRound(2, 80, usingHoleStats: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, score: 4, hitGreen: false, numberOfPutts: 1), // up-and-down
+                CreateHole(2, 4, score: 5, hitGreen: false, numberOfPutts: 2)   // bogey - no
+            }),
+            // Round 1 (older): 0 up-and-down of 1 = 0%
+            CreateRound(1, 85, usingHoleStats: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, score: 5, hitGreen: false, numberOfPutts: 2)
+            })
+        };
+
+        var result = StatsCalculator.BuildUpAndDownTrend(rounds);
+
+        // Reversed: oldest round first
+        Assert.Equal(2, result.Count);
+        Assert.Equal(1, result[0].RoundId);
+        Assert.Equal(0.0, result[0].UpAndDownPercent);
+        Assert.Equal(2, result[1].RoundId);
+        Assert.Equal(50.0, result[1].UpAndDownPercent);
+    }
+
+    [Fact]
+    public void BuildUpAndDownTrend_MapsAllProperties()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(7, 80, courseName: "Pebble", datePlayed: new DateOnly(2024, 6, 1),
+                usingHoleStats: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, score: 4, hitGreen: false, numberOfPutts: 1), // up-and-down
+                CreateHole(2, 4, score: 5, hitGreen: false, numberOfPutts: 2)   // no
+            })
+        };
+
+        var result = StatsCalculator.BuildUpAndDownTrend(rounds);
+
+        Assert.Single(result);
+        Assert.Equal(7, result[0].RoundId);
+        Assert.Equal(new DateOnly(2024, 6, 1), result[0].DatePlayed);
+        Assert.Equal(50.0, result[0].UpAndDownPercent);
+        Assert.Equal(1, result[0].UpAndDowns);
+        Assert.Equal(2, result[0].Attempts);
+        Assert.Equal("Pebble", result[0].CourseName);
+    }
+
+    [Fact]
+    public void BuildUpAndDownTrend_CountsParOrBetter()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 5, score: 4, hitGreen: false, numberOfPutts: 1), // missed green, birdie - counts
+                CreateHole(2, 4, score: 5, hitGreen: false, numberOfPutts: 2)   // bogey - no
+            })
+        };
+
+        var result = StatsCalculator.BuildUpAndDownTrend(rounds);
+
+        Assert.Single(result);
+        Assert.Equal(1, result[0].UpAndDowns);
+        Assert.Equal(50.0, result[0].UpAndDownPercent);
+    }
+
+    #endregion
+
+    #region BuildThreePuttsTrend Tests
+
+    [Fact]
+    public void BuildThreePuttsTrend_EmptyList_ReturnsEmptyList()
+    {
+        var result = StatsCalculator.BuildThreePuttsTrend(new List<RoundResponse>());
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildThreePuttsTrend_MultipleRounds_ReturnsCorrectDataReversed()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            // Round 2 (most recent): 2 three-putts (a 3-putt and a 4-putt)
+            CreateRound(2, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 3),
+                CreateHole(2, 4, numberOfPutts: 4),
+                CreateHole(3, 4, numberOfPutts: 2)
+            }),
+            // Round 1 (older): 1 three-putt
+            CreateRound(1, 82, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 3),
+                CreateHole(2, 4, numberOfPutts: 2)
+            })
+        };
+
+        var result = StatsCalculator.BuildThreePuttsTrend(rounds);
+
+        // Reversed: oldest round first
+        Assert.Equal(2, result.Count);
+        Assert.Equal(1, result[0].RoundId);
+        Assert.Equal(1, result[0].ThreePutts);
+        Assert.Equal(2, result[1].RoundId);
+        Assert.Equal(2, result[1].ThreePutts);
+    }
+
+    [Fact]
+    public void BuildThreePuttsTrend_FiltersToRoundType()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 3)
+            }),
+            CreateRound(2, 40, usingHoleStats: true, fullRound: false, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 3)
+            })
+        };
+
+        var full = StatsCalculator.BuildThreePuttsTrend(rounds);
+        var nine = StatsCalculator.BuildThreePuttsTrend(rounds, fullRound: false);
+
+        Assert.Single(full);
+        Assert.Equal(1, full[0].RoundId);
+        Assert.Single(nine);
+        Assert.Equal(2, nine[0].RoundId);
+    }
+
+    [Fact]
+    public void BuildThreePuttsTrend_IncludesRoundsWithZeroThreePutts()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 2),
+                CreateHole(2, 4, numberOfPutts: 1)
+            })
+        };
+
+        var result = StatsCalculator.BuildThreePuttsTrend(rounds);
+
+        Assert.Single(result);
+        Assert.Equal(0, result[0].ThreePutts);
+    }
+
+    [Fact]
+    public void BuildThreePuttsTrend_MapsAllProperties()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(9, 80, courseName: "Augusta", datePlayed: new DateOnly(2024, 5, 3),
+                usingHoleStats: true, fullRound: true, holes: new List<RoundHole>
+            {
+                CreateHole(1, 4, numberOfPutts: 3),
+                CreateHole(2, 4, numberOfPutts: 2)
+            })
+        };
+
+        var result = StatsCalculator.BuildThreePuttsTrend(rounds);
+
+        Assert.Single(result);
+        Assert.Equal(9, result[0].RoundId);
+        Assert.Equal(new DateOnly(2024, 5, 3), result[0].DatePlayed);
+        Assert.Equal(1, result[0].ThreePutts);
+        Assert.Equal("Augusta", result[0].CourseName);
+    }
+
+    #endregion
+
+    #region BuildUpAndDownTrendLine Tests
+
+    [Fact]
+    public void BuildUpAndDownTrendLine_SinglePoint_ReturnsEmptyList()
+    {
+        var trendPoints = new List<UpAndDownTrendPoint>
+        {
+            new() { RoundId = 1, DatePlayed = new DateOnly(2024, 6, 1), UpAndDownPercent = 50 }
+        };
+
+        var result = StatsCalculator.BuildUpAndDownTrendLine(trendPoints);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildUpAndDownTrendLine_TwoPoints_ReturnsTwoPointLine()
+    {
+        var trendPoints = new List<UpAndDownTrendPoint>
+        {
+            new() { RoundId = 2, DatePlayed = new DateOnly(2024, 6, 1), UpAndDownPercent = 40 },
+            new() { RoundId = 1, DatePlayed = new DateOnly(2024, 6, 2), UpAndDownPercent = 60 }
+        };
+
+        var result = StatsCalculator.BuildUpAndDownTrendLine(trendPoints);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal("6/1", result[0].DateLabel);
+        Assert.Equal(40.0, result[0].Value);
+        Assert.Equal("6/2", result[1].DateLabel);
+        Assert.Equal(60.0, result[1].Value);
+    }
+
+    #endregion
+
+    #region BuildThreePuttsTrendLine Tests
+
+    [Fact]
+    public void BuildThreePuttsTrendLine_SinglePoint_ReturnsEmptyList()
+    {
+        var trendPoints = new List<ThreePuttsTrendPoint>
+        {
+            new() { RoundId = 1, DatePlayed = new DateOnly(2024, 6, 1), ThreePutts = 2 }
+        };
+
+        var result = StatsCalculator.BuildThreePuttsTrendLine(trendPoints);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildThreePuttsTrendLine_TwoPoints_ReturnsTwoPointLine()
+    {
+        var trendPoints = new List<ThreePuttsTrendPoint>
+        {
+            new() { RoundId = 2, DatePlayed = new DateOnly(2024, 6, 1), ThreePutts = 3 },
+            new() { RoundId = 1, DatePlayed = new DateOnly(2024, 6, 2), ThreePutts = 1 }
+        };
+
+        var result = StatsCalculator.BuildThreePuttsTrendLine(trendPoints);
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal(3.0, result[0].Value);
+        Assert.Equal(1.0, result[1].Value);
     }
 
     #endregion

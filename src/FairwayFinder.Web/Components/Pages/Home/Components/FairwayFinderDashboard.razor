@@ -240,7 +240,7 @@
                         }
                     </FairwayFinderStatsCard>
                 }
-
+                /*
                 @if (_stats.AdvancedStats.Average9HolePutts.HasValue)
                 {
                     <FairwayFinderStatsCard
@@ -268,6 +268,92 @@
                         }
                     </FairwayFinderStatsCard>
                 }
+                */
+                @if (_stats.AdvancedStats.UpAndDownPercent.HasValue)
+                {
+                    <FairwayFinderStatsCard
+                        Label="Up & Down"
+                        Value="@($"{_stats.AdvancedStats.UpAndDownPercent:F1}%")"
+                        SubText="@($"{_stats.AdvancedStats.RoundsWithStats} rounds")"
+                        OnClick="ShowUpAndDownTrendDialog">
+                        @if (_stats.AdvancedStats.UpAndDownPercentTrend.HasValue)
+                        {
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
+                                @if (_stats.AdvancedStats.UpAndDownPercentTrend > 0) {
+                                    <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Success"/>
+                                    <RadzenText TextStyle="TextStyle.Caption">
+                                       + @_stats.AdvancedStats.UpAndDownPercentTrend.Value.ToString("F1")%
+                                    </RadzenText>
+                                }
+                                else
+                                {
+                                    <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Danger"/>
+                                    <RadzenText TextStyle="TextStyle.Caption">
+                                       @_stats.AdvancedStats.UpAndDownPercentTrend.Value.ToString("F1")%
+                                    </RadzenText>
+                                }
+                            </RadzenStack>
+                        }
+                    </FairwayFinderStatsCard>
+                }
+
+                @if (_stats.AdvancedStats.Average18HoleThreePutts.HasValue)
+                {
+                    <FairwayFinderStatsCard
+                        Label="3-Putts (18)"
+                        Value="@($"{_stats.AdvancedStats.Average18HoleThreePutts:F1}")"
+                        SubText="per round"
+                        OnClick="ShowThreePuttsTrendDialog18Hole">
+                        @if (_stats.AdvancedStats.Average18HoleThreePuttsTrend.HasValue)
+                        {
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
+                                @if (_stats.AdvancedStats.Average18HoleThreePuttsTrend < 0) {
+                                    <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Success"/>
+                                    <RadzenText TextStyle="TextStyle.Caption">
+                                       @_stats.AdvancedStats.Average18HoleThreePuttsTrend.Value.ToString("F1")
+                                    </RadzenText>
+                                }
+                                else
+                                {
+                                    <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Danger"/>
+                                    <RadzenText TextStyle="TextStyle.Caption">
+                                       + @_stats.AdvancedStats.Average18HoleThreePuttsTrend.Value.ToString("F1")
+                                    </RadzenText>
+                                }
+                            </RadzenStack>
+                        }
+                    </FairwayFinderStatsCard>
+                }
+                
+                /*
+                @if (_stats.AdvancedStats.Average9HoleThreePutts.HasValue)
+                {
+                    <FairwayFinderStatsCard
+                        Label="3-Putts (9)"
+                        Value="@($"{_stats.AdvancedStats.Average9HoleThreePutts:F1}")"
+                        SubText="per round"
+                        OnClick="ShowThreePuttsTrendDialog9Hole">
+                        @if (_stats.AdvancedStats.Average9HoleThreePuttsTrend.HasValue)
+                        {
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
+                                @if (_stats.AdvancedStats.Average9HoleThreePuttsTrend < 0) {
+                                    <RadzenIcon Icon="trending_down" IconStyle="IconStyle.Success"/>
+                                    <RadzenText TextStyle="TextStyle.Caption">
+                                       @_stats.AdvancedStats.Average9HoleThreePuttsTrend.Value.ToString("F1")
+                                    </RadzenText>
+                                }
+                                else
+                                {
+                                    <RadzenIcon Icon="trending_up" IconStyle="IconStyle.Danger"/>
+                                    <RadzenText TextStyle="TextStyle.Caption">
+                                       + @_stats.AdvancedStats.Average9HoleThreePuttsTrend.Value.ToString("F1")
+                                    </RadzenText>
+                                }
+                            </RadzenStack>
+                        }
+                    </FairwayFinderStatsCard>
+                }
+                */
             }
         </RadzenStack>
 
@@ -611,6 +697,60 @@
             new Dictionary<string, object>
             {
                 { "TrendData", _stats.FirTrend }
+            },
+            new DialogOptions
+            {
+                Width = "700px",
+                CloseDialogOnOverlayClick = true,
+                CloseDialogOnEsc = true
+            });
+    }
+
+    private async Task ShowUpAndDownTrendDialog()
+    {
+        if (!ShowTrendDialogs) return;
+        if (_stats?.UpAndDownTrend is null || _stats.UpAndDownTrend.Count < 2) return;
+
+        await DialogService.OpenAsync<UpAndDownTrendDialog>("Up & Down Trend",
+            new Dictionary<string, object>
+            {
+                { "TrendData", _stats.UpAndDownTrend }
+            },
+            new DialogOptions
+            {
+                Width = "700px",
+                CloseDialogOnOverlayClick = true,
+                CloseDialogOnEsc = true
+            });
+    }
+
+    private async Task ShowThreePuttsTrendDialog18Hole()
+    {
+        if (!ShowTrendDialogs) return;
+        if (_stats?.ThreePuttsTrend18Hole is null || _stats.ThreePuttsTrend18Hole.Count < 2) return;
+
+        await DialogService.OpenAsync<ThreePuttsTrendDialog>("3-Putts Trend (18-Hole Rounds)",
+            new Dictionary<string, object>
+            {
+                { "TrendData", _stats.ThreePuttsTrend18Hole }
+            },
+            new DialogOptions
+            {
+                Width = "700px",
+                CloseDialogOnOverlayClick = true,
+                CloseDialogOnEsc = true
+            });
+    }
+
+    private async Task ShowThreePuttsTrendDialog9Hole()
+    {
+        if (!ShowTrendDialogs) return;
+        if (_stats?.ThreePuttsTrend9Hole is null || _stats.ThreePuttsTrend9Hole.Count < 2) return;
+
+        await DialogService.OpenAsync<ThreePuttsTrendDialog>("3-Putts Trend (9-Hole Rounds)",
+            new Dictionary<string, object>
+            {
+                { "TrendData", _stats.ThreePuttsTrend9Hole }
             },
             new DialogOptions
             {
