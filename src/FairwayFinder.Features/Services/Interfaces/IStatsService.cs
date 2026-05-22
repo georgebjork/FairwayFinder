@@ -23,8 +23,9 @@ public interface IStatsService
     /// <param name="startDate">Optional start date (inclusive). Null = no lower bound.</param>
     /// <param name="endDate">Optional end date (inclusive). Null = no upper bound.</param>
     /// <param name="fullRoundOnly">Optional round-type filter: null = all, true = 18-hole only, false = 9-hole only.</param>
+    /// <param name="year">Optional calendar-year filter. Ignored when <paramref name="startDate"/> or <paramref name="endDate"/> is set.</param>
     /// <returns>Course-specific stats, or null if user has no rounds at this course</returns>
-    Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null);
+    Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null, int? year = null);
     
     /// <summary>
     /// Gets the distinct years that a user has played rounds in.

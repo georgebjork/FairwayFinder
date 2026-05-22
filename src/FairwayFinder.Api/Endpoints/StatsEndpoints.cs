@@ -18,6 +18,7 @@ public static class StatsEndpoints
             DateOnly? startDate,
             DateOnly? endDate,
             long? courseId,
+            int? year,
             HttpContext ctx,
             IStatsService statsService) =>
         {
@@ -28,7 +29,8 @@ public static class StatsEndpoints
                 FullRoundOnly = fullRoundOnly,
                 StartDate = startDate,
                 EndDate = endDate,
-                CourseId = courseId
+                CourseId = courseId,
+                Year = year
             };
 
             var stats = await statsService.GetUserStatsAsync(userId, filter.HasFilters ? filter : null);
@@ -41,11 +43,12 @@ public static class StatsEndpoints
             DateOnly? startDate,
             DateOnly? endDate,
             bool? fullRoundOnly,
+            int? year,
             HttpContext ctx,
             IStatsService statsService) =>
         {
             var userId = ctx.User.GetUserId();
-            var stats = await statsService.GetCourseStatsAsync(userId, courseId, teeboxId, startDate, endDate, fullRoundOnly);
+            var stats = await statsService.GetCourseStatsAsync(userId, courseId, teeboxId, startDate, endDate, fullRoundOnly, year);
             if (stats is null)
                 throw new NotFoundException("CourseStats", courseId);
 

@@ -100,7 +100,7 @@ public class StatsService : IStatsService
         }
     }
 
-    public async Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null)
+    public async Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null, int? year = null)
     {
         using var activity = FairwayFinderDiagnostics.StatsActivity.StartActivity(name: FairwayFinderDiagnostics.ActivityNames.StatsCourseGenerate);
         var stopwatch = Stopwatch.StartNew();
@@ -152,6 +152,14 @@ public class StatsService : IStatsService
             {
                 filteredRounds = filteredRounds
                     .Where(r => r.DatePlayed <= endDate.Value)
+                    .ToList();
+            }
+
+            // Apply year filter — only when no explicit date range was given.
+            if (year.HasValue && !startDate.HasValue && !endDate.HasValue)
+            {
+                filteredRounds = filteredRounds
+                    .Where(r => r.DatePlayed.Year == year.Value)
                     .ToList();
             }
 
@@ -274,18 +282,24 @@ public class StatsService : IStatsService
         {
             result = result.Where(r => r.DatePlayed >= filter.StartDate.Value);
         }
-        
+
         if (filter.EndDate.HasValue)
         {
             result = result.Where(r => r.DatePlayed <= filter.EndDate.Value);
         }
-        
+
+        // Filter by year — only when no explicit date range was given.
+        if (filter.Year.HasValue && !filter.StartDate.HasValue && !filter.EndDate.HasValue)
+        {
+            result = result.Where(r => r.DatePlayed.Year == filter.Year.Value);
+        }
+
         // Filter by course
         if (filter.CourseId.HasValue)
         {
             result = result.Where(r => r.CourseId == filter.CourseId.Value);
         }
-        
+
         return result.ToList();
     }
 

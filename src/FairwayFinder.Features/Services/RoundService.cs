@@ -67,6 +67,11 @@ public class RoundService : IRoundService
             {
                 query = query.Where(r => r.DatePlayed <= filter.EndDate.Value);
             }
+            // Year is ignored when an explicit date range is set — the range wins.
+            if (filter.Year.HasValue && !filter.StartDate.HasValue && !filter.EndDate.HasValue)
+            {
+                query = query.Where(r => r.DatePlayed.Year == filter.Year.Value);
+            }
             if (filter.CourseId.HasValue)
             {
                 query = query.Where(r => r.CourseId == filter.CourseId.Value);
@@ -109,6 +114,11 @@ public class RoundService : IRoundService
             if (filter.EndDate.HasValue)
             {
                 query = query.Where(r => r.DatePlayed <= filter.EndDate.Value);
+            }
+            // Year is ignored when an explicit date range is set — the range wins.
+            if (filter.Year.HasValue && !filter.StartDate.HasValue && !filter.EndDate.HasValue)
+            {
+                query = query.Where(r => r.DatePlayed.Year == filter.Year.Value);
             }
             if (filter.CourseId.HasValue)
             {

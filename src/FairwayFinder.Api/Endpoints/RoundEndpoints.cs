@@ -42,6 +42,7 @@ public static class RoundEndpoints
             bool? fullRoundOnly,
             DateOnly? startDate,
             DateOnly? endDate,
+            int? year,
             HttpContext ctx,
             IRoundService roundService) =>
         {
@@ -51,7 +52,8 @@ public static class RoundEndpoints
                 CourseId = courseId,
                 FullRoundOnly = fullRoundOnly,
                 StartDate = startDate,
-                EndDate = endDate
+                EndDate = endDate,
+                Year = year
             };
 
             var rounds = filter.HasFilters

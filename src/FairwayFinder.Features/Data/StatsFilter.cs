@@ -24,11 +24,18 @@ public class StatsFilter
     /// Filter by course. Null = all courses.
     /// </summary>
     public long? CourseId { get; set; }
-    
+
+    /// <summary>
+    /// Restrict to rounds played in this calendar year. Null = all years.
+    /// Ignored when <see cref="StartDate"/> or <see cref="EndDate"/> is set —
+    /// an explicit date range always wins.
+    /// </summary>
+    public int? Year { get; set; }
+
     /// <summary>
     /// Returns true if any filter is applied.
     /// </summary>
-    public bool HasFilters => FullRoundOnly.HasValue || StartDate.HasValue || EndDate.HasValue || CourseId.HasValue;
+    public bool HasFilters => FullRoundOnly.HasValue || StartDate.HasValue || EndDate.HasValue || CourseId.HasValue || Year.HasValue;
 }
 
 /// <summary>
