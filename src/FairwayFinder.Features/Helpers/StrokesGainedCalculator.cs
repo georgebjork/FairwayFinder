@@ -361,4 +361,24 @@ public static class StrokesGainedCalculator
         var (slope, _) = StatsCalculator.CalculateLinearRegression(values);
         return Math.Round(slope, 3);
     }
+
+    /// <summary>
+    /// Averages a collection of per-hole SG records into a single block.
+    /// All sub-values are rounded to 2 dp, matching the precision used by
+    /// <c>AggregateStoredSg</c> in <c>StatsService</c>. Caller is responsible
+    /// for filtering out null/empty inputs — passing an empty list will throw
+    /// (LINQ Average) so check the count first.
+    /// </summary>
+    public static HoleAverageSg AverageHoleSg(IReadOnlyList<StrokesGainedHoleResult> sgs)
+    {
+        return new HoleAverageSg
+        {
+            Count            = sgs.Count,
+            SgTotal          = Math.Round(sgs.Average(s => s.SgTotal),          2),
+            SgOffTheTee      = Math.Round(sgs.Average(s => s.SgOffTheTee),      2),
+            SgApproach       = Math.Round(sgs.Average(s => s.SgApproach),       2),
+            SgAroundTheGreen = Math.Round(sgs.Average(s => s.SgAroundTheGreen), 2),
+            SgPutting        = Math.Round(sgs.Average(s => s.SgPutting),        2),
+        };
+    }
 }

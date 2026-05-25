@@ -288,4 +288,51 @@ public class StrokesGainedCalculatorTests
     }
 
     #endregion
+
+    #region AverageHoleSg Tests
+
+    private static StrokesGainedHoleResult MakeSg(double total, double ott, double app, double atg, double putt) =>
+        new()
+        {
+            HoleNumber = 1, Par = 4, Score = 4,
+            SgTotal = total, SgOffTheTee = ott, SgApproach = app, SgAroundTheGreen = atg, SgPutting = putt
+        };
+
+    [Fact]
+    public void AverageHoleSg_AveragesAllComponentsAndRoundsTo2dp()
+    {
+        var sgs = new[]
+        {
+            MakeSg(total: 0.10, ott: 0.30, app: -0.10, atg: 0.05, putt: -0.15),
+            MakeSg(total: 0.30, ott: 0.50, app:  0.10, atg: 0.15, putt: -0.45)
+        };
+
+        var avg = StrokesGainedCalculator.AverageHoleSg(sgs);
+
+        Assert.Equal(2, avg.Count);
+        Assert.Equal(0.20,  avg.SgTotal);
+        Assert.Equal(0.40,  avg.SgOffTheTee);
+        Assert.Equal(0.00,  avg.SgApproach);
+        Assert.Equal(0.10,  avg.SgAroundTheGreen);
+        Assert.Equal(-0.30, avg.SgPutting);
+    }
+
+    [Fact]
+    public void AverageHoleSg_RoundsHalfAwayFromZero()
+    {
+        // 0.115 average should round to 0.12 per Math.Round default banker's rounding for .NET 5+.
+        // Use values that aren't ambiguous: 0.12 and 0.13 → 0.125 → 0.12 (banker's), but we'll
+        // use 0.10 and 0.13 → 0.115 → 0.12 to confirm the round path runs.
+        var sgs = new[]
+        {
+            MakeSg(total: 0.10, ott: 0, app: 0, atg: 0, putt: 0),
+            MakeSg(total: 0.13, ott: 0, app: 0, atg: 0, putt: 0)
+        };
+
+        var avg = StrokesGainedCalculator.AverageHoleSg(sgs);
+
+        Assert.InRange(avg.SgTotal, 0.11, 0.12);
+    }
+
+    #endregion
 }

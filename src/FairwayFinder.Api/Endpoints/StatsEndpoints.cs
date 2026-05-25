@@ -55,6 +55,24 @@ public static class StatsEndpoints
             return Results.Ok(stats);
         });
 
+        group.MapGet("/courses/{courseId:long}/holes", async (
+            long courseId,
+            long? teeboxId,
+            DateOnly? startDate,
+            DateOnly? endDate,
+            bool? fullRoundOnly,
+            int? year,
+            HttpContext ctx,
+            IStatsService statsService) =>
+        {
+            var userId = ctx.User.GetUserId();
+            var stats = await statsService.GetCourseHoleStatsAsync(userId, courseId, teeboxId, startDate, endDate, fullRoundOnly, year);
+            if (stats is null)
+                throw new NotFoundException("CourseHoleStats", courseId);
+
+            return Results.Ok(stats);
+        });
+
         group.MapGet("/years", async (HttpContext ctx, IStatsService statsService) =>
         {
             var userId = ctx.User.GetUserId();

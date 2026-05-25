@@ -114,77 +114,29 @@ public class StatsService : IStatsService
         {
             var rounds = await _roundService.GetRoundsWithDetailsAsync(userId);
 
-            var allCourseRounds = rounds
-                .Where(r => r.CourseId == courseId && !r.ExcludeFromStats)
-                .ToList();
-
-            if (allCourseRounds.Count == 0)
+            var filter = FilterCourseRounds(rounds, courseId, teeboxId, startDate, endDate, year, fullRoundOnly);
+            if (filter is null)
             {
                 result = FairwayFinderDiagnostics.TagValues.ResultEmpty;
                 return null;
             }
 
-            // Build teebox options from all rounds at this course (before any filtering)
-            var teeboxOptions = allCourseRounds
-                .GroupBy(r => new { r.Teebox.TeeboxId, r.Teebox.TeeboxName })
-                .OrderByDescending(g => g.Count())
-                .Select(g => new CourseTeeboxOption
-                {
-                    TeeboxId = g.Key.TeeboxId,
-                    TeeboxName = g.Key.TeeboxName,
-                    RoundCount = g.Count()
-                })
-                .ToList();
-
-            // Apply teebox filter if specified
-            var filteredRounds = teeboxId.HasValue
-                ? allCourseRounds.Where(r => r.Teebox.TeeboxId == teeboxId.Value).ToList()
-                : allCourseRounds;
-
-            // Apply date range filter
-            if (startDate.HasValue)
-            {
-                filteredRounds = filteredRounds
-                    .Where(r => r.DatePlayed >= startDate.Value)
-                    .ToList();
-            }
-            if (endDate.HasValue)
-            {
-                filteredRounds = filteredRounds
-                    .Where(r => r.DatePlayed <= endDate.Value)
-                    .ToList();
-            }
-
-            // Apply year filter — only when no explicit date range was given.
-            if (year.HasValue && !startDate.HasValue && !endDate.HasValue)
-            {
-                filteredRounds = filteredRounds
-                    .Where(r => r.DatePlayed.Year == year.Value)
-                    .ToList();
-            }
-
-            // Apply round-type filter (18-hole vs 9-hole)
-            if (fullRoundOnly.HasValue)
-            {
-                filteredRounds = filteredRounds
-                    .Where(r => r.FullRound == fullRoundOnly.Value)
-                    .ToList();
-            }
-
-            if (filteredRounds.Count == 0)
+            if (filter.FilteredRounds.Count == 0)
             {
                 result = FairwayFinderDiagnostics.TagValues.ResultFilteredEmpty;
-                // Teebox filter matched no rounds — return shell with options so user can pick another
+                // Teebox/date/year/fullRound filter matched no rounds — return shell with options so user can pick another.
                 return new CourseStatsResponse
                 {
                     CourseId = courseId,
-                    CourseName = allCourseRounds.First().CourseName,
-                    TeeboxOptions = teeboxOptions,
+                    CourseName = filter.CourseName,
+                    TeeboxOptions = filter.TeeboxOptions,
                     SelectedTeeboxId = teeboxId
                 };
             }
 
-            var courseName = filteredRounds.First().CourseName;
+            var filteredRounds = filter.FilteredRounds;
+            var teeboxOptions = filter.TeeboxOptions;
+            var courseName = filter.CourseName;
 
             var response = new CourseStatsResponse
             {
@@ -245,7 +197,71 @@ public class StatsService : IStatsService
                 });
         }
     }
-    
+
+    public async Task<CourseHoleStatsResponse?> GetCourseHoleStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null, int? year = null)
+    {
+        using var activity = FairwayFinderDiagnostics.StatsActivity.StartActivity(name: FairwayFinderDiagnostics.ActivityNames.StatsCourseHolesGenerate);
+        var stopwatch = Stopwatch.StartNew();
+        activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.StatsCourseId, courseId);
+        activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.StatsTeeboxId, teeboxId);
+
+        var result = FairwayFinderDiagnostics.TagValues.ResultError;
+        var hasSg = false;
+
+        try
+        {
+            var rounds = await _roundService.GetRoundsWithDetailsAsync(userId);
+
+            var filter = FilterCourseRounds(rounds, courseId, teeboxId, startDate, endDate, year, fullRoundOnly);
+            if (filter is null)
+            {
+                result = FairwayFinderDiagnostics.TagValues.ResultEmpty;
+                return null;
+            }
+
+            if (filter.FilteredRounds.Count == 0)
+            {
+                result = FairwayFinderDiagnostics.TagValues.ResultFilteredEmpty;
+                return new CourseHoleStatsResponse
+                {
+                    CourseId = courseId,
+                    CourseName = filter.CourseName,
+                    TeeboxOptions = filter.TeeboxOptions,
+                    SelectedTeeboxId = teeboxId,
+                    Holes = new List<HoleStatsDetail>()
+                };
+            }
+
+            var holes = BuildHoleStatsDetails(filter.FilteredRounds, out hasSg);
+
+            result = FairwayFinderDiagnostics.TagValues.ResultOk;
+            return new CourseHoleStatsResponse
+            {
+                CourseId = courseId,
+                CourseName = filter.CourseName,
+                TotalRounds = filter.FilteredRounds.Count,
+                TeeboxOptions = filter.TeeboxOptions,
+                SelectedTeeboxId = teeboxId,
+                Holes = holes
+            };
+        }
+        catch (Exception ex)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            throw;
+        }
+        finally
+        {
+            FairwayFinderDiagnostics.StatsCourseHolesDuration.Record(
+                stopwatch.Elapsed.TotalMilliseconds,
+                new TagList
+                {
+                    { FairwayFinderDiagnostics.Tags.Result, result },
+                    { FairwayFinderDiagnostics.Tags.HasSg, hasSg }
+                });
+        }
+    }
+
     public async Task<List<int>> GetAvailableYearsAsync(string userId)
     {
         var rounds = await _roundService.GetRoundsByUserIdAsync(userId);
@@ -400,5 +416,176 @@ public class StatsService : IStatsService
         if (values.Count < 2) return null;
         var (slope, _) = StatsCalculator.CalculateLinearRegression(values);
         return Math.Round(slope, 3);
+    }
+
+    /// <summary>
+    /// Result of filtering a user's rounds down to a single course + the user's
+    /// optional filter criteria. <see cref="TeeboxOptions"/> is always built from
+    /// the pre-filter set so the dropdown stays stable when filters eliminate
+    /// every round.
+    /// </summary>
+    private sealed record FilteredCourseRounds(
+        List<RoundResponse> FilteredRounds,
+        List<CourseTeeboxOption> TeeboxOptions,
+        string CourseName);
+
+    /// <summary>
+    /// Filters a user's rounds down to a single course and applies the standard
+    /// teebox / date / year / fullRound filter pipeline. Returns null when the
+    /// user has no rounds at this course at all (caller should 404). Returns an
+    /// instance with empty <see cref="FilteredCourseRounds.FilteredRounds"/>
+    /// when the filters eliminate every round (caller returns a shell response
+    /// with the teebox options populated so the UI can adjust).
+    /// </summary>
+    private static FilteredCourseRounds? FilterCourseRounds(
+        IReadOnlyList<RoundResponse> rounds,
+        long courseId,
+        long? teeboxId,
+        DateOnly? startDate,
+        DateOnly? endDate,
+        int? year,
+        bool? fullRoundOnly)
+    {
+        var allCourseRounds = rounds
+            .Where(r => r.CourseId == courseId && !r.ExcludeFromStats)
+            .ToList();
+
+        if (allCourseRounds.Count == 0) return null;
+
+        // Build teebox options from all rounds at this course (before any filtering)
+        var teeboxOptions = allCourseRounds
+            .GroupBy(r => new { r.Teebox.TeeboxId, r.Teebox.TeeboxName })
+            .OrderByDescending(g => g.Count())
+            .Select(g => new CourseTeeboxOption
+            {
+                TeeboxId = g.Key.TeeboxId,
+                TeeboxName = g.Key.TeeboxName,
+                RoundCount = g.Count()
+            })
+            .ToList();
+
+        // Apply teebox filter if specified
+        var filteredRounds = teeboxId.HasValue
+            ? allCourseRounds.Where(r => r.Teebox.TeeboxId == teeboxId.Value).ToList()
+            : allCourseRounds.ToList();
+
+        // Apply date range filter
+        if (startDate.HasValue)
+        {
+            filteredRounds = filteredRounds
+                .Where(r => r.DatePlayed >= startDate.Value)
+                .ToList();
+        }
+        if (endDate.HasValue)
+        {
+            filteredRounds = filteredRounds
+                .Where(r => r.DatePlayed <= endDate.Value)
+                .ToList();
+        }
+
+        // Apply year filter — only when no explicit date range was given.
+        if (year.HasValue && !startDate.HasValue && !endDate.HasValue)
+        {
+            filteredRounds = filteredRounds
+                .Where(r => r.DatePlayed.Year == year.Value)
+                .ToList();
+        }
+
+        // Apply round-type filter (18-hole vs 9-hole)
+        if (fullRoundOnly.HasValue)
+        {
+            filteredRounds = filteredRounds
+                .Where(r => r.FullRound == fullRoundOnly.Value)
+                .ToList();
+        }
+
+        return new FilteredCourseRounds(
+            FilteredRounds: filteredRounds,
+            TeeboxOptions: teeboxOptions,
+            CourseName: allCourseRounds[0].CourseName);
+    }
+
+    /// <summary>
+    /// Composes per-hole detail entries: existing aggregate row + per-hole scoring
+    /// distribution + plays list (newest first) + averaged strokes-gained block.
+    /// Only holes with at least one play in <paramref name="filteredRounds"/> are
+    /// included; this matches <see cref="StatsCalculator.CalculateHoleAggregateStats"/>'s
+    /// own behavior.
+    /// </summary>
+    private static List<HoleStatsDetail> BuildHoleStatsDetails(
+        IReadOnlyList<RoundResponse> filteredRounds, out bool anyHoleHasSg)
+    {
+        var aggregates = StatsCalculator.CalculateHoleAggregateStats(filteredRounds);
+
+        // Group plays by hole number, ordered newest first for the iOS list view.
+        var playsByHole = filteredRounds
+            .SelectMany(r => r.Holes
+                .Where(h => h.Score.HasValue)
+                .Select(h => new
+                {
+                    h.HoleNumber,
+                    Play = new HolePlay
+                    {
+                        RoundId = r.RoundId,
+                        DatePlayed = r.DatePlayed,
+                        Score = h.Score!.Value,
+                        ScoreToPar = h.Score!.Value - h.Par,
+                        TeeboxName = r.Teebox.TeeboxName
+                    }
+                }))
+            .GroupBy(x => x.HoleNumber)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(x => x.Play).OrderByDescending(p => p.DatePlayed).ToList());
+
+        // Group per-hole SG records by hole number (rounds without shot tracking are skipped).
+        var sgByHole = filteredRounds
+            .Where(r => r.HoleByHoleSg is { Count: > 0 })
+            .SelectMany(r => r.HoleByHoleSg!)
+            .GroupBy(sg => sg.HoleNumber)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        anyHoleHasSg = sgByHole.Count > 0;
+
+        var details = new List<HoleStatsDetail>(aggregates.Count);
+        foreach (var agg in aggregates)
+        {
+            var plays = playsByHole.TryGetValue(agg.HoleNumber, out var ps) ? ps : new List<HolePlay>();
+            var distribution = StatsCalculator.CalculateHoleScoringDistribution(plays, agg.Par);
+
+            // Ascending so the slope goes old→new (negative = scores trending down over time).
+            var scoreTrend = CalcSlope(plays.OrderBy(p => p.DatePlayed).Select(p => (double)p.Score).ToList());
+
+            HoleAverageSg? avgSg = null;
+            if (sgByHole.TryGetValue(agg.HoleNumber, out var sgList) && sgList.Count > 0)
+            {
+                avgSg = StrokesGainedCalculator.AverageHoleSg(sgList);
+            }
+
+            details.Add(new HoleStatsDetail
+            {
+                // Aggregate fields (inherited)
+                HoleNumber                       = agg.HoleNumber,
+                Par                              = agg.Par,
+                Handicap                         = agg.Handicap,
+                AverageYardage                   = agg.AverageYardage,
+                TimesPlayed                      = agg.TimesPlayed,
+                AverageScore                     = agg.AverageScore,
+                AverageScoreToPar                = agg.AverageScoreToPar,
+                FairwayHitPercent                = agg.FairwayHitPercent,
+                GirPercent                       = agg.GirPercent,
+                AveragePutts                     = agg.AveragePutts,
+                TeeShotOutOfPositionPercent      = agg.TeeShotOutOfPositionPercent,
+                ApproachShotOutOfPositionPercent = agg.ApproachShotOutOfPositionPercent,
+                FairwayMiss                      = agg.FairwayMiss,
+                GreenMiss                        = agg.GreenMiss,
+                // Per-hole-detail fields
+                ScoringDistribution              = distribution,
+                Plays                            = plays,
+                StrokesGained                    = avgSg,
+                AverageScoreTrend                = scoreTrend
+            });
+        }
+        return details;
     }
 }

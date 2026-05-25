@@ -258,7 +258,7 @@ public static class StatsCalculator
     public static ScoringDistribution AggregateScoringDistribution(IReadOnlyList<RoundResponse> rounds)
     {
         var roundsWithStats = rounds.Where(r => r.Stats != null).ToList();
-        
+
         if (roundsWithStats.Count == 0)
         {
             return new ScoringDistribution();
@@ -276,6 +276,30 @@ public static class StatsCalculator
             TripleOrWorse = roundsWithStats.Sum(r => r.Stats!.TripleOrWorse),
             RoundsIncluded = roundsWithStats.Count
         };
+    }
+
+    /// <summary>
+    /// Builds a scoring distribution for a single hole from its plays list.
+    /// Score == 1 is always counted as a hole-in-one regardless of par; everything
+    /// else buckets by (score - par). <c>RoundsIncluded</c> is set to the play count.
+    /// Mirrors the iOS HoleDetailViewModel logic so server/client distributions match.
+    /// </summary>
+    public static ScoringDistribution CalculateHoleScoringDistribution(IReadOnlyList<HolePlay> plays, int par)
+    {
+        var dist = new ScoringDistribution { RoundsIncluded = plays.Count };
+        foreach (var p in plays)
+        {
+            if (p.Score == 1) { dist.HolesInOne++; continue; }
+            var diff = p.Score - par;
+            if      (diff <= -3) dist.DoubleEagles++;
+            else if (diff == -2) dist.Eagles++;
+            else if (diff == -1) dist.Birdies++;
+            else if (diff ==  0) dist.Pars++;
+            else if (diff ==  1) dist.Bogeys++;
+            else if (diff ==  2) dist.DoubleBogeys++;
+            else                 dist.TripleOrWorse++;
+        }
+        return dist;
     }
 
     /// <summary>

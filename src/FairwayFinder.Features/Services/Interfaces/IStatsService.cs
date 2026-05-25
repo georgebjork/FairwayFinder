@@ -26,7 +26,16 @@ public interface IStatsService
     /// <param name="year">Optional calendar-year filter. Ignored when <paramref name="startDate"/> or <paramref name="endDate"/> is set.</param>
     /// <returns>Course-specific stats, or null if user has no rounds at this course</returns>
     Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null, int? year = null);
-    
+
+    /// <summary>
+    /// Gets per-hole stats for a user at a particular course. One entry per played hole,
+    /// each carrying the existing aggregate metrics plus a per-hole scoring distribution,
+    /// a plays list (for round navigation), and an averaged strokes-gained block.
+    /// Filters mirror <see cref="GetCourseStatsAsync"/>.
+    /// </summary>
+    /// <returns>Hole-level stats, or null if the user has no rounds at this course.</returns>
+    Task<CourseHoleStatsResponse?> GetCourseHoleStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null, int? year = null);
+
     /// <summary>
     /// Gets the distinct years that a user has played rounds in.
     /// </summary>

@@ -2647,4 +2647,62 @@ public class StatsCalculatorTests
     }
 
     #endregion
+
+    #region CalculateHoleScoringDistribution Tests
+
+    private static HolePlay Play(short score, int scoreToPar = 0) =>
+        new() { RoundId = 1, DatePlayed = DateOnly.FromDateTime(DateTime.Today), Score = score, ScoreToPar = scoreToPar };
+
+    [Fact]
+    public void CalculateHoleScoringDistribution_Empty_ReturnsZeroDistribution()
+    {
+        var dist = StatsCalculator.CalculateHoleScoringDistribution(new List<HolePlay>(), par: 4);
+
+        Assert.Equal(0, dist.TotalHoles);
+        Assert.Equal(0, dist.RoundsIncluded);
+    }
+
+    [Fact]
+    public void CalculateHoleScoringDistribution_Par4_BucketsByScoreToPar()
+    {
+        // Scores 1..8 on a par 4 cover hole-in-one + every non-condor bucket.
+        var plays = new short[] { 1, 2, 3, 4, 5, 6, 7, 8 }.Select(Play).ToList();
+
+        var dist = StatsCalculator.CalculateHoleScoringDistribution(plays, par: 4);
+
+        Assert.Equal(1, dist.HolesInOne);   // score 1
+        Assert.Equal(0, dist.DoubleEagles); // score 1 already counted as ace; no -3 from another score
+        Assert.Equal(1, dist.Eagles);       // score 2
+        Assert.Equal(1, dist.Birdies);      // score 3
+        Assert.Equal(1, dist.Pars);         // score 4
+        Assert.Equal(1, dist.Bogeys);       // score 5
+        Assert.Equal(1, dist.DoubleBogeys); // score 6
+        Assert.Equal(2, dist.TripleOrWorse);// scores 7 and 8
+        Assert.Equal(8, dist.RoundsIncluded);
+        Assert.Equal(8, dist.TotalHoles);
+    }
+
+    [Fact]
+    public void CalculateHoleScoringDistribution_Par5_AceCountsAsHoleInOneNotCondor()
+    {
+        var dist = StatsCalculator.CalculateHoleScoringDistribution(new[] { Play(1) }, par: 5);
+
+        Assert.Equal(1, dist.HolesInOne);
+        Assert.Equal(0, dist.DoubleEagles);
+        Assert.Equal(1, dist.RoundsIncluded);
+    }
+
+    [Fact]
+    public void CalculateHoleScoringDistribution_Par3_TwoIsBirdieOneIsAce()
+    {
+        var dist = StatsCalculator.CalculateHoleScoringDistribution(new[] { Play(1), Play(2), Play(3), Play(4) }, par: 3);
+
+        Assert.Equal(1, dist.HolesInOne); // 1 on par 3 is an ace
+        Assert.Equal(0, dist.Eagles);     // -2 on a par 3 would be score 1, which is already counted as ace
+        Assert.Equal(1, dist.Birdies);    // score 2
+        Assert.Equal(1, dist.Pars);       // score 3
+        Assert.Equal(1, dist.Bogeys);     // score 4
+    }
+
+    #endregion
 }

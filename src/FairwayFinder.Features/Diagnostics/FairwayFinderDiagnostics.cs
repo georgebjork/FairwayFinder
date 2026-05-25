@@ -36,6 +36,8 @@ public static class FairwayFinderDiagnostics
         StatsMeter.CreateHistogram<double>("fairwayfinder.stats.dashboard.duration", unit: "ms", description: "Time to generate user-stats dashboard");
     public static readonly Histogram<double> StatsCourseDuration =
         StatsMeter.CreateHistogram<double>("fairwayfinder.stats.course.duration", unit: "ms", description: "Time to generate course-stats response");
+    public static readonly Histogram<double> StatsCourseHolesDuration =
+        StatsMeter.CreateHistogram<double>("fairwayfinder.stats.course_holes.duration", unit: "ms", description: "Time to generate course per-hole stats response");
 
     // ── Imports ──
     public static readonly Counter<long> GcaImported =
@@ -74,6 +76,7 @@ public static class FairwayFinderDiagnostics
         public const string RoundUpdate = "round.update";
         public const string StatsUserGenerate = "stats.user.generate";
         public const string StatsCourseGenerate = "stats.course.generate";
+        public const string StatsCourseHolesGenerate = "stats.course_holes.generate";
         public const string ImportsGcaRun = "imports.gca.run";
         public const string ImportsTgtrTransfer = "imports.tgtr.transfer";
     }
