@@ -184,26 +184,20 @@ public static class StatsCalculator
 
         foreach (var round in roundsWithStats)
         {
-            var upAndDownHoles = round.Holes
-                .Where(h => h.Stats != null 
-                            && h.Stats?.HitGreen == false 
-                            && h.Stats?.NumberOfPutts.HasValue == true 
-                            && h.Score.HasValue).ToList();
+            // RoundResponse already exposes the canonical up-and-down aggregates
+            // (Holes.Count of IsUpAndDownAttempt / IsUpAndDown). Reuse them so this
+            // method has no independent definition of what "up-and-down" means.
+            if (round.UpAndDownAttempts == 0) continue;
 
-            if (upAndDownHoles.Count > 0)
+            result.Add(new UpAndDownTrendPoint
             {
-                var upAndDowns = upAndDownHoles.Count(h =>
-                    h.Stats!.HitGreen == false && h.Stats!.NumberOfPutts <= 1 && h.ScoreToPar <= 0);
-                result.Add(new UpAndDownTrendPoint
-                {
-                    RoundId = round.RoundId,
-                    DatePlayed = round.DatePlayed,
-                    UpAndDownPercent = Math.Round((double)upAndDowns / upAndDownHoles.Count * 100, 1),
-                    UpAndDowns = upAndDowns,
-                    Attempts = upAndDownHoles.Count,
-                    CourseName = round.CourseName
-                });
-            }
+                RoundId = round.RoundId,
+                DatePlayed = round.DatePlayed,
+                UpAndDownPercent = round.UpAndDownPercentage!.Value,
+                UpAndDowns = round.UpAndDowns,
+                Attempts = round.UpAndDownAttempts,
+                CourseName = round.CourseName
+            });
         }
 
         // Reverse to get oldest first for chart display
@@ -408,15 +402,14 @@ public static class StatsCalculator
             .Where(x => x.Hole.Stats != null)
             .ToList();
 
-        // Up and down % (all holes)
-        var upAndDownHoles = allHoleStats
-            .Where(h => h.Hole.Stats != null &&  h.Hole.Stats?.HitGreen == false && h.Hole.Stats?.NumberOfPutts.HasValue == true)
-            .ToList();
-
-        if (upAndDownHoles.Count > 0)
+        // Up and down % (all holes). Aggregates across many rounds' holes, so we
+        // can't reuse RoundResponse.UpAndDownPercentage (that would average percents);
+        // instead lean on the canonical RoundHole predicates.
+        var attempts = allHoleStats.Count(x => x.Hole.IsUpAndDownAttempt);
+        if (attempts > 0)
         {
-            var upAndDowns = upAndDownHoles.Count(x => x.Hole.Stats!.HitGreen == false && x.Hole.Stats.NumberOfPutts <= 1 && x.Hole.ScoreToPar <= 0);
-            result.UpAndDownPercent = Math.Round((double)upAndDowns / upAndDownHoles.Count * 100, 1);
+            var ups = allHoleStats.Count(x => x.Hole.IsUpAndDown);
+            result.UpAndDownPercent = Math.Round((double)ups / attempts * 100, 1);
         }
 
         // Average putts per round — 18-hole
@@ -790,18 +783,13 @@ public static class StatsCalculator
         ShortGameStats result,
         List<RoundResponse> roundsWithHoleStats)
     {
-        // Up & Down% Trend — compute per-round up-and-down%, then regress (oldest first)
+        // Up & Down% Trend — compute per-round up-and-down%, then regress (oldest first).
+        // The previous inline filter here used HitGreen.HasValue (true OR false) as the
+        // denominator, inflating it with greens-hit holes and reporting a bogus slope.
+        // RoundResponse.UpAndDownPercentage is the canonical per-round number.
         var upAndDownPerRound = roundsWithHoleStats
             .AsEnumerable().Reverse()
-            .Select(r =>
-            {
-                var upAndDownHoles = r.Holes
-                    .Where(h => h.Stats?.HitGreen.HasValue == true && h.Stats?.NumberOfPutts.HasValue == true)
-                    .ToList();
-                if (upAndDownHoles.Count == 0) return (double?)null;
-                var upAndDowns = upAndDownHoles.Count(h => h.Stats!.HitGreen == false && h.Stats!.NumberOfPutts <= 1 && h.ScoreToPar <= 0);
-                return (double)upAndDowns / upAndDownHoles.Count * 100;
-            })
+            .Select(r => r.UpAndDownPercentage)
             .Where(x => x.HasValue)
             .Select(x => x!.Value)
             .ToList();

@@ -68,6 +68,12 @@ public class CourseScoringStats
     /// <summary>Number of rounds backing these stats.</summary>
     public int RoundsIncluded { get; set; }
 
+    /// <summary>Count of 18-hole rounds included.</summary>
+    public int Rounds18Hole { get; set; }
+
+    /// <summary>Count of 9-hole rounds included.</summary>
+    public int Rounds9Hole { get; set; }
+
     /// <summary>Average 18-hole score at this course. Null if no 18-hole rounds.</summary>
     public double? Average18HoleScore { get; set; }
 
@@ -79,6 +85,18 @@ public class CourseScoringStats
 
     /// <summary>Best 9-hole round at this course. Null if no 9-hole rounds.</summary>
     public BestRound? Best9HoleRound { get; set; }
+
+    /// <summary>Per-round score change (slope) for 18-hole rounds. Negative = improving.</summary>
+    public double? Average18HoleScoreTrend { get; set; }
+
+    /// <summary>Per-round score change (slope) for 9-hole rounds. Negative = improving.</summary>
+    public double? Average9HoleScoreTrend { get; set; }
+
+    /// <summary>Per-round 18-hole scores at this course for charting (oldest to newest).</summary>
+    public List<ScoreTrendPoint> ScoreTrend18Hole { get; set; } = new();
+
+    /// <summary>Per-round 9-hole scores at this course for charting (oldest to newest).</summary>
+    public List<ScoreTrendPoint> ScoreTrend9Hole { get; set; } = new();
 }
 
 /// <summary>

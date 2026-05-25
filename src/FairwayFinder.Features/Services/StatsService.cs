@@ -194,10 +194,16 @@ public class StatsService : IStatsService
                 Scoring = new CourseScoringStats
                 {
                     RoundsIncluded = filteredRounds.Count,
+                    Rounds18Hole = filteredRounds.Count(r => r.FullRound),
+                    Rounds9Hole = filteredRounds.Count(r => !r.FullRound),
                     Average18HoleScore = StatsCalculator.CalculateAverageScore(filteredRounds),
                     Average9HoleScore = StatsCalculator.CalculateAverageScore(filteredRounds, false),
                     Best18HoleRound = StatsCalculator.FindBestRound(filteredRounds),
-                    Best9HoleRound = StatsCalculator.FindBestRound(filteredRounds, false)
+                    Best9HoleRound = StatsCalculator.FindBestRound(filteredRounds, false),
+                    Average18HoleScoreTrend = StatsCalculator.CalculateScoreTrend(filteredRounds),
+                    Average9HoleScoreTrend = StatsCalculator.CalculateScoreTrend(filteredRounds, fullRound: false),
+                    ScoreTrend18Hole = StatsCalculator.BuildScoreTrend(filteredRounds, fullRound: true),
+                    ScoreTrend9Hole = StatsCalculator.BuildScoreTrend(filteredRounds, fullRound: false)
                 },
                 BallStriking = BuildBallStriking(filteredRounds),
                 ShortGame = BuildShortGame(filteredRounds),
