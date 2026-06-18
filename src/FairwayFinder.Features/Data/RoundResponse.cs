@@ -72,6 +72,11 @@ public class RoundResponse
     public int PuttsIn => Holes.Where(h => h.HoleNumber > 9 && h.Stats?.NumberOfPutts.HasValue == true).Sum(h => h.Stats!.NumberOfPutts!.Value);
     public int TotalPutts => PuttsOut + PuttsIn;
 
+    // Computed properties - Penalties (tee-shot + approach OB flags, per hole)
+    public int TotalPenalties =>
+        Holes.Count(h => h.Stats?.TeeShotOb == true) +
+        Holes.Count(h => h.Stats?.ApproachShotOb == true);
+
     // Computed properties - Up and Down (scrambling): missed greens saved for par or better
     public int UpAndDowns => Holes.Count(h => h.IsUpAndDown);
     public int UpAndDownAttempts => Holes.Count(h => h.IsUpAndDownAttempt);
@@ -242,6 +247,8 @@ public class RoundHoleStat
     public int? ApproachYardage { get; set; }
     public bool TeeShotOutOfPosition { get; set; }
     public bool ApproachShotOutOfPosition { get; set; }
+    public bool? TeeShotOb { get; set; }
+    public bool? ApproachShotOb { get; set; }
 
     public static RoundHoleStat From(HoleStat holeStat)
     {
@@ -254,7 +261,9 @@ public class RoundHoleStat
             NumberOfPutts = holeStat.NumberOfPutts,
             ApproachYardage = holeStat.ApproachYardage,
             TeeShotOutOfPosition = holeStat.TeeShotOutOfPosition,
-            ApproachShotOutOfPosition = holeStat.ApproachShotOutOfPosition
+            ApproachShotOutOfPosition = holeStat.ApproachShotOutOfPosition,
+            TeeShotOb = holeStat.TeeShotOb,
+            ApproachShotOb = holeStat.ApproachShotOb
         };
     }
 }

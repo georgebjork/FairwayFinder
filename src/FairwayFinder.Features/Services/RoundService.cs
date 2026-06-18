@@ -409,6 +409,8 @@ public class RoundService : IRoundService
                 ApproachYardage = h.ApproachYardage,
                 TeeShotOutOfPosition = h.TeeShotOutOfPosition,
                 ApproachShotOutOfPosition = h.ApproachShotOutOfPosition,
+                TeeShotOb = h.TeeShotOb,
+                ApproachShotOb = h.ApproachShotOb,
                 CreatedBy = userId,
                 CreatedOn = today,
                 UpdatedBy = userId,
@@ -764,6 +766,8 @@ public class RoundService : IRoundService
                     existingStat.ApproachYardage = hole.ApproachYardage;
                     existingStat.TeeShotOutOfPosition = hole.TeeShotOutOfPosition;
                     existingStat.ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition;
+                    existingStat.TeeShotOb = hole.TeeShotOb;
+                    existingStat.ApproachShotOb = hole.ApproachShotOb;
                     existingStat.UpdatedBy = userId;
                     existingStat.UpdatedOn = today;
                 }
@@ -782,6 +786,8 @@ public class RoundService : IRoundService
                         ApproachYardage = hole.ApproachYardage,
                         TeeShotOutOfPosition = hole.TeeShotOutOfPosition,
                         ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition,
+                        TeeShotOb = hole.TeeShotOb,
+                        ApproachShotOb = hole.ApproachShotOb,
                         CreatedBy = userId,
                         CreatedOn = today,
                         UpdatedBy = userId,

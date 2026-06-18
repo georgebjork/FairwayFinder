@@ -41,6 +41,8 @@ public class HoleScoreEntry
     public int? ApproachYardage { get; set; }
     public bool TeeShotOutOfPosition { get; set; }
     public bool ApproachShotOutOfPosition { get; set; }
+    public bool TeeShotOb { get; set; }
+    public bool ApproachShotOb { get; set; }
 
     // Shot-by-shot data (populated when UsingShotTracking = true)
     public List<ShotData>? Shots { get; set; }
