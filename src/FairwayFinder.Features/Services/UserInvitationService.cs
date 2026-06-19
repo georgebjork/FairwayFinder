@@ -17,6 +17,7 @@ public class UserInvitationService : IUserInvitationService
     private readonly IEmailSender _emailSender;
     private readonly ILogger<UserInvitationService> _logger;
     private readonly string _registrationUrlBase;
+    private readonly string? _appInstallUrl;
 
     private const int InviteValidityDays = 14;
 
@@ -33,6 +34,9 @@ public class UserInvitationService : IUserInvitationService
         _logger = logger;
         _registrationUrlBase = configuration["Invites:RegistrationUrlBase"]
             ?? "https://fairwayfinder.pro/register";
+        // Optional: a TestFlight/App Store link offered to recipients who don't have the app yet.
+        // Override via appsettings or the Invites__AppInstallUrl environment variable.
+        _appInstallUrl = configuration["Invites:AppInstallUrl"];
     }
 
     public async Task<CreateInviteResult> CreateAndSendInviteAsync(string email, string sentByUserId)
@@ -77,7 +81,7 @@ public class UserInvitationService : IUserInvitationService
 
         try
         {
-            await _emailSender.SendInvitationEmailAsync(email, link);
+            await _emailSender.SendInvitationEmailAsync(email, link, _appInstallUrl);
         }
         catch (Exception ex)
         {
