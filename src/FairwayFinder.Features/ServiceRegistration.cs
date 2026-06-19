@@ -20,6 +20,7 @@ public static class ServiceRegistration
     {
         // Admin services
         services.AddTransient<UserAdminService>();
+        services.AddTransient<IUserInvitationService, UserInvitationService>();
 
         // Domain services
         services.AddTransient<IRoundService, RoundService>();

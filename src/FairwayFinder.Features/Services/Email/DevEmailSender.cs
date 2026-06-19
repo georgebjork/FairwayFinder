@@ -25,4 +25,11 @@ public class DevEmailSender : IEmailSender
             toEmail, resetLink);
         return Task.CompletedTask;
     }
+
+    public Task SendInvitationEmailAsync(string toEmail, string registrationLink, string? appInstallUrl)
+    {
+        _logger.LogInformation("[DEV EMAIL] Invitation email to {Email}. Click to register: {Link}. Install: {InstallLink}",
+            toEmail, registrationLink, appInstallUrl ?? "(none)");
+        return Task.CompletedTask;
+    }
 }

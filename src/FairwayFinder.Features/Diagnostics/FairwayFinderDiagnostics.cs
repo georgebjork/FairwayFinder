@@ -139,6 +139,7 @@ public static class FairwayFinderDiagnostics
 
         public const string EmailKindConfirmation = "confirmation";
         public const string EmailKindPasswordReset = "password_reset";
+        public const string EmailKindInvitation = "invitation";
 
         public const string ResultEmpty = "empty";
         public const string ResultFilteredEmpty = "filtered_empty";
