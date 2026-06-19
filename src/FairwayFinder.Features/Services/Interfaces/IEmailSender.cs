@@ -11,4 +11,9 @@ public interface IEmailSender
     /// Sends a password reset link to the specified address.
     /// </summary>
     Task SendPasswordResetEmailAsync(string toEmail, string resetLink);
+
+    /// <summary>
+    /// Sends an invitation link inviting the recipient to register an account.
+    /// </summary>
+    Task SendInvitationEmailAsync(string toEmail, string registrationLink);
 }

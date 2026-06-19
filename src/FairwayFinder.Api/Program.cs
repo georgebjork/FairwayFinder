@@ -135,5 +135,6 @@ app.MapLookupEndpoints();
 app.MapProfileEndpoints();
 app.MapFriendEndpoints();
 app.MapDeviceEndpoints();
+app.MapAdminInviteEndpoints();
 
 app.Run();

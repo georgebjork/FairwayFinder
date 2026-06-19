@@ -57,6 +57,24 @@ public class ResendEmailSender : IEmailSender
         await SendAsync(message, FairwayFinderDiagnostics.TagValues.EmailKindPasswordReset);
     }
 
+    public async Task SendInvitationEmailAsync(string toEmail, string registrationLink)
+    {
+        var message = new EmailMessage
+        {
+            From = FromAddress,
+            Subject = "You're invited to FairwayFinder",
+            HtmlBody = $"""
+                <h2>You've been invited to FairwayFinder!</h2>
+                <p>You've been invited to create a FairwayFinder account. Tap the link below on your iPhone to get started:</p>
+                <p><a href="{registrationLink}">Accept your invitation</a></p>
+                <p>This invitation will expire soon. If you weren't expecting this, you can safely ignore this email.</p>
+                """
+        };
+        message.To.Add(toEmail);
+
+        await SendAsync(message, FairwayFinderDiagnostics.TagValues.EmailKindInvitation);
+    }
+
     private async Task SendAsync(EmailMessage message, string kind)
     {
         var stopwatch = Stopwatch.StartNew();

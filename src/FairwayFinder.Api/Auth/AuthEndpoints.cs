@@ -1,4 +1,7 @@
 using FairwayFinder.Api.Exceptions;
+using FairwayFinder.Api.Validators;
+using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Identity;
 
@@ -66,6 +69,59 @@ public static class AuthEndpoints
             await tokenService.RevokeRefreshTokenAsync(request.RefreshToken);
             return Results.NoContent();
         });
+
+        // ── Invite-only registration ────────────────────────────
+        group.MapGet("/invites/{code}", async (
+            string code,
+            IUserInvitationService inviteService) =>
+        {
+            var result = await inviteService.ValidateInviteAsync(code);
+            return Results.Ok(result);
+        });
+
+        group.MapPost("/register", async (
+            RegisterRequest request,
+            UserManager<ApplicationUser> userManager,
+            IUserInvitationService inviteService,
+            JwtTokenService tokenService) =>
+        {
+            // The email is taken from the invite, never the request — this enforces
+            // that the account always matches who was invited.
+            var validation = await inviteService.ValidateInviteAsync(request.Code);
+            if (!validation.Valid || validation.Email is null)
+                return Results.Problem(
+                    detail: validation.Reason ?? "This invitation is not valid.",
+                    statusCode: StatusCodes.Status400BadRequest);
+
+            var now = DateTime.UtcNow;
+            var user = new ApplicationUser
+            {
+                UserName = validation.Email,
+                Email = validation.Email,
+                EmailConfirmed = true,
+                FirstName = request.FirstName.Trim(),
+                LastName = request.LastName.Trim(),
+                PreferredTees = (PreferredTees)request.PreferredTees,
+                CreatedOn = now,
+                UpdatedOn = now
+            };
+
+            var result = await userManager.CreateAsync(user, request.Password);
+            if (!result.Succeeded)
+                return Results.Problem(
+                    detail: string.Join(" ", result.Errors.Select(e => e.Description)),
+                    statusCode: StatusCodes.Status400BadRequest);
+
+            await userManager.AddToRoleAsync(user, ApplicationRoles.User);
+            await inviteService.ClaimInviteAsync(request.Code);
+
+            var roles = await userManager.GetRolesAsync(user);
+            var (accessToken, expiresAt) = tokenService.GenerateAccessToken(user, roles);
+            var refreshToken = await tokenService.IssueRefreshTokenAsync(user.Id, request.DeviceName);
+
+            return Results.Ok(BuildLoginResponse(accessToken, refreshToken, expiresAt, user));
+        })
+        .AddEndpointFilter<ValidationFilter<RegisterRequest>>();
 
         return app;
     }
