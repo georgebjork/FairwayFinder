@@ -1,0 +1,154 @@
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services.Admin
+
+@if (Round is null)
+{
+    <RadzenText TextStyle="TextStyle.Body2">Round not found.</RadzenText>
+}
+else
+{
+    <RadzenStack Gap="1rem">
+        @* ── Header summary ── *@
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="0.5rem">
+            <RadzenStack Gap="0.1rem">
+                <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">@Round.CourseName</RadzenText>
+                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                    @Round.Teebox.TeeboxName • @Round.DatePlayed.ToString("MMM d, yyyy")
+                </RadzenText>
+            </RadzenStack>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.25rem">
+                @if (Round.ExcludeFromStats)
+                {
+                    <RadzenBadge Text="Excluded" BadgeStyle="BadgeStyle.Warning" Shade="Shade.Lighter" />
+                }
+                @if (Round.UsingShotTracking)
+                {
+                    <RadzenBadge Text="Shot Tracking" BadgeStyle="BadgeStyle.Info" Shade="Shade.Lighter" />
+                }
+                @if (!Round.FullRound)
+                {
+                    <RadzenBadge Text="9 Holes" BadgeStyle="BadgeStyle.Light" Shade="Shade.Lighter" />
+                }
+            </RadzenStack>
+        </RadzenStack>
+
+        @* ── Stat tiles ── *@
+        <RadzenRow Gap="1rem" RowGap="1rem">
+            @StatTile("Score", Round.Score.ToString())
+            @StatTile("To Par", FormatToPar(Round.ScoreToPar))
+            @StatTile("Fairways", $"{Round.FairwaysHit}/{Round.FairwaysTotal}")
+            @StatTile("Greens", $"{Round.GreensHit}/{Round.GreensTotal}")
+            @StatTile("Putts", Round.TotalPutts.ToString())
+            @StatTile("Penalties", Round.TotalPenalties.ToString())
+            @StatTile("Rating", Round.Teebox.Rating.ToString("0.0"))
+            @StatTile("Slope", Round.Teebox.Slope.ToString())
+        </RadzenRow>
+
+        @* ── Per-hole scores ── *@
+        @if (Round.Holes.Count > 0)
+        {
+            <RadzenDataGrid TItem="RoundHole" Data="Round.Holes" AllowSorting="false" AllowPaging="false"
+                            GridLines="DataGridGridLines.Horizontal" Density="Density.Compact">
+                <Columns>
+                    <RadzenDataGridColumn TItem="RoundHole" Property="HoleNumber" Title="Hole" Width="70px" />
+                    <RadzenDataGridColumn TItem="RoundHole" Property="Par" Title="Par" Width="70px" />
+                    <RadzenDataGridColumn TItem="RoundHole" Property="Yardage" Title="Yards" Width="90px" />
+                    <RadzenDataGridColumn TItem="RoundHole" Title="Score" Width="80px">
+                        <Template Context="hole">@(hole.Score?.ToString() ?? "—")</Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="RoundHole" Title="+/−" Width="70px">
+                        <Template Context="hole">@(hole.ScoreToPar.HasValue ? FormatToPar(hole.ScoreToPar.Value) : "—")</Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        }
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="0.5rem">
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                <RadzenButton Text="@(Round.ExcludeFromStats ? "Include in stats" : "Exclude from stats")"
+                              Icon="@(Round.ExcludeFromStats ? "playlist_add_check" : "playlist_remove")"
+                              ButtonStyle="@(Round.ExcludeFromStats ? ButtonStyle.Success : ButtonStyle.Warning)"
+                              Variant="Variant.Outlined" Size="ButtonSize.Small"
+                              IsBusy="_busy" Click="OnToggleExclude" />
+                <RadzenButton Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger"
+                              Variant="Variant.Outlined" Size="ButtonSize.Small"
+                              IsBusy="_busy" Click="OnDelete" />
+            </RadzenStack>
+            <RadzenButton Text="Close" ButtonStyle="ButtonStyle.Light" Click="@(() => DialogService.Close(_changed))" />
+        </RadzenStack>
+    </RadzenStack>
+}
+
+@code {
+    [Inject] public DialogService DialogService { get; set; } = default!;
+    [Inject] public AdminRoundService AdminRoundService { get; set; } = default!;
+    [Inject] public NotificationService NotificationService { get; set; } = default!;
+
+    [Parameter] public RoundResponse? Round { get; set; }
+    [Parameter] public string AdminUserId { get; set; } = string.Empty;
+
+    private bool _busy;
+    private bool _changed;
+
+    private async Task OnToggleExclude()
+    {
+        if (Round is null) return;
+        _busy = true;
+        var exclude = !Round.ExcludeFromStats;
+        var ok = await AdminRoundService.SetExcludeFromStatsAsync(Round.RoundId, exclude, AdminUserId);
+        _busy = false;
+
+        if (ok)
+        {
+            Round.ExcludeFromStats = exclude;
+            _changed = true;
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = exclude ? "Excluded from Stats" : "Included in Stats",
+                Duration = 3000
+            });
+        }
+    }
+
+    private async Task OnDelete()
+    {
+        if (Round is null) return;
+
+        var confirmed = await DialogService.Confirm(
+            $"Delete the round at {Round.CourseName} on {Round.DatePlayed:MMM d, yyyy}? This soft-deletes the round and its scores, hole stats, and shots.",
+            "Delete Round",
+            new ConfirmOptions { OkButtonText = "Delete", CancelButtonText = "Cancel" });
+
+        if (confirmed != true) return;
+
+        _busy = true;
+        var ok = await AdminRoundService.DeleteRoundAsync(Round.RoundId, AdminUserId);
+        _busy = false;
+
+        if (ok)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Round Deleted",
+                Duration = 3000
+            });
+            DialogService.Close(true);
+        }
+    }
+
+    private static string FormatToPar(int toPar) => toPar switch
+    {
+        0 => "E",
+        > 0 => $"+{toPar}",
+        _ => toPar.ToString()
+    };
+
+    private RenderFragment StatTile(string label, string value) =>@<RadzenColumn Size="6" SizeMD="3">
+        <RadzenStack Gap="0.1rem">
+            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0">@label</RadzenText>
+            <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">@value</RadzenText>
+        </RadzenStack>
+    </RadzenColumn>;
+}

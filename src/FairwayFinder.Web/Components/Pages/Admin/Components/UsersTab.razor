@@ -4,6 +4,7 @@
 @inject UserAdminService UserAdminService
 @inject DialogService DialogService
 @inject NotificationService NotificationService
+@inject NavigationManager NavigationManager
 
 <RadzenStack Gap="1rem" class="rz-p-2">
     @* ── Toolbar ── *@
@@ -94,30 +95,15 @@
                             </Template>
                         </RadzenDataGridColumn>
                         <RadzenDataGridColumn TItem="UserAdminDto" Property="CreatedOn" Title="Created" Width="140px" FormatString="{0:MMM d, yyyy}" />
-                        <RadzenDataGridColumn TItem="UserAdminDto" Title="Actions" Width="260px" Sortable="false" Filterable="false">
+                        <RadzenDataGridColumn TItem="UserAdminDto" Title="Actions" Width="140px" Sortable="false" Filterable="false">
                             <Template Context="user">
                                 <RadzenStack Orientation="Orientation.Horizontal" Gap="0.25rem">
-                                    <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.ExtraSmall"
+                                    <RadzenButton Icon="edit" Text="Edit" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.ExtraSmall"
                                                   Variant="Variant.Outlined" Title="Edit user"
                                                   Click="@(() => OnEditUserClicked(user))" />
-                                    <RadzenButton Icon="@(user.IsAdmin ? "remove_moderator" : "admin_panel_settings")"
-                                                  ButtonStyle="@(user.IsAdmin ? ButtonStyle.Warning : ButtonStyle.Secondary)"
-                                                  Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
-                                                  Title="@(user.IsAdmin ? "Remove Admin" : "Make Admin")"
-                                                  Click="@(() => OnToggleAdminClicked(user))" />
-                                    <RadzenButton Icon="@(user.IsLockedOut ? "lock_open" : "lock")"
-                                                  ButtonStyle="@(user.IsLockedOut ? ButtonStyle.Success : ButtonStyle.Warning)"
-                                                  Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
-                                                  Title="@(user.IsLockedOut ? "Unlock user" : "Lock user")"
-                                                  Click="@(() => OnToggleLockoutClicked(user))" />
-                                    <RadzenButton Icon="@(user.IsSearchHidden ? "visibility" : "visibility_off")"
-                                                  ButtonStyle="@(user.IsSearchHidden ? ButtonStyle.Success : ButtonStyle.Warning)"
-                                                  Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
-                                                  Title="@(user.IsSearchHidden ? "Show in search" : "Hide from search")"
-                                                  Click="@(() => OnToggleSearchHiddenClicked(user))" />
-                                    <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.ExtraSmall"
-                                                  Variant="Variant.Outlined" Title="Delete user"
-                                                  Click="@(() => OnDeleteUserClicked(user))" />
+                                    <RadzenButton Icon="sports_golf" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.ExtraSmall"
+                                                  Variant="Variant.Outlined" Title="View this user's rounds"
+                                                  Click="@(() => OnViewRoundsClicked(user))" />
                                 </RadzenStack>
                             </Template>
                         </RadzenDataGridColumn>
@@ -193,151 +179,11 @@
         if (result is true)
         {
             await LoadUsersAsync();
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Success,
-                Summary = "User Updated",
-                Detail = "User details have been saved.",
-                Duration = 4000
-            });
         }
     }
 
-    private async Task OnToggleAdminClicked(UserAdminDto user)
+    private void OnViewRoundsClicked(UserAdminDto user)
     {
-        var action = user.IsAdmin ? "remove Admin role from" : "grant Admin role to";
-        var confirmed = await DialogService.Confirm(
-            $"Are you sure you want to {action} {user.FullName}?",
-            "Confirm Role Change",
-            new ConfirmOptions { OkButtonText = "Yes", CancelButtonText = "Cancel" });
-
-        if (confirmed != true) return;
-
-        var result = await UserAdminService.ToggleAdminRoleAsync(user.Id);
-        if (result.Succeeded)
-        {
-            await LoadUsersAsync();
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Success,
-                Summary = "Role Updated",
-                Detail = $"Admin role {(user.IsAdmin ? "removed from" : "granted to")} {user.FullName}.",
-                Duration = 4000
-            });
-        }
-        else
-        {
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Error,
-                Summary = "Role Update Failed",
-                Detail = string.Join(", ", result.Errors.Select(e => e.Description)),
-                Duration = 6000
-            });
-        }
-    }
-
-    private async Task OnToggleLockoutClicked(UserAdminDto user)
-    {
-        var action = user.IsLockedOut ? "unlock" : "lock";
-        var confirmed = await DialogService.Confirm(
-            $"Are you sure you want to {action} {user.FullName}?",
-            $"Confirm {(user.IsLockedOut ? "Unlock" : "Lock")}",
-            new ConfirmOptions { OkButtonText = "Yes", CancelButtonText = "Cancel" });
-
-        if (confirmed != true) return;
-
-        var result = await UserAdminService.SetLockoutAsync(user.Id, !user.IsLockedOut);
-        if (result.Succeeded)
-        {
-            await LoadUsersAsync();
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Success,
-                Summary = user.IsLockedOut ? "User Unlocked" : "User Locked",
-                Detail = $"{user.FullName} has been {(user.IsLockedOut ? "unlocked" : "locked")}.",
-                Duration = 4000
-            });
-        }
-        else
-        {
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Error,
-                Summary = "Action Failed",
-                Detail = string.Join(", ", result.Errors.Select(e => e.Description)),
-                Duration = 6000
-            });
-        }
-    }
-
-    private async Task OnToggleSearchHiddenClicked(UserAdminDto user)
-    {
-        var action = user.IsSearchHidden ? "show" : "hide";
-        var confirmed = await DialogService.Confirm(
-            $"Are you sure you want to {action} {user.FullName} {(user.IsSearchHidden ? "in" : "from")} user search?",
-            $"Confirm {(user.IsSearchHidden ? "Show" : "Hide")}",
-            new ConfirmOptions { OkButtonText = "Yes", CancelButtonText = "Cancel" });
-
-        if (confirmed != true) return;
-
-        var result = await UserAdminService.SetSearchHiddenAsync(user.Id, !user.IsSearchHidden);
-        if (result.Succeeded)
-        {
-            await LoadUsersAsync();
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Success,
-                Summary = user.IsSearchHidden ? "User Shown" : "User Hidden",
-                Detail = $"{user.FullName} is now {(user.IsSearchHidden ? "visible in" : "hidden from")} user search.",
-                Duration = 4000
-            });
-        }
-        else
-        {
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Error,
-                Summary = "Action Failed",
-                Detail = string.Join(", ", result.Errors.Select(e => e.Description)),
-                Duration = 6000
-            });
-        }
-    }
-
-    private async Task OnDeleteUserClicked(UserAdminDto user)
-    {
-        var result = await DialogService.OpenAsync<DeleteConfirmDialog>("Delete User",
-            new Dictionary<string, object>
-            {
-                { "EntityName", user.FullName },
-                { "WarningMessage", "This will permanently remove the user and all associated data." }
-            },
-            new DialogOptions { Width = "400px", CloseDialogOnOverlayClick = false });
-
-        if (result is not true) return;
-
-        var deleteResult = await UserAdminService.DeleteUserAsync(user.Id);
-        if (deleteResult.Succeeded)
-        {
-            await LoadUsersAsync();
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Success,
-                Summary = "User Deleted",
-                Detail = $"{user.FullName} has been deleted.",
-                Duration = 4000
-            });
-        }
-        else
-        {
-            NotificationService.Notify(new NotificationMessage
-            {
-                Severity = NotificationSeverity.Error,
-                Summary = "Delete Failed",
-                Detail = string.Join(", ", deleteResult.Errors.Select(e => e.Description)),
-                Duration = 6000
-            });
-        }
+        NavigationManager.NavigateTo($"/admin/rounds?userId={Uri.EscapeDataString(user.Id)}");
     }
 }

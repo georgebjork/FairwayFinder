@@ -1,7 +1,25 @@
 @using FairwayFinder.Features.Services.Admin
+@using FairwayFinder.Web.Components.Shared.Dialogs
+@inject DialogService DialogService
+@inject UserAdminService UserAdminService
+@inject NotificationService NotificationService
+@inject NavigationManager NavigationManager
 
 <RadzenTemplateForm TItem="EditUserModel" Data="_model" Submit="OnSubmit">
-    <RadzenStack Gap="1rem">
+    <RadzenStack Gap="1.25rem">
+
+        @* ── Identity ── *@
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+            <RadzenGravatar Email="@User.Email" />
+            <RadzenStack Gap="0">
+                <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-m-0">@User.Email</RadzenText>
+                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0">
+                    Joined @User.CreatedOn.ToLocalTime().ToString("MMM d, yyyy") ·
+                    @(User.IsEmailConfirmed ? "email confirmed" : "email not confirmed")
+                </RadzenText>
+            </RadzenStack>
+        </RadzenStack>
+
         <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem">
             <RadzenFormField Text="First Name" Style="flex: 1;">
                 <RadzenTextBox @bind-Value="_model.FirstName" Name="FirstName" />
@@ -13,14 +31,21 @@
             </RadzenFormField>
         </RadzenStack>
 
-        <RadzenStack Gap="0.25rem">
-            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Email</RadzenText>
-            <RadzenText TextStyle="TextStyle.Body2">@User.Email</RadzenText>
+        @* ── Permissions & visibility ── *@
+        <RadzenStack Gap="0.75rem">
+            <RadzenText TextStyle="TextStyle.Overline" style="color: var(--rz-text-secondary-color);" class="rz-m-0">Access</RadzenText>
+
+            @SwitchRow("Administrator", "Full access to the admin area.",
+                () => _model.IsAdmin, v => _model.IsAdmin = v)
+            @SwitchRow("Locked out", "Blocks the user from signing in.",
+                () => _model.IsLockedOut, v => _model.IsLockedOut = v)
+            @SwitchRow("Hidden from search", "User won't appear in player search.",
+                () => _model.IsSearchHidden, v => _model.IsSearchHidden = v)
         </RadzenStack>
 
         @if (_errors.Count > 0)
         {
-            <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Lighter" AllowClose="false">
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Lighter" AllowClose="false" Size="AlertSize.Small">
                 <ul style="margin: 0; padding-left: 1.25rem;">
                     @foreach (var error in _errors)
                     {
@@ -30,60 +55,143 @@
             </RadzenAlert>
         }
 
-        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
-            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light"
-                          Click="@(() => DialogService.Close(false))" />
-            <RadzenButton Text="Save" Icon="save" ButtonStyle="ButtonStyle.Primary"
-                          ButtonType="ButtonType.Submit" IsBusy="_saving" BusyText="Saving..." />
+        @* ── Actions ── *@
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="0.5rem">
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                <RadzenButton Text="View rounds" Icon="sports_golf" ButtonStyle="ButtonStyle.Light"
+                              Variant="Variant.Outlined" Size="ButtonSize.Small" ButtonType="ButtonType.Button"
+                              Click="OnViewRounds" />
+                <RadzenButton Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger"
+                              Variant="Variant.Outlined" Size="ButtonSize.Small" ButtonType="ButtonType.Button"
+                              IsBusy="_busy" Click="OnDelete" />
+            </RadzenStack>
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button"
+                              Click="@(() => DialogService.Close(false))" />
+                <RadzenButton Text="Save" Icon="save" ButtonStyle="ButtonStyle.Primary"
+                              ButtonType="ButtonType.Submit" IsBusy="_busy" BusyText="Saving..." />
+            </RadzenStack>
         </RadzenStack>
     </RadzenStack>
 </RadzenTemplateForm>
 
 @code {
-    [Inject] public DialogService DialogService { get; set; } = default!;
-    [Inject] public UserAdminService UserAdminService { get; set; } = default!;
-
     [Parameter] public UserAdminDto User { get; set; } = default!;
 
     private EditUserModel _model = new();
     private List<string> _errors = new();
-    private bool _saving;
+    private bool _busy;
 
     protected override void OnParametersSet()
     {
         _model = new EditUserModel
         {
             FirstName = User.FirstName,
-            LastName = User.LastName
+            LastName = User.LastName,
+            IsAdmin = User.IsAdmin,
+            IsLockedOut = User.IsLockedOut,
+            IsSearchHidden = User.IsSearchHidden
         };
     }
 
     private async Task OnSubmit()
     {
-        _saving = true;
+        _busy = true;
         _errors.Clear();
 
-        var result = await UserAdminService.UpdateUserAsync(User.Id, new UpdateUserDto
+        var nameResult = await UserAdminService.UpdateUserAsync(User.Id, new UpdateUserDto
         {
             FirstName = _model.FirstName,
             LastName = _model.LastName
         });
+        if (!nameResult.Succeeded) _errors.AddRange(nameResult.Errors.Select(e => e.Description));
+
+        if (_model.IsAdmin != User.IsAdmin)
+        {
+            var r = await UserAdminService.ToggleAdminRoleAsync(User.Id);
+            if (!r.Succeeded) _errors.AddRange(r.Errors.Select(e => e.Description));
+        }
+
+        if (_model.IsLockedOut != User.IsLockedOut)
+        {
+            var r = await UserAdminService.SetLockoutAsync(User.Id, _model.IsLockedOut);
+            if (!r.Succeeded) _errors.AddRange(r.Errors.Select(e => e.Description));
+        }
+
+        if (_model.IsSearchHidden != User.IsSearchHidden)
+        {
+            var r = await UserAdminService.SetSearchHiddenAsync(User.Id, _model.IsSearchHidden);
+            if (!r.Succeeded) _errors.AddRange(r.Errors.Select(e => e.Description));
+        }
+
+        _busy = false;
+
+        if (_errors.Count == 0)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "User Updated",
+                Detail = $"Changes to {User.FullName} have been saved.",
+                Duration = 4000
+            });
+            DialogService.Close(true);
+        }
+    }
+
+    private async Task OnDelete()
+    {
+        var confirmed = await DialogService.OpenAsync<DeleteConfirmDialog>("Delete User",
+            new Dictionary<string, object>
+            {
+                { "EntityName", string.IsNullOrWhiteSpace(User.FullName) ? User.Email : User.FullName },
+                { "WarningMessage", "This permanently removes the user and all associated data." }
+            },
+            new DialogOptions { Width = "400px", CloseDialogOnOverlayClick = false });
+
+        if (confirmed is not true) return;
+
+        _busy = true;
+        var result = await UserAdminService.DeleteUserAsync(User.Id);
+        _busy = false;
 
         if (result.Succeeded)
         {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "User Deleted",
+                Detail = $"{User.FullName} has been deleted.",
+                Duration = 4000
+            });
             DialogService.Close(true);
         }
         else
         {
             _errors = result.Errors.Select(e => e.Description).ToList();
         }
-
-        _saving = false;
     }
+
+    private void OnViewRounds()
+    {
+        DialogService.Close(false);
+        NavigationManager.NavigateTo($"/admin/rounds?userId={Uri.EscapeDataString(User.Id)}");
+    }
+
+    private RenderFragment SwitchRow(string label, string hint, Func<bool> get, Action<bool> set) =>@<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Gap="1rem">
+        <RadzenStack Gap="0">
+            <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@label</RadzenText>
+            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0">@hint</RadzenText>
+        </RadzenStack>
+        <RadzenSwitch Value="get()" Change="@(args => set((bool)args))" />
+    </RadzenStack>;
 
     private class EditUserModel
     {
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
+        public bool IsAdmin { get; set; }
+        public bool IsLockedOut { get; set; }
+        public bool IsSearchHidden { get; set; }
     }
 }
