@@ -1,4 +1,5 @@
 using FairwayFinder.Data;
+using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Identity;
 using FairwayFinder.Shared.Settings;
 using Microsoft.AspNetCore.Identity;
@@ -19,6 +20,7 @@ public class ApplicationStartupService : IApplicationStartupService
     private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IProfileService _profileService;
     private readonly SeedUserSettings _seedUserSettings;
     private readonly ILogger<ApplicationStartupService> _logger;
 
@@ -26,12 +28,14 @@ public class ApplicationStartupService : IApplicationStartupService
         IDbContextFactory<ApplicationDbContext> dbContextFactory,
         RoleManager<IdentityRole> roleManager,
         UserManager<ApplicationUser> userManager,
+        IProfileService profileService,
         IOptions<SeedUserSettings> seedUserSettings,
         ILogger<ApplicationStartupService> logger)
     {
         _dbContextFactory = dbContextFactory;
         _roleManager = roleManager;
         _userManager = userManager;
+        _profileService = profileService;
         _seedUserSettings = seedUserSettings.Value;
         _logger = logger;
     }
@@ -94,6 +98,17 @@ public class ApplicationStartupService : IApplicationStartupService
         }
 
         await _userManager.AddToRoleAsync(user, ApplicationRoles.Admin);
+
+        // Create the profile so the seed/admin account is searchable like any other user.
+        try
+        {
+            await _profileService.GetOrCreateProfileAsync(user.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create profile for seed user {Email}.", _seedUserSettings.Email);
+        }
+
         _logger.LogInformation("Seed user {Email} created with Admin role.", _seedUserSettings.Email);
     }
 }

@@ -12,6 +12,7 @@
 @using Microsoft.AspNetCore.WebUtilities
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
+@inject IProfileService ProfileService
 @inject IEmailSender EmailSender
 @inject NavigationManager NavigationManager
 @inject ILogger<Register> Logger
@@ -173,6 +174,18 @@
         }
 
         Logger.LogInformation("User {email} created a new account with password.", Input.Email);
+
+        // Create the user's profile up front so they are immediately searchable as a friend.
+        // Best-effort: a failure here must not block an otherwise-successful registration
+        // (the profile is also created lazily on first profile-page visit).
+        try
+        {
+            await ProfileService.GetOrCreateProfileAsync(user.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to create profile for new user {UserId} during registration.", user.Id);
+        }
 
         // Send confirmation email
         var token = await UserManager.GenerateEmailConfirmationTokenAsync(user);

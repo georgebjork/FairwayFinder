@@ -83,7 +83,9 @@ public static class AuthEndpoints
             RegisterRequest request,
             UserManager<ApplicationUser> userManager,
             IUserInvitationService inviteService,
-            JwtTokenService tokenService) =>
+            IProfileService profileService,
+            JwtTokenService tokenService,
+            ILoggerFactory loggerFactory) =>
         {
             // The email is taken from the invite, never the request — this enforces
             // that the account always matches who was invited.
@@ -114,6 +116,19 @@ public static class AuthEndpoints
 
             await userManager.AddToRoleAsync(user, ApplicationRoles.User);
             await inviteService.ClaimInviteAsync(request.Code);
+
+            // Create the user's profile up front so they are immediately searchable as a friend.
+            // Best-effort: a failure here must not fail registration (the profile is also
+            // created lazily on first profile access).
+            try
+            {
+                await profileService.GetOrCreateProfileAsync(user.Id);
+            }
+            catch (Exception ex)
+            {
+                loggerFactory.CreateLogger("AuthEndpoints")
+                    .LogError(ex, "Failed to create profile for new user {UserId} during registration.", user.Id);
+            }
 
             var roles = await userManager.GetRolesAsync(user);
             var (accessToken, expiresAt) = tokenService.GenerateAccessToken(user, roles);
