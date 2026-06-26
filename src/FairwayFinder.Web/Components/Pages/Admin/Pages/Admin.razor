@@ -1,35 +1,210 @@
 @page "/admin"
 @rendermode InteractiveServer
+@layout AdminLayout
 @attribute [Authorize(Roles = "Admin")]
-@using FairwayFinder.Web.Components.Pages.Admin.Components
+@using Microsoft.Extensions.Diagnostics.HealthChecks
+@using FairwayFinder.Features.Services.Admin
 @using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
+@using FairwayFinder.Web.Services
+@inject AdminDashboardService DashboardService
+@inject HealthCheckService HealthCheckService
+@inject CircuitTrackingService CircuitTrackingService
+@inject NavigationManager NavigationManager
 @inject BreadcrumbState BreadcrumbState
+@inject ILogger<Admin> Logger
 
 <PageTitle>Administration</PageTitle>
 
-<RadzenStack Gap="1.5rem" Style="max-width: 1200px;" class="rz-mx-auto rz-p-4">
-    <RadzenTabs>
-        <Tabs>
-            <RadzenTabsItem Text="Users" Icon="people">
-                <UsersTab />
-            </RadzenTabsItem>
-            <RadzenTabsItem Text="TGTR" Icon="sync">
-                <TgtrAdminTab />
-            </RadzenTabsItem>
-            <RadzenTabsItem Text="Connections" Icon="cable">
-                <WebSocketConnectionsTab />
-            </RadzenTabsItem>
-            <RadzenTabsItem Text="Agent Testing" Icon="smart_toy">
-                <AgentTestingTab />
-            </RadzenTabsItem>
-            <RadzenTabsItem Text="Course Import" Icon="cloud_download">
-                <CourseImportTab />
-            </RadzenTabsItem>
-        </Tabs>
-    </RadzenTabs>
+<RadzenStack Gap="1.5rem">
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="0.5rem">
+        <RadzenStack Gap="0.1rem">
+            <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">Overview</RadzenText>
+            @if (_metrics is not null)
+            {
+                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0">
+                    Snapshot @_metrics.GeneratedAtUtc.ToLocalTime().ToString("MMM d, yyyy · HH:mm")
+                </RadzenText>
+            }
+        </RadzenStack>
+        <RadzenButton Text="Refresh" Icon="refresh" ButtonStyle="ButtonStyle.Light"
+                      Click="LoadAsync" IsBusy="_loading" />
+    </RadzenStack>
+
+    @if (_loading)
+    {
+        <RadzenStack AlignItems="AlignItems.Center" class="rz-p-8">
+            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        </RadzenStack>
+    }
+    else if (_metrics is null)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Lighter" AllowClose="false" Title="Failed to load dashboard metrics">
+            <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@(_error ?? "An unexpected error occurred.")</RadzenText>
+        </RadzenAlert>
+    }
+    else
+    {
+        @* ── Health + live connections ── *@
+        <RadzenRow Gap="1rem" RowGap="1rem">
+            <RadzenColumn Size="12" SizeMD="8">
+                <RadzenCard Variant="Variant.Outlined" Style="cursor: pointer; height: 100%;"
+                            @onclick="@(() => NavigationManager.NavigateTo("/admin/health"))">
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="0.75rem">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+                            <RadzenIcon Icon="monitor_heart" Style="@HealthIconStyle()" />
+                            <RadzenStack Gap="0">
+                                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0">System Health</RadzenText>
+                                <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">@(_healthStatus?.ToString() ?? "Unknown")</RadzenText>
+                            </RadzenStack>
+                        </RadzenStack>
+                        <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+                            @if (_healthReport is not null)
+                            {
+                                @foreach (var entry in _healthReport.Entries)
+                                {
+                                    <RadzenBadge Text="@($"{entry.Key}: {entry.Value.Status}")"
+                                                 BadgeStyle="@HealthBadge(entry.Value.Status)" Shade="Shade.Lighter" />
+                                }
+                            }
+                        </RadzenStack>
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
+            <RadzenColumn Size="12" SizeMD="4">
+                <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+                        <RadzenIcon Icon="cable" Style="color: var(--rz-info); font-size: 2rem;" />
+                        <RadzenStack Gap="0">
+                            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0">Live Connections</RadzenText>
+                            <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">@_liveConnections</RadzenText>
+                        </RadzenStack>
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
+        </RadzenRow>
+
+        @* ── Key metric cards ── *@
+        <RadzenRow Gap="1rem" RowGap="1rem">
+            @MetricCard("people", "var(--rz-primary)", "Total Users", _metrics.Growth.TotalUsers.ToString(), $"+{_metrics.Growth.NewUsersLast30Days} new in 30d")
+            @MetricCard("how_to_reg", "var(--rz-success)", "Activation", $"{_metrics.Growth.ActivationRatePercent}%", $"{_metrics.Growth.ActivatedUsers} have logged a round")
+            @MetricCard("bedtime", "var(--rz-warning)", "Dormant Users", _metrics.Growth.DormantUsers.ToString(), "signed up, never played")
+            @MetricCard("bolt", "var(--rz-info)", "Engagement", $"{_metrics.Growth.EngagementRatePercent}%", $"{_metrics.Growth.ActiveUsers} active in 30d")
+            @MetricCard("sports_golf", "var(--rz-success)", "Total Rounds", _metrics.Activity.TotalRounds.ToString(), $"{_metrics.Activity.RoundsLast7Days} in 7d · {_metrics.Activity.RoundsLast30Days} in 30d")
+            @MetricCard("track_changes", "var(--rz-info)", "Shot Tracking", $"{_metrics.Activity.ShotTrackingAdoptionPercent}%", "of rounds use it")
+            @MetricCard("mail", "var(--rz-primary)", "Invites", _metrics.Invites.PendingCount.ToString(), $"pending · {_metrics.Invites.ClaimRatePercent}% claimed")
+            @MetricCard("mark_email_read", "var(--rz-secondary)", "Email Confirmed", $"{_metrics.Growth.EmailConfirmedPercent}%", $"{_metrics.Growth.EmailConfirmedCount} of {_metrics.Growth.TotalUsers}")
+        </RadzenRow>
+
+        @* ── Charts ── *@
+        <RadzenRow Gap="1rem" RowGap="1rem">
+            <RadzenColumn Size="12" SizeMD="6">
+                <RadzenCard Variant="Variant.Outlined">
+                    <RadzenText TextStyle="TextStyle.H6">New Signups · 12 mo</RadzenText>
+                    <RadzenChart>
+                        <RadzenColumnSeries Data="@_metrics.Growth.SignupsByMonth" CategoryProperty="Label" ValueProperty="Count" Title="Signups" Fill="var(--rz-primary)" />
+                        <RadzenCategoryAxis Padding="20" LabelAutoRotation="-45" />
+                        <RadzenValueAxis Min="0">
+                            <RadzenGridLines Visible="true" />
+                        </RadzenValueAxis>
+                    </RadzenChart>
+                </RadzenCard>
+            </RadzenColumn>
+            <RadzenColumn Size="12" SizeMD="6">
+                <RadzenCard Variant="Variant.Outlined">
+                    <RadzenText TextStyle="TextStyle.H6">Rounds Played · 12 mo</RadzenText>
+                    <RadzenChart>
+                        <RadzenColumnSeries Data="@_metrics.Activity.RoundsByMonth" CategoryProperty="Label" ValueProperty="Count" Title="Rounds" Fill="var(--rz-success)" />
+                        <RadzenCategoryAxis Padding="20" LabelAutoRotation="-45" />
+                        <RadzenValueAxis Min="0">
+                            <RadzenGridLines Visible="true" />
+                        </RadzenValueAxis>
+                    </RadzenChart>
+                </RadzenCard>
+            </RadzenColumn>
+        </RadzenRow>
+
+        @* ── Lists ── *@
+        <RadzenRow Gap="1rem" RowGap="1rem">
+            <RadzenColumn Size="12" SizeMD="4">
+                <RadzenCard Variant="Variant.Outlined">
+                    <RadzenText TextStyle="TextStyle.H6">Most-Played Courses</RadzenText>
+                    @if (_metrics.Activity.MostPlayedCourses.Count == 0)
+                    {
+                        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">No rounds yet.</RadzenText>
+                    }
+                    else
+                    {
+                        <RadzenStack Gap="0.5rem" class="rz-mt-2">
+                            @foreach (var c in _metrics.Activity.MostPlayedCourses)
+                            {
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@c.CourseName</RadzenText>
+                                    <RadzenBadge Text="@c.RoundCount.ToString()" BadgeStyle="BadgeStyle.Light" Shade="Shade.Lighter" />
+                                </RadzenStack>
+                            }
+                        </RadzenStack>
+                    }
+                </RadzenCard>
+            </RadzenColumn>
+            <RadzenColumn Size="12" SizeMD="4">
+                <RadzenCard Variant="Variant.Outlined">
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Recently Joined</RadzenText>
+                        <RadzenLink Text="All users" Path="/admin/users" />
+                    </RadzenStack>
+                    <RadzenStack Gap="0.5rem" class="rz-mt-2">
+                        @foreach (var u in _metrics.Growth.RecentlyJoined)
+                        {
+                            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+                                <RadzenStack Gap="0">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@(string.IsNullOrWhiteSpace(u.FullName) ? u.Email : u.FullName)</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">@u.CreatedOn.ToLocalTime().ToString("MMM d, yyyy")</RadzenText>
+                                </RadzenStack>
+                                @if (!u.IsEmailConfirmed)
+                                {
+                                    <RadzenBadge Text="Unverified" BadgeStyle="BadgeStyle.Warning" Shade="Shade.Lighter" />
+                                }
+                            </RadzenStack>
+                        }
+                    </RadzenStack>
+                </RadzenCard>
+            </RadzenColumn>
+            <RadzenColumn Size="12" SizeMD="4">
+                <RadzenCard Variant="Variant.Outlined">
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+                        <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Recent Invites</RadzenText>
+                        <RadzenLink Text="All invites" Path="/admin/invites" />
+                    </RadzenStack>
+                    @if (_metrics.Invites.RecentInvites.Count == 0)
+                    {
+                        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);" class="rz-mt-2">No invites yet.</RadzenText>
+                    }
+                    else
+                    {
+                        <RadzenStack Gap="0.5rem" class="rz-mt-2">
+                            @foreach (var i in _metrics.Invites.RecentInvites)
+                            {
+                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@i.Email</RadzenText>
+                                    <RadzenBadge Text="@i.Status" BadgeStyle="@InviteBadge(i.Status)" Shade="Shade.Lighter" />
+                                </RadzenStack>
+                            }
+                        </RadzenStack>
+                    }
+                </RadzenCard>
+            </RadzenColumn>
+        </RadzenRow>
+    }
 </RadzenStack>
 
 @code {
+    private bool _loading = true;
+    private string? _error;
+    private DashboardMetricsDto? _metrics;
+    private HealthReport? _healthReport;
+    private HealthStatus? _healthStatus;
+    private int _liveConnections;
+
     protected override void OnInitialized()
     {
         BreadcrumbState.Set(
@@ -37,4 +212,81 @@
             new BreadcrumbItem("Administration")
         );
     }
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        StateHasChanged();
+
+        _liveConnections = CircuitTrackingService.ActiveCount;
+
+        try
+        {
+            _metrics = await DashboardService.GetDashboardMetricsAsync();
+        }
+        catch (Exception ex)
+        {
+            _metrics = null;
+            _error = ex.Message;
+            Logger.LogError(ex, "Failed to load admin dashboard metrics");
+        }
+
+        try
+        {
+            _healthReport = await HealthCheckService.CheckHealthAsync();
+            _healthStatus = _healthReport.Status;
+        }
+        catch
+        {
+            _healthStatus = HealthStatus.Unhealthy;
+        }
+
+        _loading = false;
+    }
+
+    private string HealthIconStyle()
+    {
+        var color = _healthStatus switch
+        {
+            HealthStatus.Healthy => "var(--rz-success)",
+            HealthStatus.Degraded => "var(--rz-warning)",
+            _ => "var(--rz-danger)"
+        };
+        return $"color: {color}; font-size: 2rem;";
+    }
+
+    private static BadgeStyle HealthBadge(HealthStatus status) => status switch
+    {
+        HealthStatus.Healthy => BadgeStyle.Success,
+        HealthStatus.Degraded => BadgeStyle.Warning,
+        _ => BadgeStyle.Danger
+    };
+
+    private static BadgeStyle InviteBadge(string status) => status switch
+    {
+        "Claimed" => BadgeStyle.Success,
+        "Expired" => BadgeStyle.Danger,
+        _ => BadgeStyle.Info
+    };
+
+    private RenderFragment MetricCard(string icon, string color, string label, string value, string? sub) =>@<RadzenColumn Size="12" SizeSM="6" SizeMD="3">
+        <RadzenCard Variant="Variant.Outlined" Style="height: 100%;">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+                <div style="@($"display:flex;align-items:center;justify-content:center;width:2.75rem;height:2.75rem;border-radius:0.5rem;background:{color};opacity:0.95;")">
+                    <RadzenIcon Icon="@icon" Style="color: #fff; font-size: 1.5rem;" />
+                </div>
+                <RadzenStack Gap="0">
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0">@label</RadzenText>
+                    <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">@value</RadzenText>
+                    @if (!string.IsNullOrEmpty(sub))
+                    {
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0">@sub</RadzenText>
+                    }
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenCard>
+    </RadzenColumn>;
 }

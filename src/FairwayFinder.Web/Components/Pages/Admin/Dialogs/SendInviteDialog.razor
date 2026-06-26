@@ -1,0 +1,75 @@
+@using System.ComponentModel.DataAnnotations
+@using FairwayFinder.Features.Services.Interfaces
+@inject IUserInvitationService InviteService
+
+<RadzenTemplateForm TItem="SendInviteModel" Data="_model" Submit="OnSubmit">
+    <RadzenStack Gap="1rem">
+        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+            Sends a universal invite link to this email address. The invite expires after 14 days.
+        </RadzenText>
+
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Email</RadzenText>
+            <RadzenTextBox Name="Email" @bind-Value="_model.Email" Style="width: 100%;" autofocus />
+            <RadzenRequiredValidator Component="Email" Text="Email is required." />
+            <RadzenEmailValidator Component="Email" Text="Enter a valid email address." />
+        </RadzenStack>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Shade="Shade.Lighter" AllowClose="false" Size="AlertSize.Small">
+                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@_error</RadzenText>
+            </RadzenAlert>
+        }
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button"
+                          Click="@(() => DialogService.Close(false))" />
+            <RadzenButton Text="Send Invite" Icon="send" ButtonStyle="ButtonStyle.Primary"
+                          ButtonType="ButtonType.Submit" IsBusy="_submitting" BusyText="Sending..." />
+        </RadzenStack>
+    </RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+    [Inject] public DialogService DialogService { get; set; } = default!;
+
+    [Parameter] public string SentByUserId { get; set; } = string.Empty;
+
+    private SendInviteModel _model = new();
+    private string? _error;
+    private bool _submitting;
+
+    private async Task OnSubmit()
+    {
+        _error = null;
+        _submitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await InviteService.CreateAndSendInviteAsync(_model.Email.Trim(), SentByUserId);
+            if (result.Success)
+            {
+                DialogService.Close(true);
+            }
+            else
+            {
+                _error = result.Error ?? "Failed to send the invite.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Unexpected error: {ex.Message}";
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private class SendInviteModel
+    {
+        public string Email { get; set; } = string.Empty;
+    }
+}

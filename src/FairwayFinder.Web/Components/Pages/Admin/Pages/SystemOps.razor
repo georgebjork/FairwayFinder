@@ -1,0 +1,40 @@
+@page "/admin/system"
+@rendermode InteractiveServer
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@using FairwayFinder.Web.Components.Pages.Admin.Components
+@using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
+@inject BreadcrumbState BreadcrumbState
+
+<PageTitle>System Operations</PageTitle>
+
+<RadzenStack Gap="1.5rem">
+    <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">System</RadzenText>
+    <RadzenTabs>
+        <Tabs>
+            <RadzenTabsItem Text="TGTR" Icon="sync">
+                <TgtrAdminTab />
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="Course Import" Icon="cloud_download">
+                <CourseImportTab />
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="Agent Testing" Icon="smart_toy">
+                <AgentTestingTab />
+            </RadzenTabsItem>
+            <RadzenTabsItem Text="Connections" Icon="cable">
+                <WebSocketConnectionsTab />
+            </RadzenTabsItem>
+        </Tabs>
+    </RadzenTabs>
+</RadzenStack>
+
+@code {
+    protected override void OnInitialized()
+    {
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem("Administration", "/admin"),
+            new BreadcrumbItem("System")
+        );
+    }
+}

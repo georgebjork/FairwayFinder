@@ -1,0 +1,162 @@
+@page "/admin/rounds"
+@rendermode InteractiveServer
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@using System.Security.Claims
+@using FairwayFinder.Features.Services.Admin
+@using FairwayFinder.Web.Components.Pages.Admin.Dialogs
+@using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
+@inject UserAdminService UserAdminService
+@inject AdminRoundService AdminRoundService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject DialogService DialogService
+@inject BreadcrumbState BreadcrumbState
+
+<PageTitle>Round Management</PageTitle>
+
+<RadzenStack Gap="1.5rem">
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="1rem">
+        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">Rounds</RadzenText>
+
+        @* User filter — applied in memory over the already-loaded rounds. *@
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+            <RadzenIcon Icon="filter_list" Style="color: var(--rz-text-secondary-color);" />
+            <RadzenDropDown TValue="string" Data="_userOptions" @bind-Value="_selectedUserId"
+                            TextProperty="Label" ValueProperty="Id"
+                            AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                            FilterOperator="StringFilterOperator.Contains"
+                            Style="width: 280px;" Disabled="_loading" />
+        </RadzenStack>
+    </RadzenStack>
+
+    @if (_loading)
+    {
+        <RadzenStack AlignItems="AlignItems.Center" class="rz-p-8">
+            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        </RadzenStack>
+    }
+    else if (FilteredRounds.Count == 0)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+            @(string.IsNullOrEmpty(_selectedUserId) ? "No rounds yet." : "This user has no rounds.")
+        </RadzenAlert>
+    }
+    else
+    {
+        <RadzenDataGrid TItem="AdminRoundListItemDto" Data="FilteredRounds"
+                        AllowSorting="true" AllowPaging="true" PageSize="20"
+                        PagerHorizontalAlign="HorizontalAlign.Right" ShowPagingSummary="true"
+                        PagingSummaryFormat="Displaying page {0} of {1} (total {2} rounds)"
+                        RowClick="OnRowClick" GridLines="DataGridGridLines.Horizontal"
+                        class="rz-selectable">
+            <Columns>
+                <RadzenDataGridColumn TItem="AdminRoundListItemDto" Property="DatePlayed" Title="Date" Width="130px" FormatString="{0:MMM d, yyyy}" SortOrder="SortOrder.Descending" />
+                <RadzenDataGridColumn TItem="AdminRoundListItemDto" Title="Player" Width="200px">
+                    <Template Context="round">
+                        <RadzenStack Gap="0">
+                            <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@round.PlayerName</RadzenText>
+                            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">@round.PlayerEmail</RadzenText>
+                        </RadzenStack>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="AdminRoundListItemDto" Property="CourseName" Title="Course" />
+                <RadzenDataGridColumn TItem="AdminRoundListItemDto" Property="TeeboxName" Title="Tees" Width="120px" />
+                <RadzenDataGridColumn TItem="AdminRoundListItemDto" Property="Score" Title="Score" Width="90px" TextAlign="TextAlign.Center" />
+                <RadzenDataGridColumn TItem="AdminRoundListItemDto" Property="ToPar" Title="To Par" Width="90px" TextAlign="TextAlign.Center">
+                    <Template Context="round">@FormatToPar(round.ToPar)</Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="AdminRoundListItemDto" Title="In Stats" Width="110px" TextAlign="TextAlign.Center" Sortable="false">
+                    <Template Context="round">
+                        @if (round.ExcludeFromStats)
+                        {
+                            <RadzenBadge Text="Excluded" BadgeStyle="BadgeStyle.Warning" Shade="Shade.Lighter" />
+                        }
+                        else
+                        {
+                            <RadzenBadge Text="Included" BadgeStyle="BadgeStyle.Success" Shade="Shade.Lighter" />
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    }
+</RadzenStack>
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "userId")] public string? UserIdQuery { get; set; }
+
+    private record UserOption(string Id, string Label);
+
+    private List<AdminRoundListItemDto> _allRounds = new();
+    private List<UserOption> _userOptions = new();
+    private bool _loading = true;
+    private string _selectedUserId = string.Empty; // "" => All
+    private string? _adminUserId;
+
+    private List<AdminRoundListItemDto> FilteredRounds => string.IsNullOrEmpty(_selectedUserId)
+        ? _allRounds
+        : _allRounds.Where(r => r.UserId == _selectedUserId).ToList();
+
+    protected override void OnInitialized()
+    {
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem("Administration", "/admin"),
+            new BreadcrumbItem("Rounds")
+        );
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _adminUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!string.IsNullOrWhiteSpace(UserIdQuery))
+        {
+            _selectedUserId = UserIdQuery;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+
+        var users = await UserAdminService.GetAllUsersAsync();
+        _userOptions = new List<UserOption> { new(string.Empty, "All users") };
+        _userOptions.AddRange(users
+            .OrderBy(u => u.FullName)
+            .Select(u => new UserOption(u.Id, string.IsNullOrWhiteSpace(u.FullName) ? u.Email : $"{u.FullName} · {u.Email}")));
+
+        _allRounds = await AdminRoundService.GetAllRoundsAsync();
+
+        _loading = false;
+    }
+
+    private async Task OnRowClick(DataGridRowMouseEventArgs<AdminRoundListItemDto> args)
+    {
+        var detail = await AdminRoundService.GetRoundDetailAsync(args.Data.RoundId);
+        if (detail is null) return;
+
+        var result = await DialogService.OpenAsync<RoundDetailDialog>("Round Detail",
+            new Dictionary<string, object>
+            {
+                { "Round", detail },
+                { "AdminUserId", _adminUserId ?? string.Empty }
+            },
+            new DialogOptions { Width = "720px", CloseDialogOnEsc = true });
+
+        if (result is true)
+        {
+            await LoadAsync();
+        }
+    }
+
+    private static string FormatToPar(int toPar) => toPar switch
+    {
+        0 => "E",
+        > 0 => $"+{toPar}",
+        _ => toPar.ToString()
+    };
+}

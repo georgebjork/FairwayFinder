@@ -1,5 +1,6 @@
 @page "/admin/health"
 @rendermode InteractiveServer
+@layout AdminLayout
 @attribute [Authorize(Roles = "Admin")]
 @using Microsoft.Extensions.Diagnostics.HealthChecks
 @using System.Reflection
@@ -10,7 +11,7 @@
 
 <PageTitle>Health Checks</PageTitle>
 
-<RadzenStack Gap="1.5rem" class="rz-mx-auto rz-p-4" Style="max-width: 1200px;">
+<RadzenStack Gap="1.5rem">
 
     @* ── System Health Section ── *@
     <RadzenCard>
@@ -285,6 +286,7 @@
     {
         BreadcrumbState.Set(
             new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem("Administration", "/admin"),
             new BreadcrumbItem("Health Checks")
         );
     }

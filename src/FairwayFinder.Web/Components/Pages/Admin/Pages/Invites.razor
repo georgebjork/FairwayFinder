@@ -1,0 +1,162 @@
+@page "/admin/invites"
+@rendermode InteractiveServer
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@using System.Security.Claims
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Web.Components.Pages.Admin.Components
+@using FairwayFinder.Web.Components.Pages.Admin.Dialogs
+@using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
+@inject IUserInvitationService InviteService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject BreadcrumbState BreadcrumbState
+
+<PageTitle>Invites</PageTitle>
+
+<RadzenStack Gap="1.5rem">
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="0.5rem">
+        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">Invites</RadzenText>
+        <RadzenButton Text="Send Invite" Icon="send" ButtonStyle="ButtonStyle.Primary"
+                      Click="OnSendInviteClicked" />
+    </RadzenStack>
+
+    @if (_loading)
+    {
+        <RadzenStack AlignItems="AlignItems.Center" class="rz-p-8">
+            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        </RadzenStack>
+    }
+    else if (_invites.Count == 0)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+            No invites yet. Click "Send Invite" to invite someone.
+        </RadzenAlert>
+    }
+    else
+    {
+        <RadzenDataGrid TItem="PendingInviteDto" Data="_invites"
+                        AllowSorting="true" AllowPaging="true" PageSize="15"
+                        PagerHorizontalAlign="HorizontalAlign.Right" ShowPagingSummary="true"
+                        PagingSummaryFormat="Displaying page {0} of {1} (total {2} invites)">
+            <Columns>
+                <RadzenDataGridColumn TItem="PendingInviteDto" Property="Email" Title="Email" />
+                <RadzenDataGridColumn TItem="PendingInviteDto" Title="Status" Width="120px" Sortable="false">
+                    <Template Context="invite">
+                        @{
+                            var (text, style) = GetStatus(invite);
+                        }
+                        <RadzenBadge Text="@text" BadgeStyle="@style" Shade="Shade.Lighter" />
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="PendingInviteDto" Property="CreatedOn" Title="Sent" Width="140px" FormatString="{0:MMM d, yyyy}" />
+                <RadzenDataGridColumn TItem="PendingInviteDto" Property="ExpiresOn" Title="Expires" Width="140px" FormatString="{0:MMM d, yyyy}" />
+                <RadzenDataGridColumn TItem="PendingInviteDto" Property="ClaimedOn" Title="Claimed" Width="140px" FormatString="{0:MMM d, yyyy}" />
+                <RadzenDataGridColumn TItem="PendingInviteDto" Title="Actions" Width="120px" Sortable="false" Filterable="false">
+                    <Template Context="invite">
+                        @if (invite.ClaimedOn is null)
+                        {
+                            <RadzenButton Text="Revoke" Icon="block" ButtonStyle="ButtonStyle.Danger"
+                                          Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
+                                          Click="@(() => OnRevokeClicked(invite))" />
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    }
+</RadzenStack>
+
+@code {
+    private List<PendingInviteDto> _invites = new();
+    private bool _loading = true;
+    private string? _userId;
+
+    protected override void OnInitialized()
+    {
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem("Administration", "/admin"),
+            new BreadcrumbItem("Invites")
+        );
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _userId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        await LoadInvitesAsync();
+    }
+
+    private async Task LoadInvitesAsync()
+    {
+        _loading = true;
+        _invites = await InviteService.GetPendingInvitesAsync();
+        _loading = false;
+    }
+
+    private static (string, BadgeStyle) GetStatus(PendingInviteDto invite)
+    {
+        if (invite.ClaimedOn is not null) return ("Claimed", BadgeStyle.Success);
+        if (invite.IsExpired) return ("Expired", BadgeStyle.Danger);
+        return ("Pending", BadgeStyle.Info);
+    }
+
+    private async Task OnSendInviteClicked()
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+
+        var result = await DialogService.OpenAsync<SendInviteDialog>("Send Invite",
+            new Dictionary<string, object> { { "SentByUserId", _userId } },
+            new DialogOptions { Width = "450px", CloseDialogOnOverlayClick = false, CloseDialogOnEsc = true });
+
+        if (result is true)
+        {
+            await LoadInvitesAsync();
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Invite Sent",
+                Detail = "The invitation has been sent.",
+                Duration = 4000
+            });
+        }
+    }
+
+    private async Task OnRevokeClicked(PendingInviteDto invite)
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+
+        var confirmed = await DialogService.Confirm(
+            $"Revoke the invite sent to {invite.Email}? The link will stop working.",
+            "Confirm Revoke",
+            new ConfirmOptions { OkButtonText = "Revoke", CancelButtonText = "Cancel" });
+
+        if (confirmed != true) return;
+
+        var success = await InviteService.RevokeInviteAsync(invite.Id, _userId);
+        if (success)
+        {
+            await LoadInvitesAsync();
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Success,
+                Summary = "Invite Revoked",
+                Detail = $"The invite to {invite.Email} has been revoked.",
+                Duration = 4000
+            });
+        }
+        else
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Revoke Failed",
+                Detail = "Could not revoke the invite.",
+                Duration = 6000
+            });
+        }
+    }
+}
