@@ -63,9 +63,19 @@ public interface ICourseService
     Task<long> CreateTeeboxAsync(SaveTeeboxRequest request, string userId);
 
     /// <summary>
-    /// Updates a teebox and its holes.
+    /// Updates a teebox and its holes in place. Existing rounds on this teebox reflect the new
+    /// values — use this for corrections (typos, slope/rating fixes).
     /// </summary>
     Task<bool> UpdateTeeboxAsync(SaveTeeboxRequest request, string userId);
+
+    /// <summary>
+    /// Saves the changes as a NEW version of the teebox: archives the source teebox (kept for
+    /// historical rounds) and inserts a new teebox with the updated values, sharing the source's
+    /// lineage (<c>TeeboxGroupId</c>). Existing rounds keep their original values; only new rounds
+    /// use the new teebox. <c>request.TeeboxId</c> is the active source being versioned.
+    /// Returns the new teebox ID, or 0 if the source is missing/already archived.
+    /// </summary>
+    Task<long> CreateTeeboxVersionAsync(SaveTeeboxRequest request, string userId);
 
     /// <summary>
     /// Soft-deletes a teebox and all its holes.

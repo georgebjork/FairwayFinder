@@ -44,6 +44,12 @@ public class TeeboxSummary
     public int YardageTotal { get; set; }
     public bool IsNineHole { get; set; }
     public bool IsWomens { get; set; }
+
+    /// <summary>Lineage key shared by all versions of this logical tee.</summary>
+    public long TeeboxGroupId { get; set; }
+
+    /// <summary>Non-null when this teebox has been superseded by a newer version (read-only history).</summary>
+    public DateOnly? ArchivedOn { get; set; }
 }
 
 /// <summary>

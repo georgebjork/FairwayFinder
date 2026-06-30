@@ -47,7 +47,7 @@ public class CourseService : ICourseService
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
         var query = dbContext.Teeboxes
-            .Where(t => t.CourseId == courseId && !t.IsDeleted);
+            .Where(t => t.CourseId == courseId && !t.IsDeleted && t.ArchivedOn == null);
 
         if (filterByPreferredTees is not null)
         {
@@ -124,7 +124,8 @@ public class CourseService : ICourseService
 
         var teeboxes = await dbContext.Teeboxes
             .Where(t => t.CourseId == courseId && !t.IsDeleted)
-            .OrderBy(t => t.YardageTotal)
+            .OrderBy(t => t.ArchivedOn != null) // active tees first, archived versions after
+            .ThenBy(t => t.YardageTotal)
             .Select(t => new TeeboxSummary
             {
                 TeeboxId = t.TeeboxId,
@@ -136,7 +137,9 @@ public class CourseService : ICourseService
                 YardageIn = t.YardageIn,
                 YardageTotal = t.YardageTotal,
                 IsNineHole = t.IsNineHole,
-                IsWomens = t.IsWomens
+                IsWomens = t.IsWomens,
+                TeeboxGroupId = t.TeeboxGroupId,
+                ArchivedOn = t.ArchivedOn
             })
             .ToListAsync();
 
@@ -314,6 +317,9 @@ public class CourseService : ICourseService
         dbContext.Teeboxes.Add(teebox);
         await dbContext.SaveChangesAsync();
 
+        // A brand-new tee is its own lineage; group id defaults to its own id.
+        teebox.TeeboxGroupId = teebox.TeeboxId;
+
         // Create holes
         var holes = request.Holes.Select(h => new Hole
         {
@@ -416,6 +422,82 @@ public class CourseService : ICourseService
         await dbContext.SaveChangesAsync();
 
         return true;
+    }
+
+    public async Task<long> CreateTeeboxVersionAsync(SaveTeeboxRequest request, string userId)
+    {
+        if (request.TeeboxId is null) return 0;
+
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        var now = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        // Source must be an active (non-archived, non-deleted) tee.
+        var source = await dbContext.Teeboxes
+            .Where(t => t.TeeboxId == request.TeeboxId && !t.IsDeleted && t.ArchivedOn == null)
+            .FirstOrDefaultAsync();
+
+        if (source is null) return 0;
+
+        // Compute aggregate values from hole data
+        var par = request.Holes.Sum(h => h.Par);
+        var yardageOut = request.Holes.Where(h => h.HoleNumber <= 9).Sum(h => h.Yardage);
+        var yardageIn = request.Holes.Where(h => h.HoleNumber > 9).Sum(h => h.Yardage);
+        var yardageTotal = request.Holes.Sum(h => h.Yardage);
+
+        // Insert the new version, inheriting the source's lineage so stats treat them as one tee.
+        var newTeebox = new Teebox
+        {
+            CourseId = source.CourseId,
+            TeeboxName = request.TeeboxName,
+            Par = par,
+            Rating = request.Rating,
+            Slope = request.Slope,
+            YardageOut = yardageOut,
+            YardageIn = yardageIn,
+            YardageTotal = yardageTotal,
+            IsNineHole = request.IsNineHole,
+            IsWomens = request.IsWomens,
+            TeeboxGroupId = source.TeeboxGroupId,
+            ArchivedOn = null,
+            ArchivedBy = null,
+            CreatedBy = userId,
+            CreatedOn = now,
+            UpdatedBy = userId,
+            UpdatedOn = now,
+            IsDeleted = false
+        };
+
+        dbContext.Teeboxes.Add(newTeebox);
+        await dbContext.SaveChangesAsync();
+
+        var holes = request.Holes.Select(h => new Hole
+        {
+            TeeboxId = newTeebox.TeeboxId,
+            CourseId = source.CourseId,
+            HoleNumber = h.HoleNumber,
+            Par = h.Par,
+            Yardage = h.Yardage,
+            Handicap = h.Handicap,
+            CreatedBy = userId,
+            CreatedOn = now,
+            UpdatedBy = userId,
+            UpdatedOn = now,
+            IsDeleted = false
+        }).ToList();
+
+        dbContext.Holes.AddRange(holes);
+
+        // Archive the source. Leave its holes and IsDeleted untouched so historical rounds
+        // still resolve their original rating/slope/handicaps.
+        source.ArchivedOn = now;
+        source.ArchivedBy = userId;
+        source.UpdatedBy = userId;
+        source.UpdatedOn = now;
+
+        await dbContext.SaveChangesAsync();
+
+        return newTeebox.TeeboxId;
     }
 
     public async Task<bool> DeleteTeeboxAsync(long teeboxId, string userId)

@@ -1,5 +1,6 @@
 @page "/courses/{CourseId:long}"
 @rendermode InteractiveServer
+@layout AdminLayout
 @attribute [Authorize(Roles = "Admin")]
 @using System.Security.Claims
 @using FairwayFinder.Features.Data
@@ -94,8 +95,12 @@
                             <RadzenDataGridColumn TItem="TeeboxSummary" Property="YardageOut" Title="Out" Width="80px" TextAlign="TextAlign.Center" />
                             <RadzenDataGridColumn TItem="TeeboxSummary" Property="YardageIn" Title="In" Width="80px" TextAlign="TextAlign.Center" />
                             <RadzenDataGridColumn TItem="TeeboxSummary" Property="YardageTotal" Title="Total" Width="80px" TextAlign="TextAlign.Center" />
-                            <RadzenDataGridColumn TItem="TeeboxSummary" Title="Type" Width="100px" TextAlign="TextAlign.Center">
+                            <RadzenDataGridColumn TItem="TeeboxSummary" Title="Type" Width="120px" TextAlign="TextAlign.Center">
                                 <Template Context="teebox">
+                                    @if (teebox.ArchivedOn is not null)
+                                    {
+                                        <RadzenBadge Text="@($"Archived {teebox.ArchivedOn:MMM d, yyyy}")" BadgeStyle="BadgeStyle.Secondary" />
+                                    }
                                     @if (teebox.IsNineHole)
                                     {
                                         <RadzenBadge Text="9-Hole" BadgeStyle="BadgeStyle.Info" />
@@ -108,12 +113,19 @@
                             </RadzenDataGridColumn>
                             <RadzenDataGridColumn TItem="TeeboxSummary" Title="Actions" Width="140px" TextAlign="TextAlign.Center" Sortable="false">
                                 <Template Context="teebox">
-                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
-                                        <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.ExtraSmall"
-                                                      Click="@(() => NavigationManager.NavigateTo($"/courses/{CourseId}/teebox/{teebox.TeeboxId}/edit"))" />
-                                        <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Text" Size="ButtonSize.ExtraSmall"
-                                                      Click="@(() => OnDeleteTeeboxClicked(teebox))" />
-                                    </RadzenStack>
+                                    @if (teebox.ArchivedOn is null)
+                                    {
+                                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem" JustifyContent="JustifyContent.Center">
+                                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.ExtraSmall"
+                                                          Click="@(() => NavigationManager.NavigateTo($"/courses/{CourseId}/teebox/{teebox.TeeboxId}/edit"))" />
+                                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Text" Size="ButtonSize.ExtraSmall"
+                                                          Click="@(() => OnDeleteTeeboxClicked(teebox))" />
+                                        </RadzenStack>
+                                    }
+                                    else
+                                    {
+                                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0">History</RadzenText>
+                                    }
                                 </Template>
                             </RadzenDataGridColumn>
                         </Columns>

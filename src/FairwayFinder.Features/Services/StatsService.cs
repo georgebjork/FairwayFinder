@@ -452,21 +452,26 @@ public class StatsService : IStatsService
 
         if (allCourseRounds.Count == 0) return null;
 
-        // Build teebox options from all rounds at this course (before any filtering)
+        // Build teebox options from all rounds at this course (before any filtering).
+        // Group by lineage key so all versions of a re-rated tee collapse into one option;
+        // the option value is the group id and the label is the group's most-used name.
         var teeboxOptions = allCourseRounds
-            .GroupBy(r => new { r.Teebox.TeeboxId, r.Teebox.TeeboxName })
-            .OrderByDescending(g => g.Count())
+            .GroupBy(r => r.Teebox.TeeboxGroupId)
             .Select(g => new CourseTeeboxOption
             {
-                TeeboxId = g.Key.TeeboxId,
-                TeeboxName = g.Key.TeeboxName,
+                TeeboxId = g.Key,
+                TeeboxName = g
+                    .GroupBy(r => r.Teebox.TeeboxName)
+                    .OrderByDescending(n => n.Count())
+                    .First().Key,
                 RoundCount = g.Count()
             })
+            .OrderByDescending(o => o.RoundCount)
             .ToList();
 
-        // Apply teebox filter if specified
+        // Apply teebox filter if specified (incoming value is a lineage group id)
         var filteredRounds = teeboxId.HasValue
-            ? allCourseRounds.Where(r => r.Teebox.TeeboxId == teeboxId.Value).ToList()
+            ? allCourseRounds.Where(r => r.Teebox.TeeboxGroupId == teeboxId.Value).ToList()
             : allCourseRounds.ToList();
 
         // Apply date range filter

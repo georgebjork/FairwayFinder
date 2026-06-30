@@ -1,0 +1,75 @@
+@inject DialogService DialogService
+
+<RadzenStack Gap="1.25rem" class="rz-p-2">
+    <RadzenText TextStyle="TextStyle.Body1" class="rz-m-0">
+        How do you want to save your changes to <strong>@TeeboxName</strong>?
+    </RadzenText>
+
+    <RadzenStack Gap="0.75rem">
+        @* Option 1 — update in place *@
+        <div class="@OptionClass("update")" @onclick="@(() => Select("update"))">
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.75rem" AlignItems="AlignItems.Start">
+                <RadzenIcon Icon="@(_mode == "update" ? "radio_button_checked" : "radio_button_unchecked")"
+                            Style="@IconStyle("update")" />
+                <RadzenStack Gap="0.15rem">
+                    <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-m-0">Update this teebox</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0">
+                        Corrects the existing tee. The new values apply to every past round on it. Use this to fix a mistake.
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenStack>
+        </div>
+
+        @* Option 2 — save as a new teebox *@
+        <div class="@OptionClass("new")" @onclick="@(() => Select("new"))">
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.75rem" AlignItems="AlignItems.Start">
+                <RadzenIcon Icon="@(_mode == "new" ? "radio_button_checked" : "radio_button_unchecked")"
+                            Style="@IconStyle("new")" />
+                <RadzenStack Gap="0.15rem">
+                    <RadzenText TextStyle="TextStyle.Subtitle2" class="rz-m-0">Save as a new teebox</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0">
+                        The course was re-rated. Past rounds keep their old rating, slope, and handicaps; only new rounds use these values.
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenStack>
+        </div>
+    </RadzenStack>
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+        <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button"
+                      Click="@(() => DialogService.Close(null))" />
+        <RadzenButton Text="Save" Icon="save" ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button"
+                      Disabled="@(_mode is null)" Click="@(() => DialogService.Close(_mode))" />
+    </RadzenStack>
+</RadzenStack>
+
+<style>
+    .mode-option {
+        border: 1px solid var(--rz-border-color);
+        border-radius: var(--rz-border-radius);
+        padding: 0.75rem;
+        cursor: pointer;
+        transition: border-color 0.15s ease;
+    }
+    .mode-option:hover {
+        border-color: var(--rz-primary);
+    }
+    .mode-option-selected {
+        border-color: var(--rz-primary);
+        box-shadow: 0 0 0 1px var(--rz-primary);
+    }
+</style>
+
+@code {
+    [Parameter] public string TeeboxName { get; set; } = string.Empty;
+
+    // null until the admin explicitly picks "update" or "new"; the Save button stays disabled until then.
+    private string? _mode;
+
+    private void Select(string mode) => _mode = mode;
+
+    private string OptionClass(string mode) => _mode == mode ? "mode-option mode-option-selected" : "mode-option";
+
+    private string IconStyle(string mode) =>
+        $"color: {(_mode == mode ? "var(--rz-primary)" : "var(--rz-text-disabled-color)")};";
+}

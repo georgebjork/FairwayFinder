@@ -130,6 +130,9 @@ public class RoundResponse
 public class RoundTeebox
 {
     public long TeeboxId { get; set; }
+
+    /// <summary>Lineage key shared by all versions of this logical tee; used to group stats across re-ratings.</summary>
+    public long TeeboxGroupId { get; set; }
     public string TeeboxName { get; set; } = string.Empty;
     public int Par { get; set; }
     public decimal Rating { get; set; }
@@ -144,6 +147,7 @@ public class RoundTeebox
         return new RoundTeebox
         {
             TeeboxId = teebox.TeeboxId,
+            TeeboxGroupId = teebox.TeeboxGroupId,
             TeeboxName = teebox.TeeboxName,
             Par = teebox.Par,
             Rating = teebox.Rating,
