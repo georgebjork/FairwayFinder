@@ -65,7 +65,7 @@
                             <RadzenLabel Text="9-Hole Course" Component="IsNineHole" />
                         </RadzenStack>
                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                            <RadzenCheckBox TValue="bool" @bind-Value="_model.IsWomens" Name="IsWomens" />
+                            <RadzenCheckBox TValue="bool" Value="_model.IsWomens" Name="IsWomens" Change="@((bool val) => OnWomensChanged(val))" />
                             <RadzenLabel Text="Women's Tees" Component="IsWomens" />
                         </RadzenStack>
                     </RadzenStack>
@@ -252,6 +252,7 @@
     private bool _saving;
     private string _currentUserId = string.Empty;
     private string _courseName = string.Empty;
+    private List<TeeboxSummary> _courseTeeboxes = new();
     private List<string> _validationErrors = new();
 
     private readonly List<int> _parOptions = new() { 3, 4, 5 };
@@ -311,11 +312,13 @@
         {
             _model = new SaveTeeboxRequest { CourseId = CourseId };
             InitializeEmptyHoles();
+            await ApplyParHandicapTemplateAsync();
         }
 
-        // Fetch course name for breadcrumb
+        // Fetch course name + teebox list (used for breadcrumb and cascade targeting)
         var courseDetail = await CourseService.GetCourseDetailAsync(CourseId);
         _courseName = courseDetail?.CourseName ?? "Course";
+        _courseTeeboxes = courseDetail?.Teeboxes ?? new List<TeeboxSummary>();
 
         BreadcrumbState.Set(
             new BreadcrumbItem("Home", "/"),
@@ -357,7 +360,7 @@
         _model.Holes = _model.Holes.OrderBy(h => h.HoleNumber).ToList();
     }
 
-    private void OnNineHoleChanged(bool isNineHole)
+    private async Task OnNineHoleChanged(bool isNineHole)
     {
         _model.IsNineHole = isNineHole;
 
@@ -369,6 +372,37 @@
                 _model.Holes[i].Par = 4;
                 _model.Holes[i].Yardage = 0;
                 _model.Holes[i].Handicap = i - 8;
+            }
+        }
+
+        // Re-pull the par/handicap template for the new hole count when creating a tee.
+        if (!_isEdit) await ApplyParHandicapTemplateAsync();
+    }
+
+    private async Task OnWomensChanged(bool isWomens)
+    {
+        _model.IsWomens = isWomens;
+
+        // Men's and women's tees use different handicaps — re-pull the matching template.
+        if (!_isEdit) await ApplyParHandicapTemplateAsync();
+    }
+
+    /// <summary>
+    /// Pre-fills par + handicap on a NEW teebox from a representative tee of the same gender and
+    /// hole count. Leaves yardage untouched (the admin still enters those).
+    /// </summary>
+    private async Task ApplyParHandicapTemplateAsync()
+    {
+        var template = await CourseService.GetParHandicapTemplateAsync(CourseId, _model.IsWomens, _model.IsNineHole);
+        if (template.Count == 0) return;
+
+        var byNumber = template.ToDictionary(h => h.HoleNumber);
+        foreach (var hole in _model.Holes)
+        {
+            if (byNumber.TryGetValue(hole.HoleNumber, out var t))
+            {
+                hole.Par = t.Par;
+                hole.Handicap = t.Handicap;
             }
         }
     }
@@ -420,9 +454,15 @@
         // New teebox: nothing to version against, just create it.
         if (!_isEdit)
         {
-            await SaveAsync(saveAsNewVersion: false);
+            await SaveAsync(saveAsNewVersion: false, cascade: false);
             return;
         }
+
+        // Count the other active same-gender, same-hole-count tees the change could cascade to.
+        var genderLabel = _model.IsWomens ? "women's" : "men's";
+        var otherTeeCount = _courseTeeboxes.Count(t =>
+            t.ArchivedOn is null && t.TeeboxId != _model.TeeboxId
+            && t.IsWomens == _model.IsWomens && t.IsNineHole == _model.IsNineHole);
 
         // Editing: make the admin choose how to save so a re-rating is never saved over history
         // by accident. Hold _saving while the dialog is open so the underlying Save button is
@@ -430,15 +470,20 @@
         _saving = true;
         StateHasChanged();
 
-        string? choice;
+        SaveTeeboxModeDialog.ModeResult? choice;
         try
         {
-            var mode = await DialogService.OpenAsync<SaveTeeboxModeDialog>(
+            var result = await DialogService.OpenAsync<SaveTeeboxModeDialog>(
                 "Save Teebox",
-                new Dictionary<string, object> { { "TeeboxName", _model.TeeboxName } },
+                new Dictionary<string, object>
+                {
+                    { "TeeboxName", _model.TeeboxName },
+                    { "GenderLabel", genderLabel },
+                    { "OtherTeeCount", otherTeeCount }
+                },
                 new DialogOptions { Width = "540px", CloseDialogOnOverlayClick = false, CloseDialogOnEsc = true });
 
-            choice = mode as string;
+            choice = result as SaveTeeboxModeDialog.ModeResult;
         }
         finally
         {
@@ -447,10 +492,10 @@
 
         if (choice is null) return; // cancelled
 
-        await SaveAsync(saveAsNewVersion: choice == "new");
+        await SaveAsync(saveAsNewVersion: choice.Mode == "new", cascade: choice.Cascade);
     }
 
-    private async Task SaveAsync(bool saveAsNewVersion)
+    private async Task SaveAsync(bool saveAsNewVersion, bool cascade)
     {
         _saving = true;
         StateHasChanged();
@@ -464,7 +509,7 @@
 
             if (_isEdit && saveAsNewVersion)
             {
-                var newId = await CourseService.CreateTeeboxVersionAsync(_model, _currentUserId);
+                var newId = await CourseService.CreateTeeboxVersionAsync(_model, _currentUserId, cascade);
                 if (newId > 0)
                 {
                     NotificationService.Notify(new NotificationMessage
@@ -489,7 +534,7 @@
             }
             else if (_isEdit)
             {
-                var success = await CourseService.UpdateTeeboxAsync(_model, _currentUserId);
+                var success = await CourseService.UpdateTeeboxAsync(_model, _currentUserId, cascade);
                 if (success)
                 {
                     NotificationService.Notify(new NotificationMessage

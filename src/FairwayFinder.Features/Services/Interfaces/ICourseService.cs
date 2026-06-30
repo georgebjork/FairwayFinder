@@ -58,24 +58,36 @@ public interface ICourseService
     Task<TeeboxDetailResponse?> GetTeeboxDetailAsync(long teeboxId);
 
     /// <summary>
+    /// Gets a par + handicap template for pre-filling a NEW teebox, taken from a representative
+    /// active tee of the same gender and hole count (falls back to any active tee of the same hole
+    /// count). Returns an empty list when the course has no tee to template from.
+    /// </summary>
+    Task<List<HoleInfo>> GetParHandicapTemplateAsync(long courseId, bool isWomens, bool isNineHole);
+
+    /// <summary>
     /// Creates a new teebox with holes. Returns the new teebox ID.
     /// </summary>
     Task<long> CreateTeeboxAsync(SaveTeeboxRequest request, string userId);
 
     /// <summary>
     /// Updates a teebox and its holes in place. Existing rounds on this teebox reflect the new
-    /// values — use this for corrections (typos, slope/rating fixes).
+    /// values — use this for corrections (typos, slope/rating fixes). When
+    /// <paramref name="cascadeToSameGender"/> is true, the per-hole par and handicap are also
+    /// applied to every other active tee on the course of the same gender and hole count.
     /// </summary>
-    Task<bool> UpdateTeeboxAsync(SaveTeeboxRequest request, string userId);
+    Task<bool> UpdateTeeboxAsync(SaveTeeboxRequest request, string userId, bool cascadeToSameGender = false);
 
     /// <summary>
     /// Saves the changes as a NEW version of the teebox: archives the source teebox (kept for
     /// historical rounds) and inserts a new teebox with the updated values, sharing the source's
     /// lineage (<c>TeeboxGroupId</c>). Existing rounds keep their original values; only new rounds
     /// use the new teebox. <c>request.TeeboxId</c> is the active source being versioned.
+    /// When <paramref name="cascadeToSameGender"/> is true, every other active tee of the same
+    /// gender and hole count is also versioned (its old version archived, the new one carrying the
+    /// updated par + handicap but keeping its own rating/slope/yardage).
     /// Returns the new teebox ID, or 0 if the source is missing/already archived.
     /// </summary>
-    Task<long> CreateTeeboxVersionAsync(SaveTeeboxRequest request, string userId);
+    Task<long> CreateTeeboxVersionAsync(SaveTeeboxRequest request, string userId, bool cascadeToSameGender = false);
 
     /// <summary>
     /// Soft-deletes a teebox and all its holes.

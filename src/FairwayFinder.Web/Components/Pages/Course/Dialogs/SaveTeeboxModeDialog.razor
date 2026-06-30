@@ -35,11 +35,33 @@
         </div>
     </RadzenStack>
 
+    @* Cascade option — only when there are other same-gender tees to sync *@
+    @if (OtherTeeCount > 0)
+    {
+        <div class="cascade-box">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                <RadzenCheckBox TValue="bool" @bind-Value="_cascade" Name="Cascade" />
+                <RadzenLabel Component="Cascade" Style="cursor: pointer;"
+                             Text="@($"Apply this par & handicap to the other {GenderLabel} {(OtherTeeCount == 1 ? "tee" : "tees")} on this course ({OtherTeeCount})")" />
+            </RadzenStack>
+            @if (_cascade)
+            {
+                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0 rz-mt-1">
+                    @(_mode == "new"
+                        ? $"Each other {GenderLabel} tee will also be saved as a new version with these handicaps."
+                        : _mode == "update"
+                            ? $"Each other {GenderLabel} tee will be updated with these handicaps."
+                            : "Choose update or new teebox above; this will be applied to the other tees the same way.")
+                </RadzenText>
+            }
+        </div>
+    }
+
     <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
         <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button"
                       Click="@(() => DialogService.Close(null))" />
         <RadzenButton Text="Save" Icon="save" ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Button"
-                      Disabled="@(_mode is null)" Click="@(() => DialogService.Close(_mode))" />
+                      Disabled="@(_mode is null)" Click="OnSave" />
     </RadzenStack>
 </RadzenStack>
 
@@ -58,18 +80,37 @@
         border-color: var(--rz-primary);
         box-shadow: 0 0 0 1px var(--rz-primary);
     }
+    .cascade-box {
+        padding: 0.75rem;
+        border: 1px solid var(--rz-border-color);
+        border-radius: var(--rz-border-radius);
+        background: var(--rz-panel-background-color);
+    }
 </style>
 
 @code {
     [Parameter] public string TeeboxName { get; set; } = string.Empty;
 
+    /// <summary>e.g. "men's" / "women's" — describes the group the cascade applies to.</summary>
+    [Parameter] public string GenderLabel { get; set; } = string.Empty;
+
+    /// <summary>Number of other active same-gender tees; the cascade option is hidden when 0.</summary>
+    [Parameter] public int OtherTeeCount { get; set; }
+
     // null until the admin explicitly picks "update" or "new"; the Save button stays disabled until then.
     private string? _mode;
 
+    // Default on (per design) — keeping all same-gender tees in sync is the common case.
+    private bool _cascade = true;
+
     private void Select(string mode) => _mode = mode;
+
+    private void OnSave() => DialogService.Close(new ModeResult(_mode!, _cascade && OtherTeeCount > 0));
 
     private string OptionClass(string mode) => _mode == mode ? "mode-option mode-option-selected" : "mode-option";
 
     private string IconStyle(string mode) =>
         $"color: {(_mode == mode ? "var(--rz-primary)" : "var(--rz-text-disabled-color)")};";
+
+    public record ModeResult(string Mode, bool Cascade);
 }
