@@ -47,7 +47,7 @@ public class CourseService : ICourseService
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
         var query = dbContext.Teeboxes
-            .Where(t => t.CourseId == courseId && !t.IsDeleted);
+            .Where(t => t.CourseId == courseId && !t.IsDeleted && t.ArchivedOn == null);
 
         if (filterByPreferredTees is not null)
         {
@@ -124,7 +124,8 @@ public class CourseService : ICourseService
 
         var teeboxes = await dbContext.Teeboxes
             .Where(t => t.CourseId == courseId && !t.IsDeleted)
-            .OrderBy(t => t.YardageTotal)
+            .OrderBy(t => t.ArchivedOn != null) // active tees first, archived versions after
+            .ThenBy(t => t.YardageTotal)
             .Select(t => new TeeboxSummary
             {
                 TeeboxId = t.TeeboxId,
@@ -136,7 +137,9 @@ public class CourseService : ICourseService
                 YardageIn = t.YardageIn,
                 YardageTotal = t.YardageTotal,
                 IsNineHole = t.IsNineHole,
-                IsWomens = t.IsWomens
+                IsWomens = t.IsWomens,
+                TeeboxGroupId = t.TeeboxGroupId,
+                ArchivedOn = t.ArchivedOn
             })
             .ToListAsync();
 
@@ -280,6 +283,38 @@ public class CourseService : ICourseService
         };
     }
 
+    public async Task<List<HoleInfo>> GetParHandicapTemplateAsync(long courseId, bool isWomens, bool isNineHole)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        // Prefer a tee of the same gender + hole count; fall back to any active tee of the same hole count.
+        var template = await dbContext.Teeboxes
+            .Where(t => t.CourseId == courseId && !t.IsDeleted && t.ArchivedOn == null
+                        && t.IsNineHole == isNineHole && t.IsWomens == isWomens)
+            .OrderByDescending(t => t.CreatedOn)
+            .FirstOrDefaultAsync()
+            ?? await dbContext.Teeboxes
+                .Where(t => t.CourseId == courseId && !t.IsDeleted && t.ArchivedOn == null
+                            && t.IsNineHole == isNineHole)
+                .OrderByDescending(t => t.CreatedOn)
+                .FirstOrDefaultAsync();
+
+        if (template is null) return new List<HoleInfo>();
+
+        return await dbContext.Holes
+            .Where(h => h.TeeboxId == template.TeeboxId && !h.IsDeleted)
+            .OrderBy(h => h.HoleNumber)
+            .Select(h => new HoleInfo
+            {
+                HoleId = h.HoleId,
+                HoleNumber = h.HoleNumber,
+                Par = h.Par,
+                Yardage = h.Yardage,
+                Handicap = h.Handicap
+            })
+            .ToListAsync();
+    }
+
     public async Task<long> CreateTeeboxAsync(SaveTeeboxRequest request, string userId)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
@@ -314,6 +349,9 @@ public class CourseService : ICourseService
         dbContext.Teeboxes.Add(teebox);
         await dbContext.SaveChangesAsync();
 
+        // A brand-new tee is its own lineage; group id defaults to its own id.
+        teebox.TeeboxGroupId = teebox.TeeboxId;
+
         // Create holes
         var holes = request.Holes.Select(h => new Hole
         {
@@ -336,7 +374,7 @@ public class CourseService : ICourseService
         return teebox.TeeboxId;
     }
 
-    public async Task<bool> UpdateTeeboxAsync(SaveTeeboxRequest request, string userId)
+    public async Task<bool> UpdateTeeboxAsync(SaveTeeboxRequest request, string userId, bool cascadeToSameGender = false)
     {
         if (request.TeeboxId is null) return false;
 
@@ -413,9 +451,224 @@ public class CourseService : ICourseService
             existing.UpdatedOn = now;
         }
 
+        // Cascade par + handicap to the other active same-gender, same-hole-count tees (in place).
+        if (cascadeToSameGender)
+        {
+            var siblings = await GetActiveSiblingTeesAsync(
+                dbContext, request.CourseId, teebox.TeeboxId, request.IsWomens, request.IsNineHole);
+            ApplyCascadeInPlace(siblings, BuildParHandicapMap(request.Holes), userId, now);
+        }
+
         await dbContext.SaveChangesAsync();
 
         return true;
+    }
+
+    public async Task<long> CreateTeeboxVersionAsync(SaveTeeboxRequest request, string userId, bool cascadeToSameGender = false)
+    {
+        if (request.TeeboxId is null) return 0;
+
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        var now = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        // Source must be an active (non-archived, non-deleted) tee.
+        var source = await dbContext.Teeboxes
+            .Where(t => t.TeeboxId == request.TeeboxId && !t.IsDeleted && t.ArchivedOn == null)
+            .FirstOrDefaultAsync();
+
+        if (source is null) return 0;
+
+        // Capture the sibling tees to cascade to BEFORE we add the new primary version, so the
+        // freshly-created versions are not themselves picked up and re-versioned.
+        var siblings = cascadeToSameGender
+            ? await GetActiveSiblingTeesAsync(dbContext, source.CourseId, source.TeeboxId, request.IsWomens, request.IsNineHole)
+            : new List<(Teebox Tee, List<Hole> Holes)>();
+
+        // Compute aggregate values from hole data
+        var par = request.Holes.Sum(h => h.Par);
+        var yardageOut = request.Holes.Where(h => h.HoleNumber <= 9).Sum(h => h.Yardage);
+        var yardageIn = request.Holes.Where(h => h.HoleNumber > 9).Sum(h => h.Yardage);
+        var yardageTotal = request.Holes.Sum(h => h.Yardage);
+
+        // Insert the new version, inheriting the source's lineage so stats treat them as one tee.
+        var newTeebox = new Teebox
+        {
+            CourseId = source.CourseId,
+            TeeboxName = request.TeeboxName,
+            Par = par,
+            Rating = request.Rating,
+            Slope = request.Slope,
+            YardageOut = yardageOut,
+            YardageIn = yardageIn,
+            YardageTotal = yardageTotal,
+            IsNineHole = request.IsNineHole,
+            IsWomens = request.IsWomens,
+            TeeboxGroupId = source.TeeboxGroupId,
+            ArchivedOn = null,
+            ArchivedBy = null,
+            CreatedBy = userId,
+            CreatedOn = now,
+            UpdatedBy = userId,
+            UpdatedOn = now,
+            IsDeleted = false
+        };
+
+        dbContext.Teeboxes.Add(newTeebox);
+        await dbContext.SaveChangesAsync();
+
+        var holes = request.Holes.Select(h => new Hole
+        {
+            TeeboxId = newTeebox.TeeboxId,
+            CourseId = source.CourseId,
+            HoleNumber = h.HoleNumber,
+            Par = h.Par,
+            Yardage = h.Yardage,
+            Handicap = h.Handicap,
+            CreatedBy = userId,
+            CreatedOn = now,
+            UpdatedBy = userId,
+            UpdatedOn = now,
+            IsDeleted = false
+        }).ToList();
+
+        dbContext.Holes.AddRange(holes);
+
+        // Archive the source. Leave its holes and IsDeleted untouched so historical rounds
+        // still resolve their original rating/slope/handicaps.
+        source.ArchivedOn = now;
+        source.ArchivedBy = userId;
+        source.UpdatedBy = userId;
+        source.UpdatedOn = now;
+
+        await dbContext.SaveChangesAsync();
+
+        // Cascade to siblings: version each one too, syncing par + handicap while keeping its own
+        // rating/slope/yardage.
+        if (siblings.Count > 0)
+        {
+            var map = BuildParHandicapMap(request.Holes);
+            foreach (var (siblingTee, siblingHoles) in siblings)
+            {
+                await CreateSiblingVersionAsync(dbContext, siblingTee, siblingHoles, map, userId, now);
+            }
+            await dbContext.SaveChangesAsync();
+        }
+
+        return newTeebox.TeeboxId;
+    }
+
+    // ── Cascade helpers ──────────────────────────────────────
+
+    private static Dictionary<int, (int Par, int Handicap)> BuildParHandicapMap(IEnumerable<HoleEntry> holes)
+        => holes.ToDictionary(h => h.HoleNumber, h => (h.Par, h.Handicap));
+
+    /// <summary>
+    /// Loads the active (non-deleted, non-archived) tees on the course that share the given gender
+    /// and hole count, excluding the edited tee, together with each one's current holes.
+    /// </summary>
+    private async Task<List<(Teebox Tee, List<Hole> Holes)>> GetActiveSiblingTeesAsync(
+        ApplicationDbContext dbContext, long courseId, long excludeTeeboxId, bool isWomens, bool isNineHole)
+    {
+        var tees = await dbContext.Teeboxes
+            .Where(t => t.CourseId == courseId && t.TeeboxId != excludeTeeboxId
+                        && !t.IsDeleted && t.ArchivedOn == null
+                        && t.IsWomens == isWomens && t.IsNineHole == isNineHole)
+            .ToListAsync();
+
+        if (tees.Count == 0) return new List<(Teebox, List<Hole>)>();
+
+        var ids = tees.Select(t => t.TeeboxId).ToList();
+        var holesByTee = (await dbContext.Holes
+                .Where(h => ids.Contains(h.TeeboxId) && !h.IsDeleted)
+                .ToListAsync())
+            .GroupBy(h => h.TeeboxId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        return tees
+            .Select(t => (t, holesByTee.TryGetValue(t.TeeboxId, out var hs) ? hs : new List<Hole>()))
+            .ToList();
+    }
+
+    /// <summary>Applies the par + handicap map to each sibling's holes in place and recomputes its par total.</summary>
+    private static void ApplyCascadeInPlace(
+        List<(Teebox Tee, List<Hole> Holes)> siblings,
+        Dictionary<int, (int Par, int Handicap)> map, string userId, DateOnly now)
+    {
+        foreach (var (tee, holes) in siblings)
+        {
+            foreach (var h in holes)
+            {
+                if (map.TryGetValue(h.HoleNumber, out var v))
+                {
+                    h.Par = v.Par;
+                    h.Handicap = v.Handicap;
+                    h.UpdatedBy = userId;
+                    h.UpdatedOn = now;
+                }
+            }
+            tee.Par = holes.Sum(h => h.Par);
+            tee.UpdatedBy = userId;
+            tee.UpdatedOn = now;
+        }
+    }
+
+    /// <summary>
+    /// Creates a new version of a sibling tee: copies its own rating/slope/yardage/name/flags and
+    /// lineage, applies the cascaded par + handicap (keeping each hole's own yardage), and archives
+    /// the old version.
+    /// </summary>
+    private async Task CreateSiblingVersionAsync(
+        ApplicationDbContext dbContext, Teebox tee, List<Hole> holes,
+        Dictionary<int, (int Par, int Handicap)> map, string userId, DateOnly now)
+    {
+        int ParOf(Hole h) => map.TryGetValue(h.HoleNumber, out var v) ? v.Par : h.Par;
+        int HandicapOf(Hole h) => map.TryGetValue(h.HoleNumber, out var v) ? v.Handicap : h.Handicap;
+
+        var newTee = new Teebox
+        {
+            CourseId = tee.CourseId,
+            TeeboxName = tee.TeeboxName,
+            Par = holes.Sum(ParOf),
+            Rating = tee.Rating,
+            Slope = tee.Slope,
+            YardageOut = tee.YardageOut,
+            YardageIn = tee.YardageIn,
+            YardageTotal = tee.YardageTotal,
+            IsNineHole = tee.IsNineHole,
+            IsWomens = tee.IsWomens,
+            TeeboxGroupId = tee.TeeboxGroupId,
+            ArchivedOn = null,
+            ArchivedBy = null,
+            CreatedBy = userId,
+            CreatedOn = now,
+            UpdatedBy = userId,
+            UpdatedOn = now,
+            IsDeleted = false
+        };
+
+        dbContext.Teeboxes.Add(newTee);
+        await dbContext.SaveChangesAsync();
+
+        dbContext.Holes.AddRange(holes.Select(h => new Hole
+        {
+            TeeboxId = newTee.TeeboxId,
+            CourseId = tee.CourseId,
+            HoleNumber = h.HoleNumber,
+            Par = ParOf(h),
+            Yardage = h.Yardage,
+            Handicap = HandicapOf(h),
+            CreatedBy = userId,
+            CreatedOn = now,
+            UpdatedBy = userId,
+            UpdatedOn = now,
+            IsDeleted = false
+        }));
+
+        tee.ArchivedOn = now;
+        tee.ArchivedBy = userId;
+        tee.UpdatedBy = userId;
+        tee.UpdatedOn = now;
     }
 
     public async Task<bool> DeleteTeeboxAsync(long teeboxId, string userId)

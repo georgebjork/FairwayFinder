@@ -24,6 +24,19 @@ public partial class Teebox
 
     public bool IsWomens { get; set; }
 
+    /// <summary>
+    /// Lineage key linking all versions of the same logical tee. New teeboxes get their own id;
+    /// a teebox created via "save as new version" inherits the source's group id so stats can
+    /// treat the whole lineage as one tee while each round keeps its own historical values.
+    /// </summary>
+    public long TeeboxGroupId { get; set; }
+
+    /// <summary>Null = active. Set when this teebox has been superseded by a newer version.</summary>
+    public DateOnly? ArchivedOn { get; set; }
+
+    /// <summary>UserId of the admin who created the superseding version. Null while active.</summary>
+    public string? ArchivedBy { get; set; }
+
     public string CreatedBy { get; set; } = null!;
 
     public DateOnly CreatedOn { get; set; }

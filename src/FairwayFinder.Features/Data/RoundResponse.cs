@@ -130,6 +130,9 @@ public class RoundResponse
 public class RoundTeebox
 {
     public long TeeboxId { get; set; }
+
+    /// <summary>Lineage key shared by all versions of this logical tee; used to group stats across re-ratings.</summary>
+    public long TeeboxGroupId { get; set; }
     public string TeeboxName { get; set; } = string.Empty;
     public int Par { get; set; }
     public decimal Rating { get; set; }
@@ -144,6 +147,7 @@ public class RoundTeebox
         return new RoundTeebox
         {
             TeeboxId = teebox.TeeboxId,
+            TeeboxGroupId = teebox.TeeboxGroupId,
             TeeboxName = teebox.TeeboxName,
             Par = teebox.Par,
             Rating = teebox.Rating,
@@ -163,6 +167,10 @@ public class RoundHole
 {
     public long ScoreId { get; set; }
     public long HoleId { get; set; }
+
+    /// <summary>Teebox version this hole record belongs to. Used to source par/handicap/yardage
+    /// from the newest (active) teebox when aggregating across re-rated teebox versions.</summary>
+    public long TeeboxId { get; set; }
     public int HoleNumber { get; set; }
     public int Par { get; set; }
     public int Yardage { get; set; }
@@ -194,6 +202,7 @@ public class RoundHole
         {
             ScoreId = score?.ScoreId ?? 0,
             HoleId = hole.HoleId,
+            TeeboxId = hole.TeeboxId,
             HoleNumber = hole.HoleNumber,
             Par = hole.Par,
             Yardage = hole.Yardage,

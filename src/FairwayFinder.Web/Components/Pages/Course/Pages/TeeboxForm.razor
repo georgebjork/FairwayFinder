@@ -1,15 +1,18 @@
 @page "/courses/{CourseId:long}/teebox/new"
 @page "/courses/{CourseId:long}/teebox/{TeeboxId:long}/edit"
 @rendermode InteractiveServer
+@layout AdminLayout
 @attribute [Authorize(Roles = "Admin")]
 @using System.Security.Claims
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Web.Components.Pages.Course.Dialogs
 @using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
 @inject ICourseService CourseService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @inject NotificationService NotificationService
+@inject DialogService DialogService
 @inject BreadcrumbState BreadcrumbState
 
 <PageTitle>@(_isEdit ? "Edit Teebox" : "Add Teebox")</PageTitle>
@@ -31,31 +34,29 @@
     else
     {
         <RadzenTemplateForm TItem="SaveTeeboxRequest" Data="_model" Submit="OnSubmit">
+          <RadzenStack Gap="1.5rem">
 
             @* ── Teebox Info Card ── *@
             <RadzenCard class="rz-p-4">
-                <RadzenStack Gap="1rem">
+                <RadzenStack Gap="1.25rem">
                     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                        <RadzenIcon Icon="flag" Style="font-size: 1.5rem;" />
+                        <RadzenIcon Icon="flag" Style="font-size: 1.5rem; color: var(--rz-primary);" />
                         <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">@(_isEdit ? "Edit Teebox" : "New Teebox")</RadzenText>
                     </RadzenStack>
 
-                    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.End" Wrap="FlexWrap.Wrap">
-                        <RadzenStack Gap="0.25rem" Style="flex: 1; min-width: 180px;">
-                            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Teebox Name</RadzenText>
-                            <RadzenTextBox Name="TeeboxName" @bind-Value="_model.TeeboxName" Style="width: 100%;" Placeholder="e.g. Blue, White, Red" />
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Start" Wrap="FlexWrap.Wrap">
+                        <RadzenFormField Text="Teebox Name" Variant="Variant.Outlined" Style="flex: 1; min-width: 200px;">
+                            <RadzenTextBox Name="TeeboxName" @bind-Value="_model.TeeboxName" Placeholder="e.g. Blue, White, Red" />
                             <RadzenRequiredValidator Component="TeeboxName" Text="Teebox name is required." />
-                        </RadzenStack>
-                        <RadzenStack Gap="0.25rem" Style="min-width: 100px;">
-                            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Rating</RadzenText>
-                            <RadzenNumeric TValue="decimal" Name="Rating" @bind-Value="_model.Rating" Style="width: 100px;"
+                        </RadzenFormField>
+                        <RadzenFormField Text="Rating" Variant="Variant.Outlined" Style="width: 130px;">
+                            <RadzenNumeric TValue="decimal" Name="Rating" @bind-Value="_model.Rating" Style="width: 100%;"
                                            Min="0m" Max="99.9m" Step="0.1m" Format="F1" />
-                        </RadzenStack>
-                        <RadzenStack Gap="0.25rem" Style="min-width: 100px;">
-                            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Slope</RadzenText>
-                            <RadzenNumeric TValue="int" Name="Slope" @bind-Value="_model.Slope" Style="width: 100px;"
+                        </RadzenFormField>
+                        <RadzenFormField Text="Slope" Variant="Variant.Outlined" Style="width: 130px;">
+                            <RadzenNumeric TValue="int" Name="Slope" @bind-Value="_model.Slope" Style="width: 100%;"
                                            Min="55" Max="155" />
-                        </RadzenStack>
+                        </RadzenFormField>
                     </RadzenStack>
 
                     <RadzenStack Orientation="Orientation.Horizontal" Gap="1.5rem" Wrap="FlexWrap.Wrap">
@@ -64,7 +65,7 @@
                             <RadzenLabel Text="9-Hole Course" Component="IsNineHole" />
                         </RadzenStack>
                         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                            <RadzenCheckBox TValue="bool" @bind-Value="_model.IsWomens" Name="IsWomens" />
+                            <RadzenCheckBox TValue="bool" Value="_model.IsWomens" Name="IsWomens" Change="@((bool val) => OnWomensChanged(val))" />
                             <RadzenLabel Text="Women's Tees" Component="IsWomens" />
                         </RadzenStack>
                     </RadzenStack>
@@ -77,15 +78,15 @@
                     <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Hole Data</RadzenText>
 
                     @* Front 9 *@
-                    <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Front 9</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-m-0">Front 9</RadzenText>
                     <div style="overflow-x: auto;">
-                        <table class="rz-datatable" style="width: 100%; border-collapse: collapse;">
+                        <table class="teebox-grid">
                             <thead>
                                 <tr>
-                                    <th style="padding: 8px; text-align: center; border-bottom: 2px solid var(--rz-border-color); min-width: 60px;">Hole</th>
-                                    <th style="padding: 8px; text-align: center; border-bottom: 2px solid var(--rz-border-color); min-width: 80px;">Par</th>
-                                    <th style="padding: 8px; text-align: center; border-bottom: 2px solid var(--rz-border-color); min-width: 100px;">Yardage</th>
-                                    <th style="padding: 8px; text-align: center; border-bottom: 2px solid var(--rz-border-color); min-width: 100px;">Handicap</th>
+                                    <th class="col-hole">Hole</th>
+                                    <th class="col-par">Par</th>
+                                    <th class="col-yard">Yardage</th>
+                                    <th class="col-hcp">Handicap</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -93,27 +94,25 @@
                                 {
                                     var hole = _model.Holes[i];
                                     <tr>
-                                        <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--rz-border-color);">
-                                            <RadzenText TextStyle="TextStyle.Body1" class="rz-m-0"><strong>@hole.HoleNumber</strong></RadzenText>
+                                        <td class="hole-num">@hole.HoleNumber</td>
+                                        <td>
+                                            <RadzenDropDown TValue="int" @bind-Value="hole.Par" Data="_parOptions" Style="width: 72px;" />
                                         </td>
-                                        <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--rz-border-color);">
-                                            <RadzenDropDown TValue="int" @bind-Value="hole.Par" Data="_parOptions"
-                                                            Style="width: 70px;" />
+                                        <td>
+                                            <RadzenNumeric TValue="int" @bind-Value="hole.Yardage" ShowUpDown="false"
+                                                           Min="0" Max="700" Style="width: 88px;" />
                                         </td>
-                                        <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--rz-border-color);">
-                                            <RadzenNumeric TValue="int" @bind-Value="hole.Yardage" Style="width: 90px;" Min="0" Max="700" />
-                                        </td>
-                                        <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--rz-border-color);">
-                                            <RadzenNumeric TValue="int" @bind-Value="hole.Handicap" Style="width: 90px;" Min="1" Max="@_maxHandicap" />
+                                        <td>
+                                            <RadzenNumeric TValue="int" @bind-Value="hole.Handicap" ShowUpDown="false"
+                                                           Min="1" Max="@_maxHandicap" Style="width: 88px;" />
                                         </td>
                                     </tr>
                                 }
-                                @* Front 9 Totals *@
-                                <tr style="background-color: var(--rz-panel-background-color);">
-                                    <td style="padding: 8px; text-align: center; font-weight: bold; border-top: 2px solid var(--rz-border-color);">OUT</td>
-                                    <td style="padding: 8px; text-align: center; font-weight: bold; border-top: 2px solid var(--rz-border-color);">@FrontNinePar</td>
-                                    <td style="padding: 8px; text-align: center; font-weight: bold; border-top: 2px solid var(--rz-border-color);">@FrontNineYardage</td>
-                                    <td style="padding: 8px; text-align: center; border-top: 2px solid var(--rz-border-color);"></td>
+                                <tr class="subtotal-row">
+                                    <td>OUT</td>
+                                    <td>@FrontNinePar</td>
+                                    <td>@FrontNineYardage</td>
+                                    <td></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -122,15 +121,15 @@
                     @if (!_model.IsNineHole)
                     {
                         @* Back 9 *@
-                        <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Back 9</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-m-0">Back 9</RadzenText>
                         <div style="overflow-x: auto;">
-                            <table class="rz-datatable" style="width: 100%; border-collapse: collapse;">
+                            <table class="teebox-grid">
                                 <thead>
                                     <tr>
-                                        <th style="padding: 8px; text-align: center; border-bottom: 2px solid var(--rz-border-color); min-width: 60px;">Hole</th>
-                                        <th style="padding: 8px; text-align: center; border-bottom: 2px solid var(--rz-border-color); min-width: 80px;">Par</th>
-                                        <th style="padding: 8px; text-align: center; border-bottom: 2px solid var(--rz-border-color); min-width: 100px;">Yardage</th>
-                                        <th style="padding: 8px; text-align: center; border-bottom: 2px solid var(--rz-border-color); min-width: 100px;">Handicap</th>
+                                        <th class="col-hole">Hole</th>
+                                        <th class="col-par">Par</th>
+                                        <th class="col-yard">Yardage</th>
+                                        <th class="col-hcp">Handicap</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -138,27 +137,25 @@
                                     {
                                         var hole = _model.Holes[i];
                                         <tr>
-                                            <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--rz-border-color);">
-                                                <RadzenText TextStyle="TextStyle.Body1" class="rz-m-0"><strong>@hole.HoleNumber</strong></RadzenText>
+                                            <td class="hole-num">@hole.HoleNumber</td>
+                                            <td>
+                                                <RadzenDropDown TValue="int" @bind-Value="hole.Par" Data="_parOptions" Style="width: 72px;" />
                                             </td>
-                                            <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--rz-border-color);">
-                                                <RadzenDropDown TValue="int" @bind-Value="hole.Par" Data="_parOptions"
-                                                                Style="width: 70px;" />
+                                            <td>
+                                                <RadzenNumeric TValue="int" @bind-Value="hole.Yardage" ShowUpDown="false"
+                                                               Min="0" Max="700" Style="width: 88px;" />
                                             </td>
-                                            <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--rz-border-color);">
-                                                <RadzenNumeric TValue="int" @bind-Value="hole.Yardage" Style="width: 90px;" Min="0" Max="700" />
-                                            </td>
-                                            <td style="padding: 6px 8px; text-align: center; border-bottom: 1px solid var(--rz-border-color);">
-                                                <RadzenNumeric TValue="int" @bind-Value="hole.Handicap" Style="width: 90px;" Min="1" Max="@_maxHandicap" />
+                                            <td>
+                                                <RadzenNumeric TValue="int" @bind-Value="hole.Handicap" ShowUpDown="false"
+                                                               Min="1" Max="@_maxHandicap" Style="width: 88px;" />
                                             </td>
                                         </tr>
                                     }
-                                    @* Back 9 Totals *@
-                                    <tr style="background-color: var(--rz-panel-background-color);">
-                                        <td style="padding: 8px; text-align: center; font-weight: bold; border-top: 2px solid var(--rz-border-color);">IN</td>
-                                        <td style="padding: 8px; text-align: center; font-weight: bold; border-top: 2px solid var(--rz-border-color);">@BackNinePar</td>
-                                        <td style="padding: 8px; text-align: center; font-weight: bold; border-top: 2px solid var(--rz-border-color);">@BackNineYardage</td>
-                                        <td style="padding: 8px; text-align: center; border-top: 2px solid var(--rz-border-color);"></td>
+                                    <tr class="subtotal-row">
+                                        <td>IN</td>
+                                        <td>@BackNinePar</td>
+                                        <td>@BackNineYardage</td>
+                                        <td></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -190,18 +187,59 @@
                 </RadzenAlert>
             }
 
-            @* ── Action Buttons ── *@
-            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
-                <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button"
-                              Click="@(() => NavigationManager.NavigateTo($"/courses/{CourseId}"))" />
-                <RadzenButton Text="@(_isEdit ? "Save Changes" : "Create Teebox")" Icon="@(_isEdit ? "save" : "add")"
-                              ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Submit"
-                              IsBusy="_saving" BusyText="Saving..." />
-            </RadzenStack>
+            @* ── Action Footer ── *@
+            <RadzenCard class="rz-p-3">
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" AlignItems="AlignItems.Center" Gap="0.5rem">
+                    <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button"
+                                  Click="@(() => NavigationManager.NavigateTo($"/courses/{CourseId}"))" />
+                    <RadzenButton Text="@(_isEdit ? "Save Changes" : "Create Teebox")" Icon="@(_isEdit ? "save" : "add")"
+                                  ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Submit"
+                                  IsBusy="_saving" BusyText="Saving..." />
+                </RadzenStack>
+            </RadzenCard>
 
+          </RadzenStack>
         </RadzenTemplateForm>
     }
 </RadzenStack>
+
+<style>
+    .teebox-grid {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .teebox-grid th {
+        padding: 0.5rem;
+        text-align: center;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--rz-text-secondary-color);
+        border-bottom: 2px solid var(--rz-border-color);
+    }
+
+    .teebox-grid td {
+        padding: 0.4rem 0.5rem;
+        text-align: center;
+        border-bottom: 1px solid var(--rz-border-color);
+    }
+
+    .teebox-grid .col-hole { min-width: 56px; }
+    .teebox-grid .col-par { min-width: 76px; }
+    .teebox-grid .col-yard { min-width: 96px; }
+    .teebox-grid .col-hcp { min-width: 96px; }
+
+    .teebox-grid .hole-num {
+        font-weight: 600;
+    }
+
+    .teebox-grid .subtotal-row td {
+        background-color: var(--rz-panel-background-color);
+        font-weight: 700;
+        border-top: 2px solid var(--rz-border-color);
+        border-bottom: none;
+    }
+</style>
 
 @code {
     [Parameter] public long CourseId { get; set; }
@@ -214,6 +252,7 @@
     private bool _saving;
     private string _currentUserId = string.Empty;
     private string _courseName = string.Empty;
+    private List<TeeboxSummary> _courseTeeboxes = new();
     private List<string> _validationErrors = new();
 
     private readonly List<int> _parOptions = new() { 3, 4, 5 };
@@ -273,11 +312,13 @@
         {
             _model = new SaveTeeboxRequest { CourseId = CourseId };
             InitializeEmptyHoles();
+            await ApplyParHandicapTemplateAsync();
         }
 
-        // Fetch course name for breadcrumb
+        // Fetch course name + teebox list (used for breadcrumb and cascade targeting)
         var courseDetail = await CourseService.GetCourseDetailAsync(CourseId);
         _courseName = courseDetail?.CourseName ?? "Course";
+        _courseTeeboxes = courseDetail?.Teeboxes ?? new List<TeeboxSummary>();
 
         BreadcrumbState.Set(
             new BreadcrumbItem("Home", "/"),
@@ -319,7 +360,7 @@
         _model.Holes = _model.Holes.OrderBy(h => h.HoleNumber).ToList();
     }
 
-    private void OnNineHoleChanged(bool isNineHole)
+    private async Task OnNineHoleChanged(bool isNineHole)
     {
         _model.IsNineHole = isNineHole;
 
@@ -331,6 +372,37 @@
                 _model.Holes[i].Par = 4;
                 _model.Holes[i].Yardage = 0;
                 _model.Holes[i].Handicap = i - 8;
+            }
+        }
+
+        // Re-pull the par/handicap template for the new hole count when creating a tee.
+        if (!_isEdit) await ApplyParHandicapTemplateAsync();
+    }
+
+    private async Task OnWomensChanged(bool isWomens)
+    {
+        _model.IsWomens = isWomens;
+
+        // Men's and women's tees use different handicaps — re-pull the matching template.
+        if (!_isEdit) await ApplyParHandicapTemplateAsync();
+    }
+
+    /// <summary>
+    /// Pre-fills par + handicap on a NEW teebox from a representative tee of the same gender and
+    /// hole count. Leaves yardage untouched (the admin still enters those).
+    /// </summary>
+    private async Task ApplyParHandicapTemplateAsync()
+    {
+        var template = await CourseService.GetParHandicapTemplateAsync(CourseId, _model.IsWomens, _model.IsNineHole);
+        if (template.Count == 0) return;
+
+        var byNumber = template.ToDictionary(h => h.HoleNumber);
+        foreach (var hole in _model.Holes)
+        {
+            if (byNumber.TryGetValue(hole.HoleNumber, out var t))
+            {
+                hole.Par = t.Par;
+                hole.Handicap = t.Handicap;
             }
         }
     }
@@ -374,8 +446,57 @@
 
     private async Task OnSubmit()
     {
+        // Ignore re-entry: a second submit while the dialog/save is in flight would stack a
+        // second dialog behind the first.
+        if (_saving) return;
         if (!Validate()) return;
 
+        // New teebox: nothing to version against, just create it.
+        if (!_isEdit)
+        {
+            await SaveAsync(saveAsNewVersion: false, cascade: false);
+            return;
+        }
+
+        // Count the other active same-gender, same-hole-count tees the change could cascade to.
+        var genderLabel = _model.IsWomens ? "women's" : "men's";
+        var otherTeeCount = _courseTeeboxes.Count(t =>
+            t.ArchivedOn is null && t.TeeboxId != _model.TeeboxId
+            && t.IsWomens == _model.IsWomens && t.IsNineHole == _model.IsNineHole);
+
+        // Editing: make the admin choose how to save so a re-rating is never saved over history
+        // by accident. Hold _saving while the dialog is open so the underlying Save button is
+        // disabled and can't open a second dialog.
+        _saving = true;
+        StateHasChanged();
+
+        SaveTeeboxModeDialog.ModeResult? choice;
+        try
+        {
+            var result = await DialogService.OpenAsync<SaveTeeboxModeDialog>(
+                "Save Teebox",
+                new Dictionary<string, object>
+                {
+                    { "TeeboxName", _model.TeeboxName },
+                    { "GenderLabel", genderLabel },
+                    { "OtherTeeCount", otherTeeCount }
+                },
+                new DialogOptions { Width = "540px", CloseDialogOnOverlayClick = false, CloseDialogOnEsc = true });
+
+            choice = result as SaveTeeboxModeDialog.ModeResult;
+        }
+        finally
+        {
+            _saving = false;
+        }
+
+        if (choice is null) return; // cancelled
+
+        await SaveAsync(saveAsNewVersion: choice.Mode == "new", cascade: choice.Cascade);
+    }
+
+    private async Task SaveAsync(bool saveAsNewVersion, bool cascade)
+    {
         _saving = true;
         StateHasChanged();
 
@@ -386,9 +507,34 @@
             _model.Holes = _model.Holes.Take(holeCount).ToList();
             _model.CourseId = CourseId;
 
-            if (_isEdit)
+            if (_isEdit && saveAsNewVersion)
             {
-                var success = await CourseService.UpdateTeeboxAsync(_model, _currentUserId);
+                var newId = await CourseService.CreateTeeboxVersionAsync(_model, _currentUserId, cascade);
+                if (newId > 0)
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Success,
+                        Summary = "New Teebox Saved",
+                        Detail = $"A new version of {_model.TeeboxName} is now active. Previous rounds are unchanged.",
+                        Duration = 4000
+                    });
+                    NavigationManager.NavigateTo($"/courses/{CourseId}");
+                }
+                else
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Error,
+                        Summary = "Failed to Save New Teebox",
+                        Detail = "The teebox could not be versioned (it may already be archived).",
+                        Duration = 6000
+                    });
+                }
+            }
+            else if (_isEdit)
+            {
+                var success = await CourseService.UpdateTeeboxAsync(_model, _currentUserId, cascade);
                 if (success)
                 {
                     NotificationService.Notify(new NotificationMessage

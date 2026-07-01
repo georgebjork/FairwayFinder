@@ -261,6 +261,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.YardageIn).HasColumnName("yardage_in");
             entity.Property(e => e.YardageOut).HasColumnName("yardage_out");
             entity.Property(e => e.YardageTotal).HasColumnName("yardage_total");
+            entity.Property(e => e.TeeboxGroupId).HasColumnName("teebox_group_id");
+            entity.Property(e => e.ArchivedOn).HasColumnName("archived_on");
+            entity.Property(e => e.ArchivedBy).HasColumnName("archived_by");
+
+            entity.HasIndex(e => e.TeeboxGroupId).HasDatabaseName("ix_teebox_teebox_group_id");
 
             entity.HasOne(e => e.Course).WithMany().HasForeignKey(e => e.CourseId).OnDelete(DeleteBehavior.Restrict);
         });

@@ -285,7 +285,15 @@ public class RoundService : IRoundService
 
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
             var userId = request.UserId;
-        
+
+            // New rounds may only be created on an active teebox version.
+            var teebox = await dbContext.Teeboxes
+                .FirstOrDefaultAsync(t => t.TeeboxId == request.TeeboxId && !t.IsDeleted);
+            if (teebox is null || teebox.ArchivedOn is not null)
+            {
+                throw new InvalidOperationException("Cannot create a round on an archived or unknown teebox.");
+            }
+
         // Compute scores
         var frontHoles = request.Holes.Where(h => h.HoleNumber <= 9).ToList();
         var backHoles = request.Holes.Where(h => h.HoleNumber > 9).ToList();
@@ -566,7 +574,19 @@ public class RoundService : IRoundService
             {
                 return false;
             }
-        
+
+            // Allow keeping a round on its existing (possibly archived) teebox, but block
+            // switching to a different teebox that is archived/unknown.
+            if (request.TeeboxId != round.TeeboxId)
+            {
+                var teebox = await dbContext.Teeboxes
+                    .FirstOrDefaultAsync(t => t.TeeboxId == request.TeeboxId && !t.IsDeleted);
+                if (teebox is null || teebox.ArchivedOn is not null)
+                {
+                    throw new InvalidOperationException("Cannot move a round to an archived or unknown teebox.");
+                }
+            }
+
         var frontHoles = request.Holes.Where(h => h.HoleNumber <= 9).ToList();
         var backHoles = request.Holes.Where(h => h.HoleNumber > 9).ToList();
         var scoreOut = frontHoles.Sum(h => (int)h.Score);
