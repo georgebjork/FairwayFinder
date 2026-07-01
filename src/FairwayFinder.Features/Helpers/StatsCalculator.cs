@@ -616,7 +616,10 @@ public static class StatsCalculator
     /// <summary>
     /// Calculates per-hole aggregate stats across all rounds at a course.
     /// Groups hole data by HoleNumber (since different teeboxes have different HoleIds
-    /// but the same HoleNumber). Uses the most common par for each hole.
+    /// but the same HoleNumber). Hole metadata (par, handicap/stroke index, yardage) is
+    /// sourced from the newest teebox version played (max TeeboxId) so a re-rating that
+    /// changed these values doesn't get overridden by the most-played historical version.
+    /// Performance figures (scores, times played, FIR/GIR/putts) still aggregate across all rounds.
     /// </summary>
     public static List<HoleAggregateStats> CalculateHoleAggregateStats(IReadOnlyList<RoundResponse> rounds)
     {
@@ -635,21 +638,24 @@ public static class StatsCalculator
             {
                 var holes = g.ToList();
 
-                // Use the most common par for this hole number (handles multiple teeboxes)
-                var par = holes
-                    .GroupBy(h => h.Par)
-                    .OrderByDescending(pg => pg.Count())
-                    .First().Key;
+                // Source hole metadata from the newest teebox version played (max TeeboxId).
+                // A re-rating creates a new teebox with a higher id in the same lineage, so the
+                // newest version holds the current par/stroke-index/yardage. This avoids letting
+                // an archived version win just because it has more rounds of history.
+                var currentHole = holes.OrderByDescending(h => h.TeeboxId).First();
 
-                // Use the most common handicap for this hole number
-                var handicap = holes
-                    .Where(h => h.Handicap > 0)
-                    .GroupBy(h => h.Handicap)
-                    .OrderByDescending(hg => hg.Count())
-                    .Select(hg => hg.Key)
-                    .FirstOrDefault();
+                var par = currentHole.Par;
 
-                var avgYardage = (int)Math.Round(holes.Average(h => h.Yardage));
+                // Prefer the current teebox's stroke index; fall back to any version that has one
+                // set in case the newest record is missing it.
+                var handicap = currentHole.Handicap > 0
+                    ? currentHole.Handicap
+                    : holes.Where(h => h.Handicap > 0)
+                        .OrderByDescending(h => h.TeeboxId)
+                        .Select(h => h.Handicap)
+                        .FirstOrDefault();
+
+                var avgYardage = currentHole.Yardage;
                 var avgScore = Math.Round((decimal)holes.Average(h => h.Score!.Value), 2);
 
                 var result = new HoleAggregateStats

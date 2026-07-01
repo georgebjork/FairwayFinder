@@ -132,17 +132,17 @@ public class HoleAggregateStats
     public int HoleNumber { get; set; }
     
     /// <summary>
-    /// Most common par for this hole (across different teeboxes).
+    /// Par for this hole, taken from the newest teebox version played.
     /// </summary>
     public int Par { get; set; }
-    
+
     /// <summary>
-    /// Most common handicap for this hole (across different teeboxes).
+    /// Handicap (stroke index) for this hole, taken from the newest teebox version played.
     /// </summary>
     public int Handicap { get; set; }
-    
+
     /// <summary>
-    /// Average yardage across teeboxes played.
+    /// Yardage for this hole, taken from the newest teebox version played.
     /// </summary>
     public int AverageYardage { get; set; }
     

@@ -167,6 +167,10 @@ public class RoundHole
 {
     public long ScoreId { get; set; }
     public long HoleId { get; set; }
+
+    /// <summary>Teebox version this hole record belongs to. Used to source par/handicap/yardage
+    /// from the newest (active) teebox when aggregating across re-rated teebox versions.</summary>
+    public long TeeboxId { get; set; }
     public int HoleNumber { get; set; }
     public int Par { get; set; }
     public int Yardage { get; set; }
@@ -198,6 +202,7 @@ public class RoundHole
         {
             ScoreId = score?.ScoreId ?? 0,
             HoleId = hole.HoleId,
+            TeeboxId = hole.TeeboxId,
             HoleNumber = hole.HoleNumber,
             Par = hole.Par,
             Yardage = hole.Yardage,

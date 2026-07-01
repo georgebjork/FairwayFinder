@@ -40,7 +40,10 @@ public class StatsCalculatorTests
         short? score = null,
         bool? hitFairway = null,
         bool? hitGreen = null,
-        short? numberOfPutts = null)
+        short? numberOfPutts = null,
+        long teeboxId = 0,
+        int handicap = 0,
+        int yardage = 0)
     {
         RoundHoleStat? stats = null;
         if (hitFairway.HasValue || hitGreen.HasValue || numberOfPutts.HasValue)
@@ -56,8 +59,11 @@ public class StatsCalculatorTests
         return new RoundHole
         {
             HoleId = holeNumber,
+            TeeboxId = teeboxId,
             HoleNumber = holeNumber,
             Par = par,
+            Handicap = handicap,
+            Yardage = yardage,
             Score = score,
             Stats = stats
         };
@@ -2702,6 +2708,64 @@ public class StatsCalculatorTests
         Assert.Equal(1, dist.Birdies);    // score 2
         Assert.Equal(1, dist.Pars);       // score 3
         Assert.Equal(1, dist.Bogeys);     // score 4
+    }
+
+    #endregion
+
+    #region CalculateHoleAggregateStats Teebox Versioning Tests
+
+    [Fact]
+    public void CalculateHoleAggregateStats_ReRatedTeebox_UsesNewestVersionHandicap()
+    {
+        // Old (archived) teebox id 1 had stroke index 5; user played it 3 times.
+        // New (active) teebox id 2 re-rated the hole to stroke index 12; played once.
+        // The modal value would pick 5 (more rounds); we want the active version's 12.
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, holes: new() { CreateHole(1, 4, score: 4, teeboxId: 1, handicap: 5, yardage: 400) }),
+            CreateRound(2, 82, holes: new() { CreateHole(1, 4, score: 5, teeboxId: 1, handicap: 5, yardage: 400) }),
+            CreateRound(3, 79, holes: new() { CreateHole(1, 4, score: 4, teeboxId: 1, handicap: 5, yardage: 400) }),
+            CreateRound(4, 81, holes: new() { CreateHole(1, 4, score: 4, teeboxId: 2, handicap: 12, yardage: 410) }),
+        };
+
+        var result = StatsCalculator.CalculateHoleAggregateStats(rounds);
+
+        var hole1 = Assert.Single(result);
+        Assert.Equal(12, hole1.Handicap);        // newest teebox version wins
+        Assert.Equal(410, hole1.AverageYardage); // yardage also from newest version
+        Assert.Equal(4, hole1.TimesPlayed);      // performance still aggregates across all rounds
+    }
+
+    [Fact]
+    public void CalculateHoleAggregateStats_ReRatedPar_UsesNewestVersionPar()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, holes: new() { CreateHole(1, 5, score: 5, teeboxId: 1, handicap: 3) }),
+            CreateRound(2, 82, holes: new() { CreateHole(1, 5, score: 6, teeboxId: 1, handicap: 3) }),
+            CreateRound(3, 79, holes: new() { CreateHole(1, 4, score: 4, teeboxId: 2, handicap: 3) }),
+        };
+
+        var result = StatsCalculator.CalculateHoleAggregateStats(rounds);
+
+        var hole1 = Assert.Single(result);
+        Assert.Equal(4, hole1.Par); // newest version's par, not the more-played par 5
+    }
+
+    [Fact]
+    public void CalculateHoleAggregateStats_NewestVersionMissingHandicap_FallsBackToOlderVersion()
+    {
+        // Newest version somehow has no stroke index (0); fall back to a version that does.
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, holes: new() { CreateHole(1, 4, score: 4, teeboxId: 1, handicap: 7) }),
+            CreateRound(2, 82, holes: new() { CreateHole(1, 4, score: 5, teeboxId: 2, handicap: 0) }),
+        };
+
+        var result = StatsCalculator.CalculateHoleAggregateStats(rounds);
+
+        var hole1 = Assert.Single(result);
+        Assert.Equal(7, hole1.Handicap);
     }
 
     #endregion
