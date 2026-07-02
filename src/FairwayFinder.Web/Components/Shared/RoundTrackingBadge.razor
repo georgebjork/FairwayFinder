@@ -1,0 +1,19 @@
+@using FairwayFinder.Features.Enums
+@* Indicates how much detail a round was recorded with: shot tracking, hole stats, or just a score. *@
+
+@switch (Level)
+{
+    case RoundTrackingLevel.ShotTracked:
+        <RadzenBadge Text="Shot Tracked" BadgeStyle="BadgeStyle.Info" Shade="Shade.Lighter" title="Full shot-by-shot tracking (strokes gained available)" />
+        break;
+    case RoundTrackingLevel.HoleStats:
+        <RadzenBadge Text="Hole Stats" BadgeStyle="BadgeStyle.Secondary" Shade="Shade.Lighter" title="Per-hole stats (fairways, greens, putts)" />
+        break;
+    default:
+        <RadzenBadge Text="Basic" BadgeStyle="BadgeStyle.Light" Shade="Shade.Lighter" title="Score only" />
+        break;
+}
+
+@code {
+    [Parameter] public RoundTrackingLevel Level { get; set; }
+}

@@ -37,6 +37,7 @@ public class AdminRoundService(
                 r.FullRound,
                 r.ExcludeFromStats,
                 r.UsingShotTracking,
+                r.UsingHoleStats,
                 CourseName = r.Course.CourseName,
                 TeeboxName = r.Teebox.TeeboxName,
                 TeeboxPar = r.Teebox.Par,
@@ -72,6 +73,7 @@ public class AdminRoundService(
                 TeeboxName = r.TeeboxName,
                 ExcludeFromStats = r.ExcludeFromStats,
                 UsingShotTracking = r.UsingShotTracking,
+                UsingHoleStats = r.UsingHoleStats,
                 FullRound = r.FullRound
             };
         }).ToList();

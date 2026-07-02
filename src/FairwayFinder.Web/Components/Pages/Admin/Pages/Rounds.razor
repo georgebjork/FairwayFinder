@@ -65,6 +65,11 @@
                 <RadzenDataGridColumn TItem="AdminRoundListItemDto" Property="ToPar" Title="To Par" Width="90px" TextAlign="TextAlign.Center">
                     <Template Context="round">@FormatToPar(round.ToPar)</Template>
                 </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="AdminRoundListItemDto" Title="Tracking" Width="130px" TextAlign="TextAlign.Center" Sortable="false">
+                    <Template Context="round">
+                        <RoundTrackingBadge Level="round.TrackingLevel" />
+                    </Template>
+                </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="AdminRoundListItemDto" Title="In Stats" Width="110px" TextAlign="TextAlign.Center" Sortable="false">
                     <Template Context="round">
                         @if (round.ExcludeFromStats)
