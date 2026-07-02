@@ -14,14 +14,13 @@ public static class StrokesGainedCalculator
     public static double CalculateShotSg(
         int startDistance, string startUnit, LieType startLie,
         int? endDistance, string? endUnit, LieType? endLie,
-        int penaltyStrokes,
-        BaselineLevel level = BaselineLevel.Scratch)
+        int penaltyStrokes)
     {
-        var expectedStart = StrokesGainedBaseline.GetExpectedStrokes(startDistance, startUnit, startLie, level);
+        var expectedStart = StrokesGainedBaseline.GetExpectedStrokes(startDistance, startUnit, startLie);
 
         var expectedEnd = (endDistance == null || endLie == null)
             ? 0.0 // holed out
-            : StrokesGainedBaseline.GetExpectedStrokes(endDistance.Value, endUnit!, endLie.Value, level);
+            : StrokesGainedBaseline.GetExpectedStrokes(endDistance.Value, endUnit!, endLie.Value);
 
         return expectedStart - expectedEnd - (1 + penaltyStrokes);
     }
@@ -62,14 +61,12 @@ public static class StrokesGainedCalculator
             var sg = CalculateShotSg(
                 shot.StartDistance, shot.StartDistanceUnit, shot.StartLie,
                 shot.EndDistance, shot.EndDistanceUnit, shot.EndLie,
-                shot.PenaltyStrokes, level);
+                shot.PenaltyStrokes);
 
             var category = ClassifyShot(shot.StartLie, shot.StartDistance, holePar);
 
             shot.StrokesGained = Math.Round(sg, 2);
             shot.Category = category;
-
-            result.SgTotal += sg;
 
             switch (category)
             {
@@ -88,12 +85,23 @@ public static class StrokesGainedCalculator
             }
         }
 
-        // Round to 2 decimal places
-        result.SgTotal = Math.Round(result.SgTotal, 2);
+        // Apply the golfer-level offset, distributed per hole (offset values are 18-hole totals),
+        // so per-hole SG, the round summary, and averages all read relative to the selected level.
+        // Tour returns a zero offset (raw SG vs the benchmark).
+        var offsets = StrokesGainedBaseline.GetRoundOffsets(level);
+        const double perHole = 1.0 / StrokesGainedBaseline.OffsetRoundHoles;
+        result.SgOffTheTee += offsets.OffTheTee * perHole;
+        result.SgApproach += offsets.Approach * perHole;
+        result.SgAroundTheGreen += offsets.AroundTheGreen * perHole;
+        result.SgPutting += offsets.Putting * perHole;
+
+        // Round categories, then derive the total from them so the parts always sum to the total.
         result.SgPutting = Math.Round(result.SgPutting, 2);
         result.SgOffTheTee = Math.Round(result.SgOffTheTee, 2);
         result.SgApproach = Math.Round(result.SgApproach, 2);
         result.SgAroundTheGreen = Math.Round(result.SgAroundTheGreen, 2);
+        result.SgTotal = Math.Round(
+            result.SgPutting + result.SgOffTheTee + result.SgApproach + result.SgAroundTheGreen, 2);
 
         return result;
     }

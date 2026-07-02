@@ -1,4 +1,5 @@
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Enums;
 using FairwayFinder.Identity;
 
 namespace FairwayFinder.Features.Services.Interfaces;
@@ -26,6 +27,11 @@ public interface IProfileService
     /// Updates the user's preferred tee type used to filter teebox dropdowns.
     /// </summary>
     Task UpdatePreferredTeesAsync(string userId, PreferredTees preferredTees);
+
+    /// <summary>
+    /// Updates the user's default golfer level for strokes-gained calculations.
+    /// </summary>
+    Task UpdateSgBaselineLevelAsync(string userId, BaselineLevel level);
 
     /// <summary>
     /// Resolves a public identifier to a user ID, but only if the profile is public.

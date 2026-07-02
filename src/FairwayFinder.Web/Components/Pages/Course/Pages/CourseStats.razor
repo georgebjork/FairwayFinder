@@ -3,6 +3,7 @@
 @attribute [Authorize]
 @using System.Security.Claims
 @using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Enums
 @using FairwayFinder.Features.Services.Interfaces
 @using FairwayFinder.Web.Components.Pages.Home.Components
 @using FairwayFinder.Web.Components.Pages.Course.Components
@@ -90,6 +91,16 @@ else
                                         Change="@OnFilterChanged" />
                     </RadzenStack>
                 }
+                <RadzenStack Gap="0.25rem">
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Golfer Level</RadzenText>
+                    <RadzenDropDown TValue="BaselineLevel"
+                                    Data="@_baselineLevelOptions"
+                                    TextProperty="Text"
+                                    ValueProperty="Value"
+                                    @bind-Value="_sgBaselineLevel"
+                                    Style="width: 150px;"
+                                    Change="@OnFilterChanged" />
+                </RadzenStack>
             </AdditionalFilters>
         </StatsFilterBar>
 
@@ -300,7 +311,15 @@ else
         "9" => false,
         _ => null
     };
+    private BaselineLevel _sgBaselineLevel = BaselineLevel.Scratch;
     private bool _hasActiveFilters => _selectedTeeboxId.HasValue || _startDate.HasValue || _endDate.HasValue || _selectedRoundType != "all";
+
+    private static readonly IReadOnlyList<BaselineLevelOption> _baselineLevelOptions =
+        BaselineLevelExtensions.AllInDisplayOrder
+            .Select(l => new BaselineLevelOption(l, l.DisplayName()))
+            .ToList();
+
+    private record BaselineLevelOption(BaselineLevel Value, string Text);
 
     private readonly List<object> _roundTypeOptions = new()
     {
@@ -334,6 +353,7 @@ else
 
         var profile = await ProfileService.GetOrCreateProfileAsync(_userId);
         _isPublic = profile.IsPublic;
+        _sgBaselineLevel = profile.SgBaselineLevel;
         if (_isPublic)
         {
             var baseUri = NavigationManager.BaseUri.TrimEnd('/');
@@ -356,7 +376,7 @@ else
             FullRoundOnly = _fullRoundOnly
         };
 
-        var statsTask = StatsService.GetCourseStatsAsync(_userId, CourseId, _selectedTeeboxId, _startDate, _endDate, _fullRoundOnly);
+        var statsTask = StatsService.GetCourseStatsAsync(_userId, CourseId, _selectedTeeboxId, _startDate, _endDate, _fullRoundOnly, level: _sgBaselineLevel);
         var roundsTask = RoundService.GetRoundsByUserIdAsync(_userId, filter);
         await Task.WhenAll(statsTask, roundsTask);
         _stats = statsTask.Result;

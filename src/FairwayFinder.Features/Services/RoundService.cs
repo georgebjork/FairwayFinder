@@ -92,7 +92,10 @@ public class RoundService : IRoundService
     public Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId)
         => GetRoundsWithDetailsAsync(userId, filter: null);
 
-    public async Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId, StatsFilter? filter)
+    public Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId, StatsFilter? filter)
+        => GetRoundsWithDetailsAsync(userId, filter, BaselineLevel.Scratch);
+
+    public async Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId, StatsFilter? filter, BaselineLevel level)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
@@ -198,13 +201,16 @@ public class RoundService : IRoundService
         await LoadShotsForRoundsAsync(responses);
         foreach (var response in responses)
         {
-            PopulateStrokesGained(response);
+            PopulateStrokesGained(response, level);
         }
 
         return responses;
     }
 
-    public async Task<RoundResponse?> GetRoundByIdAsync(long roundId)
+    public Task<RoundResponse?> GetRoundByIdAsync(long roundId)
+        => GetRoundByIdAsync(roundId, BaselineLevel.Scratch);
+
+    public async Task<RoundResponse?> GetRoundByIdAsync(long roundId, BaselineLevel level)
     {
         RoundResponse? response;
 
@@ -269,7 +275,7 @@ public class RoundService : IRoundService
         if (response.UsingShotTracking)
         {
             await LoadShotsForRoundsAsync(new List<RoundResponse> { response });
-            PopulateStrokesGained(response);
+            PopulateStrokesGained(response, level);
         }
 
         return response;
@@ -1110,11 +1116,12 @@ public class RoundService : IRoundService
 
     /// <summary>
     /// Computes per-hole and round-level strokes gained live from the shots already attached to
-    /// the response. SG is never persisted — it is derived from shot data + the baseline tables on
-    /// every read so baseline changes take effect without re-saving rounds. Requires shots to have
-    /// been loaded first (via <see cref="LoadShotsForRoundsAsync"/>).
+    /// the response, relative to the given golfer <paramref name="level"/>. SG is never persisted —
+    /// it is derived from shot data + the baseline tables on every read so baseline/level changes
+    /// take effect without re-saving rounds. Requires shots to have been loaded first (via
+    /// <see cref="LoadShotsForRoundsAsync"/>).
     /// </summary>
-    private static void PopulateStrokesGained(RoundResponse response)
+    private static void PopulateStrokesGained(RoundResponse response, BaselineLevel level)
     {
         if (!response.UsingShotTracking) return;
 
@@ -1122,10 +1129,10 @@ public class RoundService : IRoundService
         foreach (var hole in response.Holes.Where(h => h.Shots is { Count: > 0 } && h.Score.HasValue))
         {
             holeResults.Add(StrokesGainedCalculator.CalculateHoleSg(
-                hole.Shots!, hole.Par, hole.HoleNumber, hole.Score!.Value));
+                hole.Shots!, hole.Par, hole.HoleNumber, hole.Score!.Value, level));
         }
 
         response.HoleByHoleSg = holeResults;
-        response.StrokesGained = StrokesGainedCalculator.CalculateRoundSg(response);
+        response.StrokesGained = StrokesGainedCalculator.CalculateRoundSg(response, level);
     }
 }

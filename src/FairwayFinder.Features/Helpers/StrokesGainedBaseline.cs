@@ -3,16 +3,20 @@ using FairwayFinder.Features.Enums;
 namespace FairwayFinder.Features.Helpers;
 
 /// <summary>
-/// Static lookup table for expected strokes to hole out from a given distance and lie.
-/// Data based on Mark Broadie's research (Every Shot Counts, 2014).
-/// Scratch baseline loaded from CSV reference data; Bogey/HighHandicap currently fall back to Scratch.
+/// Expected strokes to hole out from a given distance and lie (Mark Broadie, Every Shot Counts,
+/// 2014). This benchmark table is a single reference used for the raw per-shot SG calculation.
+///
+/// The selected golfer level (<see cref="BaselineLevel"/>) does NOT change this table — instead it
+/// contributes a per-category, per-round <see cref="GetRoundOffsets">offset</see> that is added to
+/// the computed SG so results read relative to that level. <see cref="BaselineLevel.Tour"/> = the
+/// raw benchmark (zero offset).
 /// </summary>
 public static class StrokesGainedBaseline
 {
     /// <summary>
     /// Returns expected strokes to hole out from a given distance and lie.
     /// </summary>
-    public static double GetExpectedStrokes(int distance, string unit, LieType lie, BaselineLevel level = BaselineLevel.Scratch)
+    public static double GetExpectedStrokes(int distance, string unit, LieType lie)
     {
         if (distance <= 0) return 0.0;
 
@@ -35,6 +39,34 @@ public static class StrokesGainedBaseline
     /// Returns 0.0 — used when the ball is holed (EndDistance is null).
     /// </summary>
     public static double GetExpectedStrokesHoled() => 0.0;
+
+    // ================================================================
+    // Golfer-level offsets (REFERENCED CHARTS sheet, "Every Shot Counts")
+    //
+    // Per-category strokes a golfer of the given level is expected to lose over an 18-hole round
+    // versus the benchmark table above. Added to the raw SG (scaled per hole) so a golfer playing
+    // exactly at the selected level reads ~0. Tour = benchmark itself (no offset).
+    // ================================================================
+
+    /// <summary>Number of holes the offset values are calibrated to (18-hole round).</summary>
+    public const int OffsetRoundHoles = 18;
+
+    private static readonly Dictionary<BaselineLevel, SgCategoryOffsets> LevelOffsets = new()
+    {
+        [BaselineLevel.Tour]    = new SgCategoryOffsets(0.00, 0.00, 0.00, 0.00),
+        [BaselineLevel.Scratch] = new SgCategoryOffsets(1.78, 2.03, 0.39, 0.94),
+        [BaselineLevel.Hcp5]    = new SgCategoryOffsets(3.31, 4.29, 0.97, 1.42),
+        [BaselineLevel.Hcp10]   = new SgCategoryOffsets(3.61, 6.11, 1.33, 2.77),
+        [BaselineLevel.Hcp15]   = new SgCategoryOffsets(4.86, 8.54, 4.46, 4.46),
+        [BaselineLevel.Hcp20]   = new SgCategoryOffsets(5.75, 11.26, 4.48, 4.48),
+        [BaselineLevel.Hcp25]   = new SgCategoryOffsets(7.53, 14.23, 4.71, 4.71)
+    };
+
+    /// <summary>
+    /// Per-round category offsets for a golfer level (18-hole basis). Unknown levels return zero.
+    /// </summary>
+    public static SgCategoryOffsets GetRoundOffsets(BaselineLevel level)
+        => LevelOffsets.TryGetValue(level, out var offsets) ? offsets : default;
 
     // ================================================================
     // O(1) array-based lookups — data from CSV reference tables

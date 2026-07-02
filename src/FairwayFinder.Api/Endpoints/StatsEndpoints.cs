@@ -1,6 +1,7 @@
 using FairwayFinder.Api.Exceptions;
 using FairwayFinder.Api.Extensions;
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Enums;
 using FairwayFinder.Features.Services.Interfaces;
 
 namespace FairwayFinder.Api.Endpoints;
@@ -19,8 +20,10 @@ public static class StatsEndpoints
             DateOnly? endDate,
             long? courseId,
             int? year,
+            BaselineLevel? level,
             HttpContext ctx,
-            IStatsService statsService) =>
+            IStatsService statsService,
+            IProfileService profileService) =>
         {
             var userId = ctx.User.GetUserId();
 
@@ -33,7 +36,8 @@ public static class StatsEndpoints
                 Year = year
             };
 
-            var stats = await statsService.GetUserStatsAsync(userId, filter.HasFilters ? filter : null);
+            var effectiveLevel = await ResolveLevelAsync(level, userId, profileService);
+            var stats = await statsService.GetUserStatsAsync(userId, filter.HasFilters ? filter : null, level: effectiveLevel);
             return Results.Ok(stats);
         });
 
@@ -44,11 +48,14 @@ public static class StatsEndpoints
             DateOnly? endDate,
             bool? fullRoundOnly,
             int? year,
+            BaselineLevel? level,
             HttpContext ctx,
-            IStatsService statsService) =>
+            IStatsService statsService,
+            IProfileService profileService) =>
         {
             var userId = ctx.User.GetUserId();
-            var stats = await statsService.GetCourseStatsAsync(userId, courseId, teeboxId, startDate, endDate, fullRoundOnly, year);
+            var effectiveLevel = await ResolveLevelAsync(level, userId, profileService);
+            var stats = await statsService.GetCourseStatsAsync(userId, courseId, teeboxId, startDate, endDate, fullRoundOnly, year, effectiveLevel);
             if (stats is null)
                 throw new NotFoundException("CourseStats", courseId);
 
@@ -62,11 +69,14 @@ public static class StatsEndpoints
             DateOnly? endDate,
             bool? fullRoundOnly,
             int? year,
+            BaselineLevel? level,
             HttpContext ctx,
-            IStatsService statsService) =>
+            IStatsService statsService,
+            IProfileService profileService) =>
         {
             var userId = ctx.User.GetUserId();
-            var stats = await statsService.GetCourseHoleStatsAsync(userId, courseId, teeboxId, startDate, endDate, fullRoundOnly, year);
+            var effectiveLevel = await ResolveLevelAsync(level, userId, profileService);
+            var stats = await statsService.GetCourseHoleStatsAsync(userId, courseId, teeboxId, startDate, endDate, fullRoundOnly, year, effectiveLevel);
             if (stats is null)
                 throw new NotFoundException("CourseHoleStats", courseId);
 
@@ -89,4 +99,8 @@ public static class StatsEndpoints
 
         return app;
     }
+
+    // Uses the explicit ?level= when supplied, otherwise the user's saved default (SgBaselineLevel).
+    private static async Task<BaselineLevel> ResolveLevelAsync(BaselineLevel? level, string userId, IProfileService profileService)
+        => level ?? (await profileService.GetOrCreateProfileAsync(userId)).SgBaselineLevel;
 }

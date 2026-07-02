@@ -1,4 +1,5 @@
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Enums;
 
 namespace FairwayFinder.Features.Services.Interfaces;
 
@@ -27,11 +28,22 @@ public interface IRoundService
     /// for the filtered round set. Rounds marked ExcludeFromStats are omitted.
     /// </summary>
     Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId, StatsFilter? filter);
-    
+
+    /// <summary>
+    /// Fully loaded rounds as above, with strokes gained computed relative to the given golfer
+    /// <paramref name="level"/> (Tour = raw benchmark; handicap levels apply a per-category offset).
+    /// </summary>
+    Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId, StatsFilter? filter, BaselineLevel level);
+
     /// <summary>
     /// Gets a single round with all related data (holes, scores, stats)
     /// </summary>
     Task<RoundResponse?> GetRoundByIdAsync(long roundId);
+
+    /// <summary>
+    /// Gets a single round as above, with strokes gained computed relative to the given golfer level.
+    /// </summary>
+    Task<RoundResponse?> GetRoundByIdAsync(long roundId, BaselineLevel level);
 
     /// <summary>
     /// Gets a list of all courses that a user has played
