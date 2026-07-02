@@ -1136,13 +1136,22 @@ public class RoundService : IRoundService
     /// take effect without re-saving rounds. Requires shots to have been loaded first (via
     /// <see cref="LoadShotsForRoundsAsync"/>).
     /// </summary>
-    private static void PopulateStrokesGained(RoundResponse response, BaselineLevel level)
+    private void PopulateStrokesGained(RoundResponse response, BaselineLevel level)
     {
         if (!response.UsingShotTracking) return;
 
         var holeResults = new List<StrokesGainedHoleResult>();
         foreach (var hole in response.Holes.Where(h => h.Shots is { Count: > 0 } && h.Score.HasValue))
         {
+            // Skip holes whose stored shots are malformed rather than emitting fabricated SG.
+            if (!StrokesGainedCalculator.AreShotsScorable(hole.Shots!, hole.Score!.Value))
+            {
+                _logger.LogWarning(
+                    "Skipping strokes gained for round {RoundId} hole {HoleNumber}: shot data failed validation.",
+                    response.RoundId, hole.HoleNumber);
+                continue;
+            }
+
             holeResults.Add(StrokesGainedCalculator.CalculateHoleSg(
                 hole.Shots!, hole.Par, hole.HoleNumber, hole.Score!.Value, level));
         }

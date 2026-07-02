@@ -223,6 +223,50 @@ public class StrokesGainedCalculatorTests
         Assert.Contains(errors, e => e.Contains("Last shot must be holed"));
     }
 
+    [Fact]
+    public void Validate_rejects_zero_distance_placeholder_row()
+    {
+        // The malformed shape seen from the API: shot 1 (457, +1 penalty) chained to a
+        // StartDistance = 0 placeholder row. A 0 distance is read as "in the hole" by the SG math.
+        var shots = new List<ShotData>
+        {
+            new() { ShotNumber = 1, StartDistance = 457, StartDistanceUnit = DistanceUnit.Yards, StartLie = LieType.Tee,
+                     EndDistance = 0, EndDistanceUnit = DistanceUnit.Yards, EndLie = LieType.Fairway, PenaltyStrokes = 1 },
+            new() { ShotNumber = 2, StartDistance = 0, StartDistanceUnit = DistanceUnit.Yards, StartLie = LieType.Fairway,
+                     EndDistance = null, EndDistanceUnit = null, EndLie = null, PenaltyStrokes = 0 },
+        };
+
+        var errors = StrokesGainedCalculator.ValidateShots(shots, holeScore: 3);
+
+        Assert.NotEmpty(errors);
+        Assert.Contains(errors, e => e.Contains("at least 1"));
+        Assert.False(StrokesGainedCalculator.AreShotsScorable(shots, holeScore: 3));
+    }
+
+    [Fact]
+    public void Validate_accepts_ob_replay_sequence()
+    {
+        // Correct representation of a stroke-and-distance OB tee shot: the penalty rides on a
+        // real shot whose end equals its start (replayed from the tee), then the chain continues.
+        var shots = new List<ShotData>
+        {
+            new() { ShotNumber = 1, StartDistance = 457, StartDistanceUnit = DistanceUnit.Yards, StartLie = LieType.Tee,
+                     EndDistance = 457, EndDistanceUnit = DistanceUnit.Yards, EndLie = LieType.Tee, PenaltyStrokes = 1 },
+            new() { ShotNumber = 2, StartDistance = 457, StartDistanceUnit = DistanceUnit.Yards, StartLie = LieType.Tee,
+                     EndDistance = 150, EndDistanceUnit = DistanceUnit.Yards, EndLie = LieType.Fairway, PenaltyStrokes = 0 },
+            new() { ShotNumber = 3, StartDistance = 150, StartDistanceUnit = DistanceUnit.Yards, StartLie = LieType.Fairway,
+                     EndDistance = 10, EndDistanceUnit = DistanceUnit.Feet, EndLie = LieType.Green, PenaltyStrokes = 0 },
+            new() { ShotNumber = 4, StartDistance = 10, StartDistanceUnit = DistanceUnit.Feet, StartLie = LieType.Green,
+                     EndDistance = null, EndDistanceUnit = null, EndLie = null, PenaltyStrokes = 0 },
+        };
+
+        // score = 4 shots + 1 penalty = 5
+        var errors = StrokesGainedCalculator.ValidateShots(shots, holeScore: 5, holeYardage: 457);
+
+        Assert.Empty(errors);
+        Assert.True(StrokesGainedCalculator.AreShotsScorable(shots, holeScore: 5));
+    }
+
     #endregion
 
     #region HoleStat Derivation Tests
