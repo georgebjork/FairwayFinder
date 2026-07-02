@@ -399,6 +399,11 @@ public class RoundService : IRoundService
                     ApproachYardage = approachYardage,
                     TeeShotOb = teeShotOb,
                     ApproachShotOb = approachShotOb,
+                    // Fields shots can't derive — accept them from the client if supplied
+                    MissFairwayType = hole.MissFairwayType,
+                    MissGreenType = hole.MissGreenType,
+                    TeeShotOutOfPosition = hole.TeeShotOutOfPosition,
+                    ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition,
                     CreatedBy = userId,
                     CreatedOn = today,
                     UpdatedBy = userId,
@@ -738,6 +743,11 @@ public class RoundService : IRoundService
                     existingStat.ApproachYardage = approachYardage;
                     existingStat.TeeShotOb = teeShotOb;
                     existingStat.ApproachShotOb = approachShotOb;
+                    // Fields shots can't derive — accept them from the client if supplied
+                    existingStat.MissFairwayType = hole.MissFairwayType;
+                    existingStat.MissGreenType = hole.MissGreenType;
+                    existingStat.TeeShotOutOfPosition = hole.TeeShotOutOfPosition;
+                    existingStat.ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition;
                     existingStat.UpdatedBy = userId;
                     existingStat.UpdatedOn = today;
                 }
@@ -754,6 +764,11 @@ public class RoundService : IRoundService
                         ApproachYardage = approachYardage,
                         TeeShotOb = teeShotOb,
                         ApproachShotOb = approachShotOb,
+                        // Fields shots can't derive — accept them from the client if supplied
+                        MissFairwayType = hole.MissFairwayType,
+                        MissGreenType = hole.MissGreenType,
+                        TeeShotOutOfPosition = hole.TeeShotOutOfPosition,
+                        ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition,
                         CreatedBy = userId,
                         CreatedOn = today,
                         UpdatedBy = userId,
