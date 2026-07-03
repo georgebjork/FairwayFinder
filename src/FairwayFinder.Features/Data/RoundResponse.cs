@@ -1,4 +1,5 @@
 using FairwayFinder.Data.Entities;
+using FairwayFinder.Features.Enums;
 
 namespace FairwayFinder.Features.Data;
 
@@ -16,6 +17,12 @@ public class RoundResponse
     public bool UsingShotTracking { get; set; }
     public bool ExcludeFromStats { get; set; }
     public bool FullRound { get; set; }
+
+    /// <summary>
+    /// Derived detail level of the round (Basic / HoleStats / ShotTracked), classified from the
+    /// tracking flags. Exposed so API clients don't have to replicate the derivation.
+    /// </summary>
+    public RoundTrackingLevel TrackingLevel => RoundTracking.Classify(UsingShotTracking, UsingHoleStats);
     
     // Course info
     public long CourseId { get; set; }
@@ -106,20 +113,9 @@ public class RoundResponse
             Teebox = RoundTeebox.From(teebox),
             Stats = roundStat != null ? RoundStats.From(roundStat) : null,
             Holes = holes ?? new(),
-            FullRound = round.FullRound,
-            StrokesGained = roundStat?.SgTotal.HasValue == true
-                ? new StrokesGainedSummary
-                {
-                    SgTotal = roundStat.SgTotal.Value,
-                    SgPutting = roundStat.SgPutting ?? 0,
-                    SgTeeToGreen = roundStat.SgTeeToGreen ?? 0,
-                    SgOffTheTee = roundStat.SgOffTheTee ?? 0,
-                    SgApproach = roundStat.SgApproach ?? 0,
-                    SgAroundTheGreen = roundStat.SgAroundTheGreen ?? 0,
-                    RoundsIncluded = 1,
-                    HolesWithShots = holes?.Count(h => h.Shots is { Count: > 0 }) ?? 0
-                }
-                : null
+            FullRound = round.FullRound
+            // StrokesGained is computed live from shot data by RoundService after shots load —
+            // it is intentionally not read from the stored round_stats.sg_* columns.
         };
     }
 }

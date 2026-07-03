@@ -14,14 +14,13 @@ public static class StrokesGainedCalculator
     public static double CalculateShotSg(
         int startDistance, string startUnit, LieType startLie,
         int? endDistance, string? endUnit, LieType? endLie,
-        int penaltyStrokes,
-        BaselineLevel level = BaselineLevel.Scratch)
+        int penaltyStrokes)
     {
-        var expectedStart = StrokesGainedBaseline.GetExpectedStrokes(startDistance, startUnit, startLie, level);
+        var expectedStart = StrokesGainedBaseline.GetExpectedStrokes(startDistance, startUnit, startLie);
 
         var expectedEnd = (endDistance == null || endLie == null)
             ? 0.0 // holed out
-            : StrokesGainedBaseline.GetExpectedStrokes(endDistance.Value, endUnit!, endLie.Value, level);
+            : StrokesGainedBaseline.GetExpectedStrokes(endDistance.Value, endUnit!, endLie.Value);
 
         return expectedStart - expectedEnd - (1 + penaltyStrokes);
     }
@@ -62,14 +61,12 @@ public static class StrokesGainedCalculator
             var sg = CalculateShotSg(
                 shot.StartDistance, shot.StartDistanceUnit, shot.StartLie,
                 shot.EndDistance, shot.EndDistanceUnit, shot.EndLie,
-                shot.PenaltyStrokes, level);
+                shot.PenaltyStrokes);
 
             var category = ClassifyShot(shot.StartLie, shot.StartDistance, holePar);
 
             shot.StrokesGained = Math.Round(sg, 2);
             shot.Category = category;
-
-            result.SgTotal += sg;
 
             switch (category)
             {
@@ -88,12 +85,23 @@ public static class StrokesGainedCalculator
             }
         }
 
-        // Round to 2 decimal places
-        result.SgTotal = Math.Round(result.SgTotal, 2);
+        // Apply the golfer-level offset, distributed per hole (offset values are 18-hole totals),
+        // so per-hole SG, the round summary, and averages all read relative to the selected level.
+        // Tour returns a zero offset (raw SG vs the benchmark).
+        var offsets = StrokesGainedBaseline.GetRoundOffsets(level);
+        const double perHole = 1.0 / StrokesGainedBaseline.OffsetRoundHoles;
+        result.SgOffTheTee += offsets.OffTheTee * perHole;
+        result.SgApproach += offsets.Approach * perHole;
+        result.SgAroundTheGreen += offsets.AroundTheGreen * perHole;
+        result.SgPutting += offsets.Putting * perHole;
+
+        // Round categories, then derive the total from them so the parts always sum to the total.
         result.SgPutting = Math.Round(result.SgPutting, 2);
         result.SgOffTheTee = Math.Round(result.SgOffTheTee, 2);
         result.SgApproach = Math.Round(result.SgApproach, 2);
         result.SgAroundTheGreen = Math.Round(result.SgAroundTheGreen, 2);
+        result.SgTotal = Math.Round(
+            result.SgPutting + result.SgOffTheTee + result.SgApproach + result.SgAroundTheGreen, 2);
 
         return result;
     }
@@ -106,7 +114,10 @@ public static class StrokesGainedCalculator
     {
         var summary = new StrokesGainedSummary { RoundsIncluded = 1 };
 
-        var holesWithShots = round.Holes.Where(h => h.Shots is { Count: > 0 }).ToList();
+        // Skip holes whose stored shots are malformed so corrupt legacy data doesn't fabricate SG.
+        var holesWithShots = round.Holes
+            .Where(h => h.Shots is { Count: > 0 } && h.Score.HasValue && AreShotsScorable(h.Shots, h.Score.Value))
+            .ToList();
         summary.HolesWithShots = holesWithShots.Count;
 
         foreach (var hole in holesWithShots)
@@ -303,10 +314,13 @@ public static class StrokesGainedCalculator
     }
 
     /// <summary>
-    /// Validates shot data integrity for a hole.
-    /// Returns a list of validation errors (empty = valid).
+    /// Validates shot data integrity for a hole. Returns a list of validation errors (empty = valid).
+    /// Shot numbering in messages is 1-based by list position (the server re-numbers shots on save,
+    /// so the client-supplied <see cref="ShotData.ShotNumber"/> is not relied upon here).
+    /// <paramref name="holeYardage"/> is optional: when null, the first-shot-start-distance check is
+    /// skipped (callers that don't have the teebox yardage handy, e.g. the API validators).
     /// </summary>
-    public static List<string> ValidateShots(List<ShotData> shots, int holeYardage, int holeScore)
+    public static List<string> ValidateShots(List<ShotData> shots, int holeScore, int? holeYardage = null)
     {
         var errors = new List<string>();
 
@@ -316,16 +330,42 @@ public static class StrokesGainedCalculator
             return errors;
         }
 
-        // Shot 1 must start from tee at hole yardage
+        // Shot 1 must start from the tee (at hole yardage when known).
         if (shots[0].StartLie != LieType.Tee)
             errors.Add("First shot must start from the tee.");
-        if (shots[0].StartDistance != holeYardage)
-            errors.Add($"First shot start distance ({shots[0].StartDistance}) must equal hole yardage ({holeYardage}).");
+        if (holeYardage.HasValue && shots[0].StartDistance != holeYardage.Value)
+            errors.Add($"First shot start distance ({shots[0].StartDistance}) must equal hole yardage ({holeYardage.Value}).");
 
-        // Last shot must be holed
-        var lastShot = shots[^1];
-        if (lastShot.EndDistance != null || lastShot.EndLie != null)
-            errors.Add("Last shot must be holed (EndDistance and EndLie must be null).");
+        // Every shot must start from a real position (distance-to-hole >= 1). A 0/negative distance
+        // is read as "in the hole" by the SG math (GetExpectedStrokes returns 0), which corrupts the
+        // result — this is the guard that catches placeholder rows like StartDistance = 0.
+        for (int i = 0; i < shots.Count; i++)
+        {
+            if (shots[i].StartDistance < 1)
+                errors.Add($"Shot {i + 1}: start distance ({shots[i].StartDistance}) must be at least 1.");
+        }
+
+        // Only the final shot may be holed. Holed is encoded as EndDistance/EndLie == null — never 0.
+        // Every non-final shot must end at a real position (distance >= 1).
+        for (int i = 0; i < shots.Count; i++)
+        {
+            var shot = shots[i];
+            var isHoled = shot.EndDistance == null && shot.EndLie == null;
+
+            if (i == shots.Count - 1)
+            {
+                if (!isHoled)
+                    errors.Add("Last shot must be holed (EndDistance and EndLie must be null).");
+            }
+            else if (shot.EndDistance == null || shot.EndLie == null)
+            {
+                errors.Add($"Shot {i + 1}: only the final shot may be holed (EndDistance and EndLie must be set).");
+            }
+            else if (shot.EndDistance < 1)
+            {
+                errors.Add($"Shot {i + 1}: end distance ({shot.EndDistance}) must be at least 1.");
+            }
+        }
 
         // Chain continuity
         for (int i = 0; i < shots.Count - 1; i++)
@@ -345,14 +385,22 @@ public static class StrokesGainedCalculator
             errors.Add($"Score mismatch: shots ({shots.Count}) + penalties ({shots.Sum(s => s.PenaltyStrokes)}) = {calculatedScore}, expected {holeScore}.");
 
         // Penalty validation
-        foreach (var shot in shots)
+        for (int i = 0; i < shots.Count; i++)
         {
-            if (shot.PenaltyStrokes < 0 || shot.PenaltyStrokes > 2)
-                errors.Add($"Shot {shot.ShotNumber}: penalty strokes must be 0, 1, or 2.");
+            if (shots[i].PenaltyStrokes < 0 || shots[i].PenaltyStrokes > 2)
+                errors.Add($"Shot {i + 1}: penalty strokes must be 0, 1, or 2.");
         }
 
         return errors;
     }
+
+    /// <summary>
+    /// True when a hole's shots form a valid, scorable chain (no validation errors). Used on read
+    /// paths to skip strokes gained for holes whose stored shots are malformed (e.g. legacy rows with
+    /// a StartDistance = 0 placeholder) rather than emitting fabricated SG.
+    /// </summary>
+    public static bool AreShotsScorable(List<ShotData> shots, int holeScore)
+        => ValidateShots(shots, holeScore).Count == 0;
 
     private static double? CalculateTrendSlope(IReadOnlyList<double> values)
     {

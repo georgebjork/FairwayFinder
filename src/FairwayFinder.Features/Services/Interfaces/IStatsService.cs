@@ -1,4 +1,5 @@
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Enums;
 
 namespace FairwayFinder.Features.Services.Interfaces;
 
@@ -10,8 +11,9 @@ public interface IStatsService
     /// <param name="userId">User ID</param>
     /// <param name="filter">Optional filter for round type and date range</param>
     /// <param name="coursesCount">Number of most played courses to return (default 5)</param>
+    /// <param name="level">Golfer level whose baseline offset is applied to strokes gained.</param>
     /// <returns>Complete user stats</returns>
-    Task<UserStatsResponse> GetUserStatsAsync(string userId, StatsFilter? filter = null, int coursesCount = 5);
+    Task<UserStatsResponse> GetUserStatsAsync(string userId, StatsFilter? filter = null, int coursesCount = 5, BaselineLevel level = BaselineLevel.Scratch);
     
     /// <summary>
     /// Gets course-specific stats for a user at a particular course.
@@ -25,7 +27,7 @@ public interface IStatsService
     /// <param name="fullRoundOnly">Optional round-type filter: null = all, true = 18-hole only, false = 9-hole only.</param>
     /// <param name="year">Optional calendar-year filter. Ignored when <paramref name="startDate"/> or <paramref name="endDate"/> is set.</param>
     /// <returns>Course-specific stats, or null if user has no rounds at this course</returns>
-    Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null, int? year = null);
+    Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null, int? year = null, BaselineLevel level = BaselineLevel.Scratch);
 
     /// <summary>
     /// Gets per-hole stats for a user at a particular course. One entry per played hole,
@@ -34,7 +36,7 @@ public interface IStatsService
     /// Filters mirror <see cref="GetCourseStatsAsync"/>.
     /// </summary>
     /// <returns>Hole-level stats, or null if the user has no rounds at this course.</returns>
-    Task<CourseHoleStatsResponse?> GetCourseHoleStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null, int? year = null);
+    Task<CourseHoleStatsResponse?> GetCourseHoleStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null, int? year = null, BaselineLevel level = BaselineLevel.Scratch);
 
     /// <summary>
     /// Gets the distinct years that a user has played rounds in.

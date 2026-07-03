@@ -92,7 +92,10 @@ public class RoundService : IRoundService
     public Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId)
         => GetRoundsWithDetailsAsync(userId, filter: null);
 
-    public async Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId, StatsFilter? filter)
+    public Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId, StatsFilter? filter)
+        => GetRoundsWithDetailsAsync(userId, filter, BaselineLevel.Scratch);
+
+    public async Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId, StatsFilter? filter, BaselineLevel level)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
@@ -166,7 +169,7 @@ public class RoundService : IRoundService
         var holeStatsByRound = holeStats.GroupBy(hs => hs.RoundId).ToDictionary(g => g.Key, g => g.ToDictionary(hs => hs.HoleId));
 
         // Map to RoundResponse
-        return roundsData.Select(x =>
+        var responses = roundsData.Select(x =>
         {
             var roundId = x.Round.RoundId;
             var roundScores = scoresByRound.GetValueOrDefault(roundId) ?? new();
@@ -192,9 +195,22 @@ public class RoundService : IRoundService
                 roundHoles
             );
         }).ToList();
+
+        // Strokes gained is computed live (never persisted) so baseline changes take effect
+        // without re-saving. Load shots for shot-tracked rounds (batched) and compute per round.
+        await LoadShotsForRoundsAsync(responses);
+        foreach (var response in responses)
+        {
+            PopulateStrokesGained(response, level);
+        }
+
+        return responses;
     }
 
-    public async Task<RoundResponse?> GetRoundByIdAsync(long roundId)
+    public Task<RoundResponse?> GetRoundByIdAsync(long roundId)
+        => GetRoundByIdAsync(roundId, BaselineLevel.Scratch);
+
+    public async Task<RoundResponse?> GetRoundByIdAsync(long roundId, BaselineLevel level)
     {
         RoundResponse? response;
 
@@ -259,15 +275,7 @@ public class RoundService : IRoundService
         if (response.UsingShotTracking)
         {
             await LoadShotsForRoundsAsync(new List<RoundResponse> { response });
-
-            var holeResults = new List<StrokesGainedHoleResult>();
-            foreach (var hole in response.Holes.Where(h => h.Shots is { Count: > 0 } && h.Score.HasValue))
-            {
-                holeResults.Add(StrokesGainedCalculator.CalculateHoleSg(
-                    hole.Shots!, hole.Par, hole.HoleNumber, hole.Score!.Value));
-            }
-            response.HoleByHoleSg = holeResults;
-            response.StrokesGained = StrokesGainedCalculator.CalculateRoundSg(response);
+            PopulateStrokesGained(response, level);
         }
 
         return response;
@@ -391,6 +399,11 @@ public class RoundService : IRoundService
                     ApproachYardage = approachYardage,
                     TeeShotOb = teeShotOb,
                     ApproachShotOb = approachShotOb,
+                    // Fields shots can't derive — accept them from the client if supplied
+                    MissFairwayType = hole.MissFairwayType,
+                    MissGreenType = hole.MissGreenType,
+                    TeeShotOutOfPosition = hole.TeeShotOutOfPosition,
+                    ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition,
                     CreatedBy = userId,
                     CreatedOn = today,
                     UpdatedBy = userId,
@@ -478,12 +491,6 @@ public class RoundService : IRoundService
             }
         }
         
-        // 5. Compute and store SG totals if shot tracking
-        if (request.UsingShotTracking)
-        {
-            ComputeAndStoreStrokesGained(roundStat, request.Holes);
-        }
-
             dbContext.RoundStats.Add(roundStat);
             await dbContext.SaveChangesAsync();
 
@@ -736,6 +743,11 @@ public class RoundService : IRoundService
                     existingStat.ApproachYardage = approachYardage;
                     existingStat.TeeShotOb = teeShotOb;
                     existingStat.ApproachShotOb = approachShotOb;
+                    // Fields shots can't derive — accept them from the client if supplied
+                    existingStat.MissFairwayType = hole.MissFairwayType;
+                    existingStat.MissGreenType = hole.MissGreenType;
+                    existingStat.TeeShotOutOfPosition = hole.TeeShotOutOfPosition;
+                    existingStat.ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition;
                     existingStat.UpdatedBy = userId;
                     existingStat.UpdatedOn = today;
                 }
@@ -752,6 +764,11 @@ public class RoundService : IRoundService
                         ApproachYardage = approachYardage,
                         TeeShotOb = teeShotOb,
                         ApproachShotOb = approachShotOb,
+                        // Fields shots can't derive — accept them from the client if supplied
+                        MissFairwayType = hole.MissFairwayType,
+                        MissGreenType = hole.MissGreenType,
+                        TeeShotOutOfPosition = hole.TeeShotOutOfPosition,
+                        ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition,
                         CreatedBy = userId,
                         CreatedOn = today,
                         UpdatedBy = userId,
@@ -862,11 +879,6 @@ public class RoundService : IRoundService
             existingRoundStat.TripleOrWorse = tripleOrWorse;
             existingRoundStat.UpdatedBy = userId;
             existingRoundStat.UpdatedOn = today;
-
-            if (request.UsingShotTracking)
-                ComputeAndStoreStrokesGained(existingRoundStat, request.Holes);
-            else
-                ClearStrokesGained(existingRoundStat);
         }
         else
         {
@@ -887,9 +899,6 @@ public class RoundService : IRoundService
                 UpdatedOn = today,
                 IsDeleted = false
             };
-
-            if (request.UsingShotTracking)
-                ComputeAndStoreStrokesGained(newRoundStat, request.Holes);
 
             dbContext.RoundStats.Add(newRoundStat);
         }
@@ -1120,40 +1129,34 @@ public class RoundService : IRoundService
         }
     }
 
-    private static void ComputeAndStoreStrokesGained(RoundStat roundStat, List<HoleScoreEntry> holes)
+    /// <summary>
+    /// Computes per-hole and round-level strokes gained live from the shots already attached to
+    /// the response, relative to the given golfer <paramref name="level"/>. SG is never persisted —
+    /// it is derived from shot data + the baseline tables on every read so baseline/level changes
+    /// take effect without re-saving rounds. Requires shots to have been loaded first (via
+    /// <see cref="LoadShotsForRoundsAsync"/>).
+    /// </summary>
+    private void PopulateStrokesGained(RoundResponse response, BaselineLevel level)
     {
-        double sgTotal = 0, sgPutting = 0, sgOtt = 0, sgApproach = 0, sgArg = 0;
+        if (!response.UsingShotTracking) return;
 
-        foreach (var hole in holes)
+        var holeResults = new List<StrokesGainedHoleResult>();
+        foreach (var hole in response.Holes.Where(h => h.Shots is { Count: > 0 } && h.Score.HasValue))
         {
-            if (hole.Shots is not { Count: > 0 }) continue;
-            // Only count completed holes (last shot is holed)
-            if (hole.Shots[^1].EndDistance != null) continue;
+            // Skip holes whose stored shots are malformed rather than emitting fabricated SG.
+            if (!StrokesGainedCalculator.AreShotsScorable(hole.Shots!, hole.Score!.Value))
+            {
+                _logger.LogWarning(
+                    "Skipping strokes gained for round {RoundId} hole {HoleNumber}: shot data failed validation.",
+                    response.RoundId, hole.HoleNumber);
+                continue;
+            }
 
-            var holeScore = hole.Shots.Count + hole.Shots.Sum(s => s.PenaltyStrokes);
-            var result = StrokesGainedCalculator.CalculateHoleSg(hole.Shots, hole.Par, hole.HoleNumber, holeScore);
-            sgTotal += result.SgTotal;
-            sgPutting += result.SgPutting;
-            sgOtt += result.SgOffTheTee;
-            sgApproach += result.SgApproach;
-            sgArg += result.SgAroundTheGreen;
+            holeResults.Add(StrokesGainedCalculator.CalculateHoleSg(
+                hole.Shots!, hole.Par, hole.HoleNumber, hole.Score!.Value, level));
         }
 
-        roundStat.SgTotal = Math.Round(sgTotal, 2);
-        roundStat.SgPutting = Math.Round(sgPutting, 2);
-        roundStat.SgTeeToGreen = Math.Round(sgOtt + sgApproach + sgArg, 2);
-        roundStat.SgOffTheTee = Math.Round(sgOtt, 2);
-        roundStat.SgApproach = Math.Round(sgApproach, 2);
-        roundStat.SgAroundTheGreen = Math.Round(sgArg, 2);
-    }
-
-    private static void ClearStrokesGained(RoundStat roundStat)
-    {
-        roundStat.SgTotal = null;
-        roundStat.SgPutting = null;
-        roundStat.SgTeeToGreen = null;
-        roundStat.SgOffTheTee = null;
-        roundStat.SgApproach = null;
-        roundStat.SgAroundTheGreen = null;
+        response.HoleByHoleSg = holeResults;
+        response.StrokesGained = StrokesGainedCalculator.CalculateRoundSg(response, level);
     }
 }

@@ -2,6 +2,7 @@ using FairwayFinder.Api.Exceptions;
 using FairwayFinder.Api.Extensions;
 using FairwayFinder.Api.Validators;
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Enums;
 using FairwayFinder.Features.Services.Interfaces;
 
 namespace FairwayFinder.Api.Endpoints;
@@ -43,8 +44,10 @@ public static class RoundEndpoints
             DateOnly? startDate,
             DateOnly? endDate,
             int? year,
+            BaselineLevel? level,
             HttpContext ctx,
-            IRoundService roundService) =>
+            IRoundService roundService,
+            IProfileService profileService) =>
         {
             var userId = ctx.User.GetUserId();
             var filter = new StatsFilter
@@ -56,18 +59,19 @@ public static class RoundEndpoints
                 Year = year
             };
 
-            var rounds = filter.HasFilters
-                ? await roundService.GetRoundsWithDetailsAsync(userId, filter)
-                : await roundService.GetRoundsWithDetailsAsync(userId);
+            var effectiveLevel = await ResolveLevelAsync(level, userId, profileService);
+            var rounds = await roundService.GetRoundsWithDetailsAsync(
+                userId, filter.HasFilters ? filter : null, effectiveLevel);
             return Results.Ok(rounds);
         });
 
-        group.MapGet("/{roundId:long}", async (long roundId, HttpContext ctx, IRoundService roundService) =>
+        group.MapGet("/{roundId:long}", async (long roundId, BaselineLevel? level, HttpContext ctx, IRoundService roundService, IProfileService profileService) =>
         {
             var userId = ctx.User.GetUserId();
             await EnsureRoundAccess(roundService, roundId, userId);
 
-            var round = await roundService.GetRoundByIdAsync(roundId);
+            var effectiveLevel = await ResolveLevelAsync(level, userId, profileService);
+            var round = await roundService.GetRoundByIdAsync(roundId, effectiveLevel);
             if (round is null)
                 throw new NotFoundException("Round", roundId);
 
@@ -120,6 +124,10 @@ public static class RoundEndpoints
 
         return app;
     }
+
+    // Uses the explicit ?level= when supplied, otherwise the user's saved default (SgBaselineLevel).
+    private static async Task<BaselineLevel> ResolveLevelAsync(BaselineLevel? level, string userId, IProfileService profileService)
+        => level ?? (await profileService.GetOrCreateProfileAsync(userId)).SgBaselineLevel;
 
     private static async Task EnsureRoundAccess(IRoundService roundService, long roundId, string userId)
     {

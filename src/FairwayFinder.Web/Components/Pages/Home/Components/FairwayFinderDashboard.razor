@@ -1,9 +1,11 @@
 @using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Enums
 @using FairwayFinder.Features.Services.Interfaces
 @using FairwayFinder.Web.Components.Pages.Home.Dialogs
 @using Microsoft.AspNetCore.WebUtilities
 @inject IStatsService StatsService
 @inject IRoundService RoundService
+@inject IProfileService ProfileService
 @inject NavigationManager NavigationManager
 @inject DialogService DialogService
 @inject NotificationService NotificationService
@@ -46,6 +48,16 @@
                                 AllowClear="true"
                                 AllowFiltering="true"
                                 Style="width: 200px;"
+                                Change="@OnFilterChanged" />
+            </RadzenStack>
+            <RadzenStack Gap="0.25rem">
+                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">Golfer Level</RadzenText>
+                <RadzenDropDown TValue="BaselineLevel"
+                                Data="@_baselineLevelOptions"
+                                TextProperty="Text"
+                                ValueProperty="Value"
+                                @bind-Value="_sgBaselineLevel"
+                                Style="width: 150px;"
                                 Change="@OnFilterChanged" />
             </RadzenStack>
         </AdditionalFilters>
@@ -275,7 +287,15 @@
     private long? _selectedCourseId;
     private DateOnly? _startDate;
     private DateOnly? _endDate;
+    private BaselineLevel _sgBaselineLevel = BaselineLevel.Scratch;
     private List<CourseOption> _courseOptions = new();
+
+    private static readonly IReadOnlyList<BaselineLevelOption> _baselineLevelOptions =
+        BaselineLevelExtensions.AllInDisplayOrder
+            .Select(l => new BaselineLevelOption(l, l.DisplayName()))
+            .ToList();
+
+    private record BaselineLevelOption(BaselineLevel Value, string Text);
 
     private bool _hasActiveFilters => _selectedRoundType != "all" || _selectedCourseId.HasValue || _startDate.HasValue || _endDate.HasValue;
 
@@ -289,6 +309,9 @@
     protected override async Task OnInitializedAsync()
     {
         _courseOptions = await StatsService.GetUserCoursesAsync(UserId);
+        // Seed the golfer-level selector from the user's saved default (owner or profile owner).
+        var profile = await ProfileService.GetOrCreateProfileAsync(UserId);
+        _sgBaselineLevel = profile.SgBaselineLevel;
         ParseQueryParameters();
         await LoadStats();
         _loading = false;
@@ -377,7 +400,7 @@
     private async Task LoadStats()
     {
         var filter = BuildFilter();
-        var statsTask = StatsService.GetUserStatsAsync(UserId, filter);
+        var statsTask = StatsService.GetUserStatsAsync(UserId, filter, level: _sgBaselineLevel);
         var roundsTask = RoundService.GetRoundsByUserIdAsync(UserId, filter);
         await Task.WhenAll(statsTask, roundsTask);
         _stats = statsTask.Result;

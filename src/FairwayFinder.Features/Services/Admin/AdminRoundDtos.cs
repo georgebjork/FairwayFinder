@@ -1,3 +1,5 @@
+using FairwayFinder.Features.Enums;
+
 namespace FairwayFinder.Features.Services.Admin;
 
 /// <summary>
@@ -17,5 +19,8 @@ public class AdminRoundListItemDto
     public string TeeboxName { get; set; } = string.Empty;
     public bool ExcludeFromStats { get; set; }
     public bool UsingShotTracking { get; set; }
+    public bool UsingHoleStats { get; set; }
     public bool FullRound { get; set; }
+
+    public RoundTrackingLevel TrackingLevel => RoundTracking.Classify(UsingShotTracking, UsingHoleStats);
 }

@@ -1,3 +1,4 @@
+using FairwayFinder.Features.Enums;
 using FairwayFinder.Identity;
 
 namespace FairwayFinder.Features.Data;
@@ -11,4 +12,7 @@ public class UserProfileResponse
     public string? DisplayName { get; set; }
     public string? Email { get; set; }
     public PreferredTees PreferredTees { get; set; }
+
+    /// <summary>The user's default golfer level for strokes-gained calculations.</summary>
+    public BaselineLevel SgBaselineLevel { get; set; }
 }

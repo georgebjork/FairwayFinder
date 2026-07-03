@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Diagnostics;
+using FairwayFinder.Features.Enums;
 using FairwayFinder.Features.Helpers;
 using FairwayFinder.Features.Services.Interfaces;
 
@@ -15,7 +16,7 @@ public class StatsService : IStatsService
         _roundService = roundService;
     }
 
-    public async Task<UserStatsResponse> GetUserStatsAsync(string userId, StatsFilter? filter = null, int coursesCount = 5)
+    public async Task<UserStatsResponse> GetUserStatsAsync(string userId, StatsFilter? filter = null, int coursesCount = 5, BaselineLevel level = BaselineLevel.Scratch)
     {
         using var activity = FairwayFinderDiagnostics.StatsActivity.StartActivity(name: FairwayFinderDiagnostics.ActivityNames.StatsUserGenerate);
         var stopwatch = Stopwatch.StartNew();
@@ -24,7 +25,7 @@ public class StatsService : IStatsService
 
         try
         {
-            var rounds = await _roundService.GetRoundsWithDetailsAsync(userId);
+            var rounds = await _roundService.GetRoundsWithDetailsAsync(userId, null, level);
 
             var statsRounds = rounds.Where(r => !r.ExcludeFromStats).ToList();
 
@@ -100,7 +101,7 @@ public class StatsService : IStatsService
         }
     }
 
-    public async Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null, int? year = null)
+    public async Task<CourseStatsResponse?> GetCourseStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null, int? year = null, BaselineLevel level = BaselineLevel.Scratch)
     {
         using var activity = FairwayFinderDiagnostics.StatsActivity.StartActivity(name: FairwayFinderDiagnostics.ActivityNames.StatsCourseGenerate);
         var stopwatch = Stopwatch.StartNew();
@@ -112,7 +113,7 @@ public class StatsService : IStatsService
 
         try
         {
-            var rounds = await _roundService.GetRoundsWithDetailsAsync(userId);
+            var rounds = await _roundService.GetRoundsWithDetailsAsync(userId, null, level);
 
             var filter = FilterCourseRounds(rounds, courseId, teeboxId, startDate, endDate, year, fullRoundOnly);
             if (filter is null)
@@ -198,7 +199,7 @@ public class StatsService : IStatsService
         }
     }
 
-    public async Task<CourseHoleStatsResponse?> GetCourseHoleStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null, int? year = null)
+    public async Task<CourseHoleStatsResponse?> GetCourseHoleStatsAsync(string userId, long courseId, long? teeboxId = null, DateOnly? startDate = null, DateOnly? endDate = null, bool? fullRoundOnly = null, int? year = null, BaselineLevel level = BaselineLevel.Scratch)
     {
         using var activity = FairwayFinderDiagnostics.StatsActivity.StartActivity(name: FairwayFinderDiagnostics.ActivityNames.StatsCourseHolesGenerate);
         var stopwatch = Stopwatch.StartNew();
@@ -210,7 +211,7 @@ public class StatsService : IStatsService
 
         try
         {
-            var rounds = await _roundService.GetRoundsWithDetailsAsync(userId);
+            var rounds = await _roundService.GetRoundsWithDetailsAsync(userId, null, level);
 
             var filter = FilterCourseRounds(rounds, courseId, teeboxId, startDate, endDate, year, fullRoundOnly);
             if (filter is null)

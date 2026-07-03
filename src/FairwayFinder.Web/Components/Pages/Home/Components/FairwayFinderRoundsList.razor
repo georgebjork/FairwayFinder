@@ -40,6 +40,11 @@ else
                     @(round.FullRound ? "18" : "9")
                 </Template>
             </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="RoundResponse" Title="Tracking" Width="130px" TextAlign="TextAlign.Center" Sortable="false" Filterable="false">
+                <Template Context="round">
+                    <RoundTrackingBadge Level="round.TrackingLevel" />
+                </Template>
+            </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="RoundResponse" Property="Score" Title="Score" Width="100px" TextAlign="TextAlign.Center" />
         </Columns>
     </RadzenDataGrid>
