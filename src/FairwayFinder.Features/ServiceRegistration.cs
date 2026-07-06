@@ -22,6 +22,7 @@ public static class ServiceRegistration
         services.AddTransient<UserAdminService>();
         services.AddTransient<AdminDashboardService>();
         services.AddTransient<AdminRoundService>();
+        services.AddTransient<AdminDeviceService>();
         services.AddTransient<ApiRequestLogService>();
         services.AddTransient<IUserInvitationService, UserInvitationService>();
 

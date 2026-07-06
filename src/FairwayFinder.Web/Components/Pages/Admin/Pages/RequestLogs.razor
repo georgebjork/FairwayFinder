@@ -23,10 +23,10 @@
                               Text="@(_paused ? "Resume" : "Pause")"
                               ButtonStyle="ButtonStyle.Base" Variant="Variant.Flat" Size="ButtonSize.Small"
                               Click="TogglePause" />
-                <RadzenIcon Icon="@(_paused ? "sync_disabled" : "sync")"
-                            Style="@($"font-size: 1rem; color: {(_paused ? "var(--rz-text-disabled-color)" : "var(--rz-success)")};")" />
-                <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color); min-width: 120px;">
-                    @(_paused ? "Auto-refresh paused" : $"Next refresh in {_secondsUntilRefresh}s")
+                <RadzenIcon Icon="@(AutoRefreshActive ? "sync" : "sync_disabled")"
+                            Style="@($"font-size: 1rem; color: {(AutoRefreshActive ? "var(--rz-success)" : "var(--rz-text-disabled-color)")};")" />
+                <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color); min-width: 150px;">
+                    @RefreshStatusText
                 </RadzenText>
             </RadzenStack>
             <RadzenButton Text="Purge older than 30 days" Icon="delete_sweep" ButtonStyle="ButtonStyle.Danger"
@@ -53,6 +53,8 @@
                     PagerHorizontalAlign="HorizontalAlign.Right"
                     ShowPagingSummary="true"
                     PagingSummaryFormat="Displaying page {0} of {1} (total {2} requests)"
+                    ExpandMode="DataGridExpandMode.Single"
+                    RowExpand="OnRowExpand" RowCollapse="OnRowCollapse"
                     EmptyText="No request logs.">
         <Columns>
             <RadzenDataGridColumn TItem="ApiRequestLogListItemDto" Property="Timestamp" Title="Time (UTC)" Width="170px" FormatString="{0:yyyy-MM-dd HH:mm:ss}" />
@@ -73,7 +75,7 @@
                     <RadzenBadge Text="@log.StatusCode.ToString()" BadgeStyle="@StatusBadgeStyle(log.StatusCode)" Shade="Shade.Lighter" />
                 </Template>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="ApiRequestLogListItemDto" Property="DurationMs" Title="Duration" Width="110px" TextAlign="TextAlign.Right">
+            <RadzenDataGridColumn TItem="ApiRequestLogListItemDto" Property="DurationMs" Title="Duration" Width="110px">
                 <Template Context="log">@log.DurationMs ms</Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="ApiRequestLogListItemDto" Title="User" Width="220px">
@@ -83,6 +85,23 @@
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="ApiRequestLogListItemDto" Property="IpAddress" Title="IP" Width="140px" />
         </Columns>
+        <Template Context="log">
+            <RadzenCard Variant="Variant.Outlined" class="rz-mx-4 rz-my-2 rz-p-3">
+                <RadzenRow RowGap="1rem">
+                    <RadzenColumn Size="12" SizeSM="6" SizeLG="4">@Field("Method", log.Method)</RadzenColumn>
+                    <RadzenColumn Size="12" SizeSM="6" SizeLG="4">@Field("Status", log.StatusCode.ToString())</RadzenColumn>
+                    <RadzenColumn Size="12" SizeSM="6" SizeLG="4">@Field("Duration", $"{log.DurationMs} ms")</RadzenColumn>
+                    <RadzenColumn Size="12" SizeLG="8">@Field("Route template", log.RouteTemplate)</RadzenColumn>
+                    <RadzenColumn Size="12" SizeSM="6" SizeLG="4">@Field("Timestamp (UTC)", log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss"))</RadzenColumn>
+                    <RadzenColumn Size="12">@Field("Full path", $"{log.Path}{log.QueryString}")</RadzenColumn>
+                    <RadzenColumn Size="12" SizeSM="6" SizeLG="4">@Field("User email", log.UserEmail)</RadzenColumn>
+                    <RadzenColumn Size="12" SizeSM="6" SizeLG="8">@Field("User id", log.UserId)</RadzenColumn>
+                    <RadzenColumn Size="12" SizeSM="6" SizeLG="4">@Field("IP address", log.IpAddress)</RadzenColumn>
+                    <RadzenColumn Size="12" SizeLG="8">@Field("Trace id", log.TraceId)</RadzenColumn>
+                    <RadzenColumn Size="12">@Field("User agent", log.UserAgent)</RadzenColumn>
+                </RadzenRow>
+            </RadzenCard>
+        </Template>
     </RadzenDataGrid>
 </RadzenStack>
 
@@ -114,6 +133,20 @@
     private bool _paused;
     private int _secondsUntilRefresh = RefreshIntervalSeconds;
 
+    // Current page window, tracked so the silent auto-refresh re-fetches exactly what's shown.
+    private int _lastSkip;
+    private int _lastTop = 25;
+
+    // When a row detail is expanded, auto-refresh is frozen so the open row isn't collapsed.
+    private ApiRequestLogListItemDto? _expandedItem;
+
+    private bool AutoRefreshActive => !_paused && _expandedItem is null;
+
+    private string RefreshStatusText =>
+        _paused ? "Auto-refresh paused"
+        : _expandedItem is not null ? "Paused while row open"
+        : $"Next refresh in {_secondsUntilRefresh}s";
+
     protected override void OnInitialized()
     {
         BreadcrumbState.Set(
@@ -139,16 +172,21 @@
 
     private async Task OnTickAsync()
     {
-        if (_paused) return;
-
         try
         {
+            // Frozen while paused or a row is expanded: only keep the indicator text current.
+            if (!AutoRefreshActive)
+            {
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
             if (_secondsUntilRefresh <= 1)
             {
                 _secondsUntilRefresh = RefreshIntervalSeconds;
-                // Skip if a load is already in flight to avoid overlapping reloads.
+                // Skip if a load is already in flight to avoid overlapping fetches.
                 if (!_loading)
-                    await InvokeAsync(async () => await _grid.Reload());
+                    await InvokeAsync(RefreshSilentlyAsync);
             }
             else
             {
@@ -162,10 +200,31 @@
         }
     }
 
+    // Re-fetches the current page and swaps the grid data in place — no loading overlay and no
+    // Reload, so the rows update without the flash that a full Reload causes.
+    private async Task RefreshSilentlyAsync()
+    {
+        var result = await FetchAsync(_lastSkip, _lastTop);
+        _logs = result.Items;
+        _totalCount = result.TotalCount;
+        StateHasChanged();
+    }
+
     private void TogglePause()
     {
         _paused = !_paused;
         if (!_paused) _secondsUntilRefresh = RefreshIntervalSeconds;
+    }
+
+    private void OnRowExpand(ApiRequestLogListItemDto item) => _expandedItem = item;
+
+    private void OnRowCollapse(ApiRequestLogListItemDto item)
+    {
+        if (ReferenceEquals(_expandedItem, item))
+        {
+            _expandedItem = null;
+            _secondsUntilRefresh = RefreshIntervalSeconds;
+        }
     }
 
     public void Dispose() => _refreshTimer?.Dispose();
@@ -176,18 +235,10 @@
 
         try
         {
-            var skip = args.Skip ?? 0;
-            var top = args.Top ?? 25;
+            _lastSkip = args.Skip ?? 0;
+            _lastTop = args.Top ?? 25;
 
-            // The "2xx" option is a status class (range); the rest are exact codes.
-            var isStatusClass = _statusCode == 200;
-            var result = await ApiRequestLogService.GetLogsAsync(
-                skip, top,
-                search: string.IsNullOrWhiteSpace(_search) ? null : _search,
-                statusCode: isStatusClass ? null : _statusCode,
-                statusClass: isStatusClass ? 2 : null,
-                from: null, to: null);
-
+            var result = await FetchAsync(_lastSkip, _lastTop);
             _logs = result.Items;
             _totalCount = result.TotalCount;
         }
@@ -195,6 +246,18 @@
         {
             _loading = false;
         }
+    }
+
+    private Task<PagedResult<ApiRequestLogListItemDto>> FetchAsync(int skip, int top)
+    {
+        // The "2xx" option is a status class (range); the rest are exact codes.
+        var isStatusClass = _statusCode == 200;
+        return ApiRequestLogService.GetLogsAsync(
+            skip, top,
+            search: string.IsNullOrWhiteSpace(_search) ? null : _search,
+            statusCode: isStatusClass ? null : _statusCode,
+            statusClass: isStatusClass ? 2 : null,
+            from: null, to: null);
     }
 
     private async Task ApplyFilters() => await _grid.Reload();
@@ -251,4 +314,10 @@
         >= 200 => BadgeStyle.Success,
         _ => BadgeStyle.Light
     };
+
+    // Labelled value used inside the expandable row detail.
+    private RenderFragment Field(string label, string? value) =>@<RadzenStack Gap="0.1rem">
+        <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">@label</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="word-break: break-all;">@(string.IsNullOrEmpty(value) ? "—" : value)</RadzenText>
+    </RadzenStack>;
 }
