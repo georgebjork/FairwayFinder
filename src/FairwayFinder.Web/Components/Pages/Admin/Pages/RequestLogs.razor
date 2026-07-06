@@ -1,0 +1,254 @@
+@page "/admin/logs"
+@rendermode InteractiveServer
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin")]
+@implements IDisposable
+@using FairwayFinder.Features.Services.Admin
+@using FairwayFinder.Web.Components.Shared.Dialogs
+@using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
+@inject ApiRequestLogService ApiRequestLogService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject BreadcrumbState BreadcrumbState
+
+<PageTitle>API Request Logs</PageTitle>
+
+<RadzenStack Gap="1.5rem">
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="1rem">
+        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">API Request Logs</RadzenText>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="0.75rem">
+            @* ── Auto-refresh control + countdown ── *@
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.4rem">
+                <RadzenButton Icon="@(_paused ? "play_arrow" : "pause")"
+                              Text="@(_paused ? "Resume" : "Pause")"
+                              ButtonStyle="ButtonStyle.Base" Variant="Variant.Flat" Size="ButtonSize.Small"
+                              Click="TogglePause" />
+                <RadzenIcon Icon="@(_paused ? "sync_disabled" : "sync")"
+                            Style="@($"font-size: 1rem; color: {(_paused ? "var(--rz-text-disabled-color)" : "var(--rz-success)")};")" />
+                <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color); min-width: 120px;">
+                    @(_paused ? "Auto-refresh paused" : $"Next refresh in {_secondsUntilRefresh}s")
+                </RadzenText>
+            </RadzenStack>
+            <RadzenButton Text="Purge older than 30 days" Icon="delete_sweep" ButtonStyle="ButtonStyle.Danger"
+                          Size="ButtonSize.Small" Click="OnPurgeClicked" />
+        </RadzenStack>
+    </RadzenStack>
+
+    @* ── Filters ── *@
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="0.75rem">
+        <RadzenTextBox Placeholder="Search path, route, or user email..." @bind-Value="_search"
+                       Style="width: 320px;" @onkeydown="OnSearchKeyDown" />
+        <RadzenDropDown TValue="int?" Data="_statusOptions" @bind-Value="_statusCode"
+                        TextProperty="Label" ValueProperty="Value"
+                        AllowClear="true" Placeholder="Any status" Style="width: 180px;" />
+        <RadzenButton Text="Apply" Icon="search" ButtonStyle="ButtonStyle.Primary" Variant="Variant.Outlined"
+                      Size="ButtonSize.Small" Click="ApplyFilters" />
+        <RadzenButton Text="Reset" Icon="clear" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                      Size="ButtonSize.Small" Click="ResetFilters" />
+    </RadzenStack>
+
+    <RadzenDataGrid @ref="_grid" TItem="ApiRequestLogListItemDto" Data="_logs" Count="_totalCount"
+                    LoadData="OnLoadData" IsLoading="_loading"
+                    AllowPaging="true" PageSize="25" PageSizeOptions="@(new[] { 25, 50, 100 })"
+                    PagerHorizontalAlign="HorizontalAlign.Right"
+                    ShowPagingSummary="true"
+                    PagingSummaryFormat="Displaying page {0} of {1} (total {2} requests)"
+                    EmptyText="No request logs.">
+        <Columns>
+            <RadzenDataGridColumn TItem="ApiRequestLogListItemDto" Property="Timestamp" Title="Time (UTC)" Width="170px" FormatString="{0:yyyy-MM-dd HH:mm:ss}" />
+            <RadzenDataGridColumn TItem="ApiRequestLogListItemDto" Property="Method" Title="Method" Width="90px" />
+            <RadzenDataGridColumn TItem="ApiRequestLogListItemDto" Title="Route / Path">
+                <Template Context="log">
+                    <RadzenStack Gap="0">
+                        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@(string.IsNullOrEmpty(log.RouteTemplate) ? log.Path : log.RouteTemplate)</RadzenText>
+                        @if (!string.IsNullOrEmpty(log.RouteTemplate))
+                        {
+                            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);" class="rz-m-0">@log.Path@log.QueryString</RadzenText>
+                        }
+                    </RadzenStack>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="ApiRequestLogListItemDto" Property="StatusCode" Title="Status" Width="100px" TextAlign="TextAlign.Center">
+                <Template Context="log">
+                    <RadzenBadge Text="@log.StatusCode.ToString()" BadgeStyle="@StatusBadgeStyle(log.StatusCode)" Shade="Shade.Lighter" />
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="ApiRequestLogListItemDto" Property="DurationMs" Title="Duration" Width="110px" TextAlign="TextAlign.Right">
+                <Template Context="log">@log.DurationMs ms</Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="ApiRequestLogListItemDto" Title="User" Width="220px">
+                <Template Context="log">
+                    @(string.IsNullOrEmpty(log.UserEmail) ? "—" : log.UserEmail)
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="ApiRequestLogListItemDto" Property="IpAddress" Title="IP" Width="140px" />
+        </Columns>
+    </RadzenDataGrid>
+</RadzenStack>
+
+@code {
+    private record StatusOption(string Label, int? Value);
+
+    private RadzenDataGrid<ApiRequestLogListItemDto> _grid = default!;
+    private IEnumerable<ApiRequestLogListItemDto> _logs = Enumerable.Empty<ApiRequestLogListItemDto>();
+    private int _totalCount;
+    private bool _loading;
+
+    private string _search = string.Empty;
+    private int? _statusCode;
+
+    private readonly List<StatusOption> _statusOptions =
+    [
+        new("2xx Success", 200),
+        new("400 Bad Request", 400),
+        new("401 Unauthorized", 401),
+        new("403 Forbidden", 403),
+        new("404 Not Found", 404),
+        new("500 Server Error", 500)
+    ];
+
+    private const int RefreshIntervalSeconds = 10;
+
+    private bool _initialLoadDone;
+    private System.Threading.Timer? _refreshTimer;
+    private bool _paused;
+    private int _secondsUntilRefresh = RefreshIntervalSeconds;
+
+    protected override void OnInitialized()
+    {
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Home", "/"),
+            new BreadcrumbItem("Administration", "/admin"),
+            new BreadcrumbItem("Request Logs")
+        );
+    }
+
+    // Radzen's automatic initial LoadData does not fire under this app's interactive-routing
+    // render setup, so kick off the first load once the grid has rendered, then start the
+    // auto-refresh ticker (1s cadence to drive the countdown; reloads every RefreshIntervalSeconds).
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialLoadDone)
+        {
+            _initialLoadDone = true;
+            await _grid.Reload();
+            _refreshTimer = new System.Threading.Timer(_ => _ = OnTickAsync(), null,
+                TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+        }
+    }
+
+    private async Task OnTickAsync()
+    {
+        if (_paused) return;
+
+        try
+        {
+            if (_secondsUntilRefresh <= 1)
+            {
+                _secondsUntilRefresh = RefreshIntervalSeconds;
+                // Skip if a load is already in flight to avoid overlapping reloads.
+                if (!_loading)
+                    await InvokeAsync(async () => await _grid.Reload());
+            }
+            else
+            {
+                _secondsUntilRefresh--;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch
+        {
+            // Timer ticks must never surface an unhandled exception onto the circuit.
+        }
+    }
+
+    private void TogglePause()
+    {
+        _paused = !_paused;
+        if (!_paused) _secondsUntilRefresh = RefreshIntervalSeconds;
+    }
+
+    public void Dispose() => _refreshTimer?.Dispose();
+
+    private async Task OnLoadData(LoadDataArgs args)
+    {
+        _loading = true;
+
+        try
+        {
+            var skip = args.Skip ?? 0;
+            var top = args.Top ?? 25;
+
+            // The "2xx" option is a status class (range); the rest are exact codes.
+            var isStatusClass = _statusCode == 200;
+            var result = await ApiRequestLogService.GetLogsAsync(
+                skip, top,
+                search: string.IsNullOrWhiteSpace(_search) ? null : _search,
+                statusCode: isStatusClass ? null : _statusCode,
+                statusClass: isStatusClass ? 2 : null,
+                from: null, to: null);
+
+            _logs = result.Items;
+            _totalCount = result.TotalCount;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task ApplyFilters() => await _grid.Reload();
+
+    private async Task ResetFilters()
+    {
+        _search = string.Empty;
+        _statusCode = null;
+        await _grid.Reload();
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await _grid.Reload();
+        }
+    }
+
+    private async Task OnPurgeClicked()
+    {
+        var confirmed = await DialogService.OpenAsync<DeleteConfirmDialog>("Purge Request Logs",
+            new Dictionary<string, object>
+            {
+                { "EntityName", "all request logs older than 30 days" },
+                { "WarningMessage", "This permanently removes matching log rows and cannot be undone." }
+            },
+            new DialogOptions
+            {
+                Width = "450px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true
+            });
+
+        if (confirmed is not true) return;
+
+        var deleted = await ApiRequestLogService.PurgeOlderThanAsync(30);
+        await _grid.Reload();
+
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = NotificationSeverity.Success,
+            Summary = "Logs Purged",
+            Detail = $"Removed {deleted} request log {(deleted == 1 ? "entry" : "entries")}.",
+            Duration = 4000
+        });
+    }
+
+    private static BadgeStyle StatusBadgeStyle(int status) => status switch
+    {
+        >= 500 => BadgeStyle.Danger,
+        >= 400 => BadgeStyle.Warning,
+        >= 300 => BadgeStyle.Info,
+        >= 200 => BadgeStyle.Success,
+        _ => BadgeStyle.Light
+    };
+}

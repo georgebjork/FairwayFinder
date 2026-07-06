@@ -27,6 +27,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public virtual DbSet<Friendship> Friendships { get; set; }
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
     public virtual DbSet<UserDevice> UserDevices { get; set; }
+    public virtual DbSet<ApiRequestLog> ApiRequestLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -431,6 +432,30 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
             entity.HasIndex(e => e.DeviceToken).IsUnique().HasDatabaseName("ix_user_device_device_token");
             entity.HasIndex(e => new { e.UserId, e.IsActive }).HasDatabaseName("ix_user_device_user_id_is_active");
+        });
+
+        // ApiRequestLog (API request audit trail)
+        modelBuilder.Entity<ApiRequestLog>(entity =>
+        {
+            entity.HasKey(e => e.ApiRequestLogId).HasName("api_request_log_pkey");
+            entity.ToTable("api_request_log");
+            entity.Property(e => e.ApiRequestLogId).HasColumnName("api_request_log_id");
+            entity.Property(e => e.Timestamp).HasColumnName("timestamp");
+            entity.Property(e => e.Method).HasColumnName("method").HasMaxLength(16);
+            entity.Property(e => e.Path).HasColumnName("path").HasMaxLength(2048);
+            entity.Property(e => e.RouteTemplate).HasColumnName("route_template").HasMaxLength(2048);
+            entity.Property(e => e.QueryString).HasColumnName("query_string").HasMaxLength(2048);
+            entity.Property(e => e.StatusCode).HasColumnName("status_code");
+            entity.Property(e => e.DurationMs).HasColumnName("duration_ms");
+            entity.Property(e => e.UserId).HasColumnName("user_id").HasMaxLength(450);
+            entity.Property(e => e.UserEmail).HasColumnName("user_email").HasMaxLength(256);
+            entity.Property(e => e.IpAddress).HasColumnName("ip_address").HasMaxLength(64);
+            entity.Property(e => e.UserAgent).HasColumnName("user_agent").HasMaxLength(512);
+            entity.Property(e => e.TraceId).HasColumnName("trace_id").HasMaxLength(128);
+
+            entity.HasIndex(e => e.Timestamp).HasDatabaseName("ix_api_request_log_timestamp");
+            entity.HasIndex(e => e.UserId).HasDatabaseName("ix_api_request_log_user_id");
+            entity.HasIndex(e => e.StatusCode).HasDatabaseName("ix_api_request_log_status_code");
         });
 
         // GolfCourseApiCourseMap (lookup table)

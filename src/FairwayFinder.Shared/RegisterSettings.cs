@@ -13,6 +13,7 @@ public static class RegisterSettings
         services.Configure<OpenAiSettings>(config.GetSection("OpenAI"));
         services.Configure<ResendSettings>(config.GetSection("Resend"));
         services.Configure<SeedUserSettings>(config.GetSection("SeedUser"));
+        services.Configure<RequestLoggingSettings>(config.GetSection("RequestLogging"));
 
         return services;
     }

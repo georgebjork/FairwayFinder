@@ -1,9 +1,13 @@
 using System.Text;
+using System.Threading.Channels;
 using FairwayFinder.Api.Auth;
+using FairwayFinder.Api.BackgroundServices;
 using FairwayFinder.Api.Endpoints;
 using FairwayFinder.Api.Exceptions;
+using FairwayFinder.Api.Middleware;
 using FairwayFinder.Api.OpenApi;
 using FairwayFinder.Data;
+using FairwayFinder.Data.Entities;
 using FairwayFinder.Features;
 using FairwayFinder.Identity;
 using FairwayFinder.ServiceDefaults;
@@ -90,6 +94,18 @@ if (string.IsNullOrWhiteSpace(apnsSettings.BundleId)
 // ── Domain Services (reuse existing registration) ───────────
 builder.Services.RegisterFeatureServices(builder.Configuration, builder.Environment.IsDevelopment());
 
+// ── Request Logging ─────────────────────────────────────────
+var requestLoggingSettings = builder.Configuration.GetSection("RequestLogging").Get<RequestLoggingSettings>()
+    ?? new RequestLoggingSettings();
+builder.Services.AddSingleton(Channel.CreateBounded<ApiRequestLog>(
+    new BoundedChannelOptions(requestLoggingSettings.ChannelCapacity)
+    {
+        FullMode = BoundedChannelFullMode.DropWrite
+    }));
+builder.Services.AddScoped<RequestLoggingMiddleware>();
+builder.Services.AddHostedService<RequestLogWriter>();
+builder.Services.AddHostedService<RequestLogPurgeService>();
+
 // ── Exception Handling ──────────────────────────────────────
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -109,6 +125,10 @@ app.MapDefaultEndpoints();
 
 // ── Middleware Pipeline ─────────────────────────────────────
 app.UseExceptionHandler();
+
+// Log every request (outermost app middleware): sees the final status code and the
+// authenticated principal on the way back out.
+app.UseMiddleware<RequestLoggingMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
