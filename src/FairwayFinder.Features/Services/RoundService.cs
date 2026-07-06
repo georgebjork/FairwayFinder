@@ -97,6 +97,9 @@ public class RoundService : IRoundService
 
     public async Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId, StatsFilter? filter, BaselineLevel level)
     {
+        using var detailsActivity = FairwayFinderDiagnostics.RoundsActivity
+            .StartActivity(FairwayFinderDiagnostics.ActivityNames.RoundsDetailsGenerate);
+
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
         var query = dbContext.Rounds
@@ -135,6 +138,8 @@ public class RoundService : IRoundService
             .Join(dbContext.Teeboxes, rc => rc.Round.TeeboxId, t => t.TeeboxId, (rc, t) => new { rc.Round, rc.Course, Teebox = t })
             .OrderByDescending(x => x.Round.DatePlayed)
             .ToListAsync();
+
+        detailsActivity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundsCount, roundsData.Count);
 
         if (roundsData.Count == 0)
         {
@@ -198,10 +203,20 @@ public class RoundService : IRoundService
 
         // Strokes gained is computed live (never persisted) so baseline changes take effect
         // without re-saving. Load shots for shot-tracked rounds (batched) and compute per round.
+        var shotTrackedCount = responses.Count(r => r.UsingShotTracking);
+        detailsActivity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundsShotTrackedCount, shotTrackedCount);
+
         await LoadShotsForRoundsAsync(responses);
-        foreach (var response in responses)
+
+        // Pure CPU work — timed separately so it stands out from the DB fetch above.
+        using (var sgActivity = FairwayFinderDiagnostics.RoundsActivity
+            .StartActivity(FairwayFinderDiagnostics.ActivityNames.RoundsStrokesGainedCompute))
         {
-            PopulateStrokesGained(response, level);
+            sgActivity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundsShotTrackedCount, shotTrackedCount);
+            foreach (var response in responses)
+            {
+                PopulateStrokesGained(response, level);
+            }
         }
 
         return responses;

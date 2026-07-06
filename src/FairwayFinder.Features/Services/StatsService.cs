@@ -41,45 +41,64 @@ public class StatsService : IStatsService
             }
             hasRounds = true;
 
-            var scoring = new ScoringStats
-            {
-                RoundsIncluded = statsRounds.Count,
-                Rounds18Hole = statsRounds.Count(x => x.FullRound),
-                Rounds9Hole = statsRounds.Count(x => !x.FullRound),
-                Average18HoleScore = StatsCalculator.CalculateAverageScore(statsRounds),
-                Average9HoleScore = StatsCalculator.CalculateAverageScore(statsRounds, false),
-                Average18HoleScoreTrend = StatsCalculator.CalculateScoreTrend(statsRounds),
-                Average9HoleScoreTrend = StatsCalculator.CalculateScoreTrend(statsRounds, fullRound: false),
-                Best18HoleRound = StatsCalculator.FindBestRound(statsRounds),
-                Best9HoleRound = StatsCalculator.FindBestRound(statsRounds, false),
-                ScoreTrend18Hole = StatsCalculator.BuildScoreTrend(statsRounds),
-                ScoreTrend9Hole = StatsCalculator.BuildScoreTrend(statsRounds, fullRound: false)
-            };
+            // All aggregation below is in-memory CPU work over the already-fetched rounds.
+            using var calcActivity = FairwayFinderDiagnostics.StatsActivity
+                .StartActivity(FairwayFinderDiagnostics.ActivityNames.StatsUserCalculate);
 
+            ScoringStats scoring;
+            using (FairwayFinderDiagnostics.StatsActivity
+                .StartActivity(FairwayFinderDiagnostics.ActivityNames.StatsCalcScoring))
+            {
+                scoring = new ScoringStats
+                {
+                    RoundsIncluded = statsRounds.Count,
+                    Rounds18Hole = statsRounds.Count(x => x.FullRound),
+                    Rounds9Hole = statsRounds.Count(x => !x.FullRound),
+                    Average18HoleScore = StatsCalculator.CalculateAverageScore(statsRounds),
+                    Average9HoleScore = StatsCalculator.CalculateAverageScore(statsRounds, false),
+                    Average18HoleScoreTrend = StatsCalculator.CalculateScoreTrend(statsRounds),
+                    Average9HoleScoreTrend = StatsCalculator.CalculateScoreTrend(statsRounds, fullRound: false),
+                    Best18HoleRound = StatsCalculator.FindBestRound(statsRounds),
+                    Best9HoleRound = StatsCalculator.FindBestRound(statsRounds, false),
+                    ScoreTrend18Hole = StatsCalculator.BuildScoreTrend(statsRounds),
+                    ScoreTrend9Hole = StatsCalculator.BuildScoreTrend(statsRounds, fullRound: false)
+                };
+            }
+
+            // BallStriking/ShortGame start their own child spans inside the shared helpers.
             var response = new UserStatsResponse
             {
                 TotalRounds = statsRounds.Count,
                 Scoring = scoring,
                 BallStriking = BuildBallStriking(statsRounds),
-                ShortGame = BuildShortGame(statsRounds),
-                ParTypeScoring = StatsCalculator.CalculateParTypeScoring(statsRounds),
-                ScoringDistribution = StatsCalculator.AggregateScoringDistribution(statsRounds),
-                MostPlayedCourses = StatsCalculator.CalculateCourseStats(statsRounds, coursesCount)
+                ShortGame = BuildShortGame(statsRounds)
             };
+
+            using (FairwayFinderDiagnostics.StatsActivity
+                .StartActivity(FairwayFinderDiagnostics.ActivityNames.StatsCalcDistribution))
+            {
+                response.ParTypeScoring = StatsCalculator.CalculateParTypeScoring(statsRounds);
+                response.ScoringDistribution = StatsCalculator.AggregateScoringDistribution(statsRounds);
+                response.MostPlayedCourses = StatsCalculator.CalculateCourseStats(statsRounds, coursesCount);
+            }
 
             // Strokes Gained — from stored values on RoundResponse
             var roundsWithSg = statsRounds.Where(r => r.StrokesGained != null).ToList();
             if (roundsWithSg.Count > 0)
             {
                 hasSg = true;
-                response.StrokesGained = new StrokesGainedStats
+                using (FairwayFinderDiagnostics.StatsActivity
+                    .StartActivity(FairwayFinderDiagnostics.ActivityNames.StatsCalcStrokesGained))
                 {
-                    RoundsIncluded = roundsWithSg.Count,
-                    Summary = AggregateStoredSg(roundsWithSg),
-                    TotalTrend = BuildSgTrendFromStored(roundsWithSg, sg => sg.SgTotal),
-                    PuttingTrend = BuildSgTrendFromStored(roundsWithSg, sg => sg.SgPutting),
-                    TeeToGreenTrend = BuildSgTrendFromStored(roundsWithSg, sg => sg.SgTeeToGreen)
-                };
+                    response.StrokesGained = new StrokesGainedStats
+                    {
+                        RoundsIncluded = roundsWithSg.Count,
+                        Summary = AggregateStoredSg(roundsWithSg),
+                        TotalTrend = BuildSgTrendFromStored(roundsWithSg, sg => sg.SgTotal),
+                        PuttingTrend = BuildSgTrendFromStored(roundsWithSg, sg => sg.SgPutting),
+                        TeeToGreenTrend = BuildSgTrendFromStored(roundsWithSg, sg => sg.SgTeeToGreen)
+                    };
+                }
             }
 
             return response;
@@ -139,48 +158,52 @@ public class StatsService : IStatsService
             var teeboxOptions = filter.TeeboxOptions;
             var courseName = filter.CourseName;
 
-            var response = new CourseStatsResponse
+            using (FairwayFinderDiagnostics.StatsActivity
+                .StartActivity(FairwayFinderDiagnostics.ActivityNames.StatsCourseCalculate))
             {
-                CourseId = courseId,
-                CourseName = courseName,
-                TotalRounds = filteredRounds.Count,
-                Scoring = new CourseScoringStats
+                var response = new CourseStatsResponse
                 {
-                    RoundsIncluded = filteredRounds.Count,
-                    Rounds18Hole = filteredRounds.Count(r => r.FullRound),
-                    Rounds9Hole = filteredRounds.Count(r => !r.FullRound),
-                    Average18HoleScore = StatsCalculator.CalculateAverageScore(filteredRounds),
-                    Average9HoleScore = StatsCalculator.CalculateAverageScore(filteredRounds, false),
-                    Best18HoleRound = StatsCalculator.FindBestRound(filteredRounds),
-                    Best9HoleRound = StatsCalculator.FindBestRound(filteredRounds, false),
-                    Average18HoleScoreTrend = StatsCalculator.CalculateScoreTrend(filteredRounds),
-                    Average9HoleScoreTrend = StatsCalculator.CalculateScoreTrend(filteredRounds, fullRound: false),
-                    ScoreTrend18Hole = StatsCalculator.BuildScoreTrend(filteredRounds, fullRound: true),
-                    ScoreTrend9Hole = StatsCalculator.BuildScoreTrend(filteredRounds, fullRound: false)
-                },
-                BallStriking = BuildBallStriking(filteredRounds),
-                ShortGame = BuildShortGame(filteredRounds),
-                ParTypeScoring = StatsCalculator.CalculateParTypeScoring(filteredRounds),
-                HoleStats = StatsCalculator.CalculateHoleAggregateStats(filteredRounds),
-                ScoringDistribution = StatsCalculator.AggregateScoringDistribution(filteredRounds),
-                TeeboxOptions = teeboxOptions,
-                SelectedTeeboxId = teeboxId
-            };
-
-            // Strokes Gained from stored values
-            var roundsWithSg = filteredRounds.Where(r => r.StrokesGained != null).ToList();
-            if (roundsWithSg.Count > 0)
-            {
-                hasSg = true;
-                response.StrokesGained = new CourseStrokesGainedStats
-                {
-                    RoundsIncluded = roundsWithSg.Count,
-                    Summary = AggregateStoredSg(roundsWithSg)
+                    CourseId = courseId,
+                    CourseName = courseName,
+                    TotalRounds = filteredRounds.Count,
+                    Scoring = new CourseScoringStats
+                    {
+                        RoundsIncluded = filteredRounds.Count,
+                        Rounds18Hole = filteredRounds.Count(r => r.FullRound),
+                        Rounds9Hole = filteredRounds.Count(r => !r.FullRound),
+                        Average18HoleScore = StatsCalculator.CalculateAverageScore(filteredRounds),
+                        Average9HoleScore = StatsCalculator.CalculateAverageScore(filteredRounds, false),
+                        Best18HoleRound = StatsCalculator.FindBestRound(filteredRounds),
+                        Best9HoleRound = StatsCalculator.FindBestRound(filteredRounds, false),
+                        Average18HoleScoreTrend = StatsCalculator.CalculateScoreTrend(filteredRounds),
+                        Average9HoleScoreTrend = StatsCalculator.CalculateScoreTrend(filteredRounds, fullRound: false),
+                        ScoreTrend18Hole = StatsCalculator.BuildScoreTrend(filteredRounds, fullRound: true),
+                        ScoreTrend9Hole = StatsCalculator.BuildScoreTrend(filteredRounds, fullRound: false)
+                    },
+                    BallStriking = BuildBallStriking(filteredRounds),
+                    ShortGame = BuildShortGame(filteredRounds),
+                    ParTypeScoring = StatsCalculator.CalculateParTypeScoring(filteredRounds),
+                    HoleStats = StatsCalculator.CalculateHoleAggregateStats(filteredRounds),
+                    ScoringDistribution = StatsCalculator.AggregateScoringDistribution(filteredRounds),
+                    TeeboxOptions = teeboxOptions,
+                    SelectedTeeboxId = teeboxId
                 };
-            }
 
-            result = FairwayFinderDiagnostics.TagValues.ResultOk;
-            return response;
+                // Strokes Gained from stored values
+                var roundsWithSg = filteredRounds.Where(r => r.StrokesGained != null).ToList();
+                if (roundsWithSg.Count > 0)
+                {
+                    hasSg = true;
+                    response.StrokesGained = new CourseStrokesGainedStats
+                    {
+                        RoundsIncluded = roundsWithSg.Count,
+                        Summary = AggregateStoredSg(roundsWithSg)
+                    };
+                }
+
+                result = FairwayFinderDiagnostics.TagValues.ResultOk;
+                return response;
+            }
         }
         catch (Exception ex)
         {
@@ -233,18 +256,22 @@ public class StatsService : IStatsService
                 };
             }
 
-            var holes = BuildHoleStatsDetails(filter.FilteredRounds, out hasSg);
-
-            result = FairwayFinderDiagnostics.TagValues.ResultOk;
-            return new CourseHoleStatsResponse
+            using (FairwayFinderDiagnostics.StatsActivity
+                .StartActivity(FairwayFinderDiagnostics.ActivityNames.StatsCourseHolesCalculate))
             {
-                CourseId = courseId,
-                CourseName = filter.CourseName,
-                TotalRounds = filter.FilteredRounds.Count,
-                TeeboxOptions = filter.TeeboxOptions,
-                SelectedTeeboxId = teeboxId,
-                Holes = holes
-            };
+                var holes = BuildHoleStatsDetails(filter.FilteredRounds, out hasSg);
+
+                result = FairwayFinderDiagnostics.TagValues.ResultOk;
+                return new CourseHoleStatsResponse
+                {
+                    CourseId = courseId,
+                    CourseName = filter.CourseName,
+                    TotalRounds = filter.FilteredRounds.Count,
+                    TeeboxOptions = filter.TeeboxOptions,
+                    SelectedTeeboxId = teeboxId,
+                    Holes = holes
+                };
+            }
         }
         catch (Exception ex)
         {
@@ -364,6 +391,9 @@ public class StatsService : IStatsService
     /// </summary>
     private static BallStrikingStats BuildBallStriking(IReadOnlyList<RoundResponse> rounds)
     {
+        using var activity = FairwayFinderDiagnostics.StatsActivity
+            .StartActivity(FairwayFinderDiagnostics.ActivityNames.StatsCalcBallStriking);
+
         var ballStriking = StatsCalculator.CalculateBallStriking(rounds);
         ballStriking.FirTrend = StatsCalculator.BuildFirTrend(rounds);
         ballStriking.GirTrend = StatsCalculator.BuildGirTrend(rounds);
@@ -376,6 +406,9 @@ public class StatsService : IStatsService
     /// </summary>
     private static ShortGameStats BuildShortGame(IReadOnlyList<RoundResponse> rounds)
     {
+        using var activity = FairwayFinderDiagnostics.StatsActivity
+            .StartActivity(FairwayFinderDiagnostics.ActivityNames.StatsCalcShortGame);
+
         var shortGame = StatsCalculator.CalculateShortGame(rounds);
         shortGame.PuttsTrend18Hole = StatsCalculator.BuildPuttsTrend(rounds);
         shortGame.PuttsTrend9Hole = StatsCalculator.BuildPuttsTrend(rounds, fullRound: false);

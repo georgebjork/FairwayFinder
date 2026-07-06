@@ -74,9 +74,19 @@ public static class FairwayFinderDiagnostics
     {
         public const string RoundCreate = "round.create";
         public const string RoundUpdate = "round.update";
+        public const string RoundsDetailsGenerate = "rounds.details.generate";
+        public const string RoundsStrokesGainedCompute = "rounds.strokes_gained.compute";
         public const string StatsUserGenerate = "stats.user.generate";
         public const string StatsCourseGenerate = "stats.course.generate";
         public const string StatsCourseHolesGenerate = "stats.course_holes.generate";
+        public const string StatsUserCalculate = "stats.user.calculate";
+        public const string StatsCourseCalculate = "stats.course.calculate";
+        public const string StatsCourseHolesCalculate = "stats.course_holes.calculate";
+        public const string StatsCalcScoring = "stats.calc.scoring";
+        public const string StatsCalcBallStriking = "stats.calc.ball_striking";
+        public const string StatsCalcShortGame = "stats.calc.short_game";
+        public const string StatsCalcDistribution = "stats.calc.distribution";
+        public const string StatsCalcStrokesGained = "stats.calc.strokes_gained";
         public const string ImportsGcaRun = "imports.gca.run";
         public const string ImportsTgtrTransfer = "imports.tgtr.transfer";
     }
@@ -110,6 +120,9 @@ public static class FairwayFinderDiagnostics
         public const string RoundId = "round.id";
         public const string RoundHoles = "round.holes";
         public const string RoundShotTracking = "round.shot_tracking";
+
+        public const string RoundsCount = "rounds.count";
+        public const string RoundsShotTrackedCount = "rounds.shot_tracked_count";
 
         public const string StatsRoundCount = "stats.round_count";
         public const string StatsFiltered = "stats.filtered";
