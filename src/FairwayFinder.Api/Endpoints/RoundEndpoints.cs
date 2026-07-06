@@ -131,12 +131,13 @@ public static class RoundEndpoints
 
     private static async Task EnsureRoundAccess(IRoundService roundService, long roundId, string userId)
     {
-        var round = await roundService.GetRoundByIdAsync(roundId);
-        if (round is null)
+        // One lightweight projection query answers both existence (404) and ownership (403) —
+        // no need to materialize the whole round just to guard access.
+        var ownerId = await roundService.GetRoundOwnerIdAsync(roundId);
+        if (ownerId is null)
             throw new NotFoundException("Round", roundId);
 
-        var isOwner = await roundService.IsRoundOwnedByUserAsync(roundId, userId);
-        if (!isOwner)
+        if (ownerId != userId)
             throw new ForbiddenException("Round", roundId);
     }
 }

@@ -56,6 +56,13 @@ public interface IRoundService
     Task<bool> IsRoundOwnedByUserAsync(long roundId, string userId);
 
     /// <summary>
+    /// Returns the owning user's id for a round, or null if the round does not exist (or is deleted).
+    /// A single lightweight projection query that lets callers distinguish "not found" (null) from
+    /// "not owned" (id mismatch) without materializing the whole round.
+    /// </summary>
+    Task<string?> GetRoundOwnerIdAsync(long roundId);
+
+    /// <summary>
     /// Creates a new round with scores, hole stats (if enabled), and round stats.
     /// Returns the new round ID.
     /// </summary>

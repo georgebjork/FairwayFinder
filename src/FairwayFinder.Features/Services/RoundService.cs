@@ -1027,6 +1027,15 @@ public class RoundService : IRoundService
             .AnyAsync(r => r.RoundId == roundId && r.UserId == userId && !r.IsDeleted);
     }
 
+    public async Task<string?> GetRoundOwnerIdAsync(long roundId)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        return await dbContext.Rounds
+            .Where(r => r.RoundId == roundId && !r.IsDeleted)
+            .Select(r => r.UserId)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task<List<CourseResponse>> GetPlayedCoursesByUserId(string userId, bool? statRounds = null)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
@@ -1097,16 +1106,18 @@ public class RoundService : IRoundService
         var shotTrackedRounds = rounds.Where(r => r.UsingShotTracking).ToList();
         if (shotTrackedRounds.Count == 0) return;
 
+        // Score ids are already on the mapped holes (set during RoundHole.From), so go straight
+        // to Shots without re-querying Scores — the caller has already loaded them.
+        var scoreIds = shotTrackedRounds
+            .SelectMany(r => r.Holes)
+            .Select(h => h.ScoreId)
+            .Where(id => id > 0)
+            .Distinct()
+            .ToList();
+
+        if (scoreIds.Count == 0) return;
+
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-
-        var roundIds = shotTrackedRounds.Select(r => r.RoundId).ToList();
-
-        // Get all scores for these rounds
-        var scores = await dbContext.Scores
-            .Where(s => roundIds.Contains(s.RoundId) && !s.IsDeleted)
-            .ToListAsync();
-
-        var scoreIds = scores.Select(s => s.ScoreId).ToList();
 
         // Get all shots for these scores
         var shots = await dbContext.Shots
