@@ -2196,6 +2196,144 @@ public class StatsCalculatorTests
 
     #endregion
 
+    #region Off-the-Tee Penalty Tests
+
+    /// <summary>
+    /// Builds a hole carrying hole-stat penalty flags. On a par 3 the tee-shot penalty is
+    /// recorded via the approach flag, mirroring the client entry form.
+    /// </summary>
+    private static RoundHole CreatePenaltyHole(
+        int holeNumber, int par, bool teePenalty = false, bool approachPenalty = false)
+    {
+        return new RoundHole
+        {
+            HoleId = holeNumber,
+            HoleNumber = holeNumber,
+            Par = par,
+            Score = (short)par,
+            Stats = new RoundHoleStat
+            {
+                TeeShotPenalty = teePenalty,
+                ApproachShotPenalty = approachPenalty
+            }
+        };
+    }
+
+    [Fact]
+    public void BuildTeePenaltyTrend_EmptyList_ReturnsEmptyList()
+    {
+        var result = StatsCalculator.BuildTeePenaltyTrend(new List<RoundResponse>());
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void BuildTeePenaltyTrend_CountsAllPars_AndPar3UsesApproachFlag()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, "Course A", usingHoleStats: true,
+                datePlayed: new DateOnly(2024, 6, 3),
+                holes: new List<RoundHole>
+                {
+                    CreatePenaltyHole(1, 4, teePenalty: true),                    // counts (par 4 tee)
+                    CreatePenaltyHole(2, 3, approachPenalty: true),               // counts (par 3 approach)
+                    CreatePenaltyHole(3, 3, teePenalty: true),                    // does NOT count (par 3 ignores tee flag)
+                    CreatePenaltyHole(4, 5)                                        // no penalty
+                })
+        };
+
+        var result = StatsCalculator.BuildTeePenaltyTrend(rounds);
+
+        Assert.Single(result);
+        // 2 penalties over 4 holes with stats = 50%
+        Assert.Equal(50.0, result[0].TeePenaltyPercent);
+        Assert.Equal(2, result[0].PenaltyHoles);
+        Assert.Equal(4, result[0].TeeShotAttempts);
+    }
+
+    [Fact]
+    public void BuildTeePenaltyTrend_MultipleRounds_ReturnsReversedOldestFirst()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, "Course A", usingHoleStats: true,
+                datePlayed: new DateOnly(2024, 6, 3),
+                holes: new List<RoundHole> { CreatePenaltyHole(1, 4, teePenalty: true), CreatePenaltyHole(2, 4) }),   // 50%
+            CreateRound(2, 82, "Course B", usingHoleStats: true,
+                datePlayed: new DateOnly(2024, 6, 2),
+                holes: new List<RoundHole> { CreatePenaltyHole(1, 4), CreatePenaltyHole(2, 4) }),                     // 0%
+            CreateRound(3, 84, "Course C", usingHoleStats: true,
+                datePlayed: new DateOnly(2024, 6, 1),
+                holes: new List<RoundHole> { CreatePenaltyHole(1, 4, teePenalty: true), CreatePenaltyHole(2, 3, approachPenalty: true) }) // 100%
+        };
+
+        var result = StatsCalculator.BuildTeePenaltyTrend(rounds);
+
+        Assert.Equal(3, result.Count);
+        Assert.Equal(3, result[0].RoundId);
+        Assert.Equal(100.0, result[0].TeePenaltyPercent);
+        Assert.Equal(2, result[1].RoundId);
+        Assert.Equal(0.0, result[1].TeePenaltyPercent);
+        Assert.Equal(1, result[2].RoundId);
+        Assert.Equal(50.0, result[2].TeePenaltyPercent);
+    }
+
+    [Fact]
+    public void BuildTeePenaltyTrend_IgnoresRoundsWithoutHoleStats()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: false,
+                holes: new List<RoundHole> { CreatePenaltyHole(1, 4, teePenalty: true) })
+        };
+
+        var result = StatsCalculator.BuildTeePenaltyTrend(rounds);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void CalculateBallStriking_TeePenaltyPercent_CountsAllParsWithPar3Approach()
+    {
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 80, usingHoleStats: true, holes: new List<RoundHole>
+            {
+                CreatePenaltyHole(1, 4, teePenalty: true),
+                CreatePenaltyHole(2, 3, approachPenalty: true),
+                CreatePenaltyHole(3, 4),
+                CreatePenaltyHole(4, 5)
+            })
+        };
+
+        var result = StatsCalculator.CalculateBallStriking(rounds);
+
+        // 2 penalties over 4 holes = 50%
+        Assert.Equal(50.0, result.TeePenaltyPercent);
+    }
+
+    [Fact]
+    public void CalculateHoleAggregateStats_TeeShotPenaltyPercent_Par3UsesApproachFlag()
+    {
+        // Same par-3 hole played twice: once with a tee-shot penalty (approach flag), once clean.
+        var rounds = new List<RoundResponse>
+        {
+            CreateRound(1, 40, usingHoleStats: true,
+                holes: new List<RoundHole> { CreatePenaltyHole(1, 3, approachPenalty: true) }),
+            CreateRound(2, 40, usingHoleStats: true,
+                holes: new List<RoundHole> { CreatePenaltyHole(1, 3) })
+        };
+
+        var result = StatsCalculator.CalculateHoleAggregateStats(rounds);
+
+        var hole = Assert.Single(result);
+        // 1 of 2 plays had an off-the-tee (approach-flagged) penalty = 50%
+        Assert.Equal(50.0m, hole.TeeShotPenaltyPercent);
+    }
+
+    #endregion
+
     #region BuildGirTrend Tests
 
     [Fact]

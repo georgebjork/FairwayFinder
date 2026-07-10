@@ -83,11 +83,20 @@ public class BallStrikingStats
     /// <summary>GIR% trend (linear regression slope). Positive = improvement.</summary>
     public double? GirPercentTrend { get; set; }
 
+    /// <summary>Off-the-tee penalty percentage (all holes; par 3 uses the approach flag).</summary>
+    public double? TeePenaltyPercent { get; set; }
+
+    /// <summary>Tee-penalty% trend (linear regression slope). Negative = improvement (fewer penalties).</summary>
+    public double? TeePenaltyPercentTrend { get; set; }
+
     /// <summary>Per-round FIR% data for charting (oldest to newest).</summary>
     public List<FirTrendPoint> FirTrend { get; set; } = new();
 
     /// <summary>Per-round GIR% data for charting (oldest to newest).</summary>
     public List<GirTrendPoint> GirTrend { get; set; } = new();
+
+    /// <summary>Per-round off-the-tee penalty% data for charting (oldest to newest).</summary>
+    public List<TeePenaltyTrendPoint> TeePenaltyTrend { get; set; } = new();
 }
 
 /// <summary>
@@ -220,6 +229,19 @@ public class GirTrendPoint
     public double GirPercent { get; set; }
     public int GreensHit { get; set; }
     public int GreenAttempts { get; set; }
+    public string CourseName { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// A single data point for off-the-tee penalty% trend
+/// </summary>
+public class TeePenaltyTrendPoint
+{
+    public long RoundId { get; set; }
+    public DateOnly DatePlayed { get; set; }
+    public double TeePenaltyPercent { get; set; }
+    public int PenaltyHoles { get; set; }
+    public int TeeShotAttempts { get; set; }
     public string CourseName { get; set; } = string.Empty;
 }
 

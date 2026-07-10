@@ -32,9 +32,9 @@ public partial class HoleStat
 
     public bool IsDeleted { get; set; }
 
-    public bool? TeeShotOb { get; set; }
+    public bool? TeeShotPenalty { get; set; }
 
-    public bool? ApproachShotOb { get; set; }
+    public bool? ApproachShotPenalty { get; set; }
 
     public bool TeeShotOutOfPosition { get; set; }
 

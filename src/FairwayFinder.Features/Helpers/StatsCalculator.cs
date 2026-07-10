@@ -133,6 +133,45 @@ public static class StatsCalculator
     }
 
     /// <summary>
+    /// Builds the off-the-tee penalty% trend data for charting (oldest to newest).
+    /// One point per round: penalty holes over all holes with hole stats (every par).
+    /// Par 3 tee penalties come from the approach flag (see IsOffTheTeePenalty).
+    /// </summary>
+    public static List<TeePenaltyTrendPoint> BuildTeePenaltyTrend(IReadOnlyList<RoundResponse> rounds)
+    {
+        var result = new List<TeePenaltyTrendPoint>();
+
+        var roundsWithStats = rounds
+            .Where(x => x.UsingHoleStats)
+            .ToList();
+
+        foreach (var round in roundsWithStats)
+        {
+            var teeHoles = round.Holes
+                .Where(h => h.Stats != null)
+                .ToList();
+
+            if (teeHoles.Count > 0)
+            {
+                var penaltyHoles = teeHoles.Count(IsOffTheTeePenalty);
+                result.Add(new TeePenaltyTrendPoint
+                {
+                    RoundId = round.RoundId,
+                    DatePlayed = round.DatePlayed,
+                    TeePenaltyPercent = Math.Round((double)penaltyHoles / teeHoles.Count * 100, 1),
+                    PenaltyHoles = penaltyHoles,
+                    TeeShotAttempts = teeHoles.Count,
+                    CourseName = round.CourseName
+                });
+            }
+        }
+
+        // Reverse to get oldest first for chart display
+        result.Reverse();
+        return result;
+    }
+
+    /// <summary>
     /// Builds the GIR% trend data for charting (oldest to newest)
     /// Only includes rounds that have hole stats with green data
     /// </summary>
@@ -382,6 +421,14 @@ public static class StatsCalculator
             result.GirPercent = Math.Round((double)greensHit / greenHoles.Count * 100, 1);
         }
 
+        // Off-the-tee penalty % (all holes with hole stats, every par). Par 3 tee
+        // penalties are recorded via the approach flag (see IsOffTheTeePenalty).
+        if (allHoles.Count > 0)
+        {
+            var penaltyHoles = allHoles.Count(IsOffTheTeePenalty);
+            result.TeePenaltyPercent = Math.Round((double)penaltyHoles / allHoles.Count * 100, 1);
+        }
+
         // Trends using linear regression (need at least 2 rounds)
         if (roundsWithHoleStats.Count >= 2)
         {
@@ -390,6 +437,14 @@ public static class StatsCalculator
 
         return result;
     }
+
+    /// <summary>
+    /// Whether a hole's tee shot incurred a penalty. On a par 3 the tee shot is the approach
+    /// to the green, so the penalty is recorded via the approach flag; par 4/5 use the tee flag.
+    /// This is the single definition of "off the tee penalty" shared by every stat below.
+    /// </summary>
+    private static bool IsOffTheTeePenalty(RoundHole hole) =>
+        hole.Par >= 4 ? hole.Stats?.TeeShotPenalty == true : hole.Stats?.ApproachShotPenalty == true;
 
     /// <summary>
     /// Calculates short-game stats (up-and-down%, putts, 3-putts) with trends.
@@ -739,6 +794,11 @@ public static class StatsCalculator
 
                     var approachOop = oopHoles.Count(h => h.Stats!.ApproachShotOutOfPosition);
                     result.ApproachShotOutOfPositionPercent = Math.Round((decimal)approachOop / oopHoles.Count * 100, 1);
+
+                    // Off-the-tee penalty % (every par). On a par 3 the tee shot penalty is
+                    // recorded via the approach flag (see IsOffTheTeePenalty).
+                    var teePenalty = oopHoles.Count(IsOffTheTeePenalty);
+                    result.TeeShotPenaltyPercent = Math.Round((decimal)teePenalty / oopHoles.Count * 100, 1);
                 }
 
                 return result;
@@ -806,6 +866,25 @@ public static class StatsCalculator
         {
             var (slope, _) = CalculateLinearRegression(girPerRound);
             result.GirPercentTrend = Math.Round(slope, 2);
+        }
+
+        // Off-the-tee penalty% Trend — per-round penalty%, then regress (oldest first)
+        var penaltyPerRound = roundsWithHoleStats
+            .AsEnumerable().Reverse()
+            .Select(r =>
+            {
+                var teeHoles = r.Holes.Where(h => h.Stats != null).ToList();
+                if (teeHoles.Count == 0) return (double?)null;
+                return (double)teeHoles.Count(IsOffTheTeePenalty) / teeHoles.Count * 100;
+            })
+            .Where(x => x.HasValue)
+            .Select(x => x!.Value)
+            .ToList();
+
+        if (penaltyPerRound.Count >= 2)
+        {
+            var (slope, _) = CalculateLinearRegression(penaltyPerRound);
+            result.TeePenaltyPercentTrend = Math.Round(slope, 2);
         }
     }
 

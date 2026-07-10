@@ -187,6 +187,12 @@ public class HoleAggregateStats
     public decimal? ApproachShotOutOfPositionPercent { get; set; }
 
     /// <summary>
+    /// Off-the-tee penalty percentage. Null if no hole-stat data. On a par 3 the tee shot
+    /// penalty is recorded via the approach flag.
+    /// </summary>
+    public decimal? TeeShotPenaltyPercent { get; set; }
+
+    /// <summary>
     /// Fairway miss direction breakdown. Null if no fairway miss data or par 3.
     /// </summary>
     public MissBreakdown? FairwayMiss { get; set; }

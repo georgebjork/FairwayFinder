@@ -400,7 +400,7 @@ public class RoundService : IRoundService
                 }
 
                 // Auto-derive HoleStat from shots
-                var (numberOfPutts, hitFairway, hitGreen, approachYardage, teeShotOb, approachShotOb) =
+                var (numberOfPutts, hitFairway, hitGreen, approachYardage, teeShotPenalty, approachShotPenalty) =
                     StrokesGainedCalculator.DeriveHoleStatFromShots(hole.Shots, hole.Par);
 
                 dbContext.HoleStats.Add(new HoleStat
@@ -412,8 +412,8 @@ public class RoundService : IRoundService
                     HitGreen = hitGreen,
                     NumberOfPutts = numberOfPutts,
                     ApproachYardage = approachYardage,
-                    TeeShotOb = teeShotOb,
-                    ApproachShotOb = approachShotOb,
+                    TeeShotPenalty = teeShotPenalty,
+                    ApproachShotPenalty = approachShotPenalty,
                     // Fields shots can't derive — accept them from the client if supplied
                     MissFairwayType = hole.MissFairwayType,
                     MissGreenType = hole.MissGreenType,
@@ -445,8 +445,8 @@ public class RoundService : IRoundService
                 ApproachYardage = h.ApproachYardage,
                 TeeShotOutOfPosition = h.TeeShotOutOfPosition,
                 ApproachShotOutOfPosition = h.ApproachShotOutOfPosition,
-                TeeShotOb = h.TeeShotOb,
-                ApproachShotOb = h.ApproachShotOb,
+                TeeShotPenalty = h.TeeShotPenalty,
+                ApproachShotPenalty = h.ApproachShotPenalty,
                 CreatedBy = userId,
                 CreatedOn = today,
                 UpdatedBy = userId,
@@ -746,7 +746,7 @@ public class RoundService : IRoundService
                 }
 
                 // Auto-derive HoleStat from shots
-                var (numberOfPutts, hitFairway, hitGreen, approachYardage, teeShotOb, approachShotOb) =
+                var (numberOfPutts, hitFairway, hitGreen, approachYardage, teeShotPenalty, approachShotPenalty) =
                     StrokesGainedCalculator.DeriveHoleStatFromShots(hole.Shots, hole.Par);
 
                 if (holeStatsByScoreId.TryGetValue(score.ScoreId, out var existingStat))
@@ -756,8 +756,8 @@ public class RoundService : IRoundService
                     existingStat.HitGreen = hitGreen;
                     existingStat.NumberOfPutts = numberOfPutts;
                     existingStat.ApproachYardage = approachYardage;
-                    existingStat.TeeShotOb = teeShotOb;
-                    existingStat.ApproachShotOb = approachShotOb;
+                    existingStat.TeeShotPenalty = teeShotPenalty;
+                    existingStat.ApproachShotPenalty = approachShotPenalty;
                     // Fields shots can't derive — accept them from the client if supplied
                     existingStat.MissFairwayType = hole.MissFairwayType;
                     existingStat.MissGreenType = hole.MissGreenType;
@@ -777,8 +777,8 @@ public class RoundService : IRoundService
                         HitGreen = hitGreen,
                         NumberOfPutts = numberOfPutts,
                         ApproachYardage = approachYardage,
-                        TeeShotOb = teeShotOb,
-                        ApproachShotOb = approachShotOb,
+                        TeeShotPenalty = teeShotPenalty,
+                        ApproachShotPenalty = approachShotPenalty,
                         // Fields shots can't derive — accept them from the client if supplied
                         MissFairwayType = hole.MissFairwayType,
                         MissGreenType = hole.MissGreenType,
@@ -818,8 +818,8 @@ public class RoundService : IRoundService
                     existingStat.ApproachYardage = hole.ApproachYardage;
                     existingStat.TeeShotOutOfPosition = hole.TeeShotOutOfPosition;
                     existingStat.ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition;
-                    existingStat.TeeShotOb = hole.TeeShotOb;
-                    existingStat.ApproachShotOb = hole.ApproachShotOb;
+                    existingStat.TeeShotPenalty = hole.TeeShotPenalty;
+                    existingStat.ApproachShotPenalty = hole.ApproachShotPenalty;
                     existingStat.UpdatedBy = userId;
                     existingStat.UpdatedOn = today;
                 }
@@ -838,8 +838,8 @@ public class RoundService : IRoundService
                         ApproachYardage = hole.ApproachYardage,
                         TeeShotOutOfPosition = hole.TeeShotOutOfPosition,
                         ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition,
-                        TeeShotOb = hole.TeeShotOb,
-                        ApproachShotOb = hole.ApproachShotOb,
+                        TeeShotPenalty = hole.TeeShotPenalty,
+                        ApproachShotPenalty = hole.ApproachShotPenalty,
                         CreatedBy = userId,
                         CreatedOn = today,
                         UpdatedBy = userId,

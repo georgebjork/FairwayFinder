@@ -101,7 +101,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasKey(e => e.HoleStatsId).HasName("hole_stats_pkey");
             entity.ToTable("hole_stats");
             entity.Property(e => e.HoleStatsId).HasColumnName("hole_stats_id");
-            entity.Property(e => e.ApproachShotOb).HasColumnName("approach_shot_ob");
+            entity.Property(e => e.ApproachShotPenalty).HasColumnName("approach_shot_penalty");
             entity.Property(e => e.ApproachYardage).HasColumnName("approach_yardage");
             entity.Property(e => e.CreatedBy).HasColumnName("created_by");
             entity.Property(e => e.CreatedOn).HasColumnName("created_on");
@@ -116,7 +116,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.ApproachShotOutOfPosition).HasColumnName("approach_shot_out_of_position");
             entity.Property(e => e.RoundId).HasColumnName("round_id");
             entity.Property(e => e.ScoreId).HasColumnName("score_id");
-            entity.Property(e => e.TeeShotOb).HasColumnName("tee_shot_ob");
+            entity.Property(e => e.TeeShotPenalty).HasColumnName("tee_shot_penalty");
             entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
             entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
 

@@ -397,6 +397,7 @@ public class StatsService : IStatsService
         var ballStriking = StatsCalculator.CalculateBallStriking(rounds);
         ballStriking.FirTrend = StatsCalculator.BuildFirTrend(rounds);
         ballStriking.GirTrend = StatsCalculator.BuildGirTrend(rounds);
+        ballStriking.TeePenaltyTrend = StatsCalculator.BuildTeePenaltyTrend(rounds);
         return ballStriking;
     }
 
@@ -616,6 +617,7 @@ public class StatsService : IStatsService
                 AveragePutts                     = agg.AveragePutts,
                 TeeShotOutOfPositionPercent      = agg.TeeShotOutOfPositionPercent,
                 ApproachShotOutOfPositionPercent = agg.ApproachShotOutOfPositionPercent,
+                TeeShotPenaltyPercent            = agg.TeeShotPenaltyPercent,
                 FairwayMiss                      = agg.FairwayMiss,
                 GreenMiss                        = agg.GreenMiss,
                 // Per-hole-detail fields

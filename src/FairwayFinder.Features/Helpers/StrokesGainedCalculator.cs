@@ -241,7 +241,7 @@ public static class StrokesGainedCalculator
     /// <summary>
     /// Derives HoleStat fields from shot data.
     /// </summary>
-    public static (short? numberOfPutts, bool? hitFairway, bool? hitGreen, int? approachYardage, bool? teeShotOb, bool? approachShotOb)
+    public static (short? numberOfPutts, bool? hitFairway, bool? hitGreen, int? approachYardage, bool? teeShotPenalty, bool? approachShotPenalty)
         DeriveHoleStatFromShots(List<ShotData> shots, int holePar)
     {
         if (shots.Count == 0)
@@ -304,13 +304,13 @@ public static class StrokesGainedCalculator
             approachYardage = approachShot.StartDistance;
         }
 
-        // Tee shot OB
-        bool? teeShotOb = shots[0].PenaltyStrokes > 0;
+        // Tee shot penalty
+        bool? teeShotPenalty = shots[0].PenaltyStrokes > 0;
 
-        // Approach shot OB
-        bool? approachShotOb = approachShot?.PenaltyStrokes > 0;
+        // Approach shot penalty
+        bool? approachShotPenalty = approachShot?.PenaltyStrokes > 0;
 
-        return (numberOfPutts, hitFairway, hitGreen, approachYardage, teeShotOb, approachShotOb);
+        return (numberOfPutts, hitFairway, hitGreen, approachYardage, teeShotPenalty, approachShotPenalty);
     }
 
     /// <summary>
