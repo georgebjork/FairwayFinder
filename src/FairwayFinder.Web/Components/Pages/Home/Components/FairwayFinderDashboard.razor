@@ -214,7 +214,7 @@
         <RadzenColumn Size="12" SizeLG="8">
             <RadzenCard Style="height: 100%;">
                 <RadzenText TextStyle="TextStyle.H5" class="rz-mb-4">Recent Rounds</RadzenText>
-                <FairwayFinderRoundsList Rounds="@_rounds" RoundUrlPrefix="@RoundUrlPrefix" />
+                <FairwayFinderRoundsList Rounds="@_rounds" RoundUrlPrefix="@RoundUrlPrefix" ShowExclusionState="@ShowExclusionState" />
             </RadzenCard>
         </RadzenColumn>
         <RadzenColumn Size="12" SizeLG="4">
@@ -277,6 +277,13 @@
     /// </summary>
     [Parameter]
     public string? ShareUrl { get; set; }
+
+    /// <summary>
+    /// Whether the rounds list badges and dims rounds flagged ExcludeFromStats.
+    /// true for the owner's dashboard, false for public viewers.
+    /// </summary>
+    [Parameter]
+    public bool ShowExclusionState { get; set; }
 
     private UserStatsResponse? _stats;
     private List<RoundResponse> _rounds = new();

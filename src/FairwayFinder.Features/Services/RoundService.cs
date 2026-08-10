@@ -50,8 +50,10 @@ public class RoundService : IRoundService
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
+        // Round lists show every round the user logged, including ones flagged
+        // ExcludeFromStats — the flag rides along on RoundResponse so the UI can badge them.
         var query = dbContext.Rounds
-            .Where(r => r.UserId == userId && !r.IsDeleted && !r.ExcludeFromStats);
+            .Where(r => r.UserId == userId && !r.IsDeleted);
 
         if (filter is not null)
         {
@@ -102,13 +104,13 @@ public class RoundService : IRoundService
 
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
+        // This is the stats/details path, so rounds the user excluded never come back —
+        // regardless of whether a filter was supplied.
         var query = dbContext.Rounds
-            .Where(r => r.UserId == userId && !r.IsDeleted);
+            .Where(r => r.UserId == userId && !r.IsDeleted && !r.ExcludeFromStats);
 
         if (filter is not null)
         {
-            query = query.Where(r => !r.ExcludeFromStats);
-
             if (filter.FullRoundOnly.HasValue)
             {
                 query = query.Where(r => r.FullRound == filter.FullRoundOnly.Value);
@@ -1036,6 +1038,26 @@ public class RoundService : IRoundService
             .FirstOrDefaultAsync();
     }
 
+    public async Task<bool> SetExcludeFromStatsAsync(long roundId, bool exclude, string userId)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        var round = await dbContext.Rounds
+            .FirstOrDefaultAsync(r => r.RoundId == roundId && !r.IsDeleted);
+
+        if (round is null || round.UserId != userId)
+        {
+            return false;
+        }
+
+        round.ExcludeFromStats = exclude;
+        round.UpdatedBy = userId;
+        round.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        await dbContext.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<List<CourseResponse>> GetPlayedCoursesByUserId(string userId, bool? statRounds = null)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
@@ -1054,7 +1076,7 @@ public class RoundService : IRoundService
         else
         {
             courses = await dbContext.Courses
-                .Join(dbContext.Rounds.Where(r => r.UserId == userId && !r.IsDeleted && r.UsingHoleStats == statRounds),
+                .Join(dbContext.Rounds.Where(r => r.UserId == userId && !r.IsDeleted && !r.ExcludeFromStats && r.UsingHoleStats == statRounds),
                     c => c.CourseId,
                     r => r.CourseId,
                     (c, r) => c)

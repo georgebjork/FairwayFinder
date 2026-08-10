@@ -97,6 +97,21 @@ public static class RoundEndpoints
             return success ? Results.NoContent() : throw new NotFoundException("Round", roundId);
         }).AddEndpointFilter<ValidationFilter<UpdateRoundRequest>>();
 
+        // Separate from the PUT because that takes a whole round (teebox, date, every hole) and
+        // cannot express a lone flag flip.
+        group.MapPatch("/{roundId:long}/exclude-from-stats", async (
+            long roundId,
+            SetExcludeFromStatsRequest request,
+            HttpContext ctx,
+            IRoundService roundService) =>
+        {
+            var userId = ctx.User.GetUserId();
+            await EnsureRoundAccess(roundService, roundId, userId);
+
+            var success = await roundService.SetExcludeFromStatsAsync(roundId, request.ExcludeFromStats, userId);
+            return success ? Results.NoContent() : throw new NotFoundException("Round", roundId);
+        });
+
         group.MapDelete("/{roundId:long}", async (long roundId, HttpContext ctx, IRoundService roundService) =>
         {
             var userId = ctx.User.GetUserId();

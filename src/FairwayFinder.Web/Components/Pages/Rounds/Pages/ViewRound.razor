@@ -42,13 +42,17 @@ else
         <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Start">
             <RadzenStack Gap="0.25rem">
                 <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">@_round.CourseName</RadzenText>
-                <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem">
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" AlignItems="AlignItems.Center">
                     <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
                         Tee Box: @_round.Teebox.TeeboxName
                     </RadzenText>
                     <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
                         Date: @_round.DatePlayed.ToString("M/d/yy")
                     </RadzenText>
+                    @if (_round.ExcludeFromStats)
+                    {
+                        <RadzenBadge Text="Excluded from stats" BadgeStyle="BadgeStyle.Warning" Shade="Shade.Lighter" />
+                    }
                 </RadzenStack>
             </RadzenStack>
 
@@ -59,12 +63,21 @@ else
                                   ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
                                   Click="CopyShareLink" />
                 }
-                <RadzenButton Text="Edit" Icon="edit"
-                              ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
-                              Click="@(() => NavigationManager.NavigateTo($"/round/{RoundId}/edit"))" />
-                <RadzenButton Text="Delete" Icon="delete"
-                              ButtonStyle="ButtonStyle.Danger" Variant="Variant.Outlined"
-                              Click="OnDeleteRoundClicked" />
+                @if (_isOwner)
+                {
+                    <RadzenButton Text="@(_round.ExcludeFromStats ? "Include in stats" : "Exclude from stats")"
+                                  Icon="@(_round.ExcludeFromStats ? "playlist_add_check" : "playlist_remove")"
+                                  ButtonStyle="@(_round.ExcludeFromStats ? ButtonStyle.Success : ButtonStyle.Warning)"
+                                  Variant="Variant.Outlined"
+                                  IsBusy="_busy" Disabled="_busy"
+                                  Click="OnToggleExcludeFromStats" />
+                    <RadzenButton Text="Edit" Icon="edit"
+                                  ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                                  Click="@(() => NavigationManager.NavigateTo($"/round/{RoundId}/edit"))" />
+                    <RadzenButton Text="Delete" Icon="delete"
+                                  ButtonStyle="ButtonStyle.Danger" Variant="Variant.Outlined"
+                                  Click="OnDeleteRoundClicked" />
+                }
             </RadzenStack>
         </RadzenStack>
         
@@ -91,6 +104,8 @@ else
     private RoundResponse? _round;
     private bool _loading = true;
     private string _currentUserId = string.Empty;
+    private bool _isOwner;
+    private bool _busy;
     private bool _isPublic;
     private string _shareableUrl = string.Empty;
 
@@ -115,6 +130,9 @@ else
     {
         _loading = true;
         _round = await RoundService.GetRoundByIdAsync(RoundId);
+        _isOwner = _round is not null
+                   && !string.IsNullOrEmpty(_currentUserId)
+                   && await RoundService.IsRoundOwnedByUserAsync(RoundId, _currentUserId);
         _loading = false;
 
         if (_round is not null)
@@ -155,6 +173,56 @@ else
                 Detail = "Please copy the link manually.",
                 Duration = 3000
             });
+        }
+    }
+
+    private async Task OnToggleExcludeFromStats()
+    {
+        if (_round is null || _busy) return;
+
+        var exclude = !_round.ExcludeFromStats;
+        _busy = true;
+
+        try
+        {
+            var success = await RoundService.SetExcludeFromStatsAsync(RoundId, exclude, _currentUserId);
+            if (success)
+            {
+                _round.ExcludeFromStats = exclude;
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = exclude ? "Excluded From Stats" : "Included In Stats",
+                    Detail = exclude
+                        ? "This round no longer counts toward your stats."
+                        : "This round counts toward your stats again.",
+                    Duration = 4000
+                });
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Failed to Update Round",
+                    Detail = "This round could not be updated.",
+                    Duration = 6000
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Failed to Update Round",
+                Detail = ex.Message,
+                Duration = 6000
+            });
+        }
+        finally
+        {
+            _busy = false;
         }
     }
 

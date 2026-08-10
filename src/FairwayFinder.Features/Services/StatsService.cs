@@ -27,6 +27,8 @@ public class StatsService : IStatsService
         {
             var rounds = await _roundService.GetRoundsWithDetailsAsync(userId, null, level);
 
+            // GetRoundsWithDetailsAsync already excludes these at the database level; this is a
+            // cheap in-memory backstop so stats never depend on the caller getting that right.
             var statsRounds = rounds.Where(r => !r.ExcludeFromStats).ToList();
 
             // Apply filters
@@ -293,8 +295,9 @@ public class StatsService : IStatsService
     public async Task<List<int>> GetAvailableYearsAsync(string userId)
     {
         var rounds = await _roundService.GetRoundsByUserIdAsync(userId);
-        
+
         return rounds
+            .Where(r => !r.ExcludeFromStats)
             .Select(r => r.DatePlayed.Year)
             .Distinct()
             .OrderByDescending(y => y)

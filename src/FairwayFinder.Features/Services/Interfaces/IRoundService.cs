@@ -6,14 +6,15 @@ namespace FairwayFinder.Features.Services.Interfaces;
 public interface IRoundService
 {
     /// <summary>
-    /// Gets a lightweight list of rounds for a user (for display in lists)
+    /// Gets a lightweight list of rounds for a user (for display in lists). Includes rounds
+    /// marked ExcludeFromStats.
     /// </summary>
     Task<List<RoundResponse>> GetRoundsByUserIdAsync(string userId);
 
     /// <summary>
-    /// Lightweight list of rounds for a user with stats-style filtering applied in the database
-    /// (round type, date range, course). Rounds marked ExcludeFromStats are omitted so the list
-    /// matches what stats endpoints aggregate over.
+    /// Lightweight list of rounds for a user with filtering applied in the database
+    /// (round type, date range, course). This is a display list, so rounds marked
+    /// ExcludeFromStats are still returned — callers can badge them off RoundResponse.ExcludeFromStats.
     /// </summary>
     Task<List<RoundResponse>> GetRoundsByUserIdAsync(string userId, StatsFilter? filter);
 
@@ -25,7 +26,8 @@ public interface IRoundService
     /// <summary>
     /// Fully loaded rounds with all related data, filtered at the database level by round type,
     /// date range, and/or course. Child collections (scores, holes, hole stats) are loaded only
-    /// for the filtered round set. Rounds marked ExcludeFromStats are omitted.
+    /// for the filtered round set. Rounds marked ExcludeFromStats are always omitted, whether or
+    /// not a filter is supplied — this is the set stats aggregate over.
     /// </summary>
     Task<List<RoundResponse>> GetRoundsWithDetailsAsync(string userId, StatsFilter? filter);
 
@@ -46,7 +48,9 @@ public interface IRoundService
     Task<RoundResponse?> GetRoundByIdAsync(long roundId, BaselineLevel level);
 
     /// <summary>
-    /// Gets a list of all courses that a user has played
+    /// Gets a list of all courses that a user has played. When <paramref name="statRounds"/> is
+    /// supplied the result is scoped to rounds that count toward stats, so rounds marked
+    /// ExcludeFromStats are ignored.
     /// </summary>
     Task<List<CourseResponse>> GetPlayedCoursesByUserId(string userId, bool? statRounds = null);
 
@@ -79,6 +83,13 @@ public interface IRoundService
     /// Returns false if the round was not found.
     /// </summary>
     Task<bool> DeleteRoundAsync(long roundId, string userId);
+
+    /// <summary>
+    /// Flags a round as excluded from (or included back into) the user's stats. The round stays
+    /// in the user's round list either way. Returns false if the round was not found or the user
+    /// does not own it.
+    /// </summary>
+    Task<bool> SetExcludeFromStatsAsync(long roundId, bool exclude, string userId);
 
     /// <summary>
     /// Gets all shots for a round, grouped by ScoreId (hole).

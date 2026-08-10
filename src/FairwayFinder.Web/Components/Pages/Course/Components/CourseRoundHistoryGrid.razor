@@ -14,6 +14,7 @@
                     PagingSummaryFormat="Displaying page {0} of {1} (total {2} rounds)"
                     Style="cursor: pointer;"
                     @bind-Value=@_selectedRound
+                    RowRender="@OnRowRender"
                     RowClick="@OnRoundRowClick">
         <Columns>
             <RadzenDataGridColumn TItem="RoundResponse" Property="DatePlayed" Title="Date Played" Width="150px">
@@ -33,6 +34,17 @@
                 </Template>
             </RadzenDataGridColumn>
             <RadzenDataGridColumn TItem="RoundResponse" Property="Score" Title="Score" Width="100px" TextAlign="TextAlign.Center" />
+            @if (ShowExclusionState)
+            {
+                <RadzenDataGridColumn TItem="RoundResponse" Title="Stats" Width="110px" TextAlign="TextAlign.Center" Sortable="false" Filterable="false">
+                    <Template Context="round">
+                        @if (round.ExcludeFromStats)
+                        {
+                            <RadzenBadge Text="Excluded" BadgeStyle="BadgeStyle.Warning" Shade="Shade.Lighter" />
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
+            }
         </Columns>
     </RadzenDataGrid>
 </RadzenCard>
@@ -49,7 +61,23 @@
     [Parameter]
     public string? RoundUrlPrefix { get; set; }
 
+    /// <summary>
+    /// Shows an "Excluded" badge and dims rounds the owner has flagged ExcludeFromStats. The
+    /// history lists every round played here, while the stats above it skip the excluded ones —
+    /// the badge is what explains the difference.
+    /// </summary>
+    [Parameter]
+    public bool ShowExclusionState { get; set; }
+
     private IList<RoundResponse> _selectedRound = [];
+
+    private void OnRowRender(RowRenderEventArgs<RoundResponse> args)
+    {
+        if (ShowExclusionState && args.Data.ExcludeFromStats)
+        {
+            args.Attributes["style"] = "opacity: 0.6;";
+        }
+    }
 
     private void OnRoundRowClick(DataGridRowMouseEventArgs<RoundResponse> args)
     {
