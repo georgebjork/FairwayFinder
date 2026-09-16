@@ -32,5 +32,5 @@ jobs:
           file: ./src/FairwayFinder.Admin/Dockerfile
           push: true
           tags: |
-            ghcr.io/georgebjork/fairwayfinder-admin:latest
-            ghcr.io/georgebjork/fairwayfinder-admin:${{ github.sha }}
+            ghcr.io/georgebjork/fairwayfinder:latest
+            ghcr.io/georgebjork/fairwayfinder:${{ github.sha }}
