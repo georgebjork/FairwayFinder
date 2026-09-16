@@ -1,0 +1,17 @@
+@* Shown by Routes.razor when a signed-in user lacks the Admin role, and by the /access-denied page. *@
+
+<RadzenCard class="rz-p-5 rz-mx-auto rz-mt-5" style="max-width: 600px;">
+    <RadzenStack Gap="1rem" AlignItems="AlignItems.Start">
+        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">Access denied</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1" style="color: var(--rz-text-secondary-color);">
+            This console is restricted to administrators. Your account is signed in but does not have
+            the Admin role.
+        </RadzenText>
+        <RadzenButton Text="Sign in as someone else" Icon="logout" ButtonStyle="ButtonStyle.Secondary"
+                      Variant="Variant.Filled" Click="@(() => Navigation.NavigateTo("/authentication/logout", true))" />
+    </RadzenStack>
+</RadzenCard>
+
+@code {
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+}

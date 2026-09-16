@@ -8,20 +8,20 @@ Create a new detail/view page for: $ARGUMENTS
 
 ## What to Generate
 
-### Detail Page — `src/FairwayFinder.Web/Components/Pages/{Domain}/Pages/{EntityName}Detail.razor`
+### Detail Page — `src/FairwayFinder.Admin/Components/Pages/{Domain}/Pages/{EntityName}Detail.razor`
 
 Follow this exact structure:
 
 ```razor
 @page "/{route}/{Id:long}"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Policy = Policies.AdminOnly)]
 @using System.Security.Claims
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
-@using FairwayFinder.Web.Components.Pages.{Domain}.Dialogs
-@using FairwayFinder.Web.Components.Shared.Dialogs
-@using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
+@using FairwayFinder.Admin.Components.Pages.{Domain}.Dialogs
+@using FairwayFinder.Admin.Components.Shared.Dialogs
+@using FairwayFinder.Admin.Components.Shared.Layout.Breadcrumb
 @inject I{EntityName}Service {EntityName}Service
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager

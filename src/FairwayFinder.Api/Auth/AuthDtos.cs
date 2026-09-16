@@ -22,3 +22,18 @@ public class RefreshRequest
 {
     public string RefreshToken { get; set; } = string.Empty;
 }
+
+public class ForgotPasswordRequest
+{
+    public string Email { get; set; } = string.Empty;
+}
+
+public class ResetPasswordRequest
+{
+    public string Email { get; set; } = string.Empty;
+
+    /// <summary>Base64Url-encoded Identity reset token, as delivered in the reset link.</summary>
+    public string Token { get; set; } = string.Empty;
+
+    public string NewPassword { get; set; } = string.Empty;
+}

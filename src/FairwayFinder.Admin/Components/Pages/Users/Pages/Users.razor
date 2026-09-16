@@ -1,0 +1,20 @@
+@page "/users"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = Policies.AdminOnly)]
+@using FairwayFinder.Admin.Components.Pages.Users.Components
+@using FairwayFinder.Admin.Components.Shared.Layout.Breadcrumb
+@inject BreadcrumbState BreadcrumbState
+
+<PageTitle>User Management</PageTitle>
+
+<UsersTab />
+
+@code {
+    protected override void OnInitialized()
+    {
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Overview", "/"),
+            new BreadcrumbItem("Users")
+        );
+    }
+}

@@ -1,0 +1,38 @@
+@page "/Error"
+@attribute [AllowAnonymous]
+@layout FairwayFinder.Admin.Components.Shared.Layout.AuthenticationLayout
+@using System.Diagnostics
+
+<PageTitle>Error</PageTitle>
+
+<RadzenCard class="rz-p-5 rz-mx-auto rz-mt-5" style="max-width: 600px;">
+    <RadzenStack Gap="1rem">
+        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0" style="color: var(--rz-danger);">
+            Something went wrong
+        </RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1" style="color: var(--rz-text-secondary-color);">
+            An error occurred while processing your request.
+        </RadzenText>
+
+        @if (ShowRequestId)
+        {
+            <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                Request ID: <strong>@RequestId</strong>
+            </RadzenText>
+        }
+
+        <RadzenButton Text="Back to dashboard" Icon="home" ButtonStyle="ButtonStyle.Primary"
+                      Variant="Variant.Filled" Click="@(() => Navigation.NavigateTo("/", true))" />
+    </RadzenStack>
+</RadzenCard>
+
+@code {
+    [CascadingParameter] private HttpContext? HttpContext { get; set; }
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private string? RequestId { get; set; }
+    private bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+
+    protected override void OnInitialized() =>
+        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+}

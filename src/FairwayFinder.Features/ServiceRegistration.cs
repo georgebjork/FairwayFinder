@@ -16,16 +16,13 @@ namespace FairwayFinder.Features;
 
 public static class ServiceRegistration
 {
+    /// <summary>
+    /// Domain services shared by every host (the API and the admin console).
+    /// Admin-only services live in <see cref="RegisterAdminServices"/> so the API does not
+    /// register — or run background jobs for — things it cannot reach.
+    /// </summary>
     public static IServiceCollection RegisterFeatureServices(this IServiceCollection services, ConfigurationManager config, bool isDevelopment)
     {
-        // Admin services
-        services.AddTransient<UserAdminService>();
-        services.AddTransient<AdminDashboardService>();
-        services.AddTransient<AdminRoundService>();
-        services.AddTransient<AdminDeviceService>();
-        services.AddTransient<ApiRequestLogService>();
-        services.AddTransient<IUserInvitationService, UserInvitationService>();
-
         // Domain services
         services.AddTransient<IRoundService, RoundService>();
         services.AddTransient<IStatsService, StatsService>();
@@ -33,30 +30,10 @@ public static class ServiceRegistration
         services.AddTransient<IProfileService, ProfileService>();
         services.AddTransient<IFriendService, FriendService>();
 
-        // TGTR integration
-        services.AddHttpClient<TgtrHttpClient>(client =>
-        {
-            var baseUrl = config["Tgtr:BaseUrl"]
-                          ?? throw new InvalidOperationException("Tgtr:BaseUrl configuration is missing.");
-            client.BaseAddress = new Uri(baseUrl);
-        });
-        services.AddTransient<TgtrTransferService>();
-
-        // GolfCourseAPI integration
-        services.AddHttpClient<GolfCourseApiHttpClient>(client =>
-        {
-            var baseUrl = config["GolfCourseApi:BaseUrl"]
-                          ?? throw new InvalidOperationException("GolfCourseApi:BaseUrl configuration is missing.");
-            var apiKey = config["GolfCourseApi:ApiKey"]
-                         ?? throw new InvalidOperationException("GolfCourseApi:ApiKey configuration is missing.");
-            client.BaseAddress = new Uri(baseUrl);
-            client.DefaultRequestHeaders.Add("Authorization", $"Key {apiKey}");
-        });
-        services.AddTransient<GolfCourseApiImportService>();
-        services.AddSingleton(Channel.CreateBounded<int>(1));
-        services.AddSingleton<GolfCourseApiImportState>();
-        services.AddSingleton<GolfCourseApiImportJob>();
-        services.AddHostedService(sp => sp.GetRequiredService<GolfCourseApiImportJob>());
+        // Invitations and request logging are used by both hosts: the API exposes invite
+        // endpoints and purges request logs on a timer, the admin console manages both by hand.
+        services.AddTransient<IUserInvitationService, UserInvitationService>();
+        services.AddTransient<ApiRequestLogService>();
 
         // APNS push notifications
         services.AddHttpClient("apns");
@@ -84,6 +61,47 @@ public static class ServiceRegistration
         {
             services.AddTransient<IEmailSender, ResendEmailSender>();
         }
+
+        return services;
+    }
+
+    /// <summary>
+    /// Services only the admin console resolves: cross-user administration, the TGTR migration
+    /// tool, and the GolfCourseAPI import pipeline (including its hosted background job).
+    /// Requires the <c>Tgtr</c> and <c>GolfCourseApi</c> configuration sections.
+    /// </summary>
+    public static IServiceCollection RegisterAdminServices(this IServiceCollection services, ConfigurationManager config)
+    {
+        // Cross-user administration
+        services.AddTransient<UserAdminService>();
+        services.AddTransient<AdminDashboardService>();
+        services.AddTransient<AdminRoundService>();
+        services.AddTransient<AdminDeviceService>();
+
+        // TGTR integration
+        services.AddHttpClient<TgtrHttpClient>(client =>
+        {
+            var baseUrl = config["Tgtr:BaseUrl"]
+                          ?? throw new InvalidOperationException("Tgtr:BaseUrl configuration is missing.");
+            client.BaseAddress = new Uri(baseUrl);
+        });
+        services.AddTransient<TgtrTransferService>();
+
+        // GolfCourseAPI integration
+        services.AddHttpClient<GolfCourseApiHttpClient>(client =>
+        {
+            var baseUrl = config["GolfCourseApi:BaseUrl"]
+                          ?? throw new InvalidOperationException("GolfCourseApi:BaseUrl configuration is missing.");
+            var apiKey = config["GolfCourseApi:ApiKey"]
+                         ?? throw new InvalidOperationException("GolfCourseApi:ApiKey configuration is missing.");
+            client.BaseAddress = new Uri(baseUrl);
+            client.DefaultRequestHeaders.Add("Authorization", $"Key {apiKey}");
+        });
+        services.AddTransient<GolfCourseApiImportService>();
+        services.AddSingleton(Channel.CreateBounded<int>(1));
+        services.AddSingleton<GolfCourseApiImportState>();
+        services.AddSingleton<GolfCourseApiImportJob>();
+        services.AddHostedService(sp => sp.GetRequiredService<GolfCourseApiImportJob>());
 
         return services;
     }

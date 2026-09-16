@@ -1,0 +1,445 @@
+@page "/stats"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = Policies.AdminOnly)]
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Enums
+@using FairwayFinder.Features.Services.Admin
+@using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Admin.Components.Shared.Layout.Breadcrumb
+@using FairwayFinder.Admin.Components.Pages.Stats.Components
+@inject UserAdminService UserAdminService
+@inject IStatsService StatsService
+@inject NavigationManager NavigationManager
+@inject BreadcrumbState BreadcrumbState
+
+<PageTitle>Stats diagnostics</PageTitle>
+
+<RadzenStack Gap="1.5rem">
+    <RadzenStack Gap="0.1rem">
+        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">Stats diagnostics</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+            Inspect computed stats and strokes gained for any player, at any baseline level.
+        </RadzenText>
+    </RadzenStack>
+
+    <!-- Filters -->
+    <RadzenCard class="rz-p-3">
+        <RadzenStack Orientation="Orientation.Horizontal" Wrap="FlexWrap.Wrap" Gap="1rem" AlignItems="AlignItems.End">
+            <RadzenFormField Text="Player" Variant="Variant.Outlined" Style="min-width: 280px;">
+                <RadzenDropDown TValue="string"
+                                Value="@_selectedUserId"
+                                ValueChanged="OnUserChanged"
+                                Data="@_userOptions"
+                                TextProperty="Label"
+                                ValueProperty="Id"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                Placeholder="Select a player" />
+            </RadzenFormField>
+
+            <RadzenFormField Text="Year" Variant="Variant.Outlined" Style="width: 130px;">
+                <RadzenDropDown TValue="int?"
+                                Value="@_year"
+                                ValueChanged="OnYearChanged"
+                                Data="@_yearOptions"
+                                AllowClear="true"
+                                Placeholder="All" />
+            </RadzenFormField>
+
+            <RadzenFormField Text="Course" Variant="Variant.Outlined" Style="min-width: 220px;">
+                <RadzenDropDown TValue="long?"
+                                Value="@_courseId"
+                                ValueChanged="OnCourseChanged"
+                                Data="@_courseOptions"
+                                TextProperty="CourseName"
+                                ValueProperty="CourseId"
+                                AllowClear="true"
+                                Placeholder="All courses" />
+            </RadzenFormField>
+
+            <RadzenFormField Text="Round type" Variant="Variant.Outlined" Style="width: 150px;">
+                <RadzenDropDown TValue="bool?"
+                                Value="@_fullRoundOnly"
+                                ValueChanged="OnRoundTypeChanged"
+                                Data="@_roundTypeOptions"
+                                TextProperty="Label"
+                                ValueProperty="Value"
+                                Placeholder="All" />
+            </RadzenFormField>
+
+            <RadzenFormField Text="From" Variant="Variant.Outlined" Style="width: 150px;">
+                <RadzenDatePicker TValue="DateTime?" Value="@_startDate" ValueChanged="OnStartDateChanged"
+                                  DateFormat="MM/dd/yyyy" ShowTime="false" AllowClear="true" />
+            </RadzenFormField>
+
+            <RadzenFormField Text="To" Variant="Variant.Outlined" Style="width: 150px;">
+                <RadzenDatePicker TValue="DateTime?" Value="@_endDate" ValueChanged="OnEndDateChanged"
+                                  DateFormat="MM/dd/yyyy" ShowTime="false" AllowClear="true" />
+            </RadzenFormField>
+        </RadzenStack>
+    </RadzenCard>
+
+    @if (string.IsNullOrEmpty(_selectedUserId))
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">
+            Select a player to load their stats.
+        </RadzenAlert>
+    }
+    else if (_loading)
+    {
+        <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" class="rz-p-8">
+            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        </RadzenStack>
+    }
+    else if (_primary is null)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">
+            No stats could be computed for this player with the current filters.
+        </RadzenAlert>
+    }
+    else
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+            <RadzenBadge BadgeStyle="BadgeStyle.Info" Shade="Shade.Lighter"
+                         Text="@($"{_primary.TotalRounds} rounds included")" />
+            <RadzenBadge BadgeStyle="BadgeStyle.Light" Shade="Shade.Lighter"
+                         Text="@($"{_primary.StrokesGained.RoundsIncluded} shot-tracked")" />
+            <RadzenBadge BadgeStyle="BadgeStyle.Light" Shade="Shade.Lighter"
+                         Text="@($"{_primary.BallStriking.RoundsIncluded} hole-tracked")" />
+        </RadzenStack>
+
+        <!-- Strokes gained: two baselines side by side -->
+        <RadzenCard class="rz-p-4">
+            <RadzenStack Gap="1rem">
+                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="1rem">
+                    <RadzenStack Gap="0.1rem">
+                        <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Strokes gained</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                            Same rounds, two baselines — the delta is the per-category offset.
+                        </RadzenText>
+                    </RadzenStack>
+                    <RadzenStack Orientation="Orientation.Horizontal" Gap="0.75rem" AlignItems="AlignItems.Center">
+                        <RadzenFormField Text="Baseline" Variant="Variant.Outlined" Style="width: 150px;">
+                            <RadzenDropDown TValue="BaselineLevel" Value="@_primaryLevel" ValueChanged="OnPrimaryLevelChanged"
+                                            Data="@BaselineLevelExtensions.AllInDisplayOrder">
+                                <Template Context="level">@(((BaselineLevel)level).DisplayName())</Template>
+                            </RadzenDropDown>
+                        </RadzenFormField>
+                        <RadzenFormField Text="Compare to" Variant="Variant.Outlined" Style="width: 150px;">
+                            <RadzenDropDown TValue="BaselineLevel" Value="@_compareLevel" ValueChanged="OnCompareLevelChanged"
+                                            Data="@BaselineLevelExtensions.AllInDisplayOrder">
+                                <Template Context="level">@(((BaselineLevel)level).DisplayName())</Template>
+                            </RadzenDropDown>
+                        </RadzenFormField>
+                    </RadzenStack>
+                </RadzenStack>
+
+                @if (_primary.StrokesGained.Summary is null)
+                {
+                    <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">
+                        No shot-tracked rounds in this filter, so strokes gained cannot be computed.
+                    </RadzenAlert>
+                }
+                else
+                {
+                    <RadzenDataGrid Data="@SgComparisonRows" TItem="SgRow" AllowSorting="false" GridLines="DataGridGridLines.Horizontal">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="SgRow" Property="Category" Title="Category" Width="200px" />
+                            <RadzenDataGridColumn TItem="SgRow" Title="@_primaryLevel.DisplayName()" TextAlign="TextAlign.Right" Width="140px">
+                                <Template Context="row">@Fmt(row.Primary)</Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="SgRow" Title="@_compareLevel.DisplayName()" TextAlign="TextAlign.Right" Width="140px">
+                                <Template Context="row">@Fmt(row.Compare)</Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="SgRow" Title="Delta" TextAlign="TextAlign.Right" Width="120px">
+                                <Template Context="row">
+                                    <span style="color: @(row.Delta >= 0 ? "var(--rz-success)" : "var(--rz-danger)");">@Fmt(row.Delta)</span>
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="SgRow" Title="Trend" TextAlign="TextAlign.Right">
+                                <Template Context="row">@(row.Trend.HasValue ? Fmt(row.Trend.Value) : "—")</Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                        Backed by @_primary.StrokesGained.Summary.RoundsIncluded rounds /
+                        @_primary.StrokesGained.Summary.HolesWithShots holes with shots.
+                    </RadzenText>
+                }
+            </RadzenStack>
+        </RadzenCard>
+
+        <!-- Raw metric tables -->
+        <RadzenRow Gap="1rem">
+            <RadzenColumn Size="12" SizeLG="6">
+                <RadzenCard class="rz-p-4" Style="height: 100%;">
+                    <RadzenText TextStyle="TextStyle.H5" class="rz-mb-3">Scoring</RadzenText>
+                    <MetricTable Rows="@ScoringRows" />
+                </RadzenCard>
+            </RadzenColumn>
+            <RadzenColumn Size="12" SizeLG="6">
+                <RadzenCard class="rz-p-4" Style="height: 100%;">
+                    <RadzenText TextStyle="TextStyle.H5" class="rz-mb-3">Ball striking</RadzenText>
+                    <MetricTable Rows="@BallStrikingRows" />
+                </RadzenCard>
+            </RadzenColumn>
+            <RadzenColumn Size="12" SizeLG="6">
+                <RadzenCard class="rz-p-4" Style="height: 100%;">
+                    <RadzenText TextStyle="TextStyle.H5" class="rz-mb-3">Short game</RadzenText>
+                    <MetricTable Rows="@ShortGameRows" />
+                </RadzenCard>
+            </RadzenColumn>
+            <RadzenColumn Size="12" SizeLG="6">
+                <RadzenCard class="rz-p-4" Style="height: 100%;">
+                    <RadzenText TextStyle="TextStyle.H5" class="rz-mb-3">Par type &amp; distribution</RadzenText>
+                    <MetricTable Rows="@DistributionRows" />
+                </RadzenCard>
+            </RadzenColumn>
+        </RadzenRow>
+
+        <!-- Most played courses -->
+        <RadzenCard class="rz-p-4">
+            <RadzenText TextStyle="TextStyle.H5" class="rz-mb-3">Most played courses</RadzenText>
+            <RadzenDataGrid Data="@_primary.MostPlayedCourses" TItem="CourseStats" AllowSorting="true"
+                            GridLines="DataGridGridLines.Horizontal" EmptyText="No rounds in this filter.">
+                <Columns>
+                    <RadzenDataGridColumn TItem="CourseStats" Property="CourseName" Title="Course" />
+                    <RadzenDataGridColumn TItem="CourseStats" Property="RoundCount" Title="Rounds" Width="100px" TextAlign="TextAlign.Right" />
+                    <RadzenDataGridColumn TItem="CourseStats" Title="Avg 18" Width="110px" TextAlign="TextAlign.Right">
+                        <Template Context="c">@(c.Average18HoleScore?.ToString("0.0") ?? "—")</Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="CourseStats" Title="Avg 9" Width="110px" TextAlign="TextAlign.Right">
+                        <Template Context="c">@(c.Average9HoleScore?.ToString("0.0") ?? "—")</Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="CourseStats" Title="" Width="130px" Sortable="false">
+                        <Template Context="c">
+                            <RadzenButton Text="Holes" Icon="grid_on" ButtonStyle="ButtonStyle.Light"
+                                          Variant="Variant.Text" Size="ButtonSize.Small"
+                                          Click="@(() => NavigationManager.NavigateTo($"/stats/{_selectedUserId}/course/{c.CourseId}"))" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        </RadzenCard>
+    }
+</RadzenStack>
+
+@code {
+    [SupplyParameterFromQuery(Name = "userId")]
+    public string? UserIdQuery { get; set; }
+
+    private sealed record UserOption(string Id, string Label);
+    private sealed record RoundTypeOption(string Label, bool? Value);
+    public sealed record SgRow(string Category, double Primary, double Compare, double? Trend)
+    {
+        public double Delta => Primary - Compare;
+    }
+
+    private List<UserOption> _userOptions = new();
+    private List<int> _yearOptions = new();
+    private List<CourseOption> _courseOptions = new();
+    private readonly List<RoundTypeOption> _roundTypeOptions = new()
+    {
+        new("All", null),
+        new("18-hole", true),
+        new("9-hole", false)
+    };
+
+    private string? _selectedUserId;
+    private int? _year;
+    private long? _courseId;
+    private bool? _fullRoundOnly;
+    private DateTime? _startDate;
+    private DateTime? _endDate;
+
+    private BaselineLevel _primaryLevel = BaselineLevel.Scratch;
+    private BaselineLevel _compareLevel = BaselineLevel.Hcp10;
+
+    private UserStatsResponse? _primary;
+    private UserStatsResponse? _compare;
+    private bool _loading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Overview", "/"),
+            new BreadcrumbItem("Stats")
+        );
+
+        var users = await UserAdminService.GetAllUsersAsync();
+        _userOptions = users
+            .OrderBy(u => u.FullName)
+            .Select(u => new UserOption(u.Id, string.IsNullOrWhiteSpace(u.FullName) ? u.Email : $"{u.FullName} · {u.Email}"))
+            .ToList();
+
+        if (!string.IsNullOrWhiteSpace(UserIdQuery))
+        {
+            _selectedUserId = UserIdQuery;
+            await LoadUserContextAsync();
+            await LoadAsync();
+        }
+    }
+
+    private async Task OnUserChanged(string userId)
+    {
+        _selectedUserId = userId;
+        _year = null;
+        _courseId = null;
+        await LoadUserContextAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadUserContextAsync()
+    {
+        if (string.IsNullOrEmpty(_selectedUserId))
+        {
+            _yearOptions = new();
+            _courseOptions = new();
+            return;
+        }
+
+        _yearOptions = await StatsService.GetAvailableYearsAsync(_selectedUserId);
+        _courseOptions = await StatsService.GetUserCoursesAsync(_selectedUserId);
+    }
+
+    private async Task OnYearChanged(int? year) { _year = year; await LoadAsync(); }
+    private async Task OnCourseChanged(long? courseId) { _courseId = courseId; await LoadAsync(); }
+    private async Task OnRoundTypeChanged(bool? value) { _fullRoundOnly = value; await LoadAsync(); }
+    private async Task OnStartDateChanged(DateTime? date) { _startDate = date; await LoadAsync(); }
+    private async Task OnEndDateChanged(DateTime? date) { _endDate = date; await LoadAsync(); }
+    private async Task OnPrimaryLevelChanged(BaselineLevel level) { _primaryLevel = level; await LoadAsync(); }
+    private async Task OnCompareLevelChanged(BaselineLevel level) { _compareLevel = level; await LoadAsync(); }
+
+    private async Task LoadAsync()
+    {
+        if (string.IsNullOrEmpty(_selectedUserId))
+        {
+            _primary = null;
+            _compare = null;
+            return;
+        }
+
+        _loading = true;
+
+        var filter = new StatsFilter
+        {
+            FullRoundOnly = _fullRoundOnly,
+            CourseId = _courseId,
+            Year = _year,
+            StartDate = _startDate.HasValue ? DateOnly.FromDateTime(_startDate.Value) : null,
+            EndDate = _endDate.HasValue ? DateOnly.FromDateTime(_endDate.Value) : null
+        };
+
+        // IStatsService takes the target user id and baseline level as plain parameters —
+        // no ownership guard, so an admin can compute anyone's stats at any level.
+        _primary = await StatsService.GetUserStatsAsync(_selectedUserId, filter, level: _primaryLevel);
+        _compare = _compareLevel == _primaryLevel
+            ? _primary
+            : await StatsService.GetUserStatsAsync(_selectedUserId, filter, level: _compareLevel);
+
+        _loading = false;
+    }
+
+    private static string Fmt(double value) => value.ToString("+0.00;-0.00;0.00");
+
+    private static string Pct(double? value) => value.HasValue ? $"{value.Value:0.0}%" : "—";
+    private static string Num(double? value, string format = "0.00") => value.HasValue ? value.Value.ToString(format) : "—";
+
+    private List<SgRow> SgComparisonRows
+    {
+        get
+        {
+            var p = _primary?.StrokesGained.Summary;
+            var c = _compare?.StrokesGained.Summary;
+            if (p is null) return new List<SgRow>();
+            c ??= p;
+
+            return new List<SgRow>
+            {
+                new("Off the tee",      p.SgOffTheTee,      c.SgOffTheTee,      p.SgOffTheTeeTrend),
+                new("Approach",         p.SgApproach,       c.SgApproach,       p.SgApproachTrend),
+                new("Around the green", p.SgAroundTheGreen, c.SgAroundTheGreen, p.SgAroundTheGreenTrend),
+                new("Putting",          p.SgPutting,        c.SgPutting,        p.SgPuttingTrend),
+                new("Tee to green",     p.SgTeeToGreen,     c.SgTeeToGreen,     p.SgTeeToGreenTrend),
+                new("Total",            p.SgTotal,          c.SgTotal,          p.SgTotalTrend)
+            };
+        }
+    }
+
+    private List<MetricRow> ScoringRows
+    {
+        get
+        {
+            var s = _primary!.Scoring;
+            return new List<MetricRow>
+            {
+                new("Rounds included", s.RoundsIncluded.ToString()),
+                new("18-hole rounds", s.Rounds18Hole.ToString()),
+                new("9-hole rounds", s.Rounds9Hole.ToString()),
+                new("Avg 18-hole score", Num(s.Average18HoleScore, "0.0")),
+                new("Avg 9-hole score", Num(s.Average9HoleScore, "0.0")),
+                new("18-hole trend", Num(s.Average18HoleScoreTrend, "+0.000;-0.000;0.000")),
+                new("9-hole trend", Num(s.Average9HoleScoreTrend, "+0.000;-0.000;0.000")),
+                new("Best 18", s.Best18HoleRound is null ? "—" : $"{s.Best18HoleRound.Score} · {s.Best18HoleRound.CourseName} · {s.Best18HoleRound.DatePlayed:M/d/yy}"),
+                new("Best 9", s.Best9HoleRound is null ? "—" : $"{s.Best9HoleRound.Score} · {s.Best9HoleRound.CourseName} · {s.Best9HoleRound.DatePlayed:M/d/yy}")
+            };
+        }
+    }
+
+    private List<MetricRow> BallStrikingRows
+    {
+        get
+        {
+            var b = _primary!.BallStriking;
+            return new List<MetricRow>
+            {
+                new("Rounds included", b.RoundsIncluded.ToString()),
+                new("FIR%", Pct(b.FirPercent)),
+                new("FIR% trend", Num(b.FirPercentTrend, "+0.000;-0.000;0.000")),
+                new("GIR%", Pct(b.GirPercent)),
+                new("GIR% trend", Num(b.GirPercentTrend, "+0.000;-0.000;0.000")),
+                new("Tee penalty%", Pct(b.TeePenaltyPercent)),
+                new("Tee penalty% trend", Num(b.TeePenaltyPercentTrend, "+0.000;-0.000;0.000"))
+            };
+        }
+    }
+
+    private List<MetricRow> ShortGameRows
+    {
+        get
+        {
+            var g = _primary!.ShortGame;
+            return new List<MetricRow>
+            {
+                new("Rounds included", g.RoundsIncluded.ToString()),
+                new("Up and down%", Pct(g.UpAndDownPercent)),
+                new("Avg putts (18)", Num(g.Average18HolePutts, "0.00")),
+                new("Avg putts (9)", Num(g.Average9HolePutts, "0.00")),
+                new("Avg 3-putts (18)", Num(g.Average18HoleThreePutts, "0.00")),
+                new("Avg 3-putts (9)", Num(g.Average9HoleThreePutts, "0.00"))
+            };
+        }
+    }
+
+    private List<MetricRow> DistributionRows
+    {
+        get
+        {
+            var p = _primary!.ParTypeScoring;
+            var d = _primary!.ScoringDistribution;
+            return new List<MetricRow>
+            {
+                new("Par 3 avg", $"{Num(p.Par3Average, "0.00")} ({p.Par3Count} holes)"),
+                new("Par 4 avg", $"{Num(p.Par4Average, "0.00")} ({p.Par4Count} holes)"),
+                new("Par 5 avg", $"{Num(p.Par5Average, "0.00")} ({p.Par5Count} holes)"),
+                new("Holes played", d.TotalHoles.ToString()),
+                new("Aces / albatross", $"{d.HolesInOne} / {d.DoubleEagles}"),
+                new("Eagles / birdies", $"{d.Eagles} / {d.Birdies}"),
+                new("Pars", d.Pars.ToString()),
+                new("Bogeys", d.Bogeys.ToString()),
+                new("Doubles / triple+", $"{d.DoubleBogeys} / {d.TripleOrWorse}")
+            };
+        }
+    }
+}

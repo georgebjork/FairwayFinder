@@ -1,5 +1,10 @@
 # FairwayFinder REST API Implementation Plan
 
+> **Historical.** This plan has shipped. It describes the repository as it was when the API was
+> first built, including `src/FairwayFinder.Web`, which has since been deleted and replaced by the
+> admin-only `src/FairwayFinder.Admin` console. Paths and file references below are not current —
+> see `CLAUDE.md` for the present architecture.
+
 ## Context
 
 The golf stat tracker currently only has a Blazor Server web app. A mobile front-end is needed, which requires a REST API. The `FairwayFinder.Api` project already exists as a skeleton (template weatherforecast endpoint) with references to Data, Features, Identity, and Shared. The goal is to wire up JWT authentication against existing Identity users and expose the existing domain services (rounds, courses, stats) via minimal API endpoints.

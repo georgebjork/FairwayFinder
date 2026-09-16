@@ -1,18 +1,25 @@
 using FairwayFinder.Data;
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Enums;
 using FairwayFinder.Features.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Features.Services.Admin;
 
 /// <summary>
-/// Thin admin surface over rounds: view any user's rounds, soft-delete a round, and toggle
-/// ExcludeFromStats. Intentionally does NOT support editing scores/shots. Reads and delete
-/// reuse <see cref="IRoundService"/>; the exclude toggle is the only direct DB write.
+/// Admin surface over rounds: view, edit, or soft-delete any user's round, and toggle
+/// ExcludeFromStats. Reads, edits, and deletes reuse <see cref="IRoundService"/>; the exclude
+/// toggle is the only direct DB write.
+///
+/// Editing goes through <see cref="UpdateRoundAsAdminAsync"/>, which resolves the round's owner
+/// and submits the update under that identity. IRoundService.UpdateRoundAsync keeps its ownership
+/// guard — this service never loosens it, it just supplies the correct owner.
 /// </summary>
 public class AdminRoundService(
     IRoundService roundService,
-    IDbContextFactory<ApplicationDbContext> dbContextFactory)
+    IDbContextFactory<ApplicationDbContext> dbContextFactory,
+    ILogger<AdminRoundService> logger)
 {
     public Task<List<RoundResponse>> GetRoundsForUserAsync(string userId)
         => roundService.GetRoundsByUserIdAsync(userId);
@@ -106,5 +113,49 @@ public class AdminRoundService(
 
         await db.SaveChangesAsync();
         return true;
+    }
+
+    /// <summary>
+    /// Fully loaded round for the admin detail page, with strokes gained computed at the given
+    /// golfer level. GetRoundByIdAsync has no owner guard, so any round is readable.
+    /// </summary>
+    public Task<RoundResponse?> GetRoundForAdminAsync(long roundId, BaselineLevel level)
+        => roundService.GetRoundByIdAsync(roundId, level);
+
+    /// <summary>
+    /// Returns the owning user's id for a round, or null when the round does not exist.
+    /// </summary>
+    public Task<string?> GetRoundOwnerIdAsync(long roundId)
+        => roundService.GetRoundOwnerIdAsync(roundId);
+
+    /// <summary>
+    /// Updates a round on the owner's behalf. The caller-supplied <c>request.UserId</c> is ignored
+    /// and replaced with the round's actual owner, so an admin can correct anyone's data without
+    /// the update being rejected by the ownership guard and without the round changing hands.
+    /// Returns false if the round does not exist.
+    /// </summary>
+    public async Task<bool> UpdateRoundAsAdminAsync(UpdateRoundRequest request, string adminUserId)
+    {
+        var ownerId = await roundService.GetRoundOwnerIdAsync(request.RoundId);
+        if (ownerId is null)
+        {
+            logger.LogWarning(
+                "Admin {AdminUserId} attempted to edit round {RoundId}, which does not exist.",
+                adminUserId, request.RoundId);
+            return false;
+        }
+
+        request.UserId = ownerId;
+
+        var updated = await roundService.UpdateRoundAsync(request);
+
+        if (updated)
+        {
+            logger.LogInformation(
+                "Admin {AdminUserId} edited round {RoundId} owned by {OwnerUserId}.",
+                adminUserId, request.RoundId, ownerId);
+        }
+
+        return updated;
     }
 }

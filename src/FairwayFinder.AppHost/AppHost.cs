@@ -10,7 +10,7 @@ var postgres = builder.AddPostgres("postgres", username, password, port: 5432)
 
 var dbFairwayfinder = postgres.AddDatabase("fairwayfinder", "db-fairwayfinder");
 
-builder.AddProject<Projects.FairwayFinder_Web>("fairwayfinder-web")
+builder.AddProject<Projects.FairwayFinder_Admin>("fairwayfinder-admin")
     .WithReference(dbFairwayfinder)
     .WaitFor(dbFairwayfinder);
 

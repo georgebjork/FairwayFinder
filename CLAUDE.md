@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Build solution
 dotnet build FairwayFinder.sln
 
-# Run via Aspire AppHost (recommended - orchestrates PostgreSQL + Web app)
+# Run via Aspire AppHost (recommended - orchestrates PostgreSQL + Admin + Api)
 dotnet run --project src/FairwayFinder.AppHost/
 
 # Run tests
@@ -20,42 +20,52 @@ dotnet test tests/FairwayFinder.Features.Tests/
 
 ## Architecture Overview
 
-Golf stat tracker built with ASP.NET Core 10.0 Blazor Server, Radzen components, and PostgreSQL. The architecture follows a straightforward **Service → EF Core** pattern. Services own all business logic and data access.
+Golf stat tracker built on ASP.NET Core 10.0 and PostgreSQL. The architecture follows a straightforward **Service → EF Core** pattern. Services own all business logic and data access.
+
+There are two hosts and they have very different jobs:
+
+- **FairwayFinder.Api** is the only end-user surface. The iOS app talks to it over JWT-authenticated REST. It also serves the small public web surface that remains: the Apple app-site-association file and landing pages for invite and password-reset deep links.
+- **FairwayFinder.Admin** is an internal Blazor Server console. Every page requires the `Admin` role. It is for the things a phone should not do — user management, invites, course and teebox data entry, cross-user round inspection and repair, stats/strokes-gained diagnostics, request logs, health, and the TGTR / GolfCourseAPI import tools. It also owns EF migrations and role seeding at startup.
+
+There is no public-facing web UI. Don't add end-user features to the admin console — they belong in the API.
 
 ### Project Structure
 
 | Project | Role |
 |---|---|
-| **FairwayFinder.Web** | Blazor Server UI (interactive server mode, static SSR for auth pages) |
-| **FairwayFinder.Api** | JWT-secured REST API (Minimal APIs) consumed by the iOS app |
-| **FairwayFinder.Features** | Services, DTOs, and business logic shared by Web and Api |
+| **FairwayFinder.Admin** | Admin-only Blazor Server console (interactive server mode, static SSR for login) |
+| **FairwayFinder.Api** | JWT-secured REST API (Minimal APIs) consumed by the iOS app — the only end-user surface |
+| **FairwayFinder.Features** | Services, DTOs, and business logic shared by Admin and Api |
 | **FairwayFinder.Data** | EF Core DbContext, entity configurations, migrations |
 | **FairwayFinder.Identity** | ASP.NET Core Identity user/role types and password policy |
-| **FairwayFinder.Agents** | OpenAI agent integration (e.g., `ScorecardScoresReaderAgent` for scorecard OCR) |
+| **FairwayFinder.Agents** | OpenAI agent integration (`ScorecardScoresReaderAgent` for scorecard OCR). **Currently unreferenced** — kept for a future API-side scorecard scan feature |
 | **FairwayFinder.Shared** | Shared settings/models |
-| **FairwayFinder.ServiceDefaults** | Aspire service defaults (telemetry, health checks) shared by Web and Api |
+| **FairwayFinder.ServiceDefaults** | Aspire service defaults (telemetry, health checks) shared by Admin and Api |
 | **FairwayFinder.AppHost** | .NET Aspire orchestration for local dev |
 
 ### Dependency Flow
 
 ```
-Web → Features → Data → Shared
-Web → Identity, Agents, ServiceDefaults
-Api → Features → Data → Shared
-Api → Identity, ServiceDefaults
-AppHost orchestrates PostgreSQL (+ PgWeb) + Web + Api
+Admin → Features → Data → Shared
+Admin → Identity, ServiceDefaults
+Api   → Features → Data → Shared
+Api   → Identity, ServiceDefaults
+AppHost orchestrates PostgreSQL (+ PgWeb) + Admin + Api
 ```
 
-Both Web and Api reuse `RegisterFeatureServices()` from Features for the domain layer. Authentication differs: Web uses cookies (ASP.NET Core Identity UI), Api uses JWT bearer tokens.
+Both hosts call `RegisterFeatureServices()` for the shared domain layer. The Admin app additionally calls `RegisterAdminServices()`, which registers the cross-user admin services, the TGTR transfer tool, and the GolfCourseAPI import pipeline (including its hosted background job) — none of which the API can reach, so it doesn't register them.
+
+Authentication differs by host: Admin uses Identity cookies with an `AdminOnly` policy on every page; Api uses JWT bearer tokens.
 
 ### Layering Rules
 
-- **Web** and **Api** call **Services**. Pages/components/endpoints never touch DbContext or EF directly.
+- **Admin** and **Api** call **Services**. Pages/components/endpoints never touch DbContext or EF directly.
 - **Services** (in Features) contain business logic and query EF Core directly via injected `DbContext`.
 - **Data** owns the `DbContext`, entity configurations, and migrations. No repository classes.
-- **DTOs** live alongside their services in Features. Services return DTOs to the Web/Api layers, not EF entities.
+- **DTOs** live alongside their services in Features. Services return DTOs to the Admin/Api layers, not EF entities.
 - **No UI code** in Features or Data (no Radzen references).
-- **Web/Services** is for UI-layer infrastructure only (`NotificationService`, `CircuitTrackingService`, `ApplicationStartupService` for migrations + role seeding). Domain services belong in Features.
+- **Admin/Services** is for UI-layer infrastructure only (`CircuitTrackingService`, `ApplicationStartupService` for migrations + role seeding). Domain services belong in Features.
+- **Acting on another user's data**: admin pages must keep the acting admin and the target user separate. Pass the target user id in as a parameter; use the admin's id only for audit stamping. `AdminRoundService.UpdateRoundAsAdminAsync` is the model — it re-resolves the round's owner server-side rather than trusting a caller-supplied `UserId`.
 
 ## Services (FairwayFinder.Features)
 
@@ -80,44 +90,37 @@ Services are grouped by domain (e.g., `Rounds`, `Players`, `Stats`, `Clubs`, `Co
 ### Render Modes
 
 - **Interactive Server** — default for all pages.
-- **Static SSR** — only for authentication pages (`Components/Auth/`).
+- **Static SSR** — only for the login page (`Components/Auth/`) and the error pages.
 
 ### Component Organization
 
 Each domain folder under `Pages/` uses a consistent subfolder structure:
 
 ```
-src/FairwayFinder.Web/Components/
+src/FairwayFinder.Admin/Components/
 ├── Pages/                          # Domain folders
-│   ├── Admin/
-│   │   ├── Pages/                  # Routable pages (@page directive)
-│   │   └── Dialogs/                # Dialog components (DialogService.OpenAsync)
-│   ├── Course/
-│   │   ├── Pages/
-│   │   └── Dialogs/
-│   ├── Friends/
-│   │   └── Pages/
-│   ├── Home/
-│   │   ├── Pages/
-│   │   ├── Components/             # Reusable child components
-│   │   └── Dialogs/
-│   ├── PublicProfile/
-│   │   └── Pages/
-│   ├── Rounds/
-│   │   ├── Pages/
-│   │   ├── Components/
-│   │   └── Dialogs/
-│   └── Settings/
-│       └── Pages/
+│   ├── Dashboard/Pages/            # "/" overview
+│   ├── Users/                      # Pages, Components, Dialogs
+│   ├── Rounds/                     # Pages, Components, Dialogs
+│   ├── Stats/                      # Pages, Components
+│   ├── Courses/                    # Pages, Components, Dialogs
+│   ├── Devices/Pages/
+│   ├── Invites/                    # Pages, Dialogs
+│   ├── SystemOps/                  # Pages, Components (TGTR, imports, connections)
+│   └── Diagnostics/Pages/          # Health checks, request logs
 ├── Shared/                         # Cross-domain shared components
-│   ├── Layout/                     # MainLayout, NavMenu (Radzen layout components)
+│   ├── Layout/                     # MainLayout (sidebar shell), AuthenticationLayout, Breadcrumb
+│   ├── Wrappers/                   # AppHeader, AppFooter
 │   └── Dialogs/                    # Shared dialogs (e.g., DeleteConfirmDialog)
-└── Auth/Pages/                     # Identity pages (static SSR)
+├── Auth/Pages/                     # Login (static SSR)
+└── Error/                          # Error, NotFound, AccessDenied
 ```
+
+> Do not name a domain folder `System` — the resulting `...Components.Pages.System` namespace shadows the global `System` namespace for every sibling folder and breaks `using System.*` across the project. That's why it's `SystemOps`.
 
 #### Domain Folder Rules
 
-- **Pages/** — Routable pages with `@page` directive. Every domain must have this.
+- **Pages/** — Routable pages with `@page` directive, each carrying `@attribute [Authorize(Policy = Policies.AdminOnly)]`. Every domain must have this.
 - **Components/** — Reusable child components (no `@page` directive, no `DialogService.Close()`). Only create when the domain has components.
 - **Dialogs/** — Dialog components opened via `DialogService.OpenAsync<T>()`. Only create when the domain has dialogs.
 - **Shared/Dialogs/** — Generic dialogs used across multiple domains.
@@ -186,7 +189,7 @@ var(--rz-warning)    var(--rz-info)
 ```razor
 @page "/path"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Policy = Policies.AdminOnly)]
 @inject ISomeService SomeService
 @inject DialogService DialogService
 

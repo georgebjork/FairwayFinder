@@ -8,19 +8,19 @@ Create a new data grid list page for: $ARGUMENTS
 
 ## What to Generate
 
-### List Page — `src/FairwayFinder.Web/Components/Pages/{Domain}/Pages/{EntityName}List.razor`
+### List Page — `src/FairwayFinder.Admin/Components/Pages/{Domain}/Pages/{EntityName}List.razor`
 
 Follow this exact structure:
 
 ```razor
 @page "/{route}"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Policy = Policies.AdminOnly)]
 @using System.Security.Claims
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
-@using FairwayFinder.Web.Components.Pages.{Domain}.Dialogs
-@using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
+@using FairwayFinder.Admin.Components.Pages.{Domain}.Dialogs
+@using FairwayFinder.Admin.Components.Shared.Layout.Breadcrumb
 @inject I{EntityName}Service {EntityName}Service
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
