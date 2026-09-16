@@ -77,6 +77,28 @@ Services are grouped by domain (e.g., `Rounds`, `Players`, `Stats`, `Clubs`, `Co
 - DTOs live alongside their services, grouped by domain.
 - Keep services small and focused — one service per domain area.
 
+### Rounds: two services, one set of scoring rules
+
+Rounds are the exception to one-service-per-domain, split by lifecycle rather than by domain:
+
+- **`RoundService`** — reading rounds, and the deprecated atomic whole-round submit (`POST /api/rounds`).
+- **`RoundEntryService`** — hole-by-hole entry: `POST /rounds/start`, `PUT /rounds/{id}/holes/{n}`,
+  `DELETE /rounds/{id}/holes/{n}`, `POST /rounds/{id}/complete`, `GET /rounds/active`. This is how
+  the iOS app logs a round, writing each hole as it's played rather than everything at the end.
+
+The scoring arithmetic both paths need lives in `Helpers/RoundScoringHelper` (totals, scoring
+distribution, shape flags, shot numbering, hole-stat derivation) so the two cannot drift. Put new
+scoring rules there, not in either service.
+
+**`round.is_complete`** is false while a round is being entered. Every list, stats, and friend
+query filters `IsComplete == true` — an in-progress round's running score would otherwise read as
+a great round. `GetRoundByIdAsync` is deliberately *not* gated: it's what the resume endpoint and
+the admin console use. `ix_round_user_id_active` enforces one open round per golfer in the
+database, and `ix_score_round_id_hole_id` makes the per-hole upsert safe under concurrency.
+
+Features cannot throw the API's exception types (the dependency runs Api → Features), so
+`RoundEntryService` returns `RoundEntryResult<T>` and `RoundEndpoints` maps the status to HTTP.
+
 ## Database
 
 - PostgreSQL in all environments. Dev uses a container via Aspire.

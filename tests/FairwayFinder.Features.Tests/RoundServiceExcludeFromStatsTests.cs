@@ -69,6 +69,9 @@ public class RoundServiceExcludeFromStatsTests
             UpdatedBy = OwnerId,
             Score = 82,
             FullRound = true,
+            // These tests are about the ExcludeFromStats split, so every seeded round is a
+            // posted one — an incomplete round is filtered out before that flag is consulted.
+            IsComplete = true,
             ExcludeFromStats = exclude
         }).ToList();
 

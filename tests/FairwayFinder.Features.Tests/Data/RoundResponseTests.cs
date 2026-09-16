@@ -147,4 +147,78 @@ public class RoundResponseTests
     }
 
     #endregion
+
+    #region ScoreToPar
+
+    private static RoundResponse RoundOn18HoleTeebox(int score, params RoundHole[] holes) => new()
+    {
+        Score = score,
+        FullRound = holes.Length == 18,
+        Teebox = new RoundTeebox { Par = 72, IsNineHole = false },
+        Holes = [.. holes]
+    };
+
+    [Fact]
+    public void ScoreToPar_FullRound_MeasuresAgainstThePlayedPars()
+    {
+        var holes = Enumerable.Range(1, 18).Select(n => Hole(n, 4, score: 4)).ToArray();
+
+        var round = RoundOn18HoleTeebox(score: 74, holes);
+
+        Assert.Equal(2, round.ScoreToPar);
+    }
+
+    [Fact]
+    public void ScoreToPar_PartiallyEnteredRound_CountsOnlyTheHolesPlayed()
+    {
+        // Four par-4s played in 4, 5, 4, 4 — one over, not 54 under.
+        var round = RoundOn18HoleTeebox(
+            score: 17,
+            Hole(1, 4, score: 4), Hole(2, 4, score: 5), Hole(3, 4, score: 4), Hole(4, 4, score: 4));
+
+        Assert.Equal(1, round.ScoreToPar);
+    }
+
+    [Fact]
+    public void ScoreToPar_FrontNine_MeasuresAgainstTheFrontNinePar()
+    {
+        var holes = Enumerable.Range(1, 9).Select(n => Hole(n, 4, score: 4)).ToArray();
+
+        var round = RoundOn18HoleTeebox(score: 38, holes);
+
+        Assert.Equal(2, round.ScoreToPar);
+    }
+
+    [Fact]
+    public void ScoreToPar_BackNine_MeasuresAgainstTheBackNinePar()
+    {
+        var holes = Enumerable.Range(10, 9).Select(n => Hole(n, 4, score: 4)).ToArray();
+
+        var round = RoundOn18HoleTeebox(score: 34, holes);
+
+        Assert.Equal(-2, round.ScoreToPar);
+    }
+
+    [Fact]
+    public void ScoreToPar_NoHolesLoaded_FallsBackToTheTeebox()
+    {
+        // The lightweight round list doesn't load holes, so the teebox is all there is to go on.
+        var fullRound = new RoundResponse
+        {
+            Score = 75,
+            FullRound = true,
+            Teebox = new RoundTeebox { Par = 72, IsNineHole = false }
+        };
+        var nineHoleRound = new RoundResponse
+        {
+            Score = 40,
+            FullRound = false,
+            Teebox = new RoundTeebox { Par = 72, IsNineHole = false }
+        };
+
+        Assert.Equal(3, fullRound.ScoreToPar);
+        Assert.Equal(4, nineHoleRound.ScoreToPar);
+    }
+
+    #endregion
 }

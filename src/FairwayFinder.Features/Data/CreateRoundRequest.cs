@@ -1,3 +1,5 @@
+using FairwayFinder.Features.Helpers;
+
 namespace FairwayFinder.Features.Data;
 
 /// <summary>
@@ -20,7 +22,7 @@ public class CreateRoundRequest
 /// <summary>
 /// Per-hole score entry with optional advanced stats.
 /// </summary>
-public class HoleScoreEntry
+public class HoleScoreEntry : IHoleStatSource
 {
     /// <summary>
     /// The score's primary key. 0 for new rounds; populated when editing an existing round.

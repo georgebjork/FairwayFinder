@@ -150,6 +150,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.ExcludeFromStats).HasColumnName("exclude_from_stats");
             entity.Property(e => e.FrontNine).HasColumnName("front_nine");
             entity.Property(e => e.FullRound).HasDefaultValue(true).HasColumnName("full_round");
+            entity.Property(e => e.IsComplete).HasDefaultValue(false).HasColumnName("is_complete");
             entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
             entity.Property(e => e.Score).HasColumnName("score");
             entity.Property(e => e.ScoreIn).HasColumnName("score_in");
@@ -163,6 +164,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
             entity.HasOne(e => e.Course).WithMany().HasForeignKey(e => e.CourseId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.Teebox).WithMany().HasForeignKey(e => e.TeeboxId).OnDelete(DeleteBehavior.Restrict);
+
+            // A golfer has at most one round in progress. Enforced here rather than by a
+            // check-then-insert in the service, which two devices could race through.
+            entity.HasIndex(e => e.UserId)
+                .HasDatabaseName("ix_round_user_id_active")
+                .IsUnique()
+                .HasFilter("is_complete = false AND is_deleted = false");
         });
 
         // RoundStat
@@ -213,6 +221,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
             entity.HasOne(e => e.Round).WithMany().HasForeignKey(e => e.RoundId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.Hole).WithMany().HasForeignKey(e => e.HoleId).OnDelete(DeleteBehavior.Restrict);
+
+            // One live score per hole per round. Makes the per-hole upsert safe under concurrency,
+            // and stops duplicates that would throw when scores are keyed by HoleId on save.
+            entity.HasIndex(e => new { e.RoundId, e.HoleId })
+                .HasDatabaseName("ix_score_round_id_hole_id")
+                .IsUnique()
+                .HasFilter("is_deleted = false");
         });
 
         // Shot

@@ -29,7 +29,7 @@ public class StatsService : IStatsService
 
             // GetRoundsWithDetailsAsync already excludes these at the database level; this is a
             // cheap in-memory backstop so stats never depend on the caller getting that right.
-            var statsRounds = rounds.Where(r => !r.ExcludeFromStats).ToList();
+            var statsRounds = rounds.Where(r => !r.ExcludeFromStats && r.IsComplete).ToList();
 
             // Apply filters
             statsRounds = ApplyFilters(statsRounds, filter);
@@ -297,7 +297,7 @@ public class StatsService : IStatsService
         var rounds = await _roundService.GetRoundsByUserIdAsync(userId);
 
         return rounds
-            .Where(r => !r.ExcludeFromStats)
+            .Where(r => !r.ExcludeFromStats && r.IsComplete)
             .Select(r => r.DatePlayed.Year)
             .Distinct()
             .OrderByDescending(y => y)
@@ -485,7 +485,7 @@ public class StatsService : IStatsService
         bool? fullRoundOnly)
     {
         var allCourseRounds = rounds
-            .Where(r => r.CourseId == courseId && !r.ExcludeFromStats)
+            .Where(r => r.CourseId == courseId && !r.ExcludeFromStats && r.IsComplete)
             .ToList();
 
         if (allCourseRounds.Count == 0) return null;

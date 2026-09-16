@@ -19,6 +19,20 @@ public class RoundResponse
     public bool FullRound { get; set; }
 
     /// <summary>
+    /// Which nine the round covers. Set from the holes actually played when the round is posted,
+    /// so these are meaningful for a nine-hole round rather than inferred by the caller.
+    /// </summary>
+    public bool FrontNine { get; set; }
+    public bool BackNine { get; set; }
+
+    /// <summary>
+    /// False while the round is still being entered hole by hole. Incomplete rounds are
+    /// filtered out of every list and stats query, so this is only ever false on the
+    /// resume endpoint and in the admin console.
+    /// </summary>
+    public bool IsComplete { get; set; }
+
+    /// <summary>
     /// Derived detail level of the round (Basic / HoleStats / ShotTracked), classified from the
     /// tracking flags. Exposed so API clients don't have to replicate the derivation.
     /// </summary>
@@ -48,17 +62,14 @@ public class RoundResponse
     {
         get
         {
-            if (FullRound || Teebox.IsNineHole) return Score - Teebox.Par;
-            // 9-hole round on an 18-hole teebox: use exact front/back par if holes are loaded,
-            // otherwise fall back to half of teebox par (correct for standard 36/36 courses).
-            if (Holes.Count > 0)
-            {
-                var hasFront = Holes.Any(h => h.HoleNumber <= 9);
-                var hasBack = Holes.Any(h => h.HoleNumber > 9);
-                if (hasFront && !hasBack) return Score - ParOut;
-                if (hasBack && !hasFront) return Score - ParIn;
-            }
-            return Score - Teebox.Par / 2;
+            // The pars actually played are the only correct baseline, and the one that holds for
+            // an eighteen, a nine, and a round still being entered alike. Measuring a four-hole
+            // round against a par-72 teebox would report it as roughly 54 under.
+            if (Holes.Count > 0) return Score - Holes.Sum(h => h.Par);
+
+            // Lightweight list path: holes aren't loaded, so fall back to the teebox. Half par is
+            // correct for the standard 36/36 course.
+            return Score - (FullRound || Teebox.IsNineHole ? Teebox.Par : Teebox.Par / 2);
         }
     }
 
@@ -113,7 +124,10 @@ public class RoundResponse
             Teebox = RoundTeebox.From(teebox),
             Stats = roundStat != null ? RoundStats.From(roundStat) : null,
             Holes = holes ?? new(),
-            FullRound = round.FullRound
+            FullRound = round.FullRound,
+            FrontNine = round.FrontNine,
+            BackNine = round.BackNine,
+            IsComplete = round.IsComplete
             // StrokesGained is computed live from shot data by RoundService after shots load —
             // it is intentionally not read from the stored round_stats.sg_* columns.
         };

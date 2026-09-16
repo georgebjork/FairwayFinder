@@ -59,7 +59,8 @@ public class RecentUserDto
 // ── Group 2: Activity & content ──
 public class ActivityMetricsDto
 {
-    public int TotalRounds { get; set; }              // non-deleted
+    public int TotalRounds { get; set; }              // non-deleted, completed
+    public int InProgressRounds { get; set; }        // started but not yet posted
     public int RoundsLast7Days { get; set; }
     public int RoundsLast30Days { get; set; }
     public int TotalCourses { get; set; }

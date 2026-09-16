@@ -26,6 +26,10 @@ public static class FairwayFinderDiagnostics
         RoundsMeter.CreateCounter<long>("fairwayfinder.rounds.updated", description: "Rounds updated");
     public static readonly Counter<long> RoundsDeleted =
         RoundsMeter.CreateCounter<long>("fairwayfinder.rounds.deleted", description: "Rounds deleted");
+    public static readonly Counter<long> RoundsStarted =
+        RoundsMeter.CreateCounter<long>("fairwayfinder.rounds.started", description: "Rounds opened for hole-by-hole entry");
+    public static readonly Counter<long> RoundHolesPosted =
+        RoundsMeter.CreateCounter<long>("fairwayfinder.round.holes.posted", description: "Per-hole writes during a round");
     public static readonly Counter<long> ShotsLogged =
         RoundsMeter.CreateCounter<long>("fairwayfinder.shots.logged", description: "Individual shots logged");
     public static readonly Histogram<double> RoundSaveDuration =
@@ -74,6 +78,9 @@ public static class FairwayFinderDiagnostics
     {
         public const string RoundCreate = "round.create";
         public const string RoundUpdate = "round.update";
+        public const string RoundStart = "round.start";
+        public const string RoundHoleUpsert = "round.hole.upsert";
+        public const string RoundComplete = "round.complete";
         public const string RoundsDetailsGenerate = "rounds.details.generate";
         public const string RoundsStrokesGainedCompute = "rounds.strokes_gained.compute";
         public const string StatsUserGenerate = "stats.user.generate";
@@ -149,6 +156,7 @@ public static class FairwayFinderDiagnostics
     {
         public const string OperationCreate = "create";
         public const string OperationUpdate = "update";
+        public const string OperationComplete = "complete";
 
         public const string EmailKindConfirmation = "confirmation";
         public const string EmailKindPasswordReset = "password_reset";

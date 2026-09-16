@@ -42,7 +42,7 @@ else
                         {
                             <td class="hole-cell">@hole.Yardage</td>
                         }
-                        <td class="total-cell" colspan="2">@Round.Teebox.YardageOut</td>
+                        <td class="total-cell" colspan="2">@FrontNine.Sum(h => h.Yardage)</td>
                     }
                     @if (HasBackNine)
                     {
@@ -50,9 +50,9 @@ else
                         {
                             <td class="hole-cell">@hole.Yardage</td>
                         }
-                        <td class="total-cell" colspan="2">@Round.Teebox.YardageIn</td>
+                        <td class="total-cell" colspan="2">@BackNine.Sum(h => h.Yardage)</td>
                     }
-                    <td class="total-cell" colspan="2">@Round.Teebox.YardageTotal</td>
+                    <td class="total-cell" colspan="2">@Round.Holes.Sum(h => h.Yardage)</td>
                 </tr>
 
                 <!-- Handicap Row -->
@@ -96,7 +96,7 @@ else
                         }
                         <td class="total-cell" colspan="2">@Round.ParIn</td>
                     }
-                    <td class="total-cell" colspan="2">@Round.Teebox.Par</td>
+                    <td class="total-cell" colspan="2">@Round.Holes.Sum(h => h.Par)</td>
                 </tr>
 
                 <!-- Score Row -->

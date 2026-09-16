@@ -48,6 +48,11 @@ else
                     <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
                         Date: @_round.DatePlayed.ToString("M/d/yy")
                     </RadzenText>
+                    @if (!_round.IsComplete)
+                    {
+                        <RadzenBadge Text="@($"In progress · {_round.Holes.Count} hole(s) entered")"
+                                     BadgeStyle="BadgeStyle.Info" Shade="Shade.Lighter" />
+                    }
                     @if (_round.ExcludeFromStats)
                     {
                         <RadzenBadge Text="Excluded from stats" BadgeStyle="BadgeStyle.Warning" Shade="Shade.Lighter" />
@@ -64,6 +69,8 @@ else
                               Click="OnToggleExcludeFromStats" />
                 <RadzenButton Text="Edit" Icon="edit"
                               ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                              Disabled="!_round.IsComplete"
+                              title="@(_round.IsComplete ? null : "This round is still being entered on the golfer's phone. It can be edited once they post it.")"
                               Click="@(() => NavigationManager.NavigateTo($"/rounds/{RoundId}/edit"))" />
                 <RadzenButton Text="Delete" Icon="delete"
                               ButtonStyle="ButtonStyle.Danger" Variant="Variant.Outlined"

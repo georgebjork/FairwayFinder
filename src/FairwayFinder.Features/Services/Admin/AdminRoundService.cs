@@ -42,6 +42,7 @@ public class AdminRoundService(
                 r.DatePlayed,
                 r.Score,
                 r.FullRound,
+                r.IsComplete,
                 r.ExcludeFromStats,
                 r.UsingShotTracking,
                 r.UsingHoleStats,
@@ -51,6 +52,18 @@ public class AdminRoundService(
                 TeeboxIsNineHole = r.Teebox.IsNineHole
             })
             .ToListAsync();
+
+        // Par of the holes each round actually has a score for. One grouped aggregate for the
+        // whole grid, so to-par stays honest for rounds still being entered — and for completed
+        // rounds that cover an unusual set of holes, which the teebox heuristic below also got
+        // wrong.
+        var playedPar = await db.Scores
+            .Where(sc => !sc.IsDeleted)
+            .Join(db.Holes.Where(h => !h.IsDeleted), sc => sc.HoleId, h => h.HoleId,
+                (sc, h) => new { sc.RoundId, h.Par })
+            .GroupBy(x => x.RoundId)
+            .Select(g => new { RoundId = g.Key, Par = g.Sum(x => x.Par), Holes = g.Count() })
+            .ToDictionaryAsync(x => x.RoundId, x => (x.Par, x.Holes));
 
         var userIds = rounds.Select(r => r.UserId).Distinct().ToList();
         var users = await db.Users
@@ -64,8 +77,12 @@ public class AdminRoundService(
             userMap.TryGetValue(r.UserId, out var u);
             var name = u is null ? "" : $"{u.FirstName} {u.LastName}".Trim();
             var email = u?.Email ?? string.Empty;
-            // Match RoundResponse's simple to-par: full/nine-hole tees use full par, otherwise half.
-            var par = r.FullRound || r.TeeboxIsNineHole ? r.TeeboxPar : r.TeeboxPar / 2;
+            // Mirrors RoundResponse.ScoreToPar: the pars actually played when there are any,
+            // falling back to the teebox only for a round with no scores on record.
+            var hasPlayed = playedPar.TryGetValue(r.RoundId, out var played) && played.Par > 0;
+            var par = hasPlayed
+                ? played.Par
+                : r.FullRound || r.TeeboxIsNineHole ? r.TeeboxPar : r.TeeboxPar / 2;
 
             return new AdminRoundListItemDto
             {
@@ -81,7 +98,9 @@ public class AdminRoundService(
                 ExcludeFromStats = r.ExcludeFromStats,
                 UsingShotTracking = r.UsingShotTracking,
                 UsingHoleStats = r.UsingHoleStats,
-                FullRound = r.FullRound
+                FullRound = r.FullRound,
+                IsComplete = r.IsComplete,
+                HolesEntered = hasPlayed ? played.Holes : 0
             };
         }).ToList();
     }

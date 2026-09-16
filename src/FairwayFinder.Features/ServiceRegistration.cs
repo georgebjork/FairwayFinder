@@ -25,6 +25,7 @@ public static class ServiceRegistration
     {
         // Domain services
         services.AddTransient<IRoundService, RoundService>();
+        services.AddTransient<IRoundEntryService, RoundEntryService>();
         services.AddTransient<IStatsService, StatsService>();
         services.AddTransient<ICourseService, CourseService>();
         services.AddTransient<IProfileService, ProfileService>();

@@ -66,6 +66,18 @@
                         <RoundTrackingBadge Level="round.TrackingLevel" />
                     </Template>
                 </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="AdminRoundListItemDto" Title="Status" Width="130px" TextAlign="TextAlign.Center" Sortable="false">
+                    <Template Context="round">
+                        @if (round.IsComplete)
+                        {
+                            <RadzenBadge Text="Posted" BadgeStyle="BadgeStyle.Success" Shade="Shade.Lighter" />
+                        }
+                        else
+                        {
+                            <RadzenBadge Text="@($"In progress · {round.HolesEntered}")" BadgeStyle="BadgeStyle.Info" Shade="Shade.Lighter" />
+                        }
+                    </Template>
+                </RadzenDataGridColumn>
                 <RadzenDataGridColumn TItem="AdminRoundListItemDto" Title="In Stats" Width="110px" TextAlign="TextAlign.Center" Sortable="false">
                     <Template Context="round">
                         @if (round.ExcludeFromStats)

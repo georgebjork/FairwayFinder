@@ -124,9 +124,13 @@ else
         // Load holes for current teebox
         var holes = await CourseService.GetHolesAsync(round.Teebox.TeeboxId);
 
-        // Determine round type
+        // Determine round type. All() is true on an empty sequence, so inferring the nine from
+        // the loaded holes picks the front for a round with none — fall back to the round's own
+        // FrontNine flag, which completion derives from the holes actually played.
         var isFullRound = round.FullRound;
-        var isFrontNine = round.Holes.All(h => h.HoleNumber <= 9);
+        var isFrontNine = round.Holes.Count > 0
+            ? round.Holes.All(h => h.HoleNumber <= 9)
+            : round.FrontNine;
 
         // Pre-populate state
         _state.SelectedCourseId = round.CourseId;
