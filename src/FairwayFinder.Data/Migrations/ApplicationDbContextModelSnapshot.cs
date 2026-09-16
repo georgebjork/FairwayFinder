@@ -557,6 +557,12 @@ namespace FairwayFinder.Data.Migrations
                         .HasDefaultValue(true)
                         .HasColumnName("full_round");
 
+                    b.Property<bool>("IsComplete")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_complete");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
@@ -609,6 +615,11 @@ namespace FairwayFinder.Data.Migrations
                     b.HasIndex("CourseId");
 
                     b.HasIndex("TeeboxId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_round_user_id_active")
+                        .HasFilter("is_complete = false AND is_deleted = false");
 
                     b.ToTable("round", (string)null);
                 });
@@ -765,7 +776,10 @@ namespace FairwayFinder.Data.Migrations
 
                     b.HasIndex("HoleId");
 
-                    b.HasIndex("RoundId");
+                    b.HasIndex("RoundId", "HoleId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_score_round_id_hole_id")
+                        .HasFilter("is_deleted = false");
 
                     b.ToTable("score", (string)null);
                 });

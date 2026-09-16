@@ -1,0 +1,163 @@
+@layout FairwayFinder.Admin.Components.Shared.Layout.AuthenticationLayout
+@page "/login"
+@attribute [ExcludeFromInteractiveRouting]
+@attribute [AllowAnonymous]
+
+@using System.ComponentModel.DataAnnotations
+@using FairwayFinder.Identity
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using FairwayFinder.Admin.Components.Auth
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject ILogger<Login> Logger
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Sign in</PageTitle>
+
+<RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Style="min-height: 100%;">
+    <RadzenStack Gap="2rem" Style="width: 100%; max-width: 420px;">
+
+        <RadzenStack AlignItems="AlignItems.Center" Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.H3" Style="margin: 0;">FairwayFinder</RadzenText>
+            <RadzenText TextStyle="TextStyle.Subtitle2" Style="margin: 0; color: var(--rz-text-secondary-color);">
+                Admin console
+            </RadzenText>
+        </RadzenStack>
+
+        <RadzenCard>
+            <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+                <DataAnnotationsValidator />
+                <RadzenStack Gap="1.5rem">
+                    <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Center">
+                        Sign in with an administrator account
+                    </RadzenText>
+
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Danger" Variant="Variant.Flat" Shade="Shade.Lighter">
+                            @_errorMessage
+                        </RadzenAlert>
+                    }
+
+                    <RadzenFormField Text="Email" Variant="Variant.Outlined">
+                        <InputText @bind-Value="Input!.Email" class="rz-textbox" autocomplete="username" aria-required="true" placeholder="Enter your email" />
+                        <ValidationMessage For="() => Input.Email" />
+                    </RadzenFormField>
+
+                    <RadzenFormField Text="Password" Variant="Variant.Outlined">
+                        <InputText type="password" @bind-Value="Input!.Password" class="rz-textbox" autocomplete="current-password" aria-required="true" placeholder="Enter your password" />
+                        <ValidationMessage For="() => Input.Password" />
+                    </RadzenFormField>
+
+                    <RadzenButton
+                        ButtonType="ButtonType.Submit"
+                        Text="Sign in"
+                        Style="width: 100%;"
+                        ButtonStyle="ButtonStyle.Primary"
+                        Variant="Variant.Filled"
+                        Size="ButtonSize.Medium" />
+                </RadzenStack>
+            </EditForm>
+        </RadzenCard>
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+    private string? _errorMessage;
+
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    [SupplyParameterFromForm]
+    private InputModel? Input { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+
+        if (HttpContext is not null && HttpMethods.IsGet(HttpContext.Request.Method))
+        {
+            await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+        }
+    }
+
+    public async Task LoginUser()
+    {
+        if (Input == null)
+        {
+            _errorMessage = "An error occurred signing you in.";
+            Logger.LogError("Input form in page Login came back null.");
+            return;
+        }
+
+        var user = await UserManager.FindByEmailAsync(Input.Email);
+
+        if (user is null)
+        {
+            Logger.LogWarning("Failed login attempt for non-existent user {Email}.", Input.Email);
+            _errorMessage = "Error: Invalid login attempt.";
+            return;
+        }
+
+        if (!await UserManager.IsEmailConfirmedAsync(user))
+        {
+            Logger.LogWarning("User {Email} attempted to sign in without a confirmed email.", Input.Email);
+            _errorMessage = "You must confirm your email before signing in.";
+            return;
+        }
+
+        var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, false, lockoutOnFailure: true);
+
+        if (result.Succeeded)
+        {
+            // Every page in this app requires the Admin role. Rejecting here gives a clear message
+            // instead of signing someone into a console where each page bounces them.
+            if (!await UserManager.IsInRoleAsync(user, ApplicationRoles.Admin))
+            {
+                await SignInManager.SignOutAsync();
+                Logger.LogWarning("Non-admin user {Email} attempted to sign in to the admin console.", Input.Email);
+                _errorMessage = "This console is restricted to administrators.";
+                return;
+            }
+
+            Logger.LogInformation("Admin {Email} logged in successfully.", Input.Email);
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else if (result.IsLockedOut)
+        {
+            Logger.LogWarning("User {Email} is locked out.", Input.Email);
+            _errorMessage = "This account has been locked due to too many failed attempts. Please try again later.";
+        }
+        else if (result.IsNotAllowed)
+        {
+            Logger.LogWarning("User {Email} sign-in was not allowed.", Input.Email);
+            _errorMessage = "You are not allowed to sign in.";
+        }
+        else if (result.RequiresTwoFactor)
+        {
+            Logger.LogInformation("User {Email} requires two-factor authentication.", Input.Email);
+            _errorMessage = "Two-factor authentication is required.";
+        }
+        else
+        {
+            Logger.LogWarning("Failed login attempt for {Email}. Invalid password.", Input.Email);
+            _errorMessage = "Error: Invalid login attempt.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+    }
+}

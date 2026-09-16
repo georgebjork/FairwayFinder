@@ -1,0 +1,15 @@
+@using FairwayFinder.Admin.Components.Pages.Stats.Components
+
+@* Plain label/value table. Diagnostics favour exact numbers over charts. *@
+<RadzenDataGrid Data="@Rows" TItem="MetricRow" AllowSorting="false" GridLines="DataGridGridLines.Horizontal"
+                ShowPagingSummary="false" EmptyText="No data.">
+    <Columns>
+        <RadzenDataGridColumn TItem="MetricRow" Property="Metric" Title="Metric" />
+        <RadzenDataGridColumn TItem="MetricRow" Property="Value" Title="Value" TextAlign="TextAlign.Right" Width="45%" />
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    [Parameter]
+    public List<MetricRow> Rows { get; set; } = new();
+}

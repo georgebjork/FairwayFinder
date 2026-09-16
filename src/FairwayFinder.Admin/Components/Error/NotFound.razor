@@ -1,0 +1,20 @@
+@page "/not-found"
+@attribute [AllowAnonymous]
+@layout FairwayFinder.Admin.Components.Shared.Layout.AuthenticationLayout
+
+<PageTitle>Not Found</PageTitle>
+
+<RadzenCard class="rz-p-5 rz-mx-auto rz-mt-5" style="max-width: 600px;">
+    <RadzenStack Gap="1rem">
+        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">Not found</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body1" style="color: var(--rz-text-secondary-color);">
+            The page you are looking for does not exist.
+        </RadzenText>
+        <RadzenButton Text="Back to dashboard" Icon="home" ButtonStyle="ButtonStyle.Primary"
+                      Variant="Variant.Filled" Click="@(() => Navigation.NavigateTo("/", true))" />
+    </RadzenStack>
+</RadzenCard>
+
+@code {
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+}

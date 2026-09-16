@@ -176,6 +176,8 @@ public class TgtrTransferService
                     FullRound = fullRound,
                     FrontNine = frontNine,
                     BackNine = backNine,
+                    // Imported rounds are historical, so they are finished by definition.
+                    IsComplete = true,
                     CreatedBy = userId,
                     CreatedOn = today,
                     UpdatedBy = userId,

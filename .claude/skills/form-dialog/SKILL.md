@@ -10,7 +10,7 @@ Create a new Add/Edit form dialog for: $ARGUMENTS
 
 Generate an Add/Edit dialog component that follows the project's exact Radzen form pattern.
 
-### Dialog Component — `src/FairwayFinder.Web/Components/Pages/{Domain}/Dialogs/AddEdit{EntityName}Dialog.razor`
+### Dialog Component — `src/FairwayFinder.Admin/Components/Pages/{Domain}/Dialogs/AddEdit{EntityName}Dialog.razor`
 
 Follow this exact structure:
 

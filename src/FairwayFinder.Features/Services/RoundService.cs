@@ -35,7 +35,7 @@ public class RoundService : IRoundService
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
         var roundsData = await dbContext.Rounds
-            .Where(r => r.UserId == userId && !r.IsDeleted)
+            .Where(r => r.UserId == userId && !r.IsDeleted && r.IsComplete)
             .Join(dbContext.Courses, r => r.CourseId, c => c.CourseId, (r, c) => new { Round = r, Course = c })
             .Join(dbContext.Teeboxes, rc => rc.Round.TeeboxId, t => t.TeeboxId, (rc, t) => new { rc.Round, rc.Course, Teebox = t })
             .OrderByDescending(x => x.Round.DatePlayed)
@@ -52,8 +52,10 @@ public class RoundService : IRoundService
 
         // Round lists show every round the user logged, including ones flagged
         // ExcludeFromStats — the flag rides along on RoundResponse so the UI can badge them.
+        // Rounds still being entered are a different case: they are not history yet, so they
+        // stay out until the golfer posts them. The resume endpoint is how the app finds one.
         var query = dbContext.Rounds
-            .Where(r => r.UserId == userId && !r.IsDeleted);
+            .Where(r => r.UserId == userId && !r.IsDeleted && r.IsComplete);
 
         if (filter is not null)
         {
@@ -105,9 +107,10 @@ public class RoundService : IRoundService
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
         // This is the stats/details path, so rounds the user excluded never come back —
-        // regardless of whether a filter was supplied.
+        // regardless of whether a filter was supplied. Nor do rounds still being entered,
+        // whose partial score would read as a great round.
         var query = dbContext.Rounds
-            .Where(r => r.UserId == userId && !r.IsDeleted && !r.ExcludeFromStats);
+            .Where(r => r.UserId == userId && !r.IsDeleted && !r.ExcludeFromStats && r.IsComplete);
 
         if (filter is not null)
         {
@@ -320,11 +323,11 @@ public class RoundService : IRoundService
             }
 
         // Compute scores
-        var frontHoles = request.Holes.Where(h => h.HoleNumber <= 9).ToList();
-        var backHoles = request.Holes.Where(h => h.HoleNumber > 9).ToList();
-        var scoreOut = frontHoles.Sum(h => (int)h.Score);
-        var scoreIn = backHoles.Sum(h => (int)h.Score);
-        var totalScore = scoreOut + scoreIn;
+        var totals = RoundScoringHelper.ComputeTotals(
+            request.Holes.Select(h => new RoundScoringHelper.HoleScoreLine(h.HoleNumber, h.Score, h.Par)));
+        var scoreOut = totals.ScoreOut;
+        var scoreIn = totals.ScoreIn;
+        var totalScore = totals.Total;
         
         // 1. Create Round entity
         var round = new Round
@@ -342,6 +345,8 @@ public class RoundService : IRoundService
             FullRound = request.FullRound,
             FrontNine = request.FrontNine,
             BackNine = request.BackNine,
+            // The atomic path receives the whole round in one payload, so it lands complete.
+            IsComplete = true,
             CreatedBy = userId,
             CreatedOn = today,
             UpdatedBy = userId,
@@ -379,54 +384,22 @@ public class RoundService : IRoundService
                 if (hole.Shots is not { Count: > 0 }) continue;
 
                 var scoreId = scoreByHoleId[hole.HoleId];
-                var shotNumber = 1;
-                foreach (var shotData in hole.Shots)
-                {
-                    dbContext.Shots.Add(new Shot
-                    {
-                        ScoreId = scoreId,
-                        ShotNumber = shotNumber++,
-                        StartDistance = shotData.StartDistance,
-                        StartDistanceUnit = shotData.StartDistanceUnit,
-                        StartLie = (int)shotData.StartLie,
-                        EndDistance = shotData.EndDistance,
-                        EndDistanceUnit = shotData.EndDistanceUnit,
-                        EndLie = shotData.EndLie.HasValue ? (int)shotData.EndLie.Value : null,
-                        PenaltyStrokes = shotData.PenaltyStrokes,
-                        CreatedBy = userId,
-                        CreatedOn = today,
-                        UpdatedBy = userId,
-                        UpdatedOn = today,
-                        IsDeleted = false
-                    });
-                }
+                dbContext.Shots.AddRange(RoundScoringHelper.BuildShots(scoreId, hole.Shots, userId, today));
 
                 // Auto-derive HoleStat from shots
-                var (numberOfPutts, hitFairway, hitGreen, approachYardage, teeShotPenalty, approachShotPenalty) =
-                    StrokesGainedCalculator.DeriveHoleStatFromShots(hole.Shots, hole.Par);
-
-                dbContext.HoleStats.Add(new HoleStat
+                var holeStat = new HoleStat
                 {
                     ScoreId = scoreId,
                     RoundId = round.RoundId,
                     HoleId = hole.HoleId,
-                    HitFairway = hitFairway,
-                    HitGreen = hitGreen,
-                    NumberOfPutts = numberOfPutts,
-                    ApproachYardage = approachYardage,
-                    TeeShotPenalty = teeShotPenalty,
-                    ApproachShotPenalty = approachShotPenalty,
-                    // Fields shots can't derive — accept them from the client if supplied
-                    MissFairwayType = hole.MissFairwayType,
-                    MissGreenType = hole.MissGreenType,
-                    TeeShotOutOfPosition = hole.TeeShotOutOfPosition,
-                    ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition,
                     CreatedBy = userId,
                     CreatedOn = today,
                     UpdatedBy = userId,
                     UpdatedOn = today,
                     IsDeleted = false
-                });
+                };
+                RoundScoringHelper.ApplyDerivedHoleStat(holeStat, hole.Shots, hole.Par, hole);
+                dbContext.HoleStats.Add(holeStat);
             }
         }
         // 3b. Create HoleStat entities if advanced stats enabled (non-shot-tracking)
@@ -463,50 +436,15 @@ public class RoundService : IRoundService
         var roundStat = new RoundStat
         {
             RoundId = round.RoundId,
-            HoleInOne = 0,
-            DoubleEagles = 0,
-            Eagles = 0,
-            Birdies = 0,
-            Pars = 0,
-            Bogies = 0,
-            DoubleBogies = 0,
-            TripleOrWorse = 0,
             CreatedBy = userId,
             CreatedOn = today,
             UpdatedBy = userId,
             UpdatedOn = today,
             IsDeleted = false
         };
-        
-        foreach (var hole in request.Holes)
-        {
-            var diff = hole.Score - hole.Par;
-            switch (diff)
-            {
-                case <= -3:
-                    if (hole.Score == 1) roundStat.HoleInOne++;
-                    else roundStat.DoubleEagles++;
-                    break;
-                case -2:
-                    roundStat.Eagles++;
-                    break;
-                case -1:
-                    roundStat.Birdies++;
-                    break;
-                case 0:
-                    roundStat.Pars++;
-                    break;
-                case 1:
-                    roundStat.Bogies++;
-                    break;
-                case 2:
-                    roundStat.DoubleBogies++;
-                    break;
-                default:
-                    roundStat.TripleOrWorse++;
-                    break;
-            }
-        }
+
+        RoundScoringHelper.ApplyScoringDistribution(roundStat,
+            request.Holes.Select(h => new RoundScoringHelper.HoleScoreLine(h.HoleNumber, h.Score, h.Par)));
         
             dbContext.RoundStats.Add(roundStat);
             await dbContext.SaveChangesAsync();
@@ -551,32 +489,9 @@ public class RoundService : IRoundService
         }
     }
 
-    private async Task NotifyFriendsOfNewRoundAsync(ApplicationDbContext dbContext, string userId, long courseId, int score)
-    {
-        try
-        {
-            var friends = await _friendService.GetFriendsAsync(userId);
-            if (friends.Count == 0) return;
-
-            var user = await dbContext.Users.FindAsync(userId);
-            var course = await dbContext.Courses.FindAsync(courseId);
-
-            var posterName = !string.IsNullOrWhiteSpace(user?.FirstName) ? user!.FirstName : "A friend";
-            var courseName = !string.IsNullOrWhiteSpace(course?.CourseName) ? course!.CourseName : "a course";
-
-            var title = $"{posterName} posted a round";
-            var body = $"Shot {score} at {courseName}";
-
-            foreach (var friend in friends)
-            {
-                await _pushService.SendToUserAsync(friend.UserId, title, body);
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to notify friends of new round for user {UserId}", userId);
-        }
-    }
+    private Task NotifyFriendsOfNewRoundAsync(ApplicationDbContext dbContext, string userId, long courseId, int score)
+        => RoundNotifications.NotifyFriendsOfNewRoundAsync(
+            dbContext, _friendService, _pushService, _logger, userId, courseId, score);
 
     public async Task<bool> UpdateRoundAsync(UpdateRoundRequest request)
     {
@@ -611,12 +526,14 @@ public class RoundService : IRoundService
                 }
             }
 
-        var frontHoles = request.Holes.Where(h => h.HoleNumber <= 9).ToList();
-        var backHoles = request.Holes.Where(h => h.HoleNumber > 9).ToList();
-        var scoreOut = frontHoles.Sum(h => (int)h.Score);
-        var scoreIn = backHoles.Sum(h => (int)h.Score);
-        var totalScore = scoreOut + scoreIn;
-        
+        var holeLines = request.Holes
+            .Select(h => new RoundScoringHelper.HoleScoreLine(h.HoleNumber, h.Score, h.Par))
+            .ToList();
+        var totals = RoundScoringHelper.ComputeTotals(holeLines);
+        var scoreOut = totals.ScoreOut;
+        var scoreIn = totals.ScoreIn;
+        var totalScore = totals.Total;
+
         round.TeeboxId = request.TeeboxId;
         round.DatePlayed = request.DatePlayed;
         round.UsingHoleStats = request.UsingHoleStats || request.UsingShotTracking;
@@ -624,6 +541,19 @@ public class RoundService : IRoundService
         round.Score = totalScore;
         round.ScoreOut = scoreOut;
         round.ScoreIn = scoreIn;
+
+        // An edit can change which holes the round covers (nine holes extended to eighteen, say),
+        // so re-derive the shape flags rather than leaving whatever create wrote.
+        var teeboxIsNineHole = await dbContext.Teeboxes
+            .Where(t => t.TeeboxId == request.TeeboxId)
+            .Select(t => t.IsNineHole)
+            .FirstOrDefaultAsync();
+        var shape = RoundScoringHelper.ClassifyShape(
+            request.Holes.Select(h => h.HoleNumber).ToHashSet(), teeboxIsNineHole);
+        round.FullRound = shape.FullRound;
+        round.FrontNine = shape.FrontNine;
+        round.BackNine = shape.BackNine;
+
         round.UpdatedBy = userId;
         round.UpdatedOn = today;
         
@@ -632,13 +562,20 @@ public class RoundService : IRoundService
             .ToListAsync();
         
         var scoresByScoreId = existingScores.ToDictionary(s => s.ScoreId);
-        
+        // Fallback lookup: a client that omits ScoreId (or sends a stale one) would otherwise
+        // insert a second row for a hole that already has one. The unique index on
+        // (round_id, hole_id) now rejects that outright, so match on HoleId instead.
+        var scoresByHoleId = existingScores
+            .GroupBy(s => s.HoleId)
+            .ToDictionary(g => g.Key, g => g.First());
+
         // Track the Score entity for each hole entry (needed for HoleStats ScoreId lookup)
         var scoreForHole = new Dictionary<long, Score>(); // keyed by HoleId from request
         
         foreach (var hole in request.Holes)
         {
-            if (hole.ScoreId > 0 && scoresByScoreId.TryGetValue(hole.ScoreId, out var existingScore))
+            if ((hole.ScoreId > 0 && scoresByScoreId.TryGetValue(hole.ScoreId, out var existingScore))
+                || scoresByHoleId.TryGetValue(hole.HoleId, out existingScore))
             {
                 existingScore.HoleId = hole.HoleId; // Update HoleId in case teebox changed
                 existingScore.HoleScore = hole.Score;
@@ -861,39 +798,12 @@ public class RoundService : IRoundService
             }
         }
         
-        int holeInOne = 0, doubleEagles = 0, eagles = 0, birdies = 0, pars = 0, bogies = 0, doubleBogies = 0, tripleOrWorse = 0;
-        
-        foreach (var hole in request.Holes)
-        {
-            var diff = hole.Score - hole.Par;
-            switch (diff)
-            {
-                case <= -3:
-                    if (hole.Score == 1) holeInOne++;
-                    else doubleEagles++;
-                    break;
-                case -2: eagles++; break;
-                case -1: birdies++; break;
-                case 0: pars++; break;
-                case 1: bogies++; break;
-                case 2: doubleBogies++; break;
-                default: tripleOrWorse++; break;
-            }
-        }
-        
         var existingRoundStat = await dbContext.RoundStats
             .FirstOrDefaultAsync(rs => rs.RoundId == request.RoundId && !rs.IsDeleted);
-        
+
         if (existingRoundStat is not null)
         {
-            existingRoundStat.HoleInOne = holeInOne;
-            existingRoundStat.DoubleEagles = doubleEagles;
-            existingRoundStat.Eagles = eagles;
-            existingRoundStat.Birdies = birdies;
-            existingRoundStat.Pars = pars;
-            existingRoundStat.Bogies = bogies;
-            existingRoundStat.DoubleBogies = doubleBogies;
-            existingRoundStat.TripleOrWorse = tripleOrWorse;
+            RoundScoringHelper.ApplyScoringDistribution(existingRoundStat, holeLines);
             existingRoundStat.UpdatedBy = userId;
             existingRoundStat.UpdatedOn = today;
         }
@@ -902,14 +812,6 @@ public class RoundService : IRoundService
             var newRoundStat = new RoundStat
             {
                 RoundId = round.RoundId,
-                HoleInOne = holeInOne,
-                DoubleEagles = doubleEagles,
-                Eagles = eagles,
-                Birdies = birdies,
-                Pars = pars,
-                Bogies = bogies,
-                DoubleBogies = doubleBogies,
-                TripleOrWorse = tripleOrWorse,
                 CreatedBy = userId,
                 CreatedOn = today,
                 UpdatedBy = userId,
@@ -917,6 +819,7 @@ public class RoundService : IRoundService
                 IsDeleted = false
             };
 
+            RoundScoringHelper.ApplyScoringDistribution(newRoundStat, holeLines);
             dbContext.RoundStats.Add(newRoundStat);
         }
 
@@ -1066,7 +969,7 @@ public class RoundService : IRoundService
         if (!statRounds.HasValue)
         {
             courses = await dbContext.Courses
-                .Join(dbContext.Rounds.Where(r => r.UserId == userId && !r.IsDeleted),
+                .Join(dbContext.Rounds.Where(r => r.UserId == userId && !r.IsDeleted && r.IsComplete),
                     c => c.CourseId,
                     r => r.CourseId,
                     (c, r) => c)
@@ -1076,7 +979,7 @@ public class RoundService : IRoundService
         else
         {
             courses = await dbContext.Courses
-                .Join(dbContext.Rounds.Where(r => r.UserId == userId && !r.IsDeleted && !r.ExcludeFromStats && r.UsingHoleStats == statRounds),
+                .Join(dbContext.Rounds.Where(r => r.UserId == userId && !r.IsDeleted && !r.ExcludeFromStats && r.IsComplete && r.UsingHoleStats == statRounds),
                     c => c.CourseId,
                     r => r.CourseId,
                     (c, r) => c)

@@ -8,16 +8,16 @@ Create a new Blazor page for: $ARGUMENTS
 
 ## Page Template
 
-Place the file at: `src/FairwayFinder.Web/Components/Pages/{Domain}/Pages/{PageName}.razor`
+Place the file at: `src/FairwayFinder.Admin/Components/Pages/{Domain}/Pages/{PageName}.razor`
 
 ```razor
 @page "/{route}"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Policy = Policies.AdminOnly)]
 @using System.Security.Claims
 @using FairwayFinder.Features.Data
 @using FairwayFinder.Features.Services.Interfaces
-@using FairwayFinder.Web.Components.Shared.Layout.Breadcrumb
+@using FairwayFinder.Admin.Components.Shared.Layout.Breadcrumb
 @inject IMyService MyService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
@@ -91,7 +91,7 @@ public int OrganizationId { get; set; }
 
 ### Admin-only page
 ```razor
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Policy = Policies.AdminOnly)]
 ```
 
 ### Toast notification
@@ -108,7 +108,7 @@ NotificationService.Notify(new NotificationMessage
 ## Rules
 
 - Always `@rendermode InteractiveServer`
-- Always `@attribute [Authorize]` (or role-specific)
+- Always `@attribute [Authorize(Policy = Policies.AdminOnly)]` — every page in the admin console is admin-gated
 - Always set breadcrumbs in initialization
 - Loading state with centered `RadzenProgressBarCircular`
 - Only Radzen components — no Bootstrap, no raw HTML divs for layout

@@ -43,14 +43,14 @@ public class AdminDashboardService(
         var adminCount = (await userManager.GetUsersInRoleAsync("Admin")).Count;
 
         var activeUsers = await db.Rounds
-            .Where(r => !r.IsDeleted && r.DatePlayed >= cutoff30)
+            .Where(r => !r.IsDeleted && r.IsComplete && r.DatePlayed >= cutoff30)
             .Select(r => r.UserId)
             .Distinct()
             .CountAsync();
 
         // Users who have ever logged a round (activation), and signups in the last 30 days.
         var activatedUsers = await db.Rounds
-            .Where(r => !r.IsDeleted)
+            .Where(r => !r.IsDeleted && r.IsComplete)
             .Select(r => r.UserId)
             .Distinct()
             .CountAsync();
@@ -106,15 +106,19 @@ public class AdminDashboardService(
         var cutoff7 = today.AddDays(-7);
         var cutoff30 = today.AddDays(-30);
 
-        var totalRounds = await db.Rounds.CountAsync(r => !r.IsDeleted);
-        var roundsLast7 = await db.Rounds.CountAsync(r => !r.IsDeleted && r.DatePlayed >= cutoff7);
-        var roundsLast30 = await db.Rounds.CountAsync(r => !r.IsDeleted && r.DatePlayed >= cutoff30);
-        var shotTracked = await db.Rounds.CountAsync(r => !r.IsDeleted && r.UsingShotTracking);
+        var totalRounds = await db.Rounds.CountAsync(r => !r.IsDeleted && r.IsComplete);
+        var roundsLast7 = await db.Rounds.CountAsync(r => !r.IsDeleted && r.IsComplete && r.DatePlayed >= cutoff7);
+        var roundsLast30 = await db.Rounds.CountAsync(r => !r.IsDeleted && r.IsComplete && r.DatePlayed >= cutoff30);
+        var shotTracked = await db.Rounds.CountAsync(r => !r.IsDeleted && r.IsComplete && r.UsingShotTracking);
+
+        // Rounds left open — an operational signal, not a volume metric, so it is counted
+        // separately rather than folded into the totals above.
+        var inProgressRounds = await db.Rounds.CountAsync(r => !r.IsDeleted && !r.IsComplete);
         var totalCourses = await db.Courses.CountAsync(c => !c.IsDeleted);
 
         // Top courses: a simple aggregate (no join), then resolve names in a second query.
         var topCourseCounts = await db.Rounds
-            .Where(r => !r.IsDeleted)
+            .Where(r => !r.IsDeleted && r.IsComplete)
             .GroupBy(r => r.CourseId)
             .Select(g => new { CourseId = g.Key, RoundCount = g.Count() })
             .OrderByDescending(x => x.RoundCount)
@@ -142,13 +146,14 @@ public class AdminDashboardService(
         var earliest = weekCutoff < monthCutoff ? weekCutoff : monthCutoff;
 
         var roundDates = await db.Rounds
-            .Where(r => !r.IsDeleted && r.DatePlayed >= earliest)
+            .Where(r => !r.IsDeleted && r.IsComplete && r.DatePlayed >= earliest)
             .Select(r => r.DatePlayed)
             .ToListAsync();
 
         return new ActivityMetricsDto
         {
             TotalRounds = totalRounds,
+            InProgressRounds = inProgressRounds,
             RoundsLast7Days = roundsLast7,
             RoundsLast30Days = roundsLast30,
             TotalCourses = totalCourses,

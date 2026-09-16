@@ -157,4 +157,63 @@ app.MapFriendEndpoints();
 app.MapDeviceEndpoints();
 app.MapAdminInviteEndpoints();
 
+// ── Public web surface ──────────────────────────────────────
+// fairwayfinder.pro points here now that the Blazor web app is gone. These two endpoints are
+// all that is left of it: the Apple association file and a landing page for invite links.
+
+// webcredentials: lets credentials saved for fairwayfinder.pro surface on the iOS login screen.
+// applinks: routes invitation links (https://fairwayfinder.pro/register?code=...) and password
+// reset links straight into the app when it's installed.
+app.MapGet("/.well-known/apple-app-site-association", () =>
+{
+    const string json = """
+        {"webcredentials":{"apps":["J2J8V2R7F8.BjorkTech.FairwayFinder-iOS"]},"applinks":{"details":[{"appIDs":["J2J8V2R7F8.BjorkTech.FairwayFinder-iOS"],"components":[{"/":"/register*"},{"/":"/reset-password*"}]}]}}
+        """;
+    return Results.Content(json, "application/json");
+}).AllowAnonymous().ExcludeFromDescription();
+
+// Fallback for invite and reset recipients who do not have the app installed. When the app IS
+// installed iOS intercepts these paths via applinks and this never renders.
+var appInstallUrl = builder.Configuration["Invites:AppInstallUrl"];
+app.MapGet("/register", () => Results.Content(BuildAppLandingPage(appInstallUrl), "text/html"))
+    .AllowAnonymous().ExcludeFromDescription();
+app.MapGet("/reset-password", () => Results.Content(BuildAppLandingPage(appInstallUrl), "text/html"))
+    .AllowAnonymous().ExcludeFromDescription();
+
 app.Run();
+
+static string BuildAppLandingPage(string? appInstallUrl)
+{
+    var action = string.IsNullOrWhiteSpace(appInstallUrl)
+        ? "<p>Install the FairwayFinder app, then open this link again from your device.</p>"
+        : $"""<p><a class="cta" href="{appInstallUrl}">Get the app</a></p>""";
+
+    return $$"""
+        <!doctype html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>FairwayFinder</title>
+          <style>
+            :root { color-scheme: dark; }
+            body { margin: 0; min-height: 100vh; display: grid; place-items: center;
+                   background: #1e1e2e; color: #cdd6f4; text-align: center;
+                   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+            main { padding: 2rem; max-width: 30rem; }
+            h1 { font-size: 1.75rem; margin: 0 0 .5rem; }
+            p { line-height: 1.6; color: #a6adc8; }
+            .cta { display: inline-block; margin-top: .5rem; padding: .75rem 1.5rem; border-radius: .5rem;
+                   background: #89b4fa; color: #1e1e2e; font-weight: 600; text-decoration: none; }
+          </style>
+        </head>
+        <body>
+          <main>
+            <h1>FairwayFinder</h1>
+            <p>This link opens in the FairwayFinder app.</p>
+            {{action}}
+          </main>
+        </body>
+        </html>
+        """;
+}

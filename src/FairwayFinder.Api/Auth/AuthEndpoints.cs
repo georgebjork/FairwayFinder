@@ -4,6 +4,8 @@ using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
+using System.Text;
 
 namespace FairwayFinder.Api.Auth;
 
@@ -69,6 +71,72 @@ public static class AuthEndpoints
             await tokenService.RevokeRefreshTokenAsync(request.RefreshToken);
             return Results.NoContent();
         });
+
+        // ── Password reset ──────────────────────────────────────
+        // The web app used to own this flow. With the admin console being admin-only, the API is
+        // the only surface end users reach, so the reset lives here and deep-links into iOS.
+        group.MapPost("/forgot-password", async (
+            ForgotPasswordRequest request,
+            UserManager<ApplicationUser> userManager,
+            IEmailSender emailSender,
+            IConfiguration configuration) =>
+        {
+            var user = await userManager.FindByEmailAsync(request.Email);
+
+            if (user is not null && await userManager.IsEmailConfirmedAsync(user))
+            {
+                var token = await userManager.GeneratePasswordResetTokenAsync(user);
+                var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+
+                var urlBase = configuration["Auth:PasswordResetUrlBase"]
+                              ?? "https://fairwayfinder.pro/reset-password";
+                var resetLink = $"{urlBase}?email={Uri.EscapeDataString(request.Email)}&token={encodedToken}";
+
+                await emailSender.SendPasswordResetEmailAsync(request.Email, resetLink);
+            }
+
+            // Always 204, whether or not the account exists — otherwise this endpoint
+            // becomes a way to enumerate registered email addresses.
+            return Results.NoContent();
+        })
+        .AddEndpointFilter<ValidationFilter<ForgotPasswordRequest>>();
+
+        group.MapPost("/reset-password", async (
+            ResetPasswordRequest request,
+            UserManager<ApplicationUser> userManager) =>
+        {
+            var user = await userManager.FindByEmailAsync(request.Email);
+            if (user is null)
+            {
+                // Same generic failure as a bad token, for the same enumeration reason.
+                return Results.Problem(
+                    detail: "This password reset link is invalid or has expired.",
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            string decodedToken;
+            try
+            {
+                decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.Token));
+            }
+            catch (FormatException)
+            {
+                return Results.Problem(
+                    detail: "This password reset link is invalid or has expired.",
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            var result = await userManager.ResetPasswordAsync(user, decodedToken, request.NewPassword);
+            if (!result.Succeeded)
+            {
+                return Results.Problem(
+                    detail: string.Join(" ", result.Errors.Select(e => e.Description)),
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            return Results.NoContent();
+        })
+        .AddEndpointFilter<ValidationFilter<ResetPasswordRequest>>();
 
         // ── Invite-only registration ────────────────────────────
         group.MapGet("/invites/{code}", async (

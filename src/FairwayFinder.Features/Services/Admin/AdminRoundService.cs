@@ -1,18 +1,25 @@
 using FairwayFinder.Data;
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Enums;
 using FairwayFinder.Features.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace FairwayFinder.Features.Services.Admin;
 
 /// <summary>
-/// Thin admin surface over rounds: view any user's rounds, soft-delete a round, and toggle
-/// ExcludeFromStats. Intentionally does NOT support editing scores/shots. Reads and delete
-/// reuse <see cref="IRoundService"/>; the exclude toggle is the only direct DB write.
+/// Admin surface over rounds: view, edit, or soft-delete any user's round, and toggle
+/// ExcludeFromStats. Reads, edits, and deletes reuse <see cref="IRoundService"/>; the exclude
+/// toggle is the only direct DB write.
+///
+/// Editing goes through <see cref="UpdateRoundAsAdminAsync"/>, which resolves the round's owner
+/// and submits the update under that identity. IRoundService.UpdateRoundAsync keeps its ownership
+/// guard — this service never loosens it, it just supplies the correct owner.
 /// </summary>
 public class AdminRoundService(
     IRoundService roundService,
-    IDbContextFactory<ApplicationDbContext> dbContextFactory)
+    IDbContextFactory<ApplicationDbContext> dbContextFactory,
+    ILogger<AdminRoundService> logger)
 {
     public Task<List<RoundResponse>> GetRoundsForUserAsync(string userId)
         => roundService.GetRoundsByUserIdAsync(userId);
@@ -35,6 +42,7 @@ public class AdminRoundService(
                 r.DatePlayed,
                 r.Score,
                 r.FullRound,
+                r.IsComplete,
                 r.ExcludeFromStats,
                 r.UsingShotTracking,
                 r.UsingHoleStats,
@@ -44,6 +52,18 @@ public class AdminRoundService(
                 TeeboxIsNineHole = r.Teebox.IsNineHole
             })
             .ToListAsync();
+
+        // Par of the holes each round actually has a score for. One grouped aggregate for the
+        // whole grid, so to-par stays honest for rounds still being entered — and for completed
+        // rounds that cover an unusual set of holes, which the teebox heuristic below also got
+        // wrong.
+        var playedPar = await db.Scores
+            .Where(sc => !sc.IsDeleted)
+            .Join(db.Holes.Where(h => !h.IsDeleted), sc => sc.HoleId, h => h.HoleId,
+                (sc, h) => new { sc.RoundId, h.Par })
+            .GroupBy(x => x.RoundId)
+            .Select(g => new { RoundId = g.Key, Par = g.Sum(x => x.Par), Holes = g.Count() })
+            .ToDictionaryAsync(x => x.RoundId, x => (x.Par, x.Holes));
 
         var userIds = rounds.Select(r => r.UserId).Distinct().ToList();
         var users = await db.Users
@@ -57,8 +77,12 @@ public class AdminRoundService(
             userMap.TryGetValue(r.UserId, out var u);
             var name = u is null ? "" : $"{u.FirstName} {u.LastName}".Trim();
             var email = u?.Email ?? string.Empty;
-            // Match RoundResponse's simple to-par: full/nine-hole tees use full par, otherwise half.
-            var par = r.FullRound || r.TeeboxIsNineHole ? r.TeeboxPar : r.TeeboxPar / 2;
+            // Mirrors RoundResponse.ScoreToPar: the pars actually played when there are any,
+            // falling back to the teebox only for a round with no scores on record.
+            var hasPlayed = playedPar.TryGetValue(r.RoundId, out var played) && played.Par > 0;
+            var par = hasPlayed
+                ? played.Par
+                : r.FullRound || r.TeeboxIsNineHole ? r.TeeboxPar : r.TeeboxPar / 2;
 
             return new AdminRoundListItemDto
             {
@@ -74,7 +98,9 @@ public class AdminRoundService(
                 ExcludeFromStats = r.ExcludeFromStats,
                 UsingShotTracking = r.UsingShotTracking,
                 UsingHoleStats = r.UsingHoleStats,
-                FullRound = r.FullRound
+                FullRound = r.FullRound,
+                IsComplete = r.IsComplete,
+                HolesEntered = hasPlayed ? played.Holes : 0
             };
         }).ToList();
     }
@@ -106,5 +132,49 @@ public class AdminRoundService(
 
         await db.SaveChangesAsync();
         return true;
+    }
+
+    /// <summary>
+    /// Fully loaded round for the admin detail page, with strokes gained computed at the given
+    /// golfer level. GetRoundByIdAsync has no owner guard, so any round is readable.
+    /// </summary>
+    public Task<RoundResponse?> GetRoundForAdminAsync(long roundId, BaselineLevel level)
+        => roundService.GetRoundByIdAsync(roundId, level);
+
+    /// <summary>
+    /// Returns the owning user's id for a round, or null when the round does not exist.
+    /// </summary>
+    public Task<string?> GetRoundOwnerIdAsync(long roundId)
+        => roundService.GetRoundOwnerIdAsync(roundId);
+
+    /// <summary>
+    /// Updates a round on the owner's behalf. The caller-supplied <c>request.UserId</c> is ignored
+    /// and replaced with the round's actual owner, so an admin can correct anyone's data without
+    /// the update being rejected by the ownership guard and without the round changing hands.
+    /// Returns false if the round does not exist.
+    /// </summary>
+    public async Task<bool> UpdateRoundAsAdminAsync(UpdateRoundRequest request, string adminUserId)
+    {
+        var ownerId = await roundService.GetRoundOwnerIdAsync(request.RoundId);
+        if (ownerId is null)
+        {
+            logger.LogWarning(
+                "Admin {AdminUserId} attempted to edit round {RoundId}, which does not exist.",
+                adminUserId, request.RoundId);
+            return false;
+        }
+
+        request.UserId = ownerId;
+
+        var updated = await roundService.UpdateRoundAsync(request);
+
+        if (updated)
+        {
+            logger.LogInformation(
+                "Admin {AdminUserId} edited round {RoundId} owned by {OwnerUserId}.",
+                adminUserId, request.RoundId, ownerId);
+        }
+
+        return updated;
     }
 }

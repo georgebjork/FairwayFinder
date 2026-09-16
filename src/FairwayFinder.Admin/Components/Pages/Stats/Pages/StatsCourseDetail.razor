@@ -1,0 +1,215 @@
+@page "/stats/{UserId}/course/{CourseId:long}"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = Policies.AdminOnly)]
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Enums
+@using FairwayFinder.Features.Services.Admin
+@using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Admin.Components.Pages.Courses.Components
+@using FairwayFinder.Admin.Components.Pages.Stats.Components
+@using FairwayFinder.Admin.Components.Shared.Layout.Breadcrumb
+@inject IStatsService StatsService
+@inject IRoundService RoundService
+@inject UserAdminService UserAdminService
+@inject NavigationManager NavigationManager
+@inject BreadcrumbState BreadcrumbState
+
+<PageTitle>Course stats</PageTitle>
+
+@if (_loading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" class="rz-p-8">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (_stats is null)
+{
+    <RadzenCard class="rz-p-5">
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
+            @_playerName has no rounds at this course with the current filters.
+        </RadzenAlert>
+        <RadzenButton Text="Back to stats" Icon="arrow_back" ButtonStyle="ButtonStyle.Secondary"
+                      Click="@(() => NavigationManager.NavigateTo($"/stats?userId={Uri.EscapeDataString(UserId)}"))" class="rz-mt-4" />
+    </RadzenCard>
+}
+else
+{
+    <RadzenStack Gap="1.5rem">
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Start" Wrap="FlexWrap.Wrap" Gap="1rem">
+            <RadzenStack Gap="0.1rem">
+                <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">@_stats.CourseName</RadzenText>
+                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                    @_playerName · @_stats.TotalRounds rounds
+                </RadzenText>
+            </RadzenStack>
+            <RadzenButton Text="Back to stats" Icon="arrow_back" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                          Click="@(() => NavigationManager.NavigateTo($"/stats?userId={Uri.EscapeDataString(UserId)}"))" />
+        </RadzenStack>
+
+        <!-- Filters -->
+        <RadzenCard class="rz-p-3">
+            <RadzenStack Orientation="Orientation.Horizontal" Wrap="FlexWrap.Wrap" Gap="1rem" AlignItems="AlignItems.End">
+                <RadzenFormField Text="Teebox" Variant="Variant.Outlined" Style="min-width: 200px;">
+                    <RadzenDropDown TValue="long?"
+                                    Value="@_teeboxId"
+                                    ValueChanged="OnTeeboxChanged"
+                                    Data="@_stats.TeeboxOptions"
+                                    TextProperty="TeeboxName"
+                                    ValueProperty="TeeboxId"
+                                    AllowClear="true"
+                                    Placeholder="All teeboxes" />
+                </RadzenFormField>
+
+                <RadzenFormField Text="Round type" Variant="Variant.Outlined" Style="width: 150px;">
+                    <RadzenDropDown TValue="bool?"
+                                    Value="@_fullRoundOnly"
+                                    ValueChanged="OnRoundTypeChanged"
+                                    Data="@_roundTypeOptions"
+                                    TextProperty="Label"
+                                    ValueProperty="Value"
+                                    Placeholder="All" />
+                </RadzenFormField>
+
+                <RadzenFormField Text="SG baseline" Variant="Variant.Outlined" Style="width: 160px;">
+                    <RadzenDropDown TValue="BaselineLevel" Value="@_level" ValueChanged="OnLevelChanged"
+                                    Data="@BaselineLevelExtensions.AllInDisplayOrder">
+                        <Template Context="level">@(((BaselineLevel)level).DisplayName())</Template>
+                    </RadzenDropDown>
+                </RadzenFormField>
+            </RadzenStack>
+        </RadzenCard>
+
+        <!-- Per-hole aggregates + strokes gained -->
+        <CourseHoleStatsGrid HoleStats="@_stats.HoleStats"
+                             ShowYardage="@_teeboxId.HasValue"
+                             StrokesGained="@_stats.StrokesGained.Summary" />
+
+        <RadzenRow Gap="1rem">
+            <RadzenColumn Size="12" SizeLG="6">
+                <RadzenCard class="rz-p-4" Style="height: 100%;">
+                    <RadzenText TextStyle="TextStyle.H5" class="rz-mb-3">Scoring</RadzenText>
+                    <MetricTable Rows="@ScoringRows" />
+                </RadzenCard>
+            </RadzenColumn>
+            <RadzenColumn Size="12" SizeLG="6">
+                <RadzenCard class="rz-p-4" Style="height: 100%;">
+                    <RadzenText TextStyle="TextStyle.H5" class="rz-mb-3">Ball striking &amp; short game</RadzenText>
+                    <MetricTable Rows="@PlayRows" />
+                </RadzenCard>
+            </RadzenColumn>
+        </RadzenRow>
+
+        <!-- Round history -->
+        <RadzenCard class="rz-p-4">
+            <RadzenText TextStyle="TextStyle.H5" class="rz-mb-3">Round history</RadzenText>
+            <CourseRoundHistoryGrid Rounds="@_rounds" RoundUrlPrefix="/rounds" ShowExclusionState="true" />
+        </RadzenCard>
+    </RadzenStack>
+}
+
+@code {
+    [Parameter] public string UserId { get; set; } = string.Empty;
+    [Parameter] public long CourseId { get; set; }
+
+    private sealed record RoundTypeOption(string Label, bool? Value);
+
+    private readonly List<RoundTypeOption> _roundTypeOptions = new()
+    {
+        new("All", null),
+        new("18-hole", true),
+        new("9-hole", false)
+    };
+
+    private CourseStatsResponse? _stats;
+    private List<RoundResponse> _rounds = new();
+    private string _playerName = "Unknown";
+    private bool _loading = true;
+
+    private long? _teeboxId;
+    private bool? _fullRoundOnly;
+    private BaselineLevel _level = BaselineLevel.Scratch;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var user = await UserAdminService.GetUserByIdAsync(UserId);
+        if (user is not null)
+        {
+            _playerName = string.IsNullOrWhiteSpace(user.FullName) ? user.Email : user.FullName;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+
+        _stats = await StatsService.GetCourseStatsAsync(
+            UserId, CourseId,
+            teeboxId: _teeboxId,
+            fullRoundOnly: _fullRoundOnly,
+            level: _level);
+
+        _rounds = await RoundService.GetRoundsWithDetailsAsync(
+            UserId,
+            new StatsFilter { CourseId = CourseId, FullRoundOnly = _fullRoundOnly },
+            _level);
+
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Overview", "/"),
+            new BreadcrumbItem("Stats", "/stats"),
+            new BreadcrumbItem(_stats?.CourseName ?? "Course")
+        );
+
+        _loading = false;
+    }
+
+    private async Task OnTeeboxChanged(long? teeboxId) { _teeboxId = teeboxId; await LoadAsync(); }
+    private async Task OnRoundTypeChanged(bool? value) { _fullRoundOnly = value; await LoadAsync(); }
+    private async Task OnLevelChanged(BaselineLevel level) { _level = level; await LoadAsync(); }
+
+    private static string Pct(double? value) => value.HasValue ? $"{value.Value:0.0}%" : "—";
+    private static string Num(double? value, string format = "0.00") => value.HasValue ? value.Value.ToString(format) : "—";
+
+    private List<MetricRow> ScoringRows
+    {
+        get
+        {
+            var s = _stats!.Scoring;
+            var d = _stats!.ScoringDistribution;
+            return new List<MetricRow>
+            {
+                new("Rounds included", s.RoundsIncluded.ToString()),
+                new("18-hole rounds", s.Rounds18Hole.ToString()),
+                new("9-hole rounds", s.Rounds9Hole.ToString()),
+                new("Avg 18-hole score", Num(s.Average18HoleScore, "0.0")),
+                new("Avg 9-hole score", Num(s.Average9HoleScore, "0.0")),
+                new("Holes played", d.TotalHoles.ToString()),
+                new("Eagles / birdies", $"{d.Eagles} / {d.Birdies}"),
+                new("Pars / bogeys", $"{d.Pars} / {d.Bogeys}"),
+                new("Doubles / triple+", $"{d.DoubleBogeys} / {d.TripleOrWorse}")
+            };
+        }
+    }
+
+    private List<MetricRow> PlayRows
+    {
+        get
+        {
+            var b = _stats!.BallStriking;
+            var g = _stats!.ShortGame;
+            var p = _stats!.ParTypeScoring;
+            return new List<MetricRow>
+            {
+                new("Hole-tracked rounds", b.RoundsIncluded.ToString()),
+                new("FIR%", Pct(b.FirPercent)),
+                new("GIR%", Pct(b.GirPercent)),
+                new("Tee penalty%", Pct(b.TeePenaltyPercent)),
+                new("Up and down%", Pct(g.UpAndDownPercent)),
+                new("Avg putts (18)", Num(g.Average18HolePutts, "0.00")),
+                new("Avg 3-putts (18)", Num(g.Average18HoleThreePutts, "0.00")),
+                new("Par 3 / 4 / 5 avg", $"{Num(p.Par3Average, "0.00")} / {Num(p.Par4Average, "0.00")} / {Num(p.Par5Average, "0.00")}")
+            };
+        }
+    }
+}

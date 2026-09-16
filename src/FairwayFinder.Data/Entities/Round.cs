@@ -34,6 +34,12 @@ public partial class Round
 
     public bool FullRound { get; set; }
 
+    /// <summary>
+    /// False while a round is still being entered hole by hole. Flipped true when the golfer
+    /// posts the round. Stats, round lists, and friend feeds only ever see complete rounds.
+    /// </summary>
+    public bool IsComplete { get; set; }
+
     public bool FrontNine { get; set; }
 
     public bool BackNine { get; set; }

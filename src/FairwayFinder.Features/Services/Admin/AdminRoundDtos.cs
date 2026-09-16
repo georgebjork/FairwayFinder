@@ -22,5 +22,11 @@ public class AdminRoundListItemDto
     public bool UsingHoleStats { get; set; }
     public bool FullRound { get; set; }
 
+    /// <summary>False while the golfer is still entering holes.</summary>
+    public bool IsComplete { get; set; }
+
+    /// <summary>How many holes have a score on record — the useful number for a round in progress.</summary>
+    public int HolesEntered { get; set; }
+
     public RoundTrackingLevel TrackingLevel => RoundTracking.Classify(UsingShotTracking, UsingHoleStats);
 }

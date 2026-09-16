@@ -1,0 +1,104 @@
+using FairwayFinder.Admin.Components;
+using FairwayFinder.Admin.Services;
+using FairwayFinder.Admin.Startup;
+using FairwayFinder.Data;
+using FairwayFinder.Features;
+using FairwayFinder.Identity;
+using FairwayFinder.ServiceDefaults;
+using FairwayFinder.Shared;
+using FairwayFinder.Shared.Settings;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Radzen;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
+
+var connectionString = builder.Configuration.GetConnectionString("fairwayfinder") ??
+                       throw new InvalidOperationException("Connection string 'fairwayfinder' not found.");
+
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+builder.Services.AddRadzenComponents();
+
+builder.Services.AddFairwayFinderAuthentication();
+builder.Services.AddFairwayFinderAuthorization();
+builder.Services.AddCascadingAuthenticationState();
+
+builder.Services.RegisterSharedSettings(builder.Configuration);
+
+// The admin app never sends a push, but RoundService and FriendService both constructor-inject
+// IPushNotificationService, which resolves the IApnsClient singleton. Failing here is better than
+// failing the first time an admin opens a round.
+var apnsSettings = builder.Configuration.GetSection("Apns").Get<ApnsSettings>()!;
+if (string.IsNullOrWhiteSpace(apnsSettings.BundleId)
+    || string.IsNullOrWhiteSpace(apnsSettings.KeyId)
+    || string.IsNullOrWhiteSpace(apnsSettings.TeamId)
+    || string.IsNullOrWhiteSpace(apnsSettings.P8Contents))
+{
+    throw new InvalidOperationException(
+        "Apns configuration is incomplete. Set BundleId, KeyId, TeamId, and P8Contents via user-secrets (dev) or environment variables (prod).");
+}
+
+builder.Services.RegisterFeatureServices(builder.Configuration, builder.Environment.IsDevelopment());
+builder.Services.RegisterAdminServices(builder.Configuration);
+builder.Services.RegisterAdminWebServices();
+
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        connectionString,
+        name: "FairwayFinderDatabase",
+        tags: ["db", "sql", "FairwayFinderAppDb"]);
+
+var app = builder.Build();
+
+app.MapDefaultEndpoints();
+
+// The admin app owns schema migration and role/seed-user provisioning for the whole system —
+// the API assumes the schema already exists.
+using (var scope = app.Services.CreateScope())
+{
+    var startupService = scope.ServiceProvider.GetRequiredService<IApplicationStartupService>();
+    await startupService.RunMigrationsAsync();
+    await startupService.EnsureRolesExistAsync();
+    await startupService.SeedDefaultUserAsync();
+}
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseMigrationsEndPoint();
+}
+else
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseHsts();
+}
+
+app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.UseAntiforgery();
+
+app.MapStaticAssets().AllowAnonymous();
+
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
+
+// Logout endpoint (GET for simple navigation from the header menu)
+app.MapGet("/authentication/logout", async (SignInManager<ApplicationUser> signInManager) =>
+{
+    await signInManager.SignOutAsync();
+    return Results.Redirect("/login");
+}).RequireAuthorization();
+
+app.Run();

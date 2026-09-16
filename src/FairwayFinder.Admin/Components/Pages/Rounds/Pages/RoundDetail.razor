@@ -1,0 +1,299 @@
+@page "/rounds/{RoundId:long}"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = Policies.AdminOnly)]
+@using System.Security.Claims
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Enums
+@using FairwayFinder.Features.Services.Admin
+@using FairwayFinder.Admin.Components.Shared.Dialogs
+@using FairwayFinder.Admin.Components.Pages.Rounds.Components
+@using FairwayFinder.Admin.Components.Shared.Layout.Breadcrumb
+@inject AdminRoundService AdminRoundService
+@inject UserAdminService UserAdminService
+@inject NavigationManager NavigationManager
+@inject BreadcrumbState BreadcrumbState
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Round detail</PageTitle>
+
+@if (_loading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" class="rz-p-8">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (_round is null)
+{
+    <RadzenCard class="rz-p-5">
+        <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
+            Round not found.
+        </RadzenAlert>
+        <RadzenButton Text="Back to rounds" Icon="arrow_back" ButtonStyle="ButtonStyle.Secondary"
+                      Click="@(() => NavigationManager.NavigateTo("/rounds"))" class="rz-mt-4" />
+    </RadzenCard>
+}
+else
+{
+    <RadzenStack Gap="1.5rem">
+        <!-- Header -->
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Start" Wrap="FlexWrap.Wrap" Gap="1rem">
+            <RadzenStack Gap="0.25rem">
+                <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">@_round.CourseName</RadzenText>
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="2rem" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+                    <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                        Tee Box: @_round.Teebox.TeeboxName
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+                        Date: @_round.DatePlayed.ToString("M/d/yy")
+                    </RadzenText>
+                    @if (!_round.IsComplete)
+                    {
+                        <RadzenBadge Text="@($"In progress · {_round.Holes.Count} hole(s) entered")"
+                                     BadgeStyle="BadgeStyle.Info" Shade="Shade.Lighter" />
+                    }
+                    @if (_round.ExcludeFromStats)
+                    {
+                        <RadzenBadge Text="Excluded from stats" BadgeStyle="BadgeStyle.Warning" Shade="Shade.Lighter" />
+                    }
+                </RadzenStack>
+            </RadzenStack>
+
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+                <RadzenButton Text="@(_round.ExcludeFromStats ? "Include in stats" : "Exclude from stats")"
+                              Icon="@(_round.ExcludeFromStats ? "playlist_add_check" : "playlist_remove")"
+                              ButtonStyle="@(_round.ExcludeFromStats ? ButtonStyle.Success : ButtonStyle.Warning)"
+                              Variant="Variant.Outlined"
+                              IsBusy="_busy" Disabled="_busy"
+                              Click="OnToggleExcludeFromStats" />
+                <RadzenButton Text="Edit" Icon="edit"
+                              ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                              Disabled="!_round.IsComplete"
+                              title="@(_round.IsComplete ? null : "This round is still being entered on the golfer's phone. It can be edited once they post it.")"
+                              Click="@(() => NavigationManager.NavigateTo($"/rounds/{RoundId}/edit"))" />
+                <RadzenButton Text="Delete" Icon="delete"
+                              ButtonStyle="ButtonStyle.Danger" Variant="Variant.Outlined"
+                              Click="OnDeleteRoundClicked" />
+            </RadzenStack>
+        </RadzenStack>
+
+        <!-- Owner + strokes-gained baseline -->
+        <RadzenCard class="rz-p-3">
+            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="1rem">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+                    <RadzenIcon Icon="person" />
+                    <RadzenStack Gap="0">
+                        <RadzenText TextStyle="TextStyle.Body1" class="rz-m-0">@_ownerName</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                            @_ownerEmail
+                        </RadzenText>
+                    </RadzenStack>
+                    @if (!string.IsNullOrEmpty(_ownerUserId))
+                    {
+                        <RadzenButton Text="All rounds" Icon="list" ButtonStyle="ButtonStyle.Light"
+                                      Variant="Variant.Text" Size="ButtonSize.Small"
+                                      Click="@(() => NavigationManager.NavigateTo($"/rounds?userId={Uri.EscapeDataString(_ownerUserId)}"))" />
+                        <RadzenButton Text="Stats" Icon="query_stats" ButtonStyle="ButtonStyle.Light"
+                                      Variant="Variant.Text" Size="ButtonSize.Small"
+                                      Click="@(() => NavigationManager.NavigateTo($"/stats?userId={Uri.EscapeDataString(_ownerUserId)}"))" />
+                    }
+                </RadzenStack>
+
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                        SG baseline
+                    </RadzenText>
+                    <RadzenDropDown TValue="BaselineLevel"
+                                    Value="_level"
+                                    ValueChanged="OnLevelChanged"
+                                    Data="@BaselineLevelExtensions.AllInDisplayOrder"
+                                    Style="width: 160px;">
+                        <Template Context="level">
+                            @(((BaselineLevel)level).DisplayName())
+                        </Template>
+                    </RadzenDropDown>
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenCard>
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Start">
+            <RoundScoringPills Round="@_round" />
+        </RadzenStack>
+
+        <FairwayFinderScorecard Round="@_round" />
+
+        <RoundStatsPanel Round="@_round" />
+    </RadzenStack>
+}
+
+@code {
+    [Parameter]
+    public long RoundId { get; set; }
+
+    private RoundResponse? _round;
+    private bool _loading = true;
+    private bool _busy;
+
+    // The admin doing the looking — used only to stamp audit fields.
+    private string _adminUserId = string.Empty;
+
+    // The player who owns this round — what every service call is scoped to.
+    private string _ownerUserId = string.Empty;
+    private string _ownerName = "Unknown";
+    private string _ownerEmail = string.Empty;
+
+    private BaselineLevel _level = BaselineLevel.Scratch;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _adminUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+    }
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+
+        _round = await AdminRoundService.GetRoundForAdminAsync(RoundId, _level);
+
+        if (_round is not null)
+        {
+            _ownerUserId = await AdminRoundService.GetRoundOwnerIdAsync(RoundId) ?? string.Empty;
+
+            if (!string.IsNullOrEmpty(_ownerUserId))
+            {
+                var owner = await UserAdminService.GetUserByIdAsync(_ownerUserId);
+                if (owner is not null)
+                {
+                    var name = $"{owner.FirstName} {owner.LastName}".Trim();
+                    _ownerEmail = owner.Email ?? string.Empty;
+                    _ownerName = string.IsNullOrWhiteSpace(name)
+                        ? (string.IsNullOrWhiteSpace(_ownerEmail) ? "Unknown" : _ownerEmail)
+                        : name;
+                }
+            }
+
+            BreadcrumbState.Set(
+                new BreadcrumbItem("Overview", "/"),
+                new BreadcrumbItem("Rounds", "/rounds"),
+                new BreadcrumbItem($"{_round.CourseName} - {_round.DatePlayed:M/d/yy}")
+            );
+        }
+        else
+        {
+            BreadcrumbState.Set(
+                new BreadcrumbItem("Overview", "/"),
+                new BreadcrumbItem("Rounds", "/rounds"),
+                new BreadcrumbItem("Round")
+            );
+        }
+
+        _loading = false;
+    }
+
+    private async Task OnLevelChanged(BaselineLevel level)
+    {
+        _level = level;
+        await LoadAsync();
+    }
+
+    private async Task OnToggleExcludeFromStats()
+    {
+        if (_round is null || _busy) return;
+
+        var exclude = !_round.ExcludeFromStats;
+        _busy = true;
+
+        try
+        {
+            var success = await AdminRoundService.SetExcludeFromStatsAsync(RoundId, exclude, _adminUserId);
+            if (success)
+            {
+                _round.ExcludeFromStats = exclude;
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = exclude ? "Excluded from stats" : "Included in stats",
+                    Detail = exclude
+                        ? $"This round no longer counts toward {_ownerName}'s stats."
+                        : $"This round counts toward {_ownerName}'s stats again.",
+                    Duration = 4000
+                });
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Failed to update round",
+                    Detail = "This round could not be updated.",
+                    Duration = 6000
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Error,
+                Summary = "Failed to update round",
+                Detail = ex.Message,
+                Duration = 6000
+            });
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task OnDeleteRoundClicked()
+    {
+        if (_round is null) return;
+
+        var result = await DialogService.OpenAsync<DeleteConfirmDialog>("Delete Round",
+            new Dictionary<string, object>
+            {
+                { "EntityName", $"{_ownerName}: {_round.CourseName} - {_round.DatePlayed:M/d/yy}" },
+                { "WarningMessage", "This will also delete all scores, stats, and shots for this round." }
+            },
+            new DialogOptions
+            {
+                Width = "450px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true
+            });
+
+        if (result is true)
+        {
+            try
+            {
+                var success = await AdminRoundService.DeleteRoundAsync(RoundId, _adminUserId);
+                if (success)
+                {
+                    NotificationService.Notify(new NotificationMessage
+                    {
+                        Severity = NotificationSeverity.Success,
+                        Summary = "Round deleted",
+                        Detail = $"{_round.CourseName} - {_round.DatePlayed:M/d/yy} has been deleted.",
+                        Duration = 4000
+                    });
+                    NavigationManager.NavigateTo("/rounds");
+                }
+            }
+            catch (Exception ex)
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Failed to delete round",
+                    Detail = ex.Message,
+                    Duration = 6000
+                });
+            }
+        }
+    }
+}

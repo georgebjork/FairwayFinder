@@ -125,8 +125,11 @@ public static class FriendEndpoints
             if (!isOwner)
                 throw new NotFoundException("Round", roundId);
 
+            // GetRoundByIdAsync is deliberately ungated on IsComplete so the owner can resume a
+            // round in progress — but a friend must not see one. Its running score would read
+            // as a spectacular round.
             var round = await roundService.GetRoundByIdAsync(roundId);
-            if (round is null)
+            if (round is null || !round.IsComplete)
                 throw new NotFoundException("Round", roundId);
 
             return Results.Ok(round);
