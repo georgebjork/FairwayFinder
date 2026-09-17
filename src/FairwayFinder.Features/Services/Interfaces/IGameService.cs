@@ -24,6 +24,13 @@ public interface IGameService
     /// </param>
     Task<GameResult<GameStateResponse>> GetGameAsync(long gameId, string? userId);
 
+    /// <summary>
+    /// Resolves a join code to the game it names, without joining. Joining requires a teebox on
+    /// the game's course, which the holder of a bare code has no way to pick — so the app previews
+    /// first, then joins. Any authenticated caller may preview: the code is the credential.
+    /// </summary>
+    Task<GameResult<GameJoinPreviewResponse>> PreviewGameAsync(string joinCode, string userId);
+
     Task<GameResult<GameStateResponse>> JoinGameAsync(JoinGameRequest request, string userId);
 
     Task<GameResult<GameStateResponse>> AddParticipantAsync(long gameId, AddParticipantRequest request, string hostUserId);

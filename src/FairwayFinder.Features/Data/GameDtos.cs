@@ -127,6 +127,37 @@ public sealed class GameParticipantResponse
 
     /// <summary>True when a linked round has since been deleted — the app should prompt to relink.</summary>
     public bool RoundUnavailable { get; set; }
+
+    /// <summary>
+    /// Every hole this participant has a score for. <see cref="HolesEntered"/> is only a count, and
+    /// the scoreboard exposes strokes for the settled prefix at best — so without this a client has
+    /// no way to render or edit what was already entered.
+    /// </summary>
+    public List<GameParticipantHole> Holes { get; set; } = [];
+}
+
+/// <summary>One entered hole, keyed by number because a guest has no round to resolve a hole id against.</summary>
+public sealed record GameParticipantHole(int HoleNumber, short Strokes);
+
+/// <summary>
+/// What a join code resolves to, before committing to it. Joining needs a teebox id validated
+/// against the game's course and hole set, which a golfer holding only a code cannot know — so
+/// this answers "which course, which day, whose game" first.
+/// </summary>
+public sealed class GameJoinPreviewResponse
+{
+    public long GameId { get; set; }
+    public GameType GameType { get; set; }
+    public GameState State { get; set; }
+    public long CourseId { get; set; }
+    public string CourseName { get; set; } = "";
+    public DateOnly DatePlayed { get; set; }
+    public List<int> HoleNumbers { get; set; } = [];
+    public string HostDisplayName { get; set; } = "";
+    public int ParticipantCount { get; set; }
+
+    /// <summary>True when the caller is already in this game — the app should offer to open it.</summary>
+    public bool AlreadyJoined { get; set; }
 }
 
 /// <summary>

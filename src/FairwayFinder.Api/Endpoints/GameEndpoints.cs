@@ -53,6 +53,18 @@ public static class GameEndpoints
             return WithETag(ctx, result.Value!);
         });
 
+        // Resolves a code to its game without joining, so the app can show what it is about to
+        // join and pick a teebox on the right course. Route constraint on the sibling
+        // "/{gameId:long}" keeps this from being read as a game id.
+        group.MapGet("/preview", async (
+            string joinCode,
+            HttpContext ctx,
+            IGameService gameService) =>
+        {
+            var result = await gameService.PreviewGameAsync(joinCode ?? "", ctx.User.GetUserId());
+            return MapGameResult(result, gameId: 0);
+        });
+
         group.MapPost("/join", async (
             JoinGameRequest request,
             HttpContext ctx,

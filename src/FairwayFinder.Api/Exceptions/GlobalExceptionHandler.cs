@@ -18,6 +18,14 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
                 detail: httpEx.Message,
                 statusCode: httpEx.StatusCode),
 
+            // Thrown by model binding before a handler ever runs — a required query parameter
+            // missing, or a route value that will not parse. It already carries the right status
+            // (400); without this case it falls to the catch-all below and a malformed request
+            // reads as a server fault.
+            BadHttpRequestException badReq => Results.Problem(
+                detail: badReq.Message,
+                statusCode: badReq.StatusCode),
+
             ValidationException valEx => Results.ValidationProblem(
                 detail: valEx.Message,
                 errors: valEx.Errors

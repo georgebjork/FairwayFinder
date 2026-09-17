@@ -211,16 +211,47 @@ public class GameService : IGameService
 
     // ── Field management ──
 
+    public async Task<GameResult<GameJoinPreviewResponse>> PreviewGameAsync(string joinCode, string userId)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        var game = await FindGameByJoinCodeAsync(dbContext, joinCode);
+
+        // Same 404 as a game the caller cannot see: a preview must not confirm that a code exists
+        // any more readily than the rest of the API does.
+        if (game is null) return GameResult<GameJoinPreviewResponse>.Fail(GameResultStatus.JoinCodeInvalid);
+
+        var courseName = await dbContext.Courses.AsNoTracking()
+            .Where(c => c.CourseId == game.CourseId)
+            .Select(c => c.CourseName)
+            .FirstOrDefaultAsync() ?? "";
+
+        var participantCount = await dbContext.GameParticipants.AsNoTracking()
+            .CountAsync(p => p.GameId == game.GameId && !p.IsDeleted);
+
+        var alreadyJoined = await dbContext.GameParticipants.AsNoTracking()
+            .AnyAsync(p => p.GameId == game.GameId && p.UserId == userId && !p.IsDeleted);
+
+        return GameResult<GameJoinPreviewResponse>.Ok(new GameJoinPreviewResponse
+        {
+            GameId = game.GameId,
+            GameType = game.GameType,
+            State = game.State,
+            CourseId = game.CourseId,
+            CourseName = courseName,
+            DatePlayed = game.DatePlayed,
+            HoleNumbers = [.. GameScoreReader.HoleNumbersFor(game)],
+            HostDisplayName = await ResolveDisplayNameAsync(dbContext, game.HostUserId),
+            ParticipantCount = participantCount,
+            AlreadyJoined = alreadyJoined
+        });
+    }
+
     public async Task<GameResult<GameStateResponse>> JoinGameAsync(JoinGameRequest request, string userId)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
-        var code = request.JoinCode.Trim().ToUpperInvariant();
-
-        // The unique index only covers live games, so the lookup must filter on state too —
-        // a bare code match could otherwise hit a game from last season.
-        var game = await dbContext.Games.FirstOrDefaultAsync(g =>
-            g.JoinCode == code && !g.IsDeleted && g.State < GameState.Completed);
+        var game = await FindGameByJoinCodeAsync(dbContext, request.JoinCode);
 
         if (game is null) return Fail(GameResultStatus.JoinCodeInvalid);
 
@@ -233,6 +264,19 @@ public class GameService : IGameService
 
         var teeboxCheck = await ValidateTeeboxAsync(dbContext, request.TeeboxId, game.CourseId, holeNumbers, allowArchived: false);
         if (teeboxCheck is not null) return teeboxCheck;
+
+        // A game that has already started validated its field once, at StartGameAsync. Joining is
+        // the one path that can change the field afterwards, so it has to re-run that check —
+        // otherwise a third player walks into a running match, match play finds three sides, and
+        // a live bet stops scoring altogether.
+        if (game.State != GameState.Setup)
+        {
+            var field = await LoadParticipantsAsync(dbContext, game.GameId);
+            var joiner = new GameParticipant { UserId = userId, Team = request.Team };
+
+            var fieldCheck = ValidateField(game.GameType, [.. field, joiner]);
+            if (fieldCheck is not null) return fieldCheck;
+        }
 
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
@@ -664,6 +708,16 @@ public class GameService : IGameService
             .Where(p => p.UserId is not null)
             .ToDictionary(p => p.UserId!, p => p.PublicIdentifier);
 
+        // The reader has already merged both score sources, so this is the one place that knows
+        // what every participant actually has entered — whatever it came from.
+        var enteredHoles = read.Context.Participants.ToDictionary(
+            line => line.ParticipantId,
+            line => line.Holes.Values
+                .Where(h => h.Strokes is not null)
+                .OrderBy(h => h.HoleNumber)
+                .Select(h => new GameParticipantHole(h.HoleNumber, (short)h.Strokes!.Value))
+                .ToList());
+
         var response = new GameStateResponse
         {
             GameId = game.GameId,
@@ -693,7 +747,8 @@ public class GameService : IGameService
                     PlayingHandicap = read.PlayingHandicaps[p.GameParticipantId],
                     Team = p.Team,
                     HolesEntered = read.HolesEntered[p.GameParticipantId],
-                    RoundUnavailable = read.RoundUnavailable[p.GameParticipantId]
+                    RoundUnavailable = read.RoundUnavailable[p.GameParticipantId],
+                    Holes = enteredHoles.TryGetValue(p.GameParticipantId, out var entered) ? entered : []
                 })
             ],
             Scoreboard = ResolveScoreboard(game, read)
@@ -980,6 +1035,18 @@ public class GameService : IGameService
     private static bool IsUniqueViolation(DbUpdateException ex)
         => ex.InnerException?.GetType().Name == "PostgresException"
            && ex.InnerException.GetType().GetProperty("SqlState")?.GetValue(ex.InnerException) as string == "23505";
+
+    /// <summary>
+    /// Resolves a join code to a live game. The unique index only covers live games, so the lookup
+    /// must filter on state too — a bare code match could otherwise hit a game from last season.
+    /// </summary>
+    private static Task<Game?> FindGameByJoinCodeAsync(ApplicationDbContext dbContext, string joinCode)
+    {
+        var code = joinCode.Trim().ToUpperInvariant();
+
+        return dbContext.Games.FirstOrDefaultAsync(g =>
+            g.JoinCode == code && !g.IsDeleted && g.State < GameState.Completed);
+    }
 
     private static GameResult<GameStateResponse> Fail(GameResultStatus status, string? detail = null)
         => GameResult<GameStateResponse>.Fail(status, detail);
