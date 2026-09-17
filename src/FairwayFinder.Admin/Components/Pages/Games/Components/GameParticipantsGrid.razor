@@ -1,0 +1,81 @@
+@using FairwayFinder.Features.Data
+
+<RadzenDataGrid TItem="GameParticipantResponse" Data="Participants"
+                AllowSorting="false" AllowPaging="false"
+                GridLines="DataGridGridLines.Horizontal">
+    <Columns>
+        <RadzenDataGridColumn TItem="GameParticipantResponse" Title="Player">
+            <Template Context="p">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@p.DisplayName</RadzenText>
+                    @if (p.IsHost)
+                    {
+                        <RadzenBadge Text="Host" BadgeStyle="BadgeStyle.Info" Shade="Shade.Lighter" />
+                    }
+                    @if (p.IsGuest)
+                    {
+                        <RadzenBadge Text="Guest" BadgeStyle="BadgeStyle.Light" Shade="Shade.Lighter" />
+                    }
+                </RadzenStack>
+            </Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="GameParticipantResponse" Title="Tees" Width="150px">
+            <Template Context="p">
+                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@p.TeeboxName</RadzenText>
+            </Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="GameParticipantResponse" Title="Handicap" Width="130px" TextAlign="TextAlign.Center">
+            <Template Context="p">
+                <RadzenStack Gap="0" AlignItems="AlignItems.Center">
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@p.CourseHandicap</RadzenText>
+                    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                        plays off @p.PlayingHandicap
+                    </RadzenText>
+                </RadzenStack>
+            </Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="GameParticipantResponse" Title="Team" Width="80px" TextAlign="TextAlign.Center">
+            <Template Context="p">@(p.Team?.ToString() ?? "—")</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="GameParticipantResponse" Title="Scores from" Width="190px">
+            <Template Context="p">
+                @if (p.RoundId is { } roundId)
+                {
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                        <RadzenLink Path="@($"/rounds/{roundId}")" Text="@($"Round #{roundId}")" />
+                        @if (p.RoundUnavailable)
+                        {
+                            <RadzenBadge Text="Missing" BadgeStyle="BadgeStyle.Danger" Shade="Shade.Lighter" />
+                        }
+                    </RadzenStack>
+                }
+                else
+                {
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                        Entered by host
+                    </RadzenText>
+                }
+            </Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="GameParticipantResponse" Title="Holes" Width="80px" TextAlign="TextAlign.Center">
+            <Template Context="p">@p.HolesEntered</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="GameParticipantResponse" Title="" Width="110px" TextAlign="TextAlign.Center">
+            <Template Context="p">
+                <RadzenButton Text="Repair" Icon="build" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                              Size="ButtonSize.Small" Click="@(() => OnRepair.InvokeAsync(p))" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<GameParticipantResponse> Participants { get; set; } = [];
+    [Parameter] public EventCallback<GameParticipantResponse> OnRepair { get; set; }
+}

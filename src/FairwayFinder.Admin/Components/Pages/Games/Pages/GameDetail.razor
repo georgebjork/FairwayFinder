@@ -1,0 +1,345 @@
+@page "/games/{GameId:long}"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = Policies.AdminOnly)]
+@using System.Security.Claims
+@using FairwayFinder.Data.Entities
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Games
+@using FairwayFinder.Features.Services.Admin
+@using FairwayFinder.Admin.Components.Pages.Games.Components
+@using FairwayFinder.Admin.Components.Pages.Games.Dialogs
+@using FairwayFinder.Admin.Components.Shared.Dialogs
+@using FairwayFinder.Admin.Components.Shared.Layout.Breadcrumb
+@inject AdminGameService AdminGameService
+@inject BreadcrumbState BreadcrumbState
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Game Detail</PageTitle>
+
+@if (_loading)
+{
+    <RadzenStack AlignItems="AlignItems.Center" class="rz-p-8">
+        <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+    </RadzenStack>
+}
+else if (_detail is null)
+{
+    <RadzenAlert AlertStyle="AlertStyle.Warning" Shade="Shade.Lighter" AllowClose="false">
+        This game could not be found.
+    </RadzenAlert>
+}
+else
+{
+    var state = _detail.State;
+
+    <RadzenStack Gap="1.5rem">
+        @* Header *@
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween"
+                     AlignItems="AlignItems.Start" Wrap="FlexWrap.Wrap" Gap="1rem">
+            <RadzenStack Gap="0.5rem">
+                <RadzenText TextStyle="TextStyle.H3" class="rz-m-0">@state.CourseName</RadzenText>
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem" Wrap="FlexWrap.Wrap">
+                    <RadzenBadge Text="@FormatGameType(state.GameType)" BadgeStyle="BadgeStyle.Light" Shade="Shade.Lighter" />
+                    <GameStateBadge State="state.State" />
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                        @state.DatePlayed.ToString("MMM d, yyyy")
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                        @(state.Rules.UseNet ? "Net" : "Gross") · @state.Rules.HandicapAllowancePercent% allowance
+                    </RadzenText>
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                        Code @state.JoinCode
+                    </RadzenText>
+                </RadzenStack>
+            </RadzenStack>
+
+            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+                <RadzenButton Text="Re-run scoring" Icon="calculate" ButtonStyle="ButtonStyle.Primary"
+                              Variant="Variant.Outlined" IsBusy="_busy"
+                              Disabled="@(state.State != GameState.Completed)"
+                              title="@RecomputeTooltip(state.State)"
+                              Click="@OnRecomputeClicked" />
+                @if (state.State == GameState.Completed)
+                {
+                    <RadzenButton Text="Reopen" Icon="lock_open" ButtonStyle="ButtonStyle.Light"
+                                  Variant="Variant.Outlined" IsBusy="_busy"
+                                  Click="@(() => OnSetStateClicked(GameState.Active))" />
+                }
+                else if (state.State != GameState.Abandoned)
+                {
+                    <RadzenButton Text="Abandon" Icon="block" ButtonStyle="ButtonStyle.Light"
+                                  Variant="Variant.Outlined" IsBusy="_busy"
+                                  Click="@(() => OnSetStateClicked(GameState.Abandoned))" />
+                }
+                <RadzenButton Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger"
+                              Variant="Variant.Outlined" IsBusy="_busy" Click="@OnDeleteClicked" />
+            </RadzenStack>
+        </RadzenStack>
+
+        @* Host *@
+        <RadzenCard class="rz-p-3">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center"
+                         JustifyContent="JustifyContent.SpaceBetween" Wrap="FlexWrap.Wrap" Gap="1rem">
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+                    <RadzenIcon Icon="person" Style="color: var(--rz-text-secondary-color);" />
+                    <RadzenStack Gap="0">
+                        <RadzenText TextStyle="TextStyle.Body1" class="rz-m-0">@_detail.HostName</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                            Host · @_detail.HostEmail
+                        </RadzenText>
+                    </RadzenStack>
+                </RadzenStack>
+                <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                    <RadzenButton Text="All rounds" Icon="sports_golf" Variant="Variant.Text" Size="ButtonSize.Small"
+                                  Click="@(() => NavigationManager.NavigateTo($"/rounds?userId={state.HostUserId}"))" />
+                    <RadzenButton Text="All games" Icon="emoji_events" Variant="Variant.Text" Size="ButtonSize.Small"
+                                  Click="@(() => NavigationManager.NavigateTo($"/games?userId={state.HostUserId}"))" />
+                </RadzenStack>
+            </RadzenStack>
+        </RadzenCard>
+
+        @* Scoreboard *@
+        @if (state.Scoreboard is { } board)
+        {
+            <RadzenCard class="rz-p-4">
+                <RadzenStack Gap="1rem">
+                    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween"
+                                 AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="0.5rem">
+                        <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">@board.Summary</RadzenText>
+                        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                            @board.HolesPlayed settled · @board.HolesRemaining to play
+                            @if (board.IsDecided)
+                            {
+                                <text> · decided</text>
+                            }
+                        </RadzenText>
+                    </RadzenStack>
+
+                    @if (state.State == GameState.Completed)
+                    {
+                        <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false" Size="AlertSize.Small">
+                            This game is posted, so the board above is the stored snapshot taken when
+                            it was completed — not a live recalculation. Editing a linked round will
+                            not move it. Use "Re-run scoring" to rebuild it from the current data.
+                        </RadzenAlert>
+                    }
+
+                    <RadzenDataGrid TItem="GameStanding" Data="board.Standings" AllowPaging="false" AllowSorting="false"
+                                    GridLines="DataGridGridLines.Horizontal">
+                        <Columns>
+                            <RadzenDataGridColumn TItem="GameStanding" Property="Position" Title="Pos" Width="70px" TextAlign="TextAlign.Center" />
+                            <RadzenDataGridColumn TItem="GameStanding" Property="DisplayName" Title="Player" />
+                            <RadzenDataGridColumn TItem="GameStanding" Property="Value" Title="Standing" Width="140px" TextAlign="TextAlign.Center" />
+                        </Columns>
+                    </RadzenDataGrid>
+                </RadzenStack>
+            </RadzenCard>
+        }
+        else
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+                This game is still in setup, so there is nothing to score yet.
+            </RadzenAlert>
+        }
+
+        @* Participants *@
+        <RadzenCard class="rz-p-4">
+            <RadzenStack Gap="1rem">
+                <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">Players</RadzenText>
+                <GameParticipantsGrid Participants="state.Participants" OnRepair="OnRepairClicked" />
+            </RadzenStack>
+        </RadzenCard>
+
+        @* Scorecard + snapshot *@
+        <RadzenCard class="rz-p-4">
+            <RadzenTabs>
+                <Tabs>
+                    <RadzenTabsItem Text="Scorecard">
+                        <GameScorecardGrid State="state" Lines="_detail.Lines" />
+                    </RadzenTabsItem>
+                    @if (!string.IsNullOrWhiteSpace(_detail.FinalScoreboardJson))
+                    {
+                        <RadzenTabsItem Text="Stored snapshot">
+                            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                                What was frozen when the game was posted. Compare it against the
+                                scorecard to see whether a repair would change the result.
+                            </RadzenText>
+                            <pre style="overflow-x: auto; background: var(--rz-panel-background-color); border: 1px solid var(--rz-border-color); border-radius: 4px; padding: 1rem; color: var(--rz-text-color);">@_detail.FinalScoreboardJson</pre>
+                        </RadzenTabsItem>
+                    }
+                </Tabs>
+            </RadzenTabs>
+        </RadzenCard>
+    </RadzenStack>
+}
+
+@code {
+    [Parameter] public long GameId { get; set; }
+
+    private AdminGameDetailDto? _detail;
+    private bool _loading = true;
+    private bool _busy;
+
+    // The admin doing the looking — used only to stamp audit fields and the log line.
+    private string _adminUserId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _adminUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+
+        _detail = await AdminGameService.GetGameForAdminAsync(GameId);
+
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Overview", "/"),
+            new BreadcrumbItem("Games", "/games"),
+            new BreadcrumbItem(_detail is null
+                ? $"Game {GameId}"
+                : $"{_detail.State.CourseName} - {_detail.State.DatePlayed:M/d/yy}")
+        );
+
+        _loading = false;
+    }
+
+    private async Task OnRepairClicked(GameParticipantResponse participant)
+    {
+        var result = await DialogService.OpenAsync<RepairParticipantDialog>($"Repair {participant.DisplayName}",
+            new Dictionary<string, object>
+            {
+                { "Participant", participant },
+                { "GameId", GameId },
+                { "AdminUserId", _adminUserId }
+            },
+            new DialogOptions
+            {
+                Width = "520px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true
+            });
+
+        if (result is true)
+        {
+            await LoadAsync();
+            Notify(NotificationSeverity.Success, "Player updated",
+                "The scoreboard has been rebuilt from the corrected details.");
+        }
+    }
+
+    private async Task OnRecomputeClicked()
+    {
+        if (_busy) return;
+        _busy = true;
+
+        try
+        {
+            if (await AdminGameService.RecomputeFinalScoreboardAsync(GameId, _adminUserId))
+            {
+                await LoadAsync();
+                Notify(NotificationSeverity.Success, "Scoring re-run",
+                    "The stored snapshot now reflects the current rounds and handicaps.");
+            }
+            else
+            {
+                Notify(NotificationSeverity.Error, "Could not re-run scoring",
+                    "Only a posted game has a stored scoreboard to rebuild.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Notify(NotificationSeverity.Error, "Could not re-run scoring", ex.Message);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task OnSetStateClicked(GameState state)
+    {
+        if (_busy) return;
+        _busy = true;
+
+        try
+        {
+            if (await AdminGameService.SetGameStateAsync(GameId, state, _adminUserId))
+            {
+                await LoadAsync();
+                Notify(NotificationSeverity.Success, "Game updated",
+                    state == GameState.Active
+                        ? "The game is live again and can be corrected, then re-posted."
+                        : $"The game is now {state.ToString().ToLowerInvariant()}.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Notify(NotificationSeverity.Error, "Could not update the game", ex.Message);
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task OnDeleteClicked()
+    {
+        if (_detail is null) return;
+
+        var result = await DialogService.OpenAsync<DeleteConfirmDialog>("Delete Game",
+            new Dictionary<string, object>
+            {
+                { "EntityName", $"{_detail.State.CourseName} - {_detail.State.DatePlayed:M/d/yy}" },
+                { "WarningMessage", "This removes the game and its players. The rounds behind it are left alone." }
+            },
+            new DialogOptions
+            {
+                Width = "450px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true
+            });
+
+        if (result is not true) return;
+
+        try
+        {
+            if (await AdminGameService.DeleteGameAsync(GameId, _adminUserId))
+            {
+                Notify(NotificationSeverity.Success, "Game deleted", "The game has been removed.");
+                NavigationManager.NavigateTo("/games");
+            }
+        }
+        catch (Exception ex)
+        {
+            Notify(NotificationSeverity.Error, "Could not delete the game", ex.Message);
+        }
+    }
+
+    private void Notify(NotificationSeverity severity, string summary, string detail)
+        => NotificationService.Notify(new NotificationMessage
+        {
+            Severity = severity,
+            Summary = summary,
+            Detail = detail,
+            Duration = severity == NotificationSeverity.Error ? 6000 : 4000
+        });
+
+    private static string RecomputeTooltip(GameState state) => state == GameState.Completed
+        ? "Rebuild the stored scoreboard from the current rounds and handicaps."
+        : "A live game's scoreboard is derived on every read — there is nothing stored to rebuild.";
+
+    private static string FormatGameType(GameType gameType) => gameType switch
+    {
+        GameType.MatchPlay => "Match play",
+        GameType.Skins => "Skins",
+        _ => gameType.ToString()
+    };
+}

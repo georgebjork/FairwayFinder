@@ -1,0 +1,180 @@
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Services.Admin
+@inject AdminGameService AdminGameService
+
+<RadzenTemplateForm TItem="RepairParticipantRequest" Data="_model" Submit="@OnSubmit">
+    <RadzenStack Gap="1rem">
+        <RadzenText TextStyle="TextStyle.Body2" style="color: var(--rz-text-secondary-color);">
+            Repairing <strong>@Participant.DisplayName</strong>. The scoreboard is derived on every
+            read, so a handicap or tee correction takes effect immediately — no re-scoring needed
+            unless the game has already been posted.
+        </RadzenText>
+
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Caption">Course handicap</RadzenText>
+            <RadzenNumeric TValue="int" @bind-Value="_courseHandicap" Min="-10" Max="54" Style="width: 100%;" />
+            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                Strokes over the holes this game plays — a nine-hole game takes the nine-hole number.
+            </RadzenText>
+        </RadzenStack>
+
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Caption">Tees</RadzenText>
+            <RadzenDropDown TValue="long" Data="_teeboxOptions" @bind-Value="_teeboxId"
+                            TextProperty="Label" ValueProperty="TeeboxId"
+                            Disabled="@IsLinkedToRound" Style="width: 100%;" />
+            @if (IsLinkedToRound)
+            {
+                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                    Tees come from the linked round — its scores are recorded against that teebox's
+                    holes. Unlink the round below to choose different tees.
+                </RadzenText>
+            }
+        </RadzenStack>
+
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Caption">Team</RadzenText>
+            <RadzenNumeric TValue="int?" @bind-Value="_team" Min="1" Max="8" Style="width: 100%;" />
+            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                Leave empty for an individual. Either everyone is on a team or nobody is.
+            </RadzenText>
+        </RadzenStack>
+
+        <RadzenStack Gap="0.25rem">
+            <RadzenText TextStyle="TextStyle.Caption">Linked round</RadzenText>
+            <RadzenDropDown TValue="long" Data="_roundOptions" @bind-Value="_roundId"
+                            TextProperty="Label" ValueProperty="RoundId"
+                            Disabled="@Participant.IsGuest" Style="width: 100%;" />
+            @if (Participant.IsGuest)
+            {
+                <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                    Guests have no account, so their strokes are always entered by the host.
+                </RadzenText>
+            }
+        </RadzenStack>
+
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Danger" Size="AlertSize.Small" AllowClose="false">@_error</RadzenAlert>
+        }
+
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+            @if (!Participant.IsGuest)
+            {
+                <RadzenButton Text="Refresh name" Icon="refresh" ButtonStyle="ButtonStyle.Light"
+                              Variant="Variant.Outlined" ButtonType="ButtonType.Button"
+                              Click="@RefreshNameAsync" IsBusy="_busy" />
+            }
+            <RadzenButton Text="Cancel" ButtonStyle="ButtonStyle.Light" ButtonType="ButtonType.Button"
+                          Click="@(() => DialogService.Close(false))" />
+            <RadzenButton Text="Save" ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Submit"
+                          IsBusy="_busy" BusyText="Saving..." />
+        </RadzenStack>
+    </RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+    [Inject] private DialogService DialogService { get; set; } = null!;
+
+    [Parameter, EditorRequired] public GameParticipantResponse Participant { get; set; } = null!;
+    [Parameter, EditorRequired] public long GameId { get; set; }
+    [Parameter, EditorRequired] public string AdminUserId { get; set; } = "";
+
+    /// <summary>Sentinel for "no linked round" in the dropdown, which binds a non-nullable long.</summary>
+    private const long NoRound = 0;
+
+    private readonly RepairParticipantRequest _model = new();
+
+    private List<AdminGameTeeboxOptionDto> _teeboxOptions = new();
+    private List<AdminGameRoundOptionDto> _roundOptions = new();
+
+    private int _courseHandicap;
+    private long _teeboxId;
+    private int? _team;
+    private long _roundId;
+    private string? _error;
+    private bool _busy;
+
+    private bool IsLinkedToRound => Participant.RoundId is not null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _courseHandicap = Participant.CourseHandicap;
+        _teeboxId = Participant.TeeboxId;
+        _team = Participant.Team;
+        _roundId = Participant.RoundId ?? NoRound;
+
+        // Archived tees are offered here on purpose: a game genuinely played off a since-replaced
+        // tee has to stay repairable. They are badged rather than hidden.
+        _teeboxOptions = await AdminGameService.GetRepairTeeboxOptionsAsync(GameId);
+
+        _roundOptions = [new AdminGameRoundOptionDto { RoundId = NoRound }];
+        if (!Participant.IsGuest)
+        {
+            _roundOptions.AddRange(await AdminGameService.GetRelinkCandidatesAsync(Participant.ParticipantId));
+        }
+    }
+
+    private async Task OnSubmit()
+    {
+        _busy = true;
+        _error = null;
+
+        try
+        {
+            // Relink first: it forces the teebox, so doing it second would undo a tee change.
+            var targetRound = _roundId == NoRound ? (long?)null : _roundId;
+            if (targetRound != Participant.RoundId)
+            {
+                if (!await AdminGameService.RelinkParticipantRoundAsync(
+                        Participant.ParticipantId, targetRound, AdminUserId))
+                {
+                    _error = "That round could not be linked — it must belong to this player and this course.";
+                    return;
+                }
+            }
+
+            _model.CourseHandicap = _courseHandicap;
+            _model.Team = _team;
+            _model.TeeboxId = IsLinkedToRound && targetRound is not null ? null : _teeboxId;
+
+            if (!await AdminGameService.RepairParticipantAsync(Participant.ParticipantId, _model, AdminUserId))
+            {
+                _error = "Those changes could not be applied.";
+                return;
+            }
+
+            DialogService.Close(true);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task RefreshNameAsync()
+    {
+        _busy = true;
+        _error = null;
+
+        try
+        {
+            if (await AdminGameService.RefreshParticipantDisplayNameAsync(Participant.ParticipantId, AdminUserId))
+            {
+                DialogService.Close(true);
+            }
+            else
+            {
+                _error = "That player has no name on their profile to copy.";
+            }
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

@@ -1,0 +1,25 @@
+@using FairwayFinder.Data.Entities
+
+<RadzenBadge Text="@Label" BadgeStyle="@Style" Shade="Shade.Lighter" />
+
+@code {
+    [Parameter, EditorRequired] public GameState State { get; set; }
+
+    private string Label => State switch
+    {
+        GameState.Setup => "Setup",
+        GameState.Active => "Live",
+        GameState.Completed => "Posted",
+        GameState.Abandoned => "Abandoned",
+        _ => State.ToString()
+    };
+
+    private BadgeStyle Style => State switch
+    {
+        GameState.Setup => BadgeStyle.Info,
+        GameState.Active => BadgeStyle.Success,
+        GameState.Completed => BadgeStyle.Secondary,
+        GameState.Abandoned => BadgeStyle.Warning,
+        _ => BadgeStyle.Light
+    };
+}

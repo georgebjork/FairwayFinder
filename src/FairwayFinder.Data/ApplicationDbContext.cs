@@ -28,6 +28,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
     public virtual DbSet<UserDevice> UserDevices { get; set; }
     public virtual DbSet<ApiRequestLog> ApiRequestLogs { get; set; }
+    public virtual DbSet<Game> Games { get; set; }
+    public virtual DbSet<GameParticipant> GameParticipants { get; set; }
+    public virtual DbSet<GameHoleScore> GameHoleScores { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -408,6 +411,101 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
             entity.HasIndex(e => new { e.AddresseeUserId, e.Status }).HasDatabaseName("ix_friendship_addressee_status");
             entity.HasIndex(e => new { e.RequesterUserId, e.Status }).HasDatabaseName("ix_friendship_requester_status");
+        });
+
+        // Game
+        modelBuilder.Entity<Game>(entity =>
+        {
+            entity.HasKey(e => e.GameId).HasName("game_pkey");
+            entity.ToTable("game");
+            entity.Property(e => e.GameId).HasColumnName("game_id");
+            entity.Property(e => e.GameType).HasColumnName("game_type").HasConversion<int>();
+            entity.Property(e => e.CourseId).HasColumnName("course_id");
+            entity.Property(e => e.DatePlayed).HasColumnName("date_played");
+            entity.Property(e => e.HostUserId).HasColumnName("host_user_id");
+            entity.Property(e => e.State).HasColumnName("state").HasConversion<int>();
+            entity.Property(e => e.JoinCode).HasColumnName("join_code").HasMaxLength(12);
+            entity.Property(e => e.FullRound).HasColumnName("full_round").HasDefaultValue(true);
+            entity.Property(e => e.FrontNine).HasColumnName("front_nine").HasDefaultValue(false);
+            entity.Property(e => e.BackNine).HasColumnName("back_nine").HasDefaultValue(false);
+            entity.Property(e => e.UseNet).HasColumnName("use_net").HasDefaultValue(false);
+            entity.Property(e => e.HandicapAllowancePercent).HasColumnName("handicap_allowance_percent").HasDefaultValue(100);
+            entity.Property(e => e.StrokesOffLow).HasColumnName("strokes_off_low").HasDefaultValue(true);
+            entity.Property(e => e.SkinsCarryover).HasColumnName("skins_carryover").HasDefaultValue(true);
+            entity.Property(e => e.SkinsValue).HasColumnName("skins_value").HasPrecision(10, 2);
+            entity.Property(e => e.FinalScoreboard).HasColumnName("final_scoreboard");
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+            entity.Property(e => e.CreatedOn).HasColumnName("created_on");
+            entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
+            entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+
+            entity.HasOne(e => e.Course).WithMany().HasForeignKey(e => e.CourseId).OnDelete(DeleteBehavior.Restrict);
+
+            // A join code only has to be unique among games still accepting players. Lookups must
+            // filter on state to match, or a bare code match can hit a year-old game.
+            entity.HasIndex(e => e.JoinCode)
+                .HasDatabaseName("ix_game_join_code_live")
+                .IsUnique()
+                .HasFilter("state < 2 AND is_deleted = false");
+
+            entity.HasIndex(e => new { e.HostUserId, e.State }).HasDatabaseName("ix_game_host_state");
+        });
+
+        // GameParticipant
+        modelBuilder.Entity<GameParticipant>(entity =>
+        {
+            entity.HasKey(e => e.GameParticipantId).HasName("game_participant_pkey");
+            entity.ToTable("game_participant");
+            entity.Property(e => e.GameParticipantId).HasColumnName("game_participant_id");
+            entity.Property(e => e.GameId).HasColumnName("game_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+            entity.Property(e => e.DisplayName).HasColumnName("display_name").HasMaxLength(128);
+            entity.Property(e => e.RoundId).HasColumnName("round_id");
+            entity.Property(e => e.TeeboxId).HasColumnName("teebox_id");
+            entity.Property(e => e.CourseHandicap).HasColumnName("course_handicap").HasDefaultValue(0);
+            entity.Property(e => e.Team).HasColumnName("team");
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+            entity.Property(e => e.CreatedOn).HasColumnName("created_on");
+            entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
+            entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+
+            entity.HasOne(e => e.Game).WithMany().HasForeignKey(e => e.GameId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Teebox).WithMany().HasForeignKey(e => e.TeeboxId).OnDelete(DeleteBehavior.Restrict);
+
+            // A golfer joins a game once. Guests (null user_id) are exempt — several may share a game.
+            entity.HasIndex(e => new { e.GameId, e.UserId })
+                .HasDatabaseName("ix_game_participant_game_user")
+                .IsUnique()
+                .HasFilter("user_id IS NOT NULL AND is_deleted = false");
+
+            entity.HasIndex(e => new { e.UserId, e.GameId }).HasDatabaseName("ix_game_participant_user");
+        });
+
+        // GameHoleScore
+        modelBuilder.Entity<GameHoleScore>(entity =>
+        {
+            entity.HasKey(e => e.GameHoleScoreId).HasName("game_hole_score_pkey");
+            entity.ToTable("game_hole_score");
+            entity.Property(e => e.GameHoleScoreId).HasColumnName("game_hole_score_id");
+            entity.Property(e => e.GameParticipantId).HasColumnName("game_participant_id");
+            entity.Property(e => e.HoleNumber).HasColumnName("hole_number");
+            entity.Property(e => e.Strokes).HasColumnName("strokes");
+            entity.Property(e => e.CreatedBy).HasColumnName("created_by");
+            entity.Property(e => e.CreatedOn).HasColumnName("created_on");
+            entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
+            entity.Property(e => e.UpdatedOn).HasColumnName("updated_on");
+            entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
+
+            entity.HasOne(e => e.GameParticipant).WithMany().HasForeignKey(e => e.GameParticipantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Mirrors ix_score_round_id_hole_id: makes the per-hole upsert safe under concurrency.
+            entity.HasIndex(e => new { e.GameParticipantId, e.HoleNumber })
+                .HasDatabaseName("ix_game_hole_score_participant_hole")
+                .IsUnique()
+                .HasFilter("is_deleted = false");
         });
 
         // RefreshToken

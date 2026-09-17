@@ -87,7 +87,13 @@ public sealed class StubFriendService : IFriendService
     public Task<FriendshipStatusInfo> GetFriendshipStatusWithUserAsync(string viewerUserId, string targetUserId)
         => throw new NotSupportedException();
 
-    public Task<bool> AreFriendsAsync(string userIdA, string userIdB) => throw new NotSupportedException();
+    /// <summary>
+    /// Answers from the same list <see cref="GetFriendsAsync"/> serves, so a test that stubs
+    /// someone as a friend gets a consistent answer from both — which the game service needs,
+    /// because it gates adding a player on this.
+    /// </summary>
+    public Task<bool> AreFriendsAsync(string userIdA, string userIdB)
+        => Task.FromResult(_friends.Any(f => f.UserId == userIdA || f.UserId == userIdB));
 }
 
 /// <summary>

@@ -1,6 +1,7 @@
 using FairwayFinder.Data;
 using FairwayFinder.Data.Entities;
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Helpers;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -107,7 +108,7 @@ public class FriendService : IFriendService
             {
                 UserId = u.Id,
                 PublicIdentifier = u.PublicIdentifier,
-                DisplayName = BuildDisplayName(u.FirstName, u.LastName, u.UserName),
+                DisplayName = DisplayNameHelper.Build(u.FirstName, u.LastName, u.UserName),
                 Email = u.Email ?? string.Empty,
                 FriendshipState = state,
                 FriendshipId = friendshipId
@@ -149,7 +150,7 @@ public class FriendService : IFriendService
             FriendshipId = r.FriendshipId,
             UserId = r.OtherUserId,
             PublicIdentifier = r.PublicIdentifier,
-            DisplayName = BuildDisplayName(r.FirstName, r.LastName, r.UserName),
+            DisplayName = DisplayNameHelper.Build(r.FirstName, r.LastName, r.UserName),
             Email = r.Email ?? string.Empty,
             IsPublic = r.IsPublic,
             FriendsSince = r.FriendsSince
@@ -434,7 +435,7 @@ public class FriendService : IFriendService
             FriendshipId = r.FriendshipId,
             OtherUserId = r.OtherUserId,
             OtherPublicIdentifier = r.PublicIdentifier,
-            OtherDisplayName = BuildDisplayName(r.FirstName, r.LastName, r.UserName),
+            OtherDisplayName = DisplayNameHelper.Build(r.FirstName, r.LastName, r.UserName),
             OtherEmail = r.Email ?? string.Empty,
             Direction = direction,
             RequestedOn = r.CreatedOn
@@ -476,16 +477,7 @@ public class FriendService : IFriendService
     private static async Task<string> GetDisplayNameAsync(ApplicationDbContext dbContext, string userId)
     {
         var user = await dbContext.Users.FindAsync(userId);
-        var name = user is null ? string.Empty : BuildDisplayName(user.FirstName, user.LastName, user.UserName);
+        var name = user is null ? string.Empty : DisplayNameHelper.Build(user.FirstName, user.LastName, user.UserName);
         return string.IsNullOrWhiteSpace(name) ? "Someone" : name;
-    }
-
-    private static string BuildDisplayName(string? firstName, string? lastName, string? userName)
-    {
-        if (!string.IsNullOrWhiteSpace(firstName) || !string.IsNullOrWhiteSpace(lastName))
-        {
-            return $"{firstName} {lastName}".Trim();
-        }
-        return userName ?? string.Empty;
     }
 }

@@ -22,7 +22,8 @@ public static class Extensions
         "FairwayFinder.Stats",
         "FairwayFinder.Imports",
         "FairwayFinder.Email",
-        "FairwayFinder.Agents"
+        "FairwayFinder.Agents",
+        "FairwayFinder.Games"
     ];
 
     public static readonly string[] FairwayFinderSources =
@@ -30,7 +31,8 @@ public static class Extensions
         "FairwayFinder.Rounds",
         "FairwayFinder.Stats",
         "FairwayFinder.Imports",
-        "FairwayFinder.Agents"
+        "FairwayFinder.Agents",
+        "FairwayFinder.Games"
     ];
 
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder

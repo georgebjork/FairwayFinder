@@ -2,6 +2,7 @@ using FairwayFinder.Data;
 using FairwayFinder.Data.Entities;
 using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Enums;
+using FairwayFinder.Features.Helpers;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -59,7 +60,7 @@ public class ProfileService : IProfileService
             UserId = profile.UserId,
             PublicIdentifier = profile.PublicIdentifier,
             IsPublic = profile.IsPublic,
-            DisplayName = BuildDisplayName(user),
+            DisplayName = DisplayNameHelper.Build(user),
             Email = user?.Email,
             PreferredTees = user?.PreferredTees ?? PreferredTees.Mens,
             SgBaselineLevel = (BaselineLevel)(user?.SgBaselineLevel ?? 0)
@@ -86,7 +87,7 @@ public class ProfileService : IProfileService
             UserId = profile.UserId,
             PublicIdentifier = profile.PublicIdentifier,
             IsPublic = profile.IsPublic,
-            DisplayName = BuildDisplayName(user),
+            DisplayName = DisplayNameHelper.Build(user),
             Email = user?.Email,
             PreferredTees = user?.PreferredTees ?? PreferredTees.Mens,
             SgBaselineLevel = (BaselineLevel)(user?.SgBaselineLevel ?? 0)
@@ -180,22 +181,10 @@ public class ProfileService : IProfileService
             UserId = profile.UserId,
             PublicIdentifier = profile.PublicIdentifier,
             IsPublic = profile.IsPublic,
-            DisplayName = BuildDisplayName(user),
+            DisplayName = DisplayNameHelper.Build(user),
             Email = user?.Email,
             PreferredTees = user?.PreferredTees ?? PreferredTees.Mens,
             SgBaselineLevel = (BaselineLevel)(user?.SgBaselineLevel ?? 0)
         };
-    }
-
-    private static string? BuildDisplayName(ApplicationUser? user)
-    {
-        if (user is null) return null;
-
-        if (!string.IsNullOrWhiteSpace(user.FirstName) || !string.IsNullOrWhiteSpace(user.LastName))
-        {
-            return $"{user.FirstName} {user.LastName}".Trim();
-        }
-
-        return user.UserName;
     }
 }

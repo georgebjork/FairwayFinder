@@ -154,6 +154,7 @@ app.MapStatsEndpoints();
 app.MapLookupEndpoints();
 app.MapProfileEndpoints();
 app.MapFriendEndpoints();
+app.MapGameEndpoints();
 app.MapDeviceEndpoints();
 app.MapAdminInviteEndpoints();
 
