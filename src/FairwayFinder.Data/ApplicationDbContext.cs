@@ -481,6 +481,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .HasFilter("user_id IS NOT NULL AND is_deleted = false");
 
             entity.HasIndex(e => new { e.UserId, e.GameId }).HasDatabaseName("ix_game_participant_user");
+
+            // Answers "which games did this round feed?" — the round detail screen reads it on
+            // every load. Filtered because a guest participant has no round to look up.
+            entity.HasIndex(e => e.RoundId)
+                .HasDatabaseName("ix_game_participant_round")
+                .HasFilter("round_id IS NOT NULL AND is_deleted = false");
         });
 
         // GameHoleScore

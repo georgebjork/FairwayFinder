@@ -23,7 +23,15 @@ public sealed class GameScoreReader(IDbContextFactory<ApplicationDbContext> dbCo
         GameParticipant Participant,
         Teebox Teebox,
         IReadOnlyDictionary<int, int> Strokes,
-        bool RoundUnavailable);
+        bool RoundUnavailable,
+        bool RoundIsComplete);
+
+    /// <summary>
+    /// Whether a participant's linked round could be posted right now. The game never posts it —
+    /// completing a game is the host's action, and it must not fire another golfer's stats and
+    /// friend notifications as a side effect. This just tells the app when to offer the button.
+    /// </summary>
+    public readonly record struct RoundPostState(bool IsLinked, bool IsComplete, bool ReadyToPost);
 
     public sealed record GameReadModel(
         GameScoringContext Context,
@@ -31,6 +39,7 @@ public sealed class GameScoreReader(IDbContextFactory<ApplicationDbContext> dbCo
         IReadOnlyDictionary<long, int> PlayingHandicaps,
         IReadOnlyDictionary<long, int> HolesEntered,
         IReadOnlyDictionary<long, bool> RoundUnavailable,
+        IReadOnlyDictionary<long, RoundPostState> RoundPostStates,
         IReadOnlyDictionary<long, string> TeeboxNames);
 
     /// <summary>
@@ -61,9 +70,9 @@ public sealed class GameScoreReader(IDbContextFactory<ApplicationDbContext> dbCo
 
         foreach (var participant in participants)
         {
-            var (strokes, roundUnavailable) = participant.RoundId is { } roundId
+            var (strokes, roundUnavailable, roundIsComplete) = participant.RoundId is { } roundId
                 ? await ReadLinkedRoundAsync(dbContext, roundId)
-                : (await ReadHostEnteredAsync(dbContext, participant.GameParticipantId), false);
+                : (await ReadHostEnteredAsync(dbContext, participant.GameParticipantId), false, false);
 
             if (!teeboxCache.TryGetValue(participant.TeeboxId, out var teebox))
             {
@@ -72,7 +81,7 @@ public sealed class GameScoreReader(IDbContextFactory<ApplicationDbContext> dbCo
                 teeboxCache[participant.TeeboxId] = teebox;
             }
 
-            sources.Add(new ParticipantSource(participant, teebox, strokes, roundUnavailable));
+            sources.Add(new ParticipantSource(participant, teebox, strokes, roundUnavailable, roundIsComplete));
         }
 
         var playingHandicaps = GameHandicapHelper.PlayingHandicaps(
@@ -125,22 +134,42 @@ public sealed class GameScoreReader(IDbContextFactory<ApplicationDbContext> dbCo
                 s => s.Participant.GameParticipantId,
                 s => s.Strokes.Count(kv => holeNumbers.Contains(kv.Key))),
             sources.ToDictionary(s => s.Participant.GameParticipantId, s => s.RoundUnavailable),
+            sources.ToDictionary(s => s.Participant.GameParticipantId, PostStateFor),
             sources.ToDictionary(s => s.Participant.GameParticipantId, s => s.Teebox.TeeboxName));
+    }
+
+    /// <summary>
+    /// Whether this participant's round could be posted. Judged on the round's <em>own</em> holes,
+    /// not the game's: an eighteen-hole round backing a front-nine game is postable once all
+    /// eighteen are in, and a match conceded on 15 is postable by neither measure.
+    /// </summary>
+    private static RoundPostState PostStateFor(ParticipantSource source)
+    {
+        if (source.Participant.RoundId is null) return new RoundPostState(false, false, false);
+        if (source.RoundIsComplete) return new RoundPostState(true, true, false);
+
+        var entered = source.Strokes.Keys.ToHashSet();
+        var ready = entered.Count > 0
+                    && RoundScoringHelper.MissingHoles(entered, source.Teebox.IsNineHole).Count == 0;
+
+        return new RoundPostState(true, false, ready);
     }
 
     /// <summary>
     /// A linked round's scores, keyed by hole number. Deliberately ungated on
     /// <c>round.IsComplete</c> — scoring a game as it is played is the entire point.
     /// </summary>
-    private static async Task<(IReadOnlyDictionary<int, int> Strokes, bool RoundUnavailable)>
+    private static async Task<(IReadOnlyDictionary<int, int> Strokes, bool RoundUnavailable, bool RoundIsComplete)>
         ReadLinkedRoundAsync(ApplicationDbContext dbContext, long roundId)
     {
         // Read the round row itself rather than inferring from "found no scores": a round just
         // started has no scores and is perfectly available.
-        var roundExists = await dbContext.Rounds.AsNoTracking()
-            .AnyAsync(r => r.RoundId == roundId && !r.IsDeleted);
+        var round = await dbContext.Rounds.AsNoTracking()
+            .Where(r => r.RoundId == roundId && !r.IsDeleted)
+            .Select(r => new { r.IsComplete })
+            .FirstOrDefaultAsync();
 
-        if (!roundExists) return (new Dictionary<int, int>(), true);
+        if (round is null) return (new Dictionary<int, int>(), true, false);
 
         var strokes = await dbContext.Scores.AsNoTracking()
             .Where(s => s.RoundId == roundId && !s.IsDeleted)
@@ -149,7 +178,7 @@ public sealed class GameScoreReader(IDbContextFactory<ApplicationDbContext> dbCo
                 (s, h) => new { h.HoleNumber, s.HoleScore })
             .ToListAsync();
 
-        return (strokes.ToDictionary(x => x.HoleNumber, x => (int)x.HoleScore), false);
+        return (strokes.ToDictionary(x => x.HoleNumber, x => (int)x.HoleScore), false, round.IsComplete);
     }
 
     private static async Task<IReadOnlyDictionary<int, int>> ReadHostEnteredAsync(

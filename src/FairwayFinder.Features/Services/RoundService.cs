@@ -1,9 +1,11 @@
 using System.Diagnostics;
+using System.Text.Json;
 using FairwayFinder.Data;
 using FairwayFinder.Data.Entities;
 using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Diagnostics;
 using FairwayFinder.Features.Enums;
+using FairwayFinder.Features.Games;
 using FairwayFinder.Features.Helpers;
 using FairwayFinder.Features.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -289,6 +291,8 @@ public class RoundService : IRoundService
                 roundStat,
                 roundHoles
             );
+
+            response.Games = await LoadGamesForRoundAsync(dbContext, roundId);
         }
 
         // For shot-tracked rounds, attach shot data and compute per-hole + summary strokes gained.
@@ -301,6 +305,81 @@ public class RoundService : IRoundService
         return response;
     }
     
+    /// <summary>
+    /// The games this round was played for — the reverse of <c>game_participant.round_id</c>,
+    /// which <c>ix_game_participant_round</c> serves.
+    ///
+    /// Only the single-round read calls this. A rounds list would pay for it per row, and the
+    /// result line comes from each game's stored snapshot rather than the scoring engine: a live
+    /// game has no snapshot, and running the engine per game on a round read is not a trade worth
+    /// making for a line of text.
+    /// </summary>
+    private static async Task<List<RoundGameSummary>> LoadGamesForRoundAsync(
+        ApplicationDbContext dbContext, long roundId)
+    {
+        var games = await dbContext.GameParticipants.AsNoTracking()
+            .Where(p => p.RoundId == roundId && !p.IsDeleted)
+            .Join(dbContext.Games.AsNoTracking().Where(g => !g.IsDeleted),
+                p => p.GameId, g => g.GameId, (p, g) => g)
+            .Select(g => new
+            {
+                g.GameId,
+                g.GameType,
+                g.State,
+                g.DatePlayed,
+                g.FinalScoreboard,
+                CourseName = g.Course.CourseName
+            })
+            .ToListAsync();
+
+        if (games.Count == 0) return [];
+
+        var gameIds = games.Select(g => g.GameId).ToList();
+
+        var counts = await dbContext.GameParticipants.AsNoTracking()
+            .Where(p => gameIds.Contains(p.GameId) && !p.IsDeleted)
+            .GroupBy(p => p.GameId)
+            .Select(g => new { GameId = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        var countMap = counts.ToDictionary(c => c.GameId, c => c.Count);
+
+        return
+        [
+            .. games
+                .OrderByDescending(g => g.DatePlayed).ThenByDescending(g => g.GameId)
+                .Select(g => new RoundGameSummary
+                {
+                    GameId = g.GameId,
+                    GameType = g.GameType,
+                    State = g.State,
+                    DatePlayed = g.DatePlayed,
+                    CourseName = g.CourseName,
+                    ParticipantCount = countMap.TryGetValue(g.GameId, out var c) ? c : 0,
+                    ResultSummary = ReadSnapshotSummary(g.FinalScoreboard)
+                })
+        ];
+    }
+
+    /// <summary>
+    /// Pulls just the headline out of a stored scoreboard. Deserializes through the base type so
+    /// the polymorphic discriminator is honoured, and swallows schema drift on an old snapshot —
+    /// a round should still render if one of its games cannot be read.
+    /// </summary>
+    private static string? ReadSnapshotSummary(string? finalScoreboard)
+    {
+        if (string.IsNullOrWhiteSpace(finalScoreboard)) return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<GameScoreboard>(finalScoreboard)?.Summary;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     public async Task<long> CreateRoundAsync(CreateRoundRequest request)
     {
         using var activity = FairwayFinderDiagnostics.RoundsActivity.StartActivity(name: FairwayFinderDiagnostics.ActivityNames.RoundCreate);

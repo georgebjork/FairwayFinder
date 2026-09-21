@@ -128,6 +128,17 @@ public sealed class GameParticipantResponse
     /// <summary>True when a linked round has since been deleted — the app should prompt to relink.</summary>
     public bool RoundUnavailable { get; set; }
 
+    /// <summary>True once the linked round has been posted. False for a guest, who has no round.</summary>
+    public bool RoundIsComplete { get; set; }
+
+    /// <summary>
+    /// True when this player's linked round has a full card and could be posted now. Completing a
+    /// game never posts it — that would fire another golfer's stats and friend notifications off
+    /// the host's button — so this is the cue for the app to offer the golfer their own one-tap
+    /// post. A match conceded on 15 leaves this false: there is no valid score to post.
+    /// </summary>
+    public bool RoundReadyToPost { get; set; }
+
     /// <summary>
     /// Every hole this participant has a score for. <see cref="HolesEntered"/> is only a count, and
     /// the scoreboard exposes strokes for the settled prefix at best — so without this a client has
@@ -175,4 +186,26 @@ public sealed class GameSummaryResponse
     public string JoinCode { get; set; } = "";
     public bool IsHost { get; set; }
     public int ParticipantCount { get; set; }
+}
+
+/// <summary>
+/// A game as it appears on the round that fed it — the reverse of
+/// <see cref="GameParticipantResponse.RoundId"/>. Deliberately thin: the round screen shows what
+/// the game was and how it finished, and links out for anything more.
+/// </summary>
+public sealed class RoundGameSummary
+{
+    public long GameId { get; set; }
+    public GameType GameType { get; set; }
+    public GameState State { get; set; }
+    public DateOnly DatePlayed { get; set; }
+    public string CourseName { get; set; } = "";
+    public int ParticipantCount { get; set; }
+
+    /// <summary>
+    /// How the game finished — "Dale wins 4 &amp; 3", "Sam 3 skins thru 18". Read from the stored
+    /// snapshot, so it is null while a game is still live: scoring one on a round read would mean
+    /// running the engine for every game the round fed.
+    /// </summary>
+    public string? ResultSummary { get; set; }
 }

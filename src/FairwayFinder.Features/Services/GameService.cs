@@ -748,6 +748,8 @@ public class GameService : IGameService
                     Team = p.Team,
                     HolesEntered = read.HolesEntered[p.GameParticipantId],
                     RoundUnavailable = read.RoundUnavailable[p.GameParticipantId],
+                    RoundIsComplete = read.RoundPostStates[p.GameParticipantId].IsComplete,
+                    RoundReadyToPost = read.RoundPostStates[p.GameParticipantId].ReadyToPost,
                     Holes = enteredHoles.TryGetValue(p.GameParticipantId, out var entered) ? entered : []
                 })
             ],

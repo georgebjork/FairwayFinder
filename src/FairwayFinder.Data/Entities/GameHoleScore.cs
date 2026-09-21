@@ -7,8 +7,12 @@ namespace FairwayFinder.Data.Entities;
 /// <c>user_id</c>, so a guest would need a synthetic one, and those rounds would leak into round
 /// lists and stats. A four-column table avoids all of it.
 ///
-/// Keys on <see cref="HoleNumber"/> rather than a hole id (as <see cref="Score"/> does) because a
-/// guest has a teebox but no round to resolve a hole against.
+/// Keys on <see cref="HoleNumber"/> rather than a hole id (as <see cref="Score"/> does) because
+/// hole numbers survive a change of tees and hole ids do not: <c>hole</c> rows hang off a teebox,
+/// so Blue's 4th and White's 4th are different rows. An admin moving a guest between tees would
+/// otherwise strand every row on the old teebox — par and stroke index read from the new tee,
+/// hole identity from the old. The cost is no foreign key on the hole; membership is enforced on
+/// write instead (<c>HoleNotInGame</c>) and by validating teebox coverage when a player joins.
 /// </summary>
 public class GameHoleScore
 {
