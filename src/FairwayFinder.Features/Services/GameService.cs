@@ -206,7 +206,7 @@ public class GameService : IGameService
             return Fail(GameResultStatus.NotParticipant);
         }
 
-        return await BuildStateAsync(gameId);
+        return await BuildStateAsync(game, participants: null, read: null);
     }
 
     // ── Field management ──
@@ -643,7 +643,9 @@ public class GameService : IGameService
             { FairwayFinderDiagnostics.Tags.GameType, game.GameType.ToString() }
         });
 
-        var state = await BuildStateAsync(gameId);
+        // The field and their strokes are unchanged by posting, so the read that produced the
+        // snapshot is still the right answer — no need to gather all of it again.
+        var state = await BuildStateAsync(game, participants, read);
 
         await GameNotifications.NotifyParticipantsOfGameResultAsync(
             dbContext, _pushService, _logger, game, participants, board.Summary);
@@ -684,6 +686,27 @@ public class GameService : IGameService
 
         if (game is null) return Fail(GameResultStatus.GameNotFound);
 
+        return await BuildStateAsync(game, participants: null, read: null);
+    }
+
+    /// <summary>
+    /// Builds the response from work a caller has already done. Callers that loaded the game, the
+    /// field, or the scored read on the way in pass them through rather than paying for all of it
+    /// twice — completing a game used to read every participant's strokes once to write the
+    /// snapshot and again to answer.
+    ///
+    /// Only pass a value that is still current: anything mutated after it was loaded must be
+    /// re-read, or the caller gets a stale answer.
+    /// </summary>
+    private async Task<GameResult<GameStateResponse>> BuildStateAsync(
+        Game game,
+        List<GameParticipant>? participants,
+        GameScoreReader.GameReadModel? read)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        var gameId = game.GameId;
+
         var courseName = await dbContext.Courses.AsNoTracking()
             .Where(c => c.CourseId == game.CourseId)
             .Select(c => c.CourseName)
@@ -694,19 +717,27 @@ public class GameService : IGameService
         activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.GameId, gameId);
         activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.GameType, game.GameType.ToString());
 
-        var participants = await LoadParticipantsAsync(dbContext, gameId);
+        participants ??= await LoadParticipantsAsync(dbContext, gameId);
         activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.GameParticipants, participants.Count);
 
-        var read = await _reader.ReadAsync(game, participants);
+        read ??= await _reader.ReadAsync(game, participants);
 
-        var publicIds = await dbContext.UserProfiles.AsNoTracking()
-            .Where(p => !p.IsDeleted)
-            .Select(p => new { p.UserId, p.PublicIdentifier })
-            .ToListAsync();
-
-        var publicIdMap = publicIds
+        // Filtered to the field. Unfiltered, this read every user_profile row in the database to
+        // map two to four participants.
+        var participantUserIds = participants
             .Where(p => p.UserId is not null)
-            .ToDictionary(p => p.UserId!, p => p.PublicIdentifier);
+            .Select(p => p.UserId!)
+            .Distinct()
+            .ToList();
+
+        var publicIdMap = participantUserIds.Count == 0
+            ? []
+            : (await dbContext.UserProfiles.AsNoTracking()
+                .Where(p => !p.IsDeleted && p.UserId != null && participantUserIds.Contains(p.UserId))
+                .Select(p => new { p.UserId, p.PublicIdentifier })
+                .ToListAsync())
+              .Where(p => p.UserId is not null)
+              .ToDictionary(p => p.UserId!, p => p.PublicIdentifier);
 
         // The reader has already merged both score sources, so this is the one place that knows
         // what every participant actually has entered — whatever it came from.

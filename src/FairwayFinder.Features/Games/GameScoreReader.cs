@@ -15,6 +15,9 @@ namespace FairwayFinder.Features.Games;
 /// <c>IRoundService</c>, which means the <c>IsComplete</c> gate that (correctly) hides a friend's
 /// in-progress round from the friend feed does not have to be relaxed. A game is authorized on
 /// "are you a participant", not "are you friends".
+///
+/// Every read here is batched across the whole field. A four-ball polled every few seconds is the
+/// normal case, so the query count has to be flat in the number of participants, not linear.
 /// </summary>
 public sealed class GameScoreReader(IDbContextFactory<ApplicationDbContext> dbContextFactory)
 {
@@ -61,27 +64,39 @@ public sealed class GameScoreReader(IDbContextFactory<ApplicationDbContext> dbCo
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
 
         var holeNumbers = HoleNumbersFor(game);
-        var sources = new List<ParticipantSource>(participants.Count);
 
-        // Two participants on the same tee should cost one set of queries, not two.
-        var teeboxCache = new Dictionary<long, Teebox>();
-        var holeCache = new Dictionary<long, IReadOnlyDictionary<int, Hole>>();
-        var strokeIndexCache = new Dictionary<long, IReadOnlyDictionary<int, int>>();
+        // ── Everything the field needs, in a fixed number of round trips ──
+        var teeboxes = await LoadTeeboxesAsync(dbContext, participants);
+        var holesByTeebox = await LoadHolesAsync(dbContext, teeboxes.Values);
+        var (roundStates, strokesByRound) = await LoadLinkedRoundsAsync(dbContext, participants);
+        var strokesByGuest = await LoadHostEnteredAsync(dbContext, participants);
+
+        var sources = new List<ParticipantSource>(participants.Count);
 
         foreach (var participant in participants)
         {
-            var (strokes, roundUnavailable, roundIsComplete) = participant.RoundId is { } roundId
-                ? await ReadLinkedRoundAsync(dbContext, roundId)
-                : (await ReadHostEnteredAsync(dbContext, participant.GameParticipantId), false, false);
+            var teebox = teeboxes[participant.TeeboxId];
 
-            if (!teeboxCache.TryGetValue(participant.TeeboxId, out var teebox))
+            if (participant.RoundId is { } roundId)
             {
-                teebox = await dbContext.Teeboxes.AsNoTracking()
-                    .FirstAsync(t => t.TeeboxId == participant.TeeboxId);
-                teeboxCache[participant.TeeboxId] = teebox;
-            }
+                var exists = roundStates.TryGetValue(roundId, out var isComplete);
 
-            sources.Add(new ParticipantSource(participant, teebox, strokes, roundUnavailable, roundIsComplete));
+                sources.Add(new ParticipantSource(
+                    participant,
+                    teebox,
+                    strokesByRound.TryGetValue(roundId, out var s) ? s : new Dictionary<int, int>(),
+                    RoundUnavailable: !exists,
+                    RoundIsComplete: exists && isComplete));
+            }
+            else
+            {
+                sources.Add(new ParticipantSource(
+                    participant,
+                    teebox,
+                    strokesByGuest.TryGetValue(participant.GameParticipantId, out var s) ? s : new Dictionary<int, int>(),
+                    RoundUnavailable: false,
+                    RoundIsComplete: false));
+            }
         }
 
         var playingHandicaps = GameHandicapHelper.PlayingHandicaps(
@@ -93,7 +108,7 @@ public sealed class GameScoreReader(IDbContextFactory<ApplicationDbContext> dbCo
 
         foreach (var source in sources)
         {
-            var holes = await ResolveHolesAsync(dbContext, source.Teebox, holeCache, strokeIndexCache);
+            var holes = holesByTeebox[source.Teebox.TeeboxId];
 
             var ranks = GameHandicapHelper.RankHolesByStrokeIndex(
                 holeNumbers.Select(n => (n, holes.TryGetValue(n, out var h) ? h.Handicap : 0)));
@@ -155,91 +170,129 @@ public sealed class GameScoreReader(IDbContextFactory<ApplicationDbContext> dbCo
         return new RoundPostState(true, false, ready);
     }
 
-    /// <summary>
-    /// A linked round's scores, keyed by hole number. Deliberately ungated on
-    /// <c>round.IsComplete</c> — scoring a game as it is played is the entire point.
-    /// </summary>
-    private static async Task<(IReadOnlyDictionary<int, int> Strokes, bool RoundUnavailable, bool RoundIsComplete)>
-        ReadLinkedRoundAsync(ApplicationDbContext dbContext, long roundId)
+    private static async Task<Dictionary<long, Teebox>> LoadTeeboxesAsync(
+        ApplicationDbContext dbContext, IReadOnlyList<GameParticipant> participants)
     {
-        // Read the round row itself rather than inferring from "found no scores": a round just
-        // started has no scores and is perfectly available.
-        var round = await dbContext.Rounds.AsNoTracking()
-            .Where(r => r.RoundId == roundId && !r.IsDeleted)
-            .Select(r => new { r.IsComplete })
-            .FirstOrDefaultAsync();
+        var teeboxIds = participants.Select(p => p.TeeboxId).Distinct().ToList();
 
-        if (round is null) return (new Dictionary<int, int>(), true, false);
-
-        var strokes = await dbContext.Scores.AsNoTracking()
-            .Where(s => s.RoundId == roundId && !s.IsDeleted)
-            .Join(dbContext.Holes.AsNoTracking().Where(h => !h.IsDeleted),
-                s => s.HoleId, h => h.HoleId,
-                (s, h) => new { h.HoleNumber, s.HoleScore })
-            .ToListAsync();
-
-        return (strokes.ToDictionary(x => x.HoleNumber, x => (int)x.HoleScore), false, round.IsComplete);
-    }
-
-    private static async Task<IReadOnlyDictionary<int, int>> ReadHostEnteredAsync(
-        ApplicationDbContext dbContext, long participantId)
-    {
-        var strokes = await dbContext.GameHoleScores.AsNoTracking()
-            .Where(s => s.GameParticipantId == participantId && !s.IsDeleted)
-            .Select(s => new { s.HoleNumber, s.Strokes })
-            .ToListAsync();
-
-        return strokes.ToDictionary(x => x.HoleNumber, x => (int)x.Strokes);
+        return await dbContext.Teeboxes.AsNoTracking()
+            .Where(t => teeboxIds.Contains(t.TeeboxId))
+            .ToDictionaryAsync(t => t.TeeboxId);
     }
 
     /// <summary>
-    /// A teebox's holes, with any unset stroke index borrowed from the newest version of the same
-    /// tee lineage that has one.
+    /// Every teebox's holes in one query, with any unset stroke index borrowed from the newest
+    /// version of the same tee lineage that has one. The lineage query only runs when a teebox
+    /// actually has a gap, so clean courses pay nothing for it.
     /// </summary>
-    private static async Task<IReadOnlyDictionary<int, Hole>> ResolveHolesAsync(
-        ApplicationDbContext dbContext,
-        Teebox teebox,
-        Dictionary<long, IReadOnlyDictionary<int, Hole>> holeCache,
-        Dictionary<long, IReadOnlyDictionary<int, int>> strokeIndexCache)
+    private static async Task<Dictionary<long, Dictionary<int, Hole>>> LoadHolesAsync(
+        ApplicationDbContext dbContext, IEnumerable<Teebox> teeboxes)
     {
-        if (holeCache.TryGetValue(teebox.TeeboxId, out var cached)) return cached;
+        var teeboxList = teeboxes.ToList();
+        var teeboxIds = teeboxList.Select(t => t.TeeboxId).ToList();
 
         var holes = await dbContext.Holes.AsNoTracking()
-            .Where(h => h.TeeboxId == teebox.TeeboxId && !h.IsDeleted)
+            .Where(h => teeboxIds.Contains(h.TeeboxId) && !h.IsDeleted)
             .ToListAsync();
 
-        var byNumber = holes.ToDictionary(h => h.HoleNumber);
+        var byTeebox = teeboxIds.ToDictionary(
+            id => id,
+            id => holes.Where(h => h.TeeboxId == id).ToDictionary(h => h.HoleNumber));
 
-        // hole.Handicap is a non-nullable int, so 0 is the only way an unset stroke index can read.
-        if (byNumber.Values.Any(h => h.Handicap <= 0))
+        // hole.Handicap is a non-nullable int, so 0 is the only way an unset stroke index reads.
+        var needsFallback = teeboxList
+            .Where(t => byTeebox[t.TeeboxId].Values.Any(h => h.Handicap <= 0))
+            .ToList();
+
+        if (needsFallback.Count == 0) return byTeebox;
+
+        var groupIds = needsFallback.Select(t => t.TeeboxGroupId).Distinct().ToList();
+
+        var lineage = await dbContext.Holes.AsNoTracking()
+            .Where(h => !h.IsDeleted && h.Handicap > 0)
+            .Join(dbContext.Teeboxes.AsNoTracking()
+                    .Where(t => !t.IsDeleted && groupIds.Contains(t.TeeboxGroupId)),
+                h => h.TeeboxId, t => t.TeeboxId,
+                (h, t) => new { t.TeeboxGroupId, h.HoleNumber, h.Handicap, h.TeeboxId })
+            .ToListAsync();
+
+        // The newest version of each lineage wins — the same instinct as StatsCalculator's
+        // per-hole fallback, but scoped to one tee rather than borrowing from whatever teebox
+        // happens to have an index.
+        var fallbackByGroup = lineage
+            .GroupBy(x => x.TeeboxGroupId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.GroupBy(x => x.HoleNumber)
+                      .ToDictionary(x => x.Key, x => x.OrderByDescending(y => y.TeeboxId).First().Handicap));
+
+        foreach (var teebox in needsFallback)
         {
-            if (!strokeIndexCache.TryGetValue(teebox.TeeboxGroupId, out var fallback))
-            {
-                var lineage = await dbContext.Holes.AsNoTracking()
-                    .Where(h => !h.IsDeleted && h.Handicap > 0)
-                    .Join(dbContext.Teeboxes.AsNoTracking()
-                            .Where(t => !t.IsDeleted && t.TeeboxGroupId == teebox.TeeboxGroupId),
-                        h => h.TeeboxId, t => t.TeeboxId,
-                        (h, t) => new { h.HoleNumber, h.Handicap, h.TeeboxId })
-                    .ToListAsync();
+            if (!fallbackByGroup.TryGetValue(teebox.TeeboxGroupId, out var fallback)) continue;
 
-                // The newest version of the lineage wins — the same instinct as
-                // StatsCalculator's per-hole fallback, but scoped to one tee rather than
-                // borrowing an index from whatever teebox happens to have one.
-                fallback = lineage
-                    .GroupBy(x => x.HoleNumber)
-                    .ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.TeeboxId).First().Handicap);
-
-                strokeIndexCache[teebox.TeeboxGroupId] = fallback;
-            }
-
-            foreach (var hole in byNumber.Values.Where(h => h.Handicap <= 0))
+            foreach (var hole in byTeebox[teebox.TeeboxId].Values.Where(h => h.Handicap <= 0))
             {
                 if (fallback.TryGetValue(hole.HoleNumber, out var borrowed)) hole.Handicap = borrowed;
             }
         }
 
-        holeCache[teebox.TeeboxId] = byNumber;
-        return byNumber;
+        return byTeebox;
+    }
+
+    /// <summary>
+    /// Every linked round's completion flag and scores, keyed by round. Deliberately ungated on
+    /// <c>round.IsComplete</c> — scoring a game as it is played is the entire point.
+    ///
+    /// The round row is read rather than inferred from "found no scores": a round just started has
+    /// no scores and is perfectly available.
+    /// </summary>
+    private static async Task<(Dictionary<long, bool> RoundStates, Dictionary<long, Dictionary<int, int>> Strokes)>
+        LoadLinkedRoundsAsync(ApplicationDbContext dbContext, IReadOnlyList<GameParticipant> participants)
+    {
+        var roundIds = participants
+            .Where(p => p.RoundId is not null)
+            .Select(p => p.RoundId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (roundIds.Count == 0) return ([], []);
+
+        var rounds = await dbContext.Rounds.AsNoTracking()
+            .Where(r => roundIds.Contains(r.RoundId) && !r.IsDeleted)
+            .Select(r => new { r.RoundId, r.IsComplete })
+            .ToListAsync();
+
+        var scores = await dbContext.Scores.AsNoTracking()
+            .Where(s => roundIds.Contains(s.RoundId) && !s.IsDeleted)
+            .Join(dbContext.Holes.AsNoTracking().Where(h => !h.IsDeleted),
+                s => s.HoleId, h => h.HoleId,
+                (s, h) => new { s.RoundId, h.HoleNumber, s.HoleScore })
+            .ToListAsync();
+
+        return (
+            rounds.ToDictionary(r => r.RoundId, r => r.IsComplete),
+            scores.GroupBy(s => s.RoundId)
+                  .ToDictionary(g => g.Key, g => g.ToDictionary(x => x.HoleNumber, x => (int)x.HoleScore)));
+    }
+
+    /// <summary>Host-entered strokes for every guest in the field, in one query.</summary>
+    private static async Task<Dictionary<long, Dictionary<int, int>>> LoadHostEnteredAsync(
+        ApplicationDbContext dbContext, IReadOnlyList<GameParticipant> participants)
+    {
+        var guestIds = participants
+            .Where(p => p.RoundId is null)
+            .Select(p => p.GameParticipantId)
+            .ToList();
+
+        if (guestIds.Count == 0) return [];
+
+        var strokes = await dbContext.GameHoleScores.AsNoTracking()
+            .Where(s => guestIds.Contains(s.GameParticipantId) && !s.IsDeleted)
+            .Select(s => new { s.GameParticipantId, s.HoleNumber, s.Strokes })
+            .ToListAsync();
+
+        return strokes
+            .GroupBy(s => s.GameParticipantId)
+            .ToDictionary(g => g.Key, g => g.ToDictionary(x => x.HoleNumber, x => (int)x.Strokes));
     }
 }
