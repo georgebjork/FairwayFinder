@@ -62,7 +62,13 @@ public class PushNotificationService(
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task<int> SendToUserAsync(string userId, string title, string body, int? badge = null, CancellationToken ct = default)
+    public async Task<int> SendToUserAsync(
+        string userId,
+        string title,
+        string body,
+        int? badge = null,
+        IReadOnlyDictionary<string, string>? data = null,
+        CancellationToken ct = default)
     {
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
@@ -84,6 +90,15 @@ public class PushNotificationService(
 
             if (badge.HasValue)
                 push.AddBadge(badge.Value);
+
+            // Custom keys ride next to `aps`, which is where the app reads them from on a tap.
+            if (data is not null)
+            {
+                foreach (var (key, value) in data)
+                {
+                    push.AddCustomProperty(key, value);
+                }
+            }
 
             if (_settings.UseSandbox)
                 push.SendToDevelopmentServer();

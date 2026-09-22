@@ -377,7 +377,7 @@ public class RoundEntryService : IRoundEntryService
 
         // The one place friends hear about the round — never at start, never per hole.
         await RoundNotifications.NotifyFriendsOfNewRoundAsync(
-            dbContext, _friendService, _pushService, _logger, round.UserId, round.CourseId, round.Score);
+            dbContext, _friendService, _pushService, _logger, round.UserId, round.RoundId, round.CourseId, round.Score);
 
         var response = await _roundService.GetRoundByIdAsync(roundId, level);
         return response is null

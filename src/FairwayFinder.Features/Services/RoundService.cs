@@ -547,7 +547,7 @@ public class RoundService : IRoundService
             activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundHoles, holeCount);
             activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundShotTracking, request.UsingShotTracking);
 
-            await NotifyFriendsOfNewRoundAsync(dbContext, userId, request.CourseId, totalScore);
+            await NotifyFriendsOfNewRoundAsync(dbContext, userId, round.RoundId, request.CourseId, totalScore);
 
             return round.RoundId;
         }
@@ -568,9 +568,9 @@ public class RoundService : IRoundService
         }
     }
 
-    private Task NotifyFriendsOfNewRoundAsync(ApplicationDbContext dbContext, string userId, long courseId, int score)
+    private Task NotifyFriendsOfNewRoundAsync(ApplicationDbContext dbContext, string userId, long roundId, long courseId, int score)
         => RoundNotifications.NotifyFriendsOfNewRoundAsync(
-            dbContext, _friendService, _pushService, _logger, userId, courseId, score);
+            dbContext, _friendService, _pushService, _logger, userId, roundId, courseId, score);
 
     public async Task<bool> UpdateRoundAsync(UpdateRoundRequest request)
     {

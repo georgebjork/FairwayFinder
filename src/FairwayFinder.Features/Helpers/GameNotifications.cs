@@ -30,7 +30,7 @@ public static class GameNotifications
             var title = $"{GameLabel(game.GameType)} started";
             var body = $"Your game at {courseName} is underway";
 
-            await NotifyAsync(pushService, participants, game.HostUserId, title, body);
+            await NotifyAsync(pushService, participants, game.HostUserId, title, body, GameRoute(game));
         }
         catch (Exception ex)
         {
@@ -52,7 +52,7 @@ public static class GameNotifications
             var courseName = await CourseNameAsync(dbContext, game.CourseId);
             var title = $"{GameLabel(game.GameType)} final";
 
-            await NotifyAsync(pushService, participants, game.HostUserId, title, $"{summary} at {courseName}");
+            await NotifyAsync(pushService, participants, game.HostUserId, title, $"{summary} at {courseName}", GameRoute(game));
         }
         catch (Exception ex)
         {
@@ -60,12 +60,23 @@ public static class GameNotifications
         }
     }
 
+    /// <summary>
+    /// The keys a tap routes on. Values are strings because APNs custom data is JSON and the
+    /// client reads them back untyped.
+    /// </summary>
+    private static Dictionary<string, string> GameRoute(Game game) => new()
+    {
+        ["type"] = "game",
+        ["gameId"] = game.GameId.ToString()
+    };
+
     private static async Task NotifyAsync(
         IPushNotificationService pushService,
         IReadOnlyList<GameParticipant> participants,
         string hostUserId,
         string title,
-        string body)
+        string body,
+        IReadOnlyDictionary<string, string> data)
     {
         // Guests have no device, and the host already knows — they pressed the button.
         var targets = participants
@@ -75,7 +86,7 @@ public static class GameNotifications
 
         foreach (var userId in targets)
         {
-            await pushService.SendToUserAsync(userId, title, body);
+            await pushService.SendToUserAsync(userId, title, body, data: data);
         }
     }
 
