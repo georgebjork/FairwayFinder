@@ -105,6 +105,28 @@ Features cannot throw the API's exception types (the dependency runs Api → Fea
 - Schema includes ASP.NET Core Identity tables + golf domain tables.
 - EF Core manages all queries and migrations.
 
+### Dates and audit stamps
+
+Every entity carrying `created_on`/`updated_on` implements `IAuditable` (`FairwayFinder.Shared`), and
+`AuditStampInterceptor` (registered from `ApplicationDbContext.OnConfiguring`) stamps both with
+`DateTime.UtcNow` on save. **Never assign them by hand** — only `CreatedBy`/`UpdatedBy`, which stay
+explicit because admin pages act on another user's data and must record the acting admin, and the
+import/purge jobs have no user at all.
+
+- Audit and event stamps are `DateTime` on `timestamp with time zone`, always holding UTC.
+- `DateOnly`/`date` is reserved for a genuine calendar date — `Round.DatePlayed`, `Game.DatePlayed`,
+  and the stats filter bounds. A round is played on a day, and the client sends its own local date so
+  an evening round isn't filed under tomorrow (`RoundEntryDtos.cs`). Don't "fix" these to `DateTime`.
+- Npgsql rejects a `DateTime` whose `Kind` is `Unspecified` or `Local` on a `timestamptz` column, so
+  bridge from a `DateOnly` with `DateTime.SpecifyKind(d.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc)`
+  — see `AdminDashboardService`. Don't paper over this with a value converter: `ToUniversalTime()` on
+  an `Unspecified` value turns a loud crash into silently wrong data.
+- `ExecuteUpdate`/`ExecuteDelete` bypass the change tracker and so the interceptor.
+- Changing a `date` column to `timestamptz` in a migration needs an explicit
+  `USING x::timestamp AT TIME ZONE 'UTC'`. EF scaffolds a bare `ALTER COLUMN ... TYPE`, which
+  succeeds via Postgres' implicit cast but resolves midnight in the *session* time zone — silently
+  shifting every row. See `20260922230819_ConvertAuditStampsToTimestamptz`.
+
 ## UI Framework
 
 **100% Radzen components** for all UI. No Bootstrap or other CSS frameworks.

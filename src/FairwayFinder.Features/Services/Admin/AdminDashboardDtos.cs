@@ -93,8 +93,8 @@ public class RecentInviteDto
 {
     public int Id { get; set; }
     public string Email { get; set; } = string.Empty;
-    public DateOnly CreatedOn { get; set; }
-    public DateOnly ExpiresOn { get; set; }
-    public DateOnly? ClaimedOn { get; set; }
+    public DateTime CreatedOn { get; set; }
+    public DateTime ExpiresOn { get; set; }
+    public DateTime? ClaimedOn { get; set; }
     public string Status { get; set; } = string.Empty; // "Pending" | "Claimed" | "Expired"
 }

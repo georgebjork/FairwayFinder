@@ -23,13 +23,14 @@ public class AdminDashboardService(
     public async Task<DashboardMetricsDto> GetDashboardMetricsAsync()
     {
         await using var db = await dbContextFactory.CreateDbContextAsync();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var nowUtc = DateTime.UtcNow;
+        var today = DateOnly.FromDateTime(nowUtc);
 
         return new DashboardMetricsDto
         {
             Growth = await GetGrowthMetricsAsync(db, today),
             Activity = await GetActivityMetricsAsync(db, today),
-            Invites = await GetInviteMetricsAsync(db, today),
+            Invites = await GetInviteMetricsAsync(db, nowUtc),
         };
     }
 
@@ -165,11 +166,11 @@ public class AdminDashboardService(
     }
 
     // ── Group 3: Invites ──
-    private async Task<InviteMetricsDto> GetInviteMetricsAsync(ApplicationDbContext db, DateOnly today)
+    private async Task<InviteMetricsDto> GetInviteMetricsAsync(ApplicationDbContext db, DateTime nowUtc)
     {
-        var pending = await db.UserInvitations.CountAsync(i => !i.IsDeleted && i.ClaimedOn == null && i.ExpiresOn >= today);
+        var pending = await db.UserInvitations.CountAsync(i => !i.IsDeleted && i.ClaimedOn == null && i.ExpiresOn >= nowUtc);
         var claimed = await db.UserInvitations.CountAsync(i => !i.IsDeleted && i.ClaimedOn != null);
-        var expired = await db.UserInvitations.CountAsync(i => !i.IsDeleted && i.ClaimedOn == null && i.ExpiresOn < today);
+        var expired = await db.UserInvitations.CountAsync(i => !i.IsDeleted && i.ClaimedOn == null && i.ExpiresOn < nowUtc);
         var nonDeleted = pending + claimed + expired;
 
         var recentInvites = await db.UserInvitations
@@ -190,7 +191,7 @@ public class AdminDashboardService(
         foreach (var i in recentInvites)
         {
             i.Status = i.ClaimedOn != null ? "Claimed"
-                     : i.ExpiresOn < today ? "Expired" : "Pending";
+                     : i.ExpiresOn < nowUtc ? "Expired" : "Pending";
         }
 
         return new InviteMetricsDto

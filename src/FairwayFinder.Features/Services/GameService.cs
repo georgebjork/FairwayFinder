@@ -67,7 +67,6 @@ public class GameService : IGameService
         var teeboxCheck = await ValidateTeeboxAsync(dbContext, request.TeeboxId, request.CourseId, holeNumbers, allowArchived: false);
         if (teeboxCheck is not null) return teeboxCheck;
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var displayName = await ResolveDisplayNameAsync(dbContext, hostUserId);
 
         // The game and its host participant are one unit: a game with nobody in it is not a
@@ -90,9 +89,7 @@ public class GameService : IGameService
             SkinsCarryover = request.SkinsCarryover,
             SkinsValue = request.SkinsValue,
             CreatedBy = hostUserId,
-            CreatedOn = today,
             UpdatedBy = hostUserId,
-            UpdatedOn = today
         };
 
         await SaveWithFreshJoinCodeAsync(dbContext, game);
@@ -106,9 +103,7 @@ public class GameService : IGameService
             CourseHandicap = request.CourseHandicap,
             Team = request.Team,
             CreatedBy = hostUserId,
-            CreatedOn = today,
             UpdatedBy = hostUserId,
-            UpdatedOn = today
         };
 
         dbContext.GameParticipants.Add(participant);
@@ -117,7 +112,7 @@ public class GameService : IGameService
         // The host may link a round they have already started.
         if (request.RoundId is { } roundId)
         {
-            var link = await ApplyRoundLinkAsync(dbContext, game, participant, roundId, hostUserId, today);
+            var link = await ApplyRoundLinkAsync(dbContext, game, participant, roundId, hostUserId);
             if (link is not null) return link;
 
             await dbContext.SaveChangesAsync();
@@ -278,8 +273,6 @@ public class GameService : IGameService
             if (fieldCheck is not null) return fieldCheck;
         }
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-
         var participant = new GameParticipant
         {
             GameId = game.GameId,
@@ -289,9 +282,7 @@ public class GameService : IGameService
             CourseHandicap = request.CourseHandicap,
             Team = request.Team,
             CreatedBy = userId,
-            CreatedOn = today,
             UpdatedBy = userId,
-            UpdatedOn = today
         };
 
         dbContext.GameParticipants.Add(participant);
@@ -309,7 +300,7 @@ public class GameService : IGameService
 
         if (request.RoundId is { } roundId)
         {
-            var link = await ApplyRoundLinkAsync(dbContext, game, participant, roundId, userId, today);
+            var link = await ApplyRoundLinkAsync(dbContext, game, participant, roundId, userId);
             if (link is not null) return link;
 
             await dbContext.SaveChangesAsync();
@@ -328,7 +319,6 @@ public class GameService : IGameService
         if (game.HostUserId != hostUserId) return Fail(GameResultStatus.NotHost);
         if (game.State != GameState.Setup) return Fail(GameResultStatus.GameNotInSetup);
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         string displayName;
 
         if (request.UserId is { } addedUserId)
@@ -365,9 +355,7 @@ public class GameService : IGameService
             CourseHandicap = request.CourseHandicap,
             Team = request.Team,
             CreatedBy = hostUserId,
-            CreatedOn = today,
             UpdatedBy = hostUserId,
-            UpdatedOn = today
         });
 
         await dbContext.SaveChangesAsync();
@@ -417,7 +405,6 @@ public class GameService : IGameService
         }
 
         participant.UpdatedBy = userId;
-        participant.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await dbContext.SaveChangesAsync();
 
@@ -441,7 +428,6 @@ public class GameService : IGameService
 
         participant.IsDeleted = true;
         participant.UpdatedBy = hostUserId;
-        participant.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await dbContext.SaveChangesAsync();
 
@@ -460,20 +446,17 @@ public class GameService : IGameService
 
         if (participant is null) return Fail(GameResultStatus.NotParticipant);
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-
         if (roundId is null)
         {
             // Unlink. The teebox stays put; host-entered strokes become the source again.
             participant.RoundId = null;
             participant.UpdatedBy = userId;
-            participant.UpdatedOn = today;
 
             await dbContext.SaveChangesAsync();
             return await BuildStateAsync(gameId);
         }
 
-        var link = await ApplyRoundLinkAsync(dbContext, game, participant, roundId.Value, userId, today);
+        var link = await ApplyRoundLinkAsync(dbContext, game, participant, roundId.Value, userId);
         if (link is not null) return link;
 
         await dbContext.SaveChangesAsync();
@@ -492,7 +475,6 @@ public class GameService : IGameService
         if (guard.Failure is not null) return guard.Failure;
 
         var participant = guard.Participant!;
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         var score = await dbContext.GameHoleScores.FirstOrDefaultAsync(s =>
             s.GameParticipantId == participantId && s.HoleNumber == holeNumber && !s.IsDeleted);
@@ -505,9 +487,7 @@ public class GameService : IGameService
                 HoleNumber = holeNumber,
                 Strokes = request.Strokes,
                 CreatedBy = userId,
-                CreatedOn = today,
                 UpdatedBy = userId,
-                UpdatedOn = today
             };
 
             dbContext.GameHoleScores.Add(score);
@@ -516,7 +496,6 @@ public class GameService : IGameService
         {
             score.Strokes = request.Strokes;
             score.UpdatedBy = userId;
-            score.UpdatedOn = today;
         }
 
         try
@@ -540,7 +519,6 @@ public class GameService : IGameService
 
             score.Strokes = request.Strokes;
             score.UpdatedBy = userId;
-            score.UpdatedOn = today;
 
             await dbContext.SaveChangesAsync();
         }
@@ -565,7 +543,6 @@ public class GameService : IGameService
         {
             score.IsDeleted = true;
             score.UpdatedBy = userId;
-            score.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
             await dbContext.SaveChangesAsync();
         }
@@ -591,7 +568,6 @@ public class GameService : IGameService
 
         game.State = GameState.Active;
         game.UpdatedBy = hostUserId;
-        game.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await dbContext.SaveChangesAsync();
 
@@ -632,7 +608,6 @@ public class GameService : IGameService
         game.FinalScoreboard = JsonSerializer.Serialize<GameScoreboard>(board);
         game.State = GameState.Completed;
         game.UpdatedBy = hostUserId;
-        game.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await dbContext.SaveChangesAsync();
 
@@ -664,7 +639,6 @@ public class GameService : IGameService
 
         game.State = GameState.Abandoned;
         game.UpdatedBy = hostUserId;
-        game.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await dbContext.SaveChangesAsync();
 
@@ -870,8 +844,7 @@ public class GameService : IGameService
         Game game,
         GameParticipant participant,
         long roundId,
-        string userId,
-        DateOnly today)
+        string userId)
     {
         var round = await dbContext.Rounds.AsNoTracking()
             .FirstOrDefaultAsync(r => r.RoundId == roundId && !r.IsDeleted);
@@ -889,7 +862,6 @@ public class GameService : IGameService
         participant.RoundId = roundId;
         participant.TeeboxId = round.TeeboxId;
         participant.UpdatedBy = userId;
-        participant.UpdatedOn = today;
 
         return null;
     }

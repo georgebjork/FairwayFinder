@@ -61,7 +61,6 @@ public class UserAdminService(UserManager<ApplicationUser> userManager)
 
         user.FirstName = dto.FirstName;
         user.LastName = dto.LastName;
-        user.UpdatedOn = DateTime.UtcNow;
 
         return await userManager.UpdateAsync(user);
     }
@@ -92,7 +91,6 @@ public class UserAdminService(UserManager<ApplicationUser> userManager)
         if (user is null) return IdentityResult.Failed(new IdentityError { Description = "User not found." });
 
         user.IsSearchHidden = hidden;
-        user.UpdatedOn = DateTime.UtcNow;
 
         return await userManager.UpdateAsync(user);
     }

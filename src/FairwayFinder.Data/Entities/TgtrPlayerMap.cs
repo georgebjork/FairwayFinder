@@ -1,8 +1,10 @@
 using System;
 
+using FairwayFinder.Shared;
+
 namespace FairwayFinder.Data.Entities;
 
-public partial class TgtrPlayerMap
+public partial class TgtrPlayerMap : IAuditable
 {
     public long TgtrPlayerMapId { get; set; }
 
@@ -12,11 +14,11 @@ public partial class TgtrPlayerMap
 
     public string CreatedBy { get; set; } = null!;
 
-    public DateOnly CreatedOn { get; set; }
+    public DateTime CreatedOn { get; set; }
 
     public string UpdatedBy { get; set; } = null!;
 
-    public DateOnly UpdatedOn { get; set; }
+    public DateTime UpdatedOn { get; set; }
 
     public bool IsDeleted { get; set; }
 }

@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 
+using FairwayFinder.Shared;
+
 namespace FairwayFinder.Data.Entities;
 
-public partial class Course
+public partial class Course : IAuditable
 {
     public long CourseId { get; set; }
 
@@ -27,11 +29,11 @@ public partial class Course
 
     public string CreatedBy { get; set; } = null!;
 
-    public DateOnly CreatedOn { get; set; }
+    public DateTime CreatedOn { get; set; }
 
     public string UpdatedBy { get; set; } = null!;
 
-    public DateOnly UpdatedOn { get; set; }
+    public DateTime UpdatedOn { get; set; }
 
     public bool IsDeleted { get; set; }
 }

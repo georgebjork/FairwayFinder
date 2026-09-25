@@ -153,7 +153,7 @@ public class FriendService : IFriendService
             DisplayName = DisplayNameHelper.Build(r.FirstName, r.LastName, r.UserName),
             Email = r.Email ?? string.Empty,
             IsPublic = r.IsPublic,
-            FriendsSince = r.FriendsSince
+            FriendsSince = DateOnly.FromDateTime(r.FriendsSince)
         }).ToList();
     }
 
@@ -204,7 +204,6 @@ public class FriendService : IFriendService
                                           || (f.RequesterUserId == addresseeUserId && f.AddresseeUserId == requesterUserId)
                                       ));
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var nowUtc = DateTime.UtcNow;
 
         if (existing is not null)
@@ -221,7 +220,6 @@ public class FriendService : IFriendService
                         existing.Status = FriendshipStatus.Accepted;
                         existing.RespondedOn = nowUtc;
                         existing.UpdatedBy = requesterUserId;
-                        existing.UpdatedOn = today;
                         await dbContext.SaveChangesAsync();
                         await NotifyFriendRequestAcceptedAsync(dbContext, requesterUserId, addresseeUserId);
                         return existing.FriendshipId;
@@ -236,7 +234,6 @@ public class FriendService : IFriendService
                     existing.Status = FriendshipStatus.Pending;
                     existing.RespondedOn = null;
                     existing.UpdatedBy = requesterUserId;
-                    existing.UpdatedOn = today;
                     await dbContext.SaveChangesAsync();
                     await NotifyFriendRequestSentAsync(dbContext, requesterUserId, addresseeUserId);
                     return existing.FriendshipId;
@@ -250,9 +247,7 @@ public class FriendService : IFriendService
             Status = FriendshipStatus.Pending,
             RespondedOn = null,
             CreatedBy = requesterUserId,
-            CreatedOn = today,
             UpdatedBy = requesterUserId,
-            UpdatedOn = today,
             IsDeleted = false
         };
 
@@ -279,7 +274,6 @@ public class FriendService : IFriendService
         friendship.Status = FriendshipStatus.Accepted;
         friendship.RespondedOn = DateTime.UtcNow;
         friendship.UpdatedBy = userId;
-        friendship.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
         await dbContext.SaveChangesAsync();
         await NotifyFriendRequestAcceptedAsync(dbContext, userId, friendship.RequesterUserId);
         return true;
@@ -302,7 +296,6 @@ public class FriendService : IFriendService
         friendship.Status = FriendshipStatus.Rejected;
         friendship.RespondedOn = DateTime.UtcNow;
         friendship.UpdatedBy = userId;
-        friendship.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
         await dbContext.SaveChangesAsync();
         return true;
     }
@@ -324,7 +317,6 @@ public class FriendService : IFriendService
         friendship.Status = FriendshipStatus.Cancelled;
         friendship.RespondedOn = DateTime.UtcNow;
         friendship.UpdatedBy = userId;
-        friendship.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
         await dbContext.SaveChangesAsync();
         return true;
     }
@@ -345,7 +337,6 @@ public class FriendService : IFriendService
 
         friendship.IsDeleted = true;
         friendship.UpdatedBy = userId;
-        friendship.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
         await dbContext.SaveChangesAsync();
         return true;
     }
@@ -438,7 +429,7 @@ public class FriendService : IFriendService
             OtherDisplayName = DisplayNameHelper.Build(r.FirstName, r.LastName, r.UserName),
             OtherEmail = r.Email ?? string.Empty,
             Direction = direction,
-            RequestedOn = r.CreatedOn
+            RequestedOn = DateOnly.FromDateTime(r.CreatedOn)
         }).ToList();
     }
 

@@ -1,6 +1,8 @@
+using FairwayFinder.Shared;
+
 namespace FairwayFinder.Data.Entities;
 
-public partial class Shot
+public partial class Shot : IAuditable
 {
     public long ShotId { get; set; }
     public long ScoreId { get; set; }
@@ -18,9 +20,9 @@ public partial class Shot
     public int PenaltyStrokes { get; set; }
 
     public string CreatedBy { get; set; } = null!;
-    public DateOnly CreatedOn { get; set; }
+    public DateTime CreatedOn { get; set; }
     public string UpdatedBy { get; set; } = null!;
-    public DateOnly UpdatedOn { get; set; }
+    public DateTime UpdatedOn { get; set; }
     public bool IsDeleted { get; set; }
 
     // Navigation properties

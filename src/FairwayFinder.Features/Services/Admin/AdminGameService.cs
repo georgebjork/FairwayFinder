@@ -258,7 +258,6 @@ public class AdminGameService(
         if (request.Team is { } team) participant.Team = team;
 
         participant.UpdatedBy = adminUserId;
-        participant.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await db.SaveChangesAsync();
 
@@ -282,8 +281,6 @@ public class AdminGameService(
             .FirstOrDefaultAsync(p => p.GameParticipantId == participantId && !p.IsDeleted);
 
         if (participant is null) return false;
-
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         if (roundId is null)
         {
@@ -311,7 +308,6 @@ public class AdminGameService(
         }
 
         participant.UpdatedBy = adminUserId;
-        participant.UpdatedOn = today;
 
         await db.SaveChangesAsync();
 
@@ -342,7 +338,6 @@ public class AdminGameService(
 
         participant.DisplayName = name;
         participant.UpdatedBy = adminUserId;
-        participant.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await db.SaveChangesAsync();
 
@@ -361,7 +356,6 @@ public class AdminGameService(
 
         participant.IsDeleted = true;
         participant.UpdatedBy = adminUserId;
-        participant.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await db.SaveChangesAsync();
 
@@ -395,7 +389,6 @@ public class AdminGameService(
         // Base type on purpose: the concrete type omits the polymorphic discriminator.
         game.FinalScoreboard = JsonSerializer.Serialize<GameScoreboard>(board);
         game.UpdatedBy = adminUserId;
-        game.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await db.SaveChangesAsync();
 
@@ -420,7 +413,6 @@ public class AdminGameService(
 
         game.State = state;
         game.UpdatedBy = adminUserId;
-        game.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await db.SaveChangesAsync();
 
@@ -438,11 +430,8 @@ public class AdminGameService(
         var game = await db.Games.FirstOrDefaultAsync(g => g.GameId == gameId && !g.IsDeleted);
         if (game is null) return false;
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-
         game.IsDeleted = true;
         game.UpdatedBy = adminUserId;
-        game.UpdatedOn = today;
 
         var participants = await db.GameParticipants
             .Where(p => p.GameId == gameId && !p.IsDeleted)
@@ -452,7 +441,6 @@ public class AdminGameService(
         {
             participant.IsDeleted = true;
             participant.UpdatedBy = adminUserId;
-            participant.UpdatedOn = today;
         }
 
         await db.SaveChangesAsync();

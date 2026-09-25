@@ -1,10 +1,12 @@
+using FairwayFinder.Shared;
+
 namespace FairwayFinder.Data.Entities;
 
 /// <summary>
 /// One player in a game. Either a registered golfer (<see cref="UserId"/> set) or a guest the host
 /// is scoring by hand.
 /// </summary>
-public class GameParticipant
+public class GameParticipant : IAuditable
 {
     public long GameParticipantId { get; set; }
 
@@ -44,11 +46,11 @@ public class GameParticipant
 
     public string CreatedBy { get; set; } = null!;
 
-    public DateOnly CreatedOn { get; set; }
+    public DateTime CreatedOn { get; set; }
 
     public string UpdatedBy { get; set; } = null!;
 
-    public DateOnly UpdatedOn { get; set; }
+    public DateTime UpdatedOn { get; set; }
 
     public bool IsDeleted { get; set; }
 

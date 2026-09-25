@@ -65,8 +65,6 @@ public class RoundEntryService : IRoundEntryService
             return RoundEntryResult<StartRoundResponse>.Fail(RoundEntryStatus.TeeboxArchived);
         }
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-
         var round = new Round
         {
             CourseId = request.CourseId,
@@ -87,9 +85,7 @@ public class RoundEntryService : IRoundEntryService
             // The whole point: this round is not history until the golfer posts it.
             IsComplete = false,
             CreatedBy = userId,
-            CreatedOn = today,
             UpdatedBy = userId,
-            UpdatedOn = today,
             IsDeleted = false
         };
 
@@ -172,7 +168,6 @@ public class RoundEntryService : IRoundEntryService
         var hole = await ResolveHoleAsync(dbContext, round!.TeeboxId, holeNumber);
         if (hole is null) return RoundEntryResult<RoundProgressResponse>.Fail(RoundEntryStatus.HoleNotOnTeebox);
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         await using var transaction = await BeginTransactionAsync(dbContext);
 
         var score = await dbContext.Scores
@@ -187,9 +182,7 @@ public class RoundEntryService : IRoundEntryService
                 HoleScore = request.Score,
                 UserId = round.UserId,
                 CreatedBy = userId,
-                CreatedOn = today,
                 UpdatedBy = userId,
-                UpdatedOn = today,
                 IsDeleted = false
             };
             dbContext.Scores.Add(score);
@@ -199,7 +192,6 @@ public class RoundEntryService : IRoundEntryService
             // Last write wins — the golfer (or their other device) is correcting the hole.
             score.HoleScore = request.Score;
             score.UpdatedBy = userId;
-            score.UpdatedOn = today;
         }
 
         try
@@ -222,13 +214,12 @@ public class RoundEntryService : IRoundEntryService
 
             score.HoleScore = request.Score;
             score.UpdatedBy = userId;
-            score.UpdatedOn = today;
             await dbContext.SaveChangesAsync();
         }
 
-        await WriteHoleDetailAsync(dbContext, round, hole, score, request, userId, today);
+        await WriteHoleDetailAsync(dbContext, round, hole, score, request, userId);
 
-        var progress = await RecomputeTotalsAsync(dbContext, round, userId, today);
+        var progress = await RecomputeTotalsAsync(dbContext, round, userId);
         await dbContext.SaveChangesAsync();
         if (transaction is not null) await transaction.CommitAsync();
 
@@ -256,7 +247,6 @@ public class RoundEntryService : IRoundEntryService
         var hole = await ResolveHoleAsync(dbContext, round!.TeeboxId, holeNumber);
         if (hole is null) return RoundEntryResult<RoundProgressResponse>.Fail(RoundEntryStatus.HoleNotOnTeebox);
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         await using var transaction = await BeginTransactionAsync(dbContext);
 
         var score = await dbContext.Scores
@@ -268,13 +258,12 @@ public class RoundEntryService : IRoundEntryService
             // (round_id, hole_id) filters on is_deleted so the hole can be re-entered later.
             score.IsDeleted = true;
             score.UpdatedBy = userId;
-            score.UpdatedOn = today;
 
-            await SoftDeleteHoleChildrenAsync(dbContext, score.ScoreId, userId, today);
+            await SoftDeleteHoleChildrenAsync(dbContext, score.ScoreId, userId);
             await dbContext.SaveChangesAsync();
         }
 
-        var progress = await RecomputeTotalsAsync(dbContext, round, userId, today);
+        var progress = await RecomputeTotalsAsync(dbContext, round, userId);
         await dbContext.SaveChangesAsync();
         if (transaction is not null) await transaction.CommitAsync();
 
@@ -327,7 +316,6 @@ public class RoundEntryService : IRoundEntryService
                     : missing);
         }
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         await using var transaction = await BeginTransactionAsync(dbContext);
 
         var totals = RoundScoringHelper.ComputeTotals(entered);
@@ -351,9 +339,7 @@ public class RoundEntryService : IRoundEntryService
             {
                 RoundId = roundId,
                 CreatedBy = userId,
-                CreatedOn = today,
                 UpdatedBy = userId,
-                UpdatedOn = today,
                 IsDeleted = false
             };
             dbContext.RoundStats.Add(roundStat);
@@ -361,14 +347,12 @@ public class RoundEntryService : IRoundEntryService
         else
         {
             roundStat.UpdatedBy = userId;
-            roundStat.UpdatedOn = today;
         }
 
         RoundScoringHelper.ApplyScoringDistribution(roundStat, entered);
 
         round.IsComplete = true;
         round.UpdatedBy = userId;
-        round.UpdatedOn = today;
 
         await dbContext.SaveChangesAsync();
         if (transaction is not null) await transaction.CommitAsync();
@@ -418,7 +402,7 @@ public class RoundEntryService : IRoundEntryService
     /// </summary>
     private static async Task WriteHoleDetailAsync(
         ApplicationDbContext dbContext, Round round, Hole hole, Score score,
-        UpsertHoleRequest request, string userId, DateOnly today)
+        UpsertHoleRequest request, string userId)
     {
         var holeStat = await dbContext.HoleStats
             .FirstOrDefaultAsync(hs => hs.ScoreId == score.ScoreId && !hs.IsDeleted);
@@ -435,18 +419,17 @@ public class RoundEntryService : IRoundEntryService
             {
                 shot.IsDeleted = true;
                 shot.UpdatedBy = userId;
-                shot.UpdatedOn = today;
             }
 
             dbContext.Shots.AddRange(
-                RoundScoringHelper.BuildShots(score.ScoreId, request.Shots, userId, today));
+                RoundScoringHelper.BuildShots(score.ScoreId, request.Shots, userId));
 
-            holeStat = EnsureHoleStat(dbContext, holeStat, score.ScoreId, round.RoundId, hole.HoleId, userId, today);
+            holeStat = EnsureHoleStat(dbContext, holeStat, score.ScoreId, round.RoundId, hole.HoleId, userId);
             RoundScoringHelper.ApplyDerivedHoleStat(holeStat, request.Shots, hole.Par, request);
         }
         else if (round.UsingHoleStats)
         {
-            holeStat = EnsureHoleStat(dbContext, holeStat, score.ScoreId, round.RoundId, hole.HoleId, userId, today);
+            holeStat = EnsureHoleStat(dbContext, holeStat, score.ScoreId, round.RoundId, hole.HoleId, userId);
             RoundScoringHelper.ApplyClientHoleStat(holeStat, request);
         }
         else if (holeStat is not null)
@@ -454,18 +437,16 @@ public class RoundEntryService : IRoundEntryService
             // The round stopped tracking stats, so the row no longer belongs to it.
             holeStat.IsDeleted = true;
             holeStat.UpdatedBy = userId;
-            holeStat.UpdatedOn = today;
         }
     }
 
     private static HoleStat EnsureHoleStat(
         ApplicationDbContext dbContext, HoleStat? existing,
-        long scoreId, long roundId, long holeId, string userId, DateOnly today)
+        long scoreId, long roundId, long holeId, string userId)
     {
         if (existing is not null)
         {
             existing.UpdatedBy = userId;
-            existing.UpdatedOn = today;
             return existing;
         }
 
@@ -475,9 +456,7 @@ public class RoundEntryService : IRoundEntryService
             RoundId = roundId,
             HoleId = holeId,
             CreatedBy = userId,
-            CreatedOn = today,
             UpdatedBy = userId,
-            UpdatedOn = today,
             IsDeleted = false
         };
 
@@ -486,7 +465,7 @@ public class RoundEntryService : IRoundEntryService
     }
 
     private static async Task SoftDeleteHoleChildrenAsync(
-        ApplicationDbContext dbContext, long scoreId, string userId, DateOnly today)
+        ApplicationDbContext dbContext, long scoreId, string userId)
     {
         var holeStats = await dbContext.HoleStats
             .Where(hs => hs.ScoreId == scoreId && !hs.IsDeleted)
@@ -495,7 +474,6 @@ public class RoundEntryService : IRoundEntryService
         {
             holeStat.IsDeleted = true;
             holeStat.UpdatedBy = userId;
-            holeStat.UpdatedOn = today;
         }
 
         var shots = await dbContext.Shots
@@ -505,7 +483,6 @@ public class RoundEntryService : IRoundEntryService
         {
             shot.IsDeleted = true;
             shot.UpdatedBy = userId;
-            shot.UpdatedOn = today;
         }
     }
 
@@ -526,7 +503,7 @@ public class RoundEntryService : IRoundEntryService
     /// twice lands on identical state, and any interleaving corrects itself on the next write.
     /// </summary>
     private static async Task<RoundProgressResponse> RecomputeTotalsAsync(
-        ApplicationDbContext dbContext, Round round, string userId, DateOnly today)
+        ApplicationDbContext dbContext, Round round, string userId)
     {
         var entered = await LoadEnteredHolesAsync(dbContext, round.RoundId);
         var totals = RoundScoringHelper.ComputeTotals(entered);
@@ -535,7 +512,6 @@ public class RoundEntryService : IRoundEntryService
         round.ScoreOut = totals.ScoreOut;
         round.ScoreIn = totals.ScoreIn;
         round.UpdatedBy = userId;
-        round.UpdatedOn = today;
 
         return new RoundProgressResponse
         {

@@ -1,6 +1,8 @@
+using FairwayFinder.Shared;
+
 namespace FairwayFinder.Data.Entities;
 
-public partial class Score
+public partial class Score : IAuditable
 {
     public long ScoreId { get; set; }
 
@@ -14,11 +16,11 @@ public partial class Score
 
     public string CreatedBy { get; set; } = null!;
 
-    public DateOnly CreatedOn { get; set; }
+    public DateTime CreatedOn { get; set; }
 
     public string UpdatedBy { get; set; } = null!;
 
-    public DateOnly UpdatedOn { get; set; }
+    public DateTime UpdatedOn { get; set; }
 
     public bool IsDeleted { get; set; }
 

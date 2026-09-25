@@ -35,16 +35,13 @@ public class ProfileService : IProfileService
 
         if (profile is null)
         {
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
             profile = new UserProfile
             {
                 UserId = userId,
                 PublicIdentifier = Guid.NewGuid(),
                 IsPublic = false,
                 CreatedBy = userId,
-                CreatedOn = today,
                 UpdatedBy = userId,
-                UpdatedOn = today,
                 IsDeleted = false
             };
 
@@ -108,7 +105,6 @@ public class ProfileService : IProfileService
 
         profile.IsPublic = isPublic;
         profile.UpdatedBy = userId;
-        profile.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await dbContext.SaveChangesAsync();
     }

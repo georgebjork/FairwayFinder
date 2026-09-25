@@ -59,7 +59,7 @@ public class AdminGameServiceTests
         var blue = NewTeebox(course.CourseId, "Blue");
         var white = NewTeebox(course.CourseId, "White");
         var archived = NewTeebox(course.CourseId, "Old Blue");
-        archived.ArchivedOn = new DateOnly(2026, 1, 1);
+        archived.ArchivedOn = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         db.Teeboxes.AddRange(blue, white, archived);
         await db.SaveChangesAsync();

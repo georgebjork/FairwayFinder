@@ -128,7 +128,6 @@ public class AdminRoundService(
 
         round.ExcludeFromStats = exclude;
         round.UpdatedBy = adminUserId;
-        round.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await db.SaveChangesAsync();
         return true;

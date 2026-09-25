@@ -86,8 +86,6 @@ public class TgtrTransferService
             .Where(m => !m.IsDeleted)
             .ToDictionaryAsync(m => m.TgtrTeeboxId);
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-
         // 5. Process each round
         foreach (var tgtrRound in tgtrRounds)
         {
@@ -102,7 +100,7 @@ public class TgtrTransferService
             try
             {
                 // Resolve course
-                var localCourseId = await ResolveCourseAsync(dbContext, courseMaps, tgtrRound, userId, today);
+                var localCourseId = await ResolveCourseAsync(dbContext, courseMaps, tgtrRound, userId);
                 if (localCourseId is null)
                 {
                     result.Errors.Add(new TgtrTransferError
@@ -114,7 +112,7 @@ public class TgtrTransferService
                 }
 
                 // Resolve teebox
-                var localTeeboxId = await ResolveTeeboxAsync(dbContext, teeboxMaps, tgtrRound, localCourseId.Value, userId, today);
+                var localTeeboxId = await ResolveTeeboxAsync(dbContext, teeboxMaps, tgtrRound, localCourseId.Value, userId);
                 if (localTeeboxId is null)
                 {
                     result.Errors.Add(new TgtrTransferError
@@ -179,9 +177,7 @@ public class TgtrTransferService
                     // Imported rounds are historical, so they are finished by definition.
                     IsComplete = true,
                     CreatedBy = userId,
-                    CreatedOn = today,
                     UpdatedBy = userId,
-                    UpdatedOn = today,
                     IsDeleted = false
                 };
 
@@ -196,9 +192,7 @@ public class TgtrTransferService
                     HoleScore = (short)hs.Score,
                     UserId = userId,
                     CreatedBy = userId,
-                    CreatedOn = today,
                     UpdatedBy = userId,
-                    UpdatedOn = today,
                     IsDeleted = false
                 }).ToList();
 
@@ -220,9 +214,7 @@ public class TgtrTransferService
                         HitGreen = hs.Gir,
                         NumberOfPutts = hs.Putts.HasValue ? (short)hs.Putts.Value : null,
                         CreatedBy = userId,
-                        CreatedOn = today,
                         UpdatedBy = userId,
-                        UpdatedOn = today,
                         IsDeleted = false
                     };
                 }).ToList();
@@ -230,7 +222,7 @@ public class TgtrTransferService
                 dbContext.HoleStats.AddRange(holeStats);
 
                 // Create RoundStat from TGTR stats
-                var roundStat = BuildRoundStat(tgtrRound, round.RoundId, userId, today);
+                var roundStat = BuildRoundStat(tgtrRound, round.RoundId, userId);
                 dbContext.RoundStats.Add(roundStat);
 
                 // Create TgtrRoundMap for duplicate tracking
@@ -239,9 +231,7 @@ public class TgtrTransferService
                     TgtrRoundId = tgtrRound.Id,
                     RoundId = round.RoundId,
                     CreatedBy = userId,
-                    CreatedOn = today,
                     UpdatedBy = userId,
-                    UpdatedOn = today,
                     IsDeleted = false
                 };
                 dbContext.TgtrRoundMaps.Add(roundMap);
@@ -294,8 +284,7 @@ public class TgtrTransferService
         ApplicationDbContext dbContext,
         Dictionary<int, TgtrCourseMap> courseMaps,
         TgtrRoundResponse tgtrRound,
-        string userId,
-        DateOnly today)
+        string userId)
     {
         // Check existing mapping first
         if (courseMaps.TryGetValue(tgtrRound.CourseId, out var existingMap))
@@ -318,9 +307,7 @@ public class TgtrTransferService
             TgtrCourseId = tgtrRound.CourseId,
             CourseId = localCourse.CourseId,
             CreatedBy = userId,
-            CreatedOn = today,
             UpdatedBy = userId,
-            UpdatedOn = today,
             IsDeleted = false
         };
 
@@ -342,8 +329,7 @@ public class TgtrTransferService
         Dictionary<int, TgtrTeeboxMap> teeboxMaps,
         TgtrRoundResponse tgtrRound,
         long localCourseId,
-        string userId,
-        DateOnly today)
+        string userId)
     {
         // Check existing mapping first
         if (teeboxMaps.TryGetValue(tgtrRound.TeeBoxId, out var existingMap))
@@ -369,9 +355,7 @@ public class TgtrTransferService
             TeeboxId = localTeebox.TeeboxId,
             TgtrCourseId = tgtrRound.CourseId,
             CreatedBy = userId,
-            CreatedOn = today,
             UpdatedBy = userId,
-            UpdatedOn = today,
             IsDeleted = false
         };
 
@@ -388,7 +372,7 @@ public class TgtrTransferService
         return localTeebox.TeeboxId;
     }
 
-    private static RoundStat BuildRoundStat(TgtrRoundResponse tgtrRound, long roundId, string userId, DateOnly today)
+    private static RoundStat BuildRoundStat(TgtrRoundResponse tgtrRound, long roundId, string userId)
     {
         var roundStat = new RoundStat
         {
@@ -402,9 +386,7 @@ public class TgtrTransferService
             DoubleBogies = 0,
             TripleOrWorse = 0,
             CreatedBy = userId,
-            CreatedOn = today,
             UpdatedBy = userId,
-            UpdatedOn = today,
             IsDeleted = false
         };
 
@@ -468,16 +450,13 @@ public class TgtrTransferService
     public async Task<TgtrPlayerMap> AddPlayerMapAsync(int tgtrPlayerId, string userId, string createdBy)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         var map = new TgtrPlayerMap
         {
             TgtrPlayerId = tgtrPlayerId,
             UserId = userId,
             CreatedBy = createdBy,
-            CreatedOn = today,
             UpdatedBy = createdBy,
-            UpdatedOn = today,
             IsDeleted = false
         };
 
@@ -498,16 +477,13 @@ public class TgtrTransferService
     public async Task<TgtrCourseMap> AddCourseMapAsync(int tgtrCourseId, long courseId, string createdBy)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         var map = new TgtrCourseMap
         {
             TgtrCourseId = tgtrCourseId,
             CourseId = courseId,
             CreatedBy = createdBy,
-            CreatedOn = today,
             UpdatedBy = createdBy,
-            UpdatedOn = today,
             IsDeleted = false
         };
 
@@ -529,7 +505,6 @@ public class TgtrTransferService
     public async Task<TgtrTeeboxMap> AddTeeboxMapAsync(int tgtrTeeboxId, long teeboxId, int tgtrCourseId, string createdBy)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
         var map = new TgtrTeeboxMap
         {
@@ -537,9 +512,7 @@ public class TgtrTransferService
             TeeboxId = teeboxId,
             TgtrCourseId = tgtrCourseId,
             CreatedBy = createdBy,
-            CreatedOn = today,
             UpdatedBy = createdBy,
-            UpdatedOn = today,
             IsDeleted = false
         };
 

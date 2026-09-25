@@ -1,6 +1,8 @@
+using FairwayFinder.Shared;
+
 namespace FairwayFinder.Data.Entities;
 
-public partial class Teebox
+public partial class Teebox : IAuditable
 {
     public long TeeboxId { get; set; }
 
@@ -32,18 +34,18 @@ public partial class Teebox
     public long TeeboxGroupId { get; set; }
 
     /// <summary>Null = active. Set when this teebox has been superseded by a newer version.</summary>
-    public DateOnly? ArchivedOn { get; set; }
+    public DateTime? ArchivedOn { get; set; }
 
     /// <summary>UserId of the admin who created the superseding version. Null while active.</summary>
     public string? ArchivedBy { get; set; }
 
     public string CreatedBy { get; set; } = null!;
 
-    public DateOnly CreatedOn { get; set; }
+    public DateTime CreatedOn { get; set; }
 
     public string UpdatedBy { get; set; } = null!;
 
-    public DateOnly UpdatedOn { get; set; }
+    public DateTime UpdatedOn { get; set; }
 
     public bool IsDeleted { get; set; }
 

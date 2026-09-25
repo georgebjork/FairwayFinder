@@ -49,13 +49,13 @@ public class UserInvitationService : IUserInvitationService
 
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var nowUtc = DateTime.UtcNow;
 
         var hasActiveInvite = await dbContext.UserInvitations.AnyAsync(i =>
             i.SentToEmail == email
             && !i.IsDeleted
             && i.ClaimedOn == null
-            && i.ExpiresOn >= today);
+            && i.ExpiresOn >= nowUtc);
 
         if (hasActiveInvite)
             return new CreateInviteResult { Success = false, Error = "An active invitation already exists for that email." };
@@ -67,11 +67,9 @@ public class UserInvitationService : IUserInvitationService
             SentByUser = sentByUserId,
             IsDeleted = false,
             ClaimedOn = null,
-            ExpiresOn = today.AddDays(InviteValidityDays),
+            ExpiresOn = nowUtc.AddDays(InviteValidityDays),
             CreatedBy = sentByUserId,
-            CreatedOn = today,
             UpdatedBy = sentByUserId,
-            UpdatedOn = today
         };
 
         dbContext.UserInvitations.Add(invitation);
@@ -105,8 +103,8 @@ public class UserInvitationService : IUserInvitationService
         if (invite.ClaimedOn is not null)
             return new InviteValidationResult { Valid = false, Reason = "This invitation has already been used." };
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        if (invite.ExpiresOn < today)
+        var nowUtc = DateTime.UtcNow;
+        if (invite.ExpiresOn < nowUtc)
             return new InviteValidationResult { Valid = false, Reason = "This invitation has expired." };
 
         return new InviteValidationResult { Valid = true, Email = invite.SentToEmail };
@@ -116,19 +114,18 @@ public class UserInvitationService : IUserInvitationService
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var nowUtc = DateTime.UtcNow;
 
         var invite = await dbContext.UserInvitations
             .FirstOrDefaultAsync(i => i.InvitationIdentifier == code
                 && !i.IsDeleted
                 && i.ClaimedOn == null
-                && i.ExpiresOn >= today);
+                && i.ExpiresOn >= nowUtc);
 
         if (invite is null)
             return false;
 
-        invite.ClaimedOn = today;
-        invite.UpdatedOn = today;
+        invite.ClaimedOn = nowUtc;
         await dbContext.SaveChangesAsync();
         return true;
     }
@@ -137,7 +134,7 @@ public class UserInvitationService : IUserInvitationService
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var nowUtc = DateTime.UtcNow;
 
         return await dbContext.UserInvitations
             .Where(i => !i.IsDeleted)
@@ -150,7 +147,7 @@ public class UserInvitationService : IUserInvitationService
                 CreatedOn = i.CreatedOn,
                 ExpiresOn = i.ExpiresOn,
                 ClaimedOn = i.ClaimedOn,
-                IsExpired = i.ClaimedOn == null && i.ExpiresOn < today
+                IsExpired = i.ClaimedOn == null && i.ExpiresOn < nowUtc
             })
             .ToListAsync();
     }
@@ -165,10 +162,8 @@ public class UserInvitationService : IUserInvitationService
         if (invite is null)
             return false;
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         invite.IsDeleted = true;
         invite.UpdatedBy = revokedByUserId;
-        invite.UpdatedOn = today;
         await dbContext.SaveChangesAsync();
         return true;
     }

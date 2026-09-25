@@ -121,7 +121,7 @@ public static class RoundScoringHelper
     /// Builds the shot rows for one hole, numbering them 1..n by list position. The client's
     /// <see cref="ShotData.ShotNumber"/> is deliberately ignored — the server owns the ordering.
     /// </summary>
-    public static List<Shot> BuildShots(long scoreId, IReadOnlyList<ShotData> shots, string userId, DateOnly today)
+    public static List<Shot> BuildShots(long scoreId, IReadOnlyList<ShotData> shots, string userId)
     {
         var built = new List<Shot>(shots.Count);
         var shotNumber = 1;
@@ -140,9 +140,7 @@ public static class RoundScoringHelper
                 EndLie = shot.EndLie.HasValue ? (int)shot.EndLie.Value : null,
                 PenaltyStrokes = shot.PenaltyStrokes,
                 CreatedBy = userId,
-                CreatedOn = today,
                 UpdatedBy = userId,
-                UpdatedOn = today,
                 IsDeleted = false
             });
         }

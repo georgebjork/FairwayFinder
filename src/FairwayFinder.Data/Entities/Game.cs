@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
 
+using FairwayFinder.Shared;
+
 namespace FairwayFinder.Data.Entities;
 
 /// <summary>
@@ -7,7 +9,7 @@ namespace FairwayFinder.Data.Entities;
 /// where each participant's strokes come from, and which scoring rules apply — it never owns
 /// strokes itself.
 /// </summary>
-public class Game
+public class Game : IAuditable
 {
     public long GameId { get; set; }
 
@@ -55,11 +57,11 @@ public class Game
 
     public string CreatedBy { get; set; } = null!;
 
-    public DateOnly CreatedOn { get; set; }
+    public DateTime CreatedOn { get; set; }
 
     public string UpdatedBy { get; set; } = null!;
 
-    public DateOnly UpdatedOn { get; set; }
+    public DateTime UpdatedOn { get; set; }
 
     public bool IsDeleted { get; set; }
 

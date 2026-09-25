@@ -163,7 +163,6 @@ public static class AuthEndpoints
                     detail: validation.Reason ?? "This invitation is not valid.",
                     statusCode: StatusCodes.Status400BadRequest);
 
-            var now = DateTime.UtcNow;
             var user = new ApplicationUser
             {
                 UserName = validation.Email,
@@ -172,8 +171,6 @@ public static class AuthEndpoints
                 FirstName = request.FirstName.Trim(),
                 LastName = request.LastName.Trim(),
                 PreferredTees = (PreferredTees)request.PreferredTees,
-                CreatedOn = now,
-                UpdatedOn = now
             };
 
             var result = await userManager.CreateAsync(user, request.Password);

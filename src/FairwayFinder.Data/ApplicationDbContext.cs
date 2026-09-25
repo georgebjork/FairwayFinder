@@ -1,4 +1,5 @@
 ﻿using FairwayFinder.Data.Entities;
+using FairwayFinder.Data.Interceptors;
 using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -31,6 +32,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public virtual DbSet<Game> Games { get; set; }
     public virtual DbSet<GameParticipant> GameParticipants { get; set; }
     public virtual DbSet<GameHoleScore> GameHoleScores { get; set; }
+
+    // Audit timestamps are stamped here rather than in DI so the interceptor is present for every
+    // context, including the hand-built in-memory options used by the tests.
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        => optionsBuilder.AddInterceptors(AuditStampInterceptor.Instance);
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

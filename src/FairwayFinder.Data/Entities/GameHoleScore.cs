@@ -1,3 +1,5 @@
+using FairwayFinder.Shared;
+
 namespace FairwayFinder.Data.Entities;
 
 /// <summary>
@@ -14,7 +16,7 @@ namespace FairwayFinder.Data.Entities;
 /// hole identity from the old. The cost is no foreign key on the hole; membership is enforced on
 /// write instead (<c>HoleNotInGame</c>) and by validating teebox coverage when a player joins.
 /// </summary>
-public class GameHoleScore
+public class GameHoleScore : IAuditable
 {
     public long GameHoleScoreId { get; set; }
 
@@ -26,11 +28,11 @@ public class GameHoleScore
 
     public string CreatedBy { get; set; } = null!;
 
-    public DateOnly CreatedOn { get; set; }
+    public DateTime CreatedOn { get; set; }
 
     public string UpdatedBy { get; set; } = null!;
 
-    public DateOnly UpdatedOn { get; set; }
+    public DateTime UpdatedOn { get; set; }
 
     public bool IsDeleted { get; set; }
 

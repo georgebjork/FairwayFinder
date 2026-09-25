@@ -63,7 +63,7 @@ public class GameServiceTests
         var second = NewTeebox(course.CourseId, "White", 18);
         var nineHole = NewTeebox(course.CourseId, "Blue Nine", 9, isNineHole: true);
         var archived = NewTeebox(course.CourseId, "Old Blue", 18);
-        archived.ArchivedOn = new DateOnly(2026, 1, 1);
+        archived.ArchivedOn = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         archived.ArchivedBy = HostId;
         var otherTeebox = NewTeebox(otherCourse.CourseId, "Green", 18);
 

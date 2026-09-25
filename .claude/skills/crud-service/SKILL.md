@@ -15,21 +15,26 @@ Generate **all 4 files** for a new domain CRUD feature following the exact patte
 Follow the exact entity pattern:
 
 ```csharp
+using FairwayFinder.Shared;   // IAuditable
+
 namespace FairwayFinder.Data.Entities;
 
-public partial class {EntityName}
+public partial class {EntityName} : IAuditable
 {
     public long {EntityName}Id { get; set; }
 
     // Domain properties...
 
     public string CreatedBy { get; set; } = null!;
-    public DateOnly CreatedOn { get; set; }
+    public DateTime CreatedOn { get; set; }
     public string UpdatedBy { get; set; } = null!;
-    public DateOnly UpdatedOn { get; set; }
+    public DateTime UpdatedOn { get; set; }
     public bool IsDeleted { get; set; }
 }
 ```
+
+`IAuditable` is what makes `AuditStampInterceptor` fill in the two timestamps — an entity that
+carries the pair without implementing it silently keeps `default(DateTime)`.
 
 ### 2. DTOs — `src/FairwayFinder.Features/Data/{EntityName}Dtos.cs`
 
@@ -83,10 +88,20 @@ Follow these exact patterns:
 - Inject `IDbContextFactory<ApplicationDbContext>` (NOT DbContext directly)
 - Every method: `await using var dbContext = await _dbContextFactory.CreateDbContextAsync();`
 - All queries filter `!c.IsDeleted`
-- Create: set `CreatedBy`, `CreatedOn`, `UpdatedBy`, `UpdatedOn`, `IsDeleted = false`, return new ID
-- Update: check null ID, find entity, update fields + `UpdatedBy`/`UpdatedOn`, return bool
+- Create: set `CreatedBy`, `UpdatedBy`, `IsDeleted = false`, return new ID
+- Update: check null ID, find entity, update fields + `UpdatedBy`, return bool
 - Delete: soft-delete (`IsDeleted = true`), cascade to children, return bool
-- Audit timestamps use `DateOnly.FromDateTime(DateTime.UtcNow)`
+- **Never assign `CreatedOn`/`UpdatedOn`.** Implement `IAuditable` and `AuditStampInterceptor`
+  stamps both with `DateTime.UtcNow` on save. Only `CreatedBy`/`UpdatedBy` are set by hand, because
+  admin pages act on another user's data and must record the acting admin, and background jobs have
+  no user at all.
+- Any other `DateTime` written to Postgres must be `Kind == Utc` — Npgsql rejects both `Unspecified`
+  and `Local` for a `timestamptz` column. Use `DateTime.UtcNow`, or
+  `DateTime.SpecifyKind(x, DateTimeKind.Utc)` when bridging from a `DateOnly`.
+- Use `DateOnly` only for a genuine calendar date (e.g. `DatePlayed`), never for a record of when
+  something happened.
+- `ExecuteUpdate`/`ExecuteDelete` bypass the change tracker and so bypass the interceptor — set
+  `UpdatedOn` by hand there.
 
 ```csharp
 using FairwayFinder.Data;
@@ -132,7 +147,8 @@ When updating a parent entity that has child collections (e.g. a Round has Score
 
 1. **Load existing children** from the database for the parent being updated
 2. **Match incoming children to existing ones** by primary key (ID) or by a stable identifier (e.g. position index within a hole)
-3. **Update matched children** — modify their properties in place, set `UpdatedBy`/`UpdatedOn`
+3. **Update matched children** — modify their properties in place and set `UpdatedBy` (the
+   interceptor stamps `UpdatedOn`)
 4. **Insert new children** — if the incoming collection has more items than existing, add the new ones
 5. **Soft-delete orphans only** — if existing children are no longer present in the incoming collection (the collection shrank, or a child was explicitly removed), soft-delete those extras
 
@@ -150,7 +166,6 @@ for (int i = 0; i < incomingChildren.Count; i++)
         // Update existing
         existingChildren[i].SomeField = incomingChildren[i].SomeField;
         existingChildren[i].UpdatedBy = userId;
-        existingChildren[i].UpdatedOn = today;
     }
     else
     {
@@ -164,7 +179,6 @@ for (int i = incomingChildren.Count; i < existingChildren.Count; i++)
 {
     existingChildren[i].IsDeleted = true;
     existingChildren[i].UpdatedBy = userId;
-    existingChildren[i].UpdatedOn = today;
 }
 ```
 
