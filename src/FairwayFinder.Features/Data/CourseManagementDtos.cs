@@ -49,7 +49,7 @@ public class TeeboxSummary
     public long TeeboxGroupId { get; set; }
 
     /// <summary>Non-null when this teebox has been superseded by a newer version (read-only history).</summary>
-    public DateOnly? ArchivedOn { get; set; }
+    public DateTime? ArchivedOn { get; set; }
 }
 
 /// <summary>

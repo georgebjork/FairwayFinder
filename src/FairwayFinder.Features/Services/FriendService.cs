@@ -1,6 +1,7 @@
 using FairwayFinder.Data;
 using FairwayFinder.Data.Entities;
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Helpers;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -107,7 +108,7 @@ public class FriendService : IFriendService
             {
                 UserId = u.Id,
                 PublicIdentifier = u.PublicIdentifier,
-                DisplayName = BuildDisplayName(u.FirstName, u.LastName, u.UserName),
+                DisplayName = DisplayNameHelper.Build(u.FirstName, u.LastName, u.UserName),
                 Email = u.Email ?? string.Empty,
                 FriendshipState = state,
                 FriendshipId = friendshipId
@@ -149,10 +150,10 @@ public class FriendService : IFriendService
             FriendshipId = r.FriendshipId,
             UserId = r.OtherUserId,
             PublicIdentifier = r.PublicIdentifier,
-            DisplayName = BuildDisplayName(r.FirstName, r.LastName, r.UserName),
+            DisplayName = DisplayNameHelper.Build(r.FirstName, r.LastName, r.UserName),
             Email = r.Email ?? string.Empty,
             IsPublic = r.IsPublic,
-            FriendsSince = r.FriendsSince
+            FriendsSince = DateOnly.FromDateTime(r.FriendsSince)
         }).ToList();
     }
 
@@ -203,7 +204,6 @@ public class FriendService : IFriendService
                                           || (f.RequesterUserId == addresseeUserId && f.AddresseeUserId == requesterUserId)
                                       ));
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var nowUtc = DateTime.UtcNow;
 
         if (existing is not null)
@@ -220,7 +220,6 @@ public class FriendService : IFriendService
                         existing.Status = FriendshipStatus.Accepted;
                         existing.RespondedOn = nowUtc;
                         existing.UpdatedBy = requesterUserId;
-                        existing.UpdatedOn = today;
                         await dbContext.SaveChangesAsync();
                         await NotifyFriendRequestAcceptedAsync(dbContext, requesterUserId, addresseeUserId);
                         return existing.FriendshipId;
@@ -235,7 +234,6 @@ public class FriendService : IFriendService
                     existing.Status = FriendshipStatus.Pending;
                     existing.RespondedOn = null;
                     existing.UpdatedBy = requesterUserId;
-                    existing.UpdatedOn = today;
                     await dbContext.SaveChangesAsync();
                     await NotifyFriendRequestSentAsync(dbContext, requesterUserId, addresseeUserId);
                     return existing.FriendshipId;
@@ -249,9 +247,7 @@ public class FriendService : IFriendService
             Status = FriendshipStatus.Pending,
             RespondedOn = null,
             CreatedBy = requesterUserId,
-            CreatedOn = today,
             UpdatedBy = requesterUserId,
-            UpdatedOn = today,
             IsDeleted = false
         };
 
@@ -278,7 +274,6 @@ public class FriendService : IFriendService
         friendship.Status = FriendshipStatus.Accepted;
         friendship.RespondedOn = DateTime.UtcNow;
         friendship.UpdatedBy = userId;
-        friendship.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
         await dbContext.SaveChangesAsync();
         await NotifyFriendRequestAcceptedAsync(dbContext, userId, friendship.RequesterUserId);
         return true;
@@ -301,7 +296,6 @@ public class FriendService : IFriendService
         friendship.Status = FriendshipStatus.Rejected;
         friendship.RespondedOn = DateTime.UtcNow;
         friendship.UpdatedBy = userId;
-        friendship.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
         await dbContext.SaveChangesAsync();
         return true;
     }
@@ -323,7 +317,6 @@ public class FriendService : IFriendService
         friendship.Status = FriendshipStatus.Cancelled;
         friendship.RespondedOn = DateTime.UtcNow;
         friendship.UpdatedBy = userId;
-        friendship.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
         await dbContext.SaveChangesAsync();
         return true;
     }
@@ -344,7 +337,6 @@ public class FriendService : IFriendService
 
         friendship.IsDeleted = true;
         friendship.UpdatedBy = userId;
-        friendship.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
         await dbContext.SaveChangesAsync();
         return true;
     }
@@ -434,10 +426,10 @@ public class FriendService : IFriendService
             FriendshipId = r.FriendshipId,
             OtherUserId = r.OtherUserId,
             OtherPublicIdentifier = r.PublicIdentifier,
-            OtherDisplayName = BuildDisplayName(r.FirstName, r.LastName, r.UserName),
+            OtherDisplayName = DisplayNameHelper.Build(r.FirstName, r.LastName, r.UserName),
             OtherEmail = r.Email ?? string.Empty,
             Direction = direction,
-            RequestedOn = r.CreatedOn
+            RequestedOn = DateOnly.FromDateTime(r.CreatedOn)
         }).ToList();
     }
 
@@ -476,16 +468,7 @@ public class FriendService : IFriendService
     private static async Task<string> GetDisplayNameAsync(ApplicationDbContext dbContext, string userId)
     {
         var user = await dbContext.Users.FindAsync(userId);
-        var name = user is null ? string.Empty : BuildDisplayName(user.FirstName, user.LastName, user.UserName);
+        var name = user is null ? string.Empty : DisplayNameHelper.Build(user.FirstName, user.LastName, user.UserName);
         return string.IsNullOrWhiteSpace(name) ? "Someone" : name;
-    }
-
-    private static string BuildDisplayName(string? firstName, string? lastName, string? userName)
-    {
-        if (!string.IsNullOrWhiteSpace(firstName) || !string.IsNullOrWhiteSpace(lastName))
-        {
-            return $"{firstName} {lastName}".Trim();
-        }
-        return userName ?? string.Empty;
     }
 }

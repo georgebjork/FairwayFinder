@@ -157,16 +157,13 @@ public class CourseService : ICourseService
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
-        var now = DateOnly.FromDateTime(DateTime.UtcNow);
         var course = new Course
         {
             CourseName = request.CourseName,
             Address = request.Address,
             PhoneNumber = request.PhoneNumber,
             CreatedBy = userId,
-            CreatedOn = now,
             UpdatedBy = userId,
-            UpdatedOn = now,
             IsDeleted = false
         };
 
@@ -182,7 +179,6 @@ public class CourseService : ICourseService
 
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
-
         var course = await dbContext.Courses
             .Where(c => c.CourseId == request.CourseId && !c.IsDeleted)
             .FirstOrDefaultAsync();
@@ -193,7 +189,6 @@ public class CourseService : ICourseService
         course.Address = request.Address;
         course.PhoneNumber = request.PhoneNumber;
         course.UpdatedBy = userId;
-        course.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await dbContext.SaveChangesAsync();
         return true;
@@ -202,9 +197,6 @@ public class CourseService : ICourseService
     public async Task<bool> DeleteCourseAsync(long courseId, string userId)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-
-
-        var now = DateOnly.FromDateTime(DateTime.UtcNow);
 
         var course = await dbContext.Courses
             .Where(c => c.CourseId == courseId && !c.IsDeleted)
@@ -215,7 +207,6 @@ public class CourseService : ICourseService
         // Soft-delete the course
         course.IsDeleted = true;
         course.UpdatedBy = userId;
-        course.UpdatedOn = now;
 
         // Soft-delete all teeboxes for this course
         var teeboxes = await dbContext.Teeboxes
@@ -226,7 +217,6 @@ public class CourseService : ICourseService
         {
             teebox.IsDeleted = true;
             teebox.UpdatedBy = userId;
-            teebox.UpdatedOn = now;
         }
 
         // Soft-delete all holes for this course
@@ -238,7 +228,6 @@ public class CourseService : ICourseService
         {
             hole.IsDeleted = true;
             hole.UpdatedBy = userId;
-            hole.UpdatedOn = now;
         }
 
         await dbContext.SaveChangesAsync();
@@ -319,8 +308,6 @@ public class CourseService : ICourseService
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
-        var now = DateOnly.FromDateTime(DateTime.UtcNow);
-
         // Compute aggregate values from hole data
         var par = request.Holes.Sum(h => h.Par);
         var yardageOut = request.Holes.Where(h => h.HoleNumber <= 9).Sum(h => h.Yardage);
@@ -340,9 +327,7 @@ public class CourseService : ICourseService
             IsNineHole = request.IsNineHole,
             IsWomens = request.IsWomens,
             CreatedBy = userId,
-            CreatedOn = now,
             UpdatedBy = userId,
-            UpdatedOn = now,
             IsDeleted = false
         };
 
@@ -362,9 +347,7 @@ public class CourseService : ICourseService
             Yardage = h.Yardage,
             Handicap = h.Handicap,
             CreatedBy = userId,
-            CreatedOn = now,
             UpdatedBy = userId,
-            UpdatedOn = now,
             IsDeleted = false
         }).ToList();
 
@@ -379,9 +362,6 @@ public class CourseService : ICourseService
         if (request.TeeboxId is null) return false;
 
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-
-
-        var now = DateOnly.FromDateTime(DateTime.UtcNow);
 
         var teebox = await dbContext.Teeboxes
             .Where(t => t.TeeboxId == request.TeeboxId && !t.IsDeleted)
@@ -406,7 +386,6 @@ public class CourseService : ICourseService
         teebox.IsNineHole = request.IsNineHole;
         teebox.IsWomens = request.IsWomens;
         teebox.UpdatedBy = userId;
-        teebox.UpdatedOn = now;
 
         var existingHoles = await dbContext.Holes
             .Where(h => h.TeeboxId == request.TeeboxId && !h.IsDeleted)
@@ -423,7 +402,6 @@ public class CourseService : ICourseService
                 existing.Yardage = requestHole.Yardage;
                 existing.Handicap = requestHole.Handicap;
                 existing.UpdatedBy = userId;
-                existing.UpdatedOn = now;
             }
             else
             {
@@ -436,9 +414,7 @@ public class CourseService : ICourseService
                     Yardage = requestHole.Yardage,
                     Handicap = requestHole.Handicap,
                     CreatedBy = userId,
-                    CreatedOn = now,
                     UpdatedBy = userId,
-                    UpdatedOn = now,
                     IsDeleted = false
                 });
             }
@@ -448,7 +424,6 @@ public class CourseService : ICourseService
         {
             existing.IsDeleted = true;
             existing.UpdatedBy = userId;
-            existing.UpdatedOn = now;
         }
 
         // Cascade par + handicap to the other active same-gender, same-hole-count tees (in place).
@@ -456,7 +431,7 @@ public class CourseService : ICourseService
         {
             var siblings = await GetActiveSiblingTeesAsync(
                 dbContext, request.CourseId, teebox.TeeboxId, request.IsWomens, request.IsNineHole);
-            ApplyCascadeInPlace(siblings, BuildParHandicapMap(request.Holes), userId, now);
+            ApplyCascadeInPlace(siblings, BuildParHandicapMap(request.Holes), userId);
         }
 
         await dbContext.SaveChangesAsync();
@@ -469,8 +444,6 @@ public class CourseService : ICourseService
         if (request.TeeboxId is null) return 0;
 
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-
-        var now = DateOnly.FromDateTime(DateTime.UtcNow);
 
         // Source must be an active (non-archived, non-deleted) tee.
         var source = await dbContext.Teeboxes
@@ -508,9 +481,7 @@ public class CourseService : ICourseService
             ArchivedOn = null,
             ArchivedBy = null,
             CreatedBy = userId,
-            CreatedOn = now,
             UpdatedBy = userId,
-            UpdatedOn = now,
             IsDeleted = false
         };
 
@@ -526,9 +497,7 @@ public class CourseService : ICourseService
             Yardage = h.Yardage,
             Handicap = h.Handicap,
             CreatedBy = userId,
-            CreatedOn = now,
             UpdatedBy = userId,
-            UpdatedOn = now,
             IsDeleted = false
         }).ToList();
 
@@ -536,10 +505,9 @@ public class CourseService : ICourseService
 
         // Archive the source. Leave its holes and IsDeleted untouched so historical rounds
         // still resolve their original rating/slope/handicaps.
-        source.ArchivedOn = now;
+        source.ArchivedOn = DateTime.UtcNow;
         source.ArchivedBy = userId;
         source.UpdatedBy = userId;
-        source.UpdatedOn = now;
 
         await dbContext.SaveChangesAsync();
 
@@ -550,7 +518,7 @@ public class CourseService : ICourseService
             var map = BuildParHandicapMap(request.Holes);
             foreach (var (siblingTee, siblingHoles) in siblings)
             {
-                await CreateSiblingVersionAsync(dbContext, siblingTee, siblingHoles, map, userId, now);
+                await CreateSiblingVersionAsync(dbContext, siblingTee, siblingHoles, map, userId);
             }
             await dbContext.SaveChangesAsync();
         }
@@ -593,7 +561,7 @@ public class CourseService : ICourseService
     /// <summary>Applies the par + handicap map to each sibling's holes in place and recomputes its par total.</summary>
     private static void ApplyCascadeInPlace(
         List<(Teebox Tee, List<Hole> Holes)> siblings,
-        Dictionary<int, (int Par, int Handicap)> map, string userId, DateOnly now)
+        Dictionary<int, (int Par, int Handicap)> map, string userId)
     {
         foreach (var (tee, holes) in siblings)
         {
@@ -604,12 +572,10 @@ public class CourseService : ICourseService
                     h.Par = v.Par;
                     h.Handicap = v.Handicap;
                     h.UpdatedBy = userId;
-                    h.UpdatedOn = now;
                 }
             }
             tee.Par = holes.Sum(h => h.Par);
             tee.UpdatedBy = userId;
-            tee.UpdatedOn = now;
         }
     }
 
@@ -620,7 +586,7 @@ public class CourseService : ICourseService
     /// </summary>
     private async Task CreateSiblingVersionAsync(
         ApplicationDbContext dbContext, Teebox tee, List<Hole> holes,
-        Dictionary<int, (int Par, int Handicap)> map, string userId, DateOnly now)
+        Dictionary<int, (int Par, int Handicap)> map, string userId)
     {
         int ParOf(Hole h) => map.TryGetValue(h.HoleNumber, out var v) ? v.Par : h.Par;
         int HandicapOf(Hole h) => map.TryGetValue(h.HoleNumber, out var v) ? v.Handicap : h.Handicap;
@@ -641,9 +607,7 @@ public class CourseService : ICourseService
             ArchivedOn = null,
             ArchivedBy = null,
             CreatedBy = userId,
-            CreatedOn = now,
             UpdatedBy = userId,
-            UpdatedOn = now,
             IsDeleted = false
         };
 
@@ -659,24 +623,18 @@ public class CourseService : ICourseService
             Yardage = h.Yardage,
             Handicap = HandicapOf(h),
             CreatedBy = userId,
-            CreatedOn = now,
             UpdatedBy = userId,
-            UpdatedOn = now,
             IsDeleted = false
         }));
 
-        tee.ArchivedOn = now;
+        tee.ArchivedOn = DateTime.UtcNow;
         tee.ArchivedBy = userId;
         tee.UpdatedBy = userId;
-        tee.UpdatedOn = now;
     }
 
     public async Task<bool> DeleteTeeboxAsync(long teeboxId, string userId)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
-
-
-        var now = DateOnly.FromDateTime(DateTime.UtcNow);
 
         var teebox = await dbContext.Teeboxes
             .Where(t => t.TeeboxId == teeboxId && !t.IsDeleted)
@@ -687,7 +645,6 @@ public class CourseService : ICourseService
         // Soft-delete the teebox
         teebox.IsDeleted = true;
         teebox.UpdatedBy = userId;
-        teebox.UpdatedOn = now;
 
         // Soft-delete all holes for this teebox
         var holes = await dbContext.Holes
@@ -698,7 +655,6 @@ public class CourseService : ICourseService
         {
             hole.IsDeleted = true;
             hole.UpdatedBy = userId;
-            hole.UpdatedOn = now;
         }
 
         await dbContext.SaveChangesAsync();

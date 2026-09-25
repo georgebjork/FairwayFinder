@@ -1,9 +1,11 @@
 using System.Diagnostics;
+using System.Text.Json;
 using FairwayFinder.Data;
 using FairwayFinder.Data.Entities;
 using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Diagnostics;
 using FairwayFinder.Features.Enums;
+using FairwayFinder.Features.Games;
 using FairwayFinder.Features.Helpers;
 using FairwayFinder.Features.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -289,6 +291,8 @@ public class RoundService : IRoundService
                 roundStat,
                 roundHoles
             );
+
+            response.Games = await LoadGamesForRoundAsync(dbContext, roundId);
         }
 
         // For shot-tracked rounds, attach shot data and compute per-hole + summary strokes gained.
@@ -301,6 +305,81 @@ public class RoundService : IRoundService
         return response;
     }
     
+    /// <summary>
+    /// The games this round was played for — the reverse of <c>game_participant.round_id</c>,
+    /// which <c>ix_game_participant_round</c> serves.
+    ///
+    /// Only the single-round read calls this. A rounds list would pay for it per row, and the
+    /// result line comes from each game's stored snapshot rather than the scoring engine: a live
+    /// game has no snapshot, and running the engine per game on a round read is not a trade worth
+    /// making for a line of text.
+    /// </summary>
+    private static async Task<List<RoundGameSummary>> LoadGamesForRoundAsync(
+        ApplicationDbContext dbContext, long roundId)
+    {
+        var games = await dbContext.GameParticipants.AsNoTracking()
+            .Where(p => p.RoundId == roundId && !p.IsDeleted)
+            .Join(dbContext.Games.AsNoTracking().Where(g => !g.IsDeleted),
+                p => p.GameId, g => g.GameId, (p, g) => g)
+            .Select(g => new
+            {
+                g.GameId,
+                g.GameType,
+                g.State,
+                g.DatePlayed,
+                g.FinalScoreboard,
+                CourseName = g.Course.CourseName
+            })
+            .ToListAsync();
+
+        if (games.Count == 0) return [];
+
+        var gameIds = games.Select(g => g.GameId).ToList();
+
+        var counts = await dbContext.GameParticipants.AsNoTracking()
+            .Where(p => gameIds.Contains(p.GameId) && !p.IsDeleted)
+            .GroupBy(p => p.GameId)
+            .Select(g => new { GameId = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        var countMap = counts.ToDictionary(c => c.GameId, c => c.Count);
+
+        return
+        [
+            .. games
+                .OrderByDescending(g => g.DatePlayed).ThenByDescending(g => g.GameId)
+                .Select(g => new RoundGameSummary
+                {
+                    GameId = g.GameId,
+                    GameType = g.GameType,
+                    State = g.State,
+                    DatePlayed = g.DatePlayed,
+                    CourseName = g.CourseName,
+                    ParticipantCount = countMap.TryGetValue(g.GameId, out var c) ? c : 0,
+                    ResultSummary = ReadSnapshotSummary(g.FinalScoreboard)
+                })
+        ];
+    }
+
+    /// <summary>
+    /// Pulls just the headline out of a stored scoreboard. Deserializes through the base type so
+    /// the polymorphic discriminator is honoured, and swallows schema drift on an old snapshot —
+    /// a round should still render if one of its games cannot be read.
+    /// </summary>
+    private static string? ReadSnapshotSummary(string? finalScoreboard)
+    {
+        if (string.IsNullOrWhiteSpace(finalScoreboard)) return null;
+
+        try
+        {
+            return JsonSerializer.Deserialize<GameScoreboard>(finalScoreboard)?.Summary;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     public async Task<long> CreateRoundAsync(CreateRoundRequest request)
     {
         using var activity = FairwayFinderDiagnostics.RoundsActivity.StartActivity(name: FairwayFinderDiagnostics.ActivityNames.RoundCreate);
@@ -311,7 +390,6 @@ public class RoundService : IRoundService
         {
             await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
             var userId = request.UserId;
 
             // New rounds may only be created on an active teebox version.
@@ -348,9 +426,7 @@ public class RoundService : IRoundService
             // The atomic path receives the whole round in one payload, so it lands complete.
             IsComplete = true,
             CreatedBy = userId,
-            CreatedOn = today,
             UpdatedBy = userId,
-            UpdatedOn = today,
             IsDeleted = false
         };
         
@@ -365,9 +441,7 @@ public class RoundService : IRoundService
             HoleScore = h.Score,
             UserId = userId,
             CreatedBy = userId,
-            CreatedOn = today,
             UpdatedBy = userId,
-            UpdatedOn = today,
             IsDeleted = false
         }).ToList();
         
@@ -384,7 +458,7 @@ public class RoundService : IRoundService
                 if (hole.Shots is not { Count: > 0 }) continue;
 
                 var scoreId = scoreByHoleId[hole.HoleId];
-                dbContext.Shots.AddRange(RoundScoringHelper.BuildShots(scoreId, hole.Shots, userId, today));
+                dbContext.Shots.AddRange(RoundScoringHelper.BuildShots(scoreId, hole.Shots, userId));
 
                 // Auto-derive HoleStat from shots
                 var holeStat = new HoleStat
@@ -393,9 +467,7 @@ public class RoundService : IRoundService
                     RoundId = round.RoundId,
                     HoleId = hole.HoleId,
                     CreatedBy = userId,
-                    CreatedOn = today,
                     UpdatedBy = userId,
-                    UpdatedOn = today,
                     IsDeleted = false
                 };
                 RoundScoringHelper.ApplyDerivedHoleStat(holeStat, hole.Shots, hole.Par, hole);
@@ -423,9 +495,7 @@ public class RoundService : IRoundService
                 TeeShotPenalty = h.TeeShotPenalty,
                 ApproachShotPenalty = h.ApproachShotPenalty,
                 CreatedBy = userId,
-                CreatedOn = today,
                 UpdatedBy = userId,
-                UpdatedOn = today,
                 IsDeleted = false
             }).ToList();
 
@@ -437,9 +507,7 @@ public class RoundService : IRoundService
         {
             RoundId = round.RoundId,
             CreatedBy = userId,
-            CreatedOn = today,
             UpdatedBy = userId,
-            UpdatedOn = today,
             IsDeleted = false
         };
 
@@ -468,7 +536,7 @@ public class RoundService : IRoundService
             activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundHoles, holeCount);
             activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundShotTracking, request.UsingShotTracking);
 
-            await NotifyFriendsOfNewRoundAsync(dbContext, userId, request.CourseId, totalScore);
+            await NotifyFriendsOfNewRoundAsync(dbContext, userId, round.RoundId, request.CourseId, totalScore);
 
             return round.RoundId;
         }
@@ -489,9 +557,9 @@ public class RoundService : IRoundService
         }
     }
 
-    private Task NotifyFriendsOfNewRoundAsync(ApplicationDbContext dbContext, string userId, long courseId, int score)
+    private Task NotifyFriendsOfNewRoundAsync(ApplicationDbContext dbContext, string userId, long roundId, long courseId, int score)
         => RoundNotifications.NotifyFriendsOfNewRoundAsync(
-            dbContext, _friendService, _pushService, _logger, userId, courseId, score);
+            dbContext, _friendService, _pushService, _logger, userId, roundId, courseId, score);
 
     public async Task<bool> UpdateRoundAsync(UpdateRoundRequest request)
     {
@@ -503,7 +571,6 @@ public class RoundService : IRoundService
         {
             await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
             var userId = request.UserId;
 
             var round = await dbContext.Rounds
@@ -555,7 +622,6 @@ public class RoundService : IRoundService
         round.BackNine = shape.BackNine;
 
         round.UpdatedBy = userId;
-        round.UpdatedOn = today;
         
         var existingScores = await dbContext.Scores
             .Where(s => s.RoundId == request.RoundId && !s.IsDeleted)
@@ -580,7 +646,6 @@ public class RoundService : IRoundService
                 existingScore.HoleId = hole.HoleId; // Update HoleId in case teebox changed
                 existingScore.HoleScore = hole.Score;
                 existingScore.UpdatedBy = userId;
-                existingScore.UpdatedOn = today;
                 scoreForHole[hole.HoleId] = existingScore;
             }
             else
@@ -592,9 +657,7 @@ public class RoundService : IRoundService
                     HoleScore = hole.Score,
                     UserId = userId,
                     CreatedBy = userId,
-                    CreatedOn = today,
                     UpdatedBy = userId,
-                    UpdatedOn = today,
                     IsDeleted = false
                 };
                 dbContext.Scores.Add(newScore);
@@ -650,7 +713,6 @@ public class RoundService : IRoundService
                         existing.EndLie = shotData.EndLie.HasValue ? (int)shotData.EndLie.Value : null;
                         existing.PenaltyStrokes = shotData.PenaltyStrokes;
                         existing.UpdatedBy = userId;
-                        existing.UpdatedOn = today;
                     }
                     else
                     {
@@ -667,9 +729,7 @@ public class RoundService : IRoundService
                             EndLie = shotData.EndLie.HasValue ? (int)shotData.EndLie.Value : null,
                             PenaltyStrokes = shotData.PenaltyStrokes,
                             CreatedBy = userId,
-                            CreatedOn = today,
                             UpdatedBy = userId,
-                            UpdatedOn = today,
                             IsDeleted = false
                         });
                     }
@@ -680,7 +740,6 @@ public class RoundService : IRoundService
                 {
                     existingHoleShots[i].IsDeleted = true;
                     existingHoleShots[i].UpdatedBy = userId;
-                    existingHoleShots[i].UpdatedOn = today;
                     matchedShotIds.Add(existingHoleShots[i].ShotId);
                 }
 
@@ -703,7 +762,6 @@ public class RoundService : IRoundService
                     existingStat.TeeShotOutOfPosition = hole.TeeShotOutOfPosition;
                     existingStat.ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition;
                     existingStat.UpdatedBy = userId;
-                    existingStat.UpdatedOn = today;
                 }
                 else
                 {
@@ -724,9 +782,7 @@ public class RoundService : IRoundService
                         TeeShotOutOfPosition = hole.TeeShotOutOfPosition,
                         ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition,
                         CreatedBy = userId,
-                        CreatedOn = today,
                         UpdatedBy = userId,
-                        UpdatedOn = today,
                         IsDeleted = false
                     });
                 }
@@ -737,7 +793,6 @@ public class RoundService : IRoundService
             {
                 shot.IsDeleted = true;
                 shot.UpdatedBy = userId;
-                shot.UpdatedOn = today;
             }
         }
         else if (request.UsingHoleStats)
@@ -760,7 +815,6 @@ public class RoundService : IRoundService
                     existingStat.TeeShotPenalty = hole.TeeShotPenalty;
                     existingStat.ApproachShotPenalty = hole.ApproachShotPenalty;
                     existingStat.UpdatedBy = userId;
-                    existingStat.UpdatedOn = today;
                 }
                 else
                 {
@@ -780,9 +834,7 @@ public class RoundService : IRoundService
                         TeeShotPenalty = hole.TeeShotPenalty,
                         ApproachShotPenalty = hole.ApproachShotPenalty,
                         CreatedBy = userId,
-                        CreatedOn = today,
                         UpdatedBy = userId,
-                        UpdatedOn = today,
                         IsDeleted = false
                     });
                 }
@@ -794,7 +846,6 @@ public class RoundService : IRoundService
             {
                 hs.IsDeleted = true;
                 hs.UpdatedBy = userId;
-                hs.UpdatedOn = today;
             }
         }
         
@@ -805,7 +856,6 @@ public class RoundService : IRoundService
         {
             RoundScoringHelper.ApplyScoringDistribution(existingRoundStat, holeLines);
             existingRoundStat.UpdatedBy = userId;
-            existingRoundStat.UpdatedOn = today;
         }
         else
         {
@@ -813,9 +863,7 @@ public class RoundService : IRoundService
             {
                 RoundId = round.RoundId,
                 CreatedBy = userId,
-                CreatedOn = today,
                 UpdatedBy = userId,
-                UpdatedOn = today,
                 IsDeleted = false
             };
 
@@ -858,8 +906,6 @@ public class RoundService : IRoundService
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
-        var now = DateOnly.FromDateTime(DateTime.UtcNow);
-
         var round = await dbContext.Rounds
             .FirstOrDefaultAsync(r => r.RoundId == roundId && !r.IsDeleted);
 
@@ -868,7 +914,6 @@ public class RoundService : IRoundService
         // Soft-delete the round
         round.IsDeleted = true;
         round.UpdatedBy = userId;
-        round.UpdatedOn = now;
 
         // Soft-delete all scores for this round
         var scores = await dbContext.Scores
@@ -879,7 +924,6 @@ public class RoundService : IRoundService
         {
             score.IsDeleted = true;
             score.UpdatedBy = userId;
-            score.UpdatedOn = now;
         }
 
         // Soft-delete all hole stats for this round
@@ -891,7 +935,6 @@ public class RoundService : IRoundService
         {
             hs.IsDeleted = true;
             hs.UpdatedBy = userId;
-            hs.UpdatedOn = now;
         }
 
         // Soft-delete all shots for this round
@@ -904,7 +947,6 @@ public class RoundService : IRoundService
         {
             shot.IsDeleted = true;
             shot.UpdatedBy = userId;
-            shot.UpdatedOn = now;
         }
 
         // Soft-delete the round stat
@@ -915,7 +957,6 @@ public class RoundService : IRoundService
         {
             roundStat.IsDeleted = true;
             roundStat.UpdatedBy = userId;
-            roundStat.UpdatedOn = now;
         }
 
         await dbContext.SaveChangesAsync();
@@ -955,7 +996,6 @@ public class RoundService : IRoundService
 
         round.ExcludeFromStats = exclude;
         round.UpdatedBy = userId;
-        round.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await dbContext.SaveChangesAsync();
         return true;

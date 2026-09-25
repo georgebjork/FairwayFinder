@@ -140,8 +140,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
-                    b.Property<DateOnly>("CreatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
                     b.Property<bool>("IsDeleted")
@@ -169,8 +169,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("updated_by");
 
-                    b.Property<DateOnly>("UpdatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
 
                     b.HasKey("CourseId")
@@ -198,8 +198,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
-                    b.Property<DateOnly>("CreatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
                     b.Property<bool>("IsDeleted")
@@ -224,8 +224,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("updated_by");
 
-                    b.Property<DateOnly>("UpdatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
 
                     b.HasKey("FriendshipId")
@@ -238,6 +238,268 @@ namespace FairwayFinder.Data.Migrations
                         .HasDatabaseName("ix_friendship_requester_status");
 
                     b.ToTable("friendship", (string)null);
+                });
+
+            modelBuilder.Entity("FairwayFinder.Data.Entities.Game", b =>
+                {
+                    b.Property<long>("GameId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("game_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("GameId"));
+
+                    b.Property<bool>("BackNine")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("back_nine");
+
+                    b.Property<long>("CourseId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("course_id");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_on");
+
+                    b.Property<DateOnly>("DatePlayed")
+                        .HasColumnType("date")
+                        .HasColumnName("date_played");
+
+                    b.Property<string>("FinalScoreboard")
+                        .HasColumnType("text")
+                        .HasColumnName("final_scoreboard");
+
+                    b.Property<bool>("FrontNine")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("front_nine");
+
+                    b.Property<bool>("FullRound")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("full_round");
+
+                    b.Property<int>("GameType")
+                        .HasColumnType("integer")
+                        .HasColumnName("game_type");
+
+                    b.Property<int>("HandicapAllowancePercent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(100)
+                        .HasColumnName("handicap_allowance_percent");
+
+                    b.Property<string>("HostUserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("host_user_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("JoinCode")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("join_code");
+
+                    b.Property<bool>("SkinsCarryover")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("skins_carryover");
+
+                    b.Property<decimal?>("SkinsValue")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("skins_value");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer")
+                        .HasColumnName("state");
+
+                    b.Property<bool>("StrokesOffLow")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("strokes_off_low");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("updated_by");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_on");
+
+                    b.Property<bool>("UseNet")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("use_net");
+
+                    b.HasKey("GameId")
+                        .HasName("game_pkey");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("JoinCode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_game_join_code_live")
+                        .HasFilter("state < 2 AND is_deleted = false");
+
+                    b.HasIndex("HostUserId", "State")
+                        .HasDatabaseName("ix_game_host_state");
+
+                    b.ToTable("game", (string)null);
+                });
+
+            modelBuilder.Entity("FairwayFinder.Data.Entities.GameHoleScore", b =>
+                {
+                    b.Property<long>("GameHoleScoreId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("game_hole_score_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("GameHoleScoreId"));
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_on");
+
+                    b.Property<long>("GameParticipantId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("game_participant_id");
+
+                    b.Property<int>("HoleNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("hole_number");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<short>("Strokes")
+                        .HasColumnType("smallint")
+                        .HasColumnName("strokes");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("updated_by");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_on");
+
+                    b.HasKey("GameHoleScoreId")
+                        .HasName("game_hole_score_pkey");
+
+                    b.HasIndex("GameParticipantId", "HoleNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_game_hole_score_participant_hole")
+                        .HasFilter("is_deleted = false");
+
+                    b.ToTable("game_hole_score", (string)null);
+                });
+
+            modelBuilder.Entity("FairwayFinder.Data.Entities.GameParticipant", b =>
+                {
+                    b.Property<long>("GameParticipantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("game_participant_id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("GameParticipantId"));
+
+                    b.Property<int>("CourseHandicap")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("course_handicap");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_on");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("display_name");
+
+                    b.Property<long>("GameId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("game_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<long?>("RoundId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("round_id");
+
+                    b.Property<int?>("Team")
+                        .HasColumnType("integer")
+                        .HasColumnName("team");
+
+                    b.Property<long>("TeeboxId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("teebox_id");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("updated_by");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_on");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("GameParticipantId")
+                        .HasName("game_participant_pkey");
+
+                    b.HasIndex("RoundId")
+                        .HasDatabaseName("ix_game_participant_round")
+                        .HasFilter("round_id IS NOT NULL AND is_deleted = false");
+
+                    b.HasIndex("TeeboxId");
+
+                    b.HasIndex("GameId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_game_participant_game_user")
+                        .HasFilter("user_id IS NOT NULL AND is_deleted = false");
+
+                    b.HasIndex("UserId", "GameId")
+                        .HasDatabaseName("ix_game_participant_user");
+
+                    b.ToTable("game_participant", (string)null);
                 });
 
             modelBuilder.Entity("FairwayFinder.Data.Entities.GolfCourseApiCourseMap", b =>
@@ -287,8 +549,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
-                    b.Property<DateOnly>("CreatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
                     b.Property<int>("Handicap")
@@ -316,8 +578,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("updated_by");
 
-                    b.Property<DateOnly>("UpdatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
 
                     b.Property<int>("Yardage")
@@ -360,8 +622,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
-                    b.Property<DateOnly>("CreatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
                     b.Property<bool?>("HitFairway")
@@ -413,8 +675,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("updated_by");
 
-                    b.Property<DateOnly>("UpdatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
 
                     b.HasKey("HoleStatsId")
@@ -535,8 +797,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
-                    b.Property<DateOnly>("CreatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
                     b.Property<DateOnly>("DatePlayed")
@@ -588,8 +850,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("updated_by");
 
-                    b.Property<DateOnly>("UpdatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
 
                     b.Property<string>("UserId")
@@ -646,8 +908,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
-                    b.Property<DateOnly>("CreatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
                     b.Property<int>("DoubleBogies")
@@ -711,8 +973,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("updated_by");
 
-                    b.Property<DateOnly>("UpdatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
 
                     b.HasKey("RoundStatsId")
@@ -737,8 +999,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
-                    b.Property<DateOnly>("CreatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
                     b.Property<long>("HoleId")
@@ -762,8 +1024,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("updated_by");
 
-                    b.Property<DateOnly>("UpdatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
 
                     b.Property<string>("UserId")
@@ -798,8 +1060,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
-                    b.Property<DateOnly>("CreatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
                     b.Property<int?>("EndDistance")
@@ -850,8 +1112,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("updated_by");
 
-                    b.Property<DateOnly>("UpdatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
 
                     b.HasKey("ShotId")
@@ -876,8 +1138,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("archived_by");
 
-                    b.Property<DateOnly?>("ArchivedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime?>("ArchivedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("archived_on");
 
                     b.Property<long>("CourseId")
@@ -889,8 +1151,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
-                    b.Property<DateOnly>("CreatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
                     b.Property<bool>("IsDeleted")
@@ -932,8 +1194,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("updated_by");
 
-                    b.Property<DateOnly>("UpdatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
 
                     b.Property<int>("YardageIn")
@@ -977,8 +1239,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
-                    b.Property<DateOnly>("CreatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
                     b.Property<bool>("IsDeleted")
@@ -994,8 +1256,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("updated_by");
 
-                    b.Property<DateOnly>("UpdatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
 
                     b.HasKey("TgtrCourseMapId")
@@ -1020,8 +1282,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
-                    b.Property<DateOnly>("CreatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
                     b.Property<bool>("IsDeleted")
@@ -1037,8 +1299,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("updated_by");
 
-                    b.Property<DateOnly>("UpdatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
 
                     b.Property<string>("UserId")
@@ -1066,8 +1328,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
-                    b.Property<DateOnly>("CreatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
                     b.Property<bool>("IsDeleted")
@@ -1087,8 +1349,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("updated_by");
 
-                    b.Property<DateOnly>("UpdatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
 
                     b.HasKey("TgtrRoundMapId")
@@ -1113,8 +1375,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
-                    b.Property<DateOnly>("CreatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
                     b.Property<bool>("IsDeleted")
@@ -1138,8 +1400,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("updated_by");
 
-                    b.Property<DateOnly>("UpdatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
 
                     b.HasKey("TgtrTeeboxMapId")
@@ -1229,8 +1491,8 @@ namespace FairwayFinder.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<DateOnly?>("ClaimedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime?>("ClaimedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("claimed_on");
 
                     b.Property<string>("CreatedBy")
@@ -1238,12 +1500,12 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
-                    b.Property<DateOnly>("CreatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
-                    b.Property<DateOnly>("ExpiresOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("ExpiresOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_on");
 
                     b.Property<string>("InvitationIdentifier")
@@ -1270,8 +1532,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("updated_by");
 
-                    b.Property<DateOnly>("UpdatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
 
                     b.HasKey("Id")
@@ -1294,8 +1556,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("created_by");
 
-                    b.Property<DateOnly>("CreatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on");
 
                     b.Property<bool>("IsDeleted")
@@ -1317,8 +1579,8 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("text")
                         .HasColumnName("updated_by");
 
-                    b.Property<DateOnly>("UpdatedOn")
-                        .HasColumnType("date")
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_on");
 
                     b.Property<string>("UserId")
@@ -1566,6 +1828,47 @@ namespace FairwayFinder.Data.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("FairwayFinder.Data.Entities.Game", b =>
+                {
+                    b.HasOne("FairwayFinder.Data.Entities.Course", "Course")
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+                });
+
+            modelBuilder.Entity("FairwayFinder.Data.Entities.GameHoleScore", b =>
+                {
+                    b.HasOne("FairwayFinder.Data.Entities.GameParticipant", "GameParticipant")
+                        .WithMany()
+                        .HasForeignKey("GameParticipantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("GameParticipant");
+                });
+
+            modelBuilder.Entity("FairwayFinder.Data.Entities.GameParticipant", b =>
+                {
+                    b.HasOne("FairwayFinder.Data.Entities.Game", "Game")
+                        .WithMany()
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FairwayFinder.Data.Entities.Teebox", "Teebox")
+                        .WithMany()
+                        .HasForeignKey("TeeboxId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Game");
+
+                    b.Navigation("Teebox");
                 });
 
             modelBuilder.Entity("FairwayFinder.Data.Entities.GolfCourseApiCourseMap", b =>

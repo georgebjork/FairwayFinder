@@ -1,3 +1,5 @@
+using FairwayFinder.Features.Helpers;
+
 namespace FairwayFinder.Features.Services.Admin;
 
 /// <summary>
@@ -50,7 +52,7 @@ public class RecentUserDto
     public string Id { get; set; } = string.Empty;
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
-    public string FullName => $"{FirstName} {LastName}".Trim();
+    public string FullName => DisplayNameHelper.Build(FirstName, LastName, userName: null);
     public string Email { get; set; } = string.Empty;
     public bool IsEmailConfirmed { get; set; }
     public DateTime CreatedOn { get; set; }
@@ -91,8 +93,8 @@ public class RecentInviteDto
 {
     public int Id { get; set; }
     public string Email { get; set; } = string.Empty;
-    public DateOnly CreatedOn { get; set; }
-    public DateOnly ExpiresOn { get; set; }
-    public DateOnly? ClaimedOn { get; set; }
+    public DateTime CreatedOn { get; set; }
+    public DateTime ExpiresOn { get; set; }
+    public DateTime? ClaimedOn { get; set; }
     public string Status { get; set; } = string.Empty; // "Pending" | "Claimed" | "Expired"
 }

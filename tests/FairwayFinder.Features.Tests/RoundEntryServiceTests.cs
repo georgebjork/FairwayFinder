@@ -176,7 +176,7 @@ public class RoundEntryServiceTests
         await using (var db = h.Factory.CreateDbContext())
         {
             var teebox = await db.Teeboxes.SingleAsync(t => t.TeeboxId == h.TeeboxId);
-            teebox.ArchivedOn = DateOnly.FromDateTime(DateTime.UtcNow);
+            teebox.ArchivedOn = DateTime.UtcNow;
             await db.SaveChangesAsync();
         }
 

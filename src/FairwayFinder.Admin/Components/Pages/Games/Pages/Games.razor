@@ -1,0 +1,156 @@
+@page "/games"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = Policies.AdminOnly)]
+@using FairwayFinder.Data.Entities
+@using FairwayFinder.Features.Services.Admin
+@using FairwayFinder.Admin.Components.Pages.Games.Components
+@using FairwayFinder.Admin.Components.Shared.Layout.Breadcrumb
+@inject AdminGameService AdminGameService
+@inject BreadcrumbState BreadcrumbState
+@inject NavigationManager NavigationManager
+
+<PageTitle>Game Management</PageTitle>
+
+<RadzenStack Gap="1.5rem">
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="1rem">
+        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">Games</RadzenText>
+
+        @* Both filters are applied in memory over the already-loaded games. *@
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" Wrap="FlexWrap.Wrap">
+            <RadzenIcon Icon="filter_list" Style="color: var(--rz-text-secondary-color);" />
+            <RadzenDropDown TValue="string" Data="_hostOptions" @bind-Value="_selectedHostId"
+                            TextProperty="Label" ValueProperty="Id"
+                            AllowFiltering="true" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                            FilterOperator="StringFilterOperator.Contains"
+                            Style="width: 260px;" Disabled="_loading" />
+            <RadzenDropDown TValue="string" Data="_stateOptions" @bind-Value="_selectedState"
+                            TextProperty="Label" ValueProperty="Id"
+                            Style="width: 150px;" Disabled="_loading" />
+        </RadzenStack>
+    </RadzenStack>
+
+    @if (_loading)
+    {
+        <RadzenStack AlignItems="AlignItems.Center" class="rz-p-8">
+            <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
+        </RadzenStack>
+    }
+    else if (FilteredGames.Count == 0)
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Info" Shade="Shade.Lighter" AllowClose="false">
+            @(_allGames.Count == 0 ? "No games yet." : "No games match these filters.")
+        </RadzenAlert>
+    }
+    else
+    {
+        <RadzenDataGrid TItem="AdminGameListItemDto" Data="FilteredGames"
+                        AllowSorting="true" AllowPaging="true" PageSize="20"
+                        PagerHorizontalAlign="HorizontalAlign.Right" ShowPagingSummary="true"
+                        PagingSummaryFormat="Displaying page {0} of {1} (total {2} games)"
+                        RowClick="OnRowClick" GridLines="DataGridGridLines.Horizontal"
+                        class="rz-selectable">
+            <Columns>
+                <RadzenDataGridColumn TItem="AdminGameListItemDto" Property="DatePlayed" Title="Date" Width="130px" FormatString="{0:MMM d, yyyy}" SortOrder="SortOrder.Descending" />
+                <RadzenDataGridColumn TItem="AdminGameListItemDto" Property="GameType" Title="Game" Width="120px">
+                    <Template Context="game">
+                        <RadzenBadge Text="@FormatGameType(game.GameType)" BadgeStyle="BadgeStyle.Light" Shade="Shade.Lighter" />
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="AdminGameListItemDto" Property="CourseName" Title="Course" />
+                <RadzenDataGridColumn TItem="AdminGameListItemDto" Title="Host" Width="200px">
+                    <Template Context="game">
+                        <RadzenStack Gap="0">
+                            <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@game.HostName</RadzenText>
+                            <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">@game.HostEmail</RadzenText>
+                        </RadzenStack>
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="AdminGameListItemDto" Property="ParticipantCount" Title="Players" Width="90px" TextAlign="TextAlign.Center" />
+                <RadzenDataGridColumn TItem="AdminGameListItemDto" Property="Shape" Title="Holes" Width="90px" TextAlign="TextAlign.Center" />
+                <RadzenDataGridColumn TItem="AdminGameListItemDto" Title="Scoring" Width="90px" TextAlign="TextAlign.Center" Sortable="false">
+                    <Template Context="game">
+                        <RadzenBadge Text="@(game.UseNet ? "Net" : "Gross")" BadgeStyle="BadgeStyle.Light" Shade="Shade.Lighter" />
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="AdminGameListItemDto" Property="State" Title="Status" Width="120px" TextAlign="TextAlign.Center">
+                    <Template Context="game">
+                        <GameStateBadge State="game.State" />
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="AdminGameListItemDto" Property="JoinCode" Title="Code" Width="100px" TextAlign="TextAlign.Center" />
+            </Columns>
+        </RadzenDataGrid>
+    }
+</RadzenStack>
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "userId")] public string? UserIdQuery { get; set; }
+
+    private record Option(string Id, string Label);
+
+    private List<AdminGameListItemDto> _allGames = new();
+    private List<Option> _hostOptions = new();
+    private bool _loading = true;
+    private string _selectedHostId = string.Empty; // "" => All
+    private string _selectedState = string.Empty;  // "" => All
+
+    private readonly List<Option> _stateOptions =
+    [
+        new(string.Empty, "All states"),
+        new(nameof(GameState.Setup), "Setup"),
+        new(nameof(GameState.Active), "Live"),
+        new(nameof(GameState.Completed), "Posted"),
+        new(nameof(GameState.Abandoned), "Abandoned")
+    ];
+
+    private List<AdminGameListItemDto> FilteredGames => _allGames
+        .Where(g => string.IsNullOrEmpty(_selectedHostId) || g.HostUserId == _selectedHostId)
+        .Where(g => string.IsNullOrEmpty(_selectedState) || g.State.ToString() == _selectedState)
+        .ToList();
+
+    protected override void OnInitialized()
+    {
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Overview", "/"),
+            new BreadcrumbItem("Games")
+        );
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(UserIdQuery))
+        {
+            _selectedHostId = UserIdQuery;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+
+        _allGames = await AdminGameService.GetAllGamesAsync();
+
+        // Hosts come from the games themselves — there is no point offering a user who has
+        // never hosted one.
+        _hostOptions = new List<Option> { new(string.Empty, "All hosts") };
+        _hostOptions.AddRange(_allGames
+            .GroupBy(g => g.HostUserId)
+            .Select(g => g.First())
+            .OrderBy(g => g.HostName)
+            .Select(g => new Option(g.HostUserId, g.HostName)));
+
+        _loading = false;
+    }
+
+    private void OnRowClick(DataGridRowMouseEventArgs<AdminGameListItemDto> args)
+        => NavigationManager.NavigateTo($"/games/{args.Data.GameId}");
+
+    private static string FormatGameType(GameType gameType) => gameType switch
+    {
+        GameType.MatchPlay => "Match play",
+        GameType.Skins => "Skins",
+        _ => gameType.ToString()
+    };
+}

@@ -1,9 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
+using FairwayFinder.Shared;
 using Microsoft.AspNetCore.Identity;
 
 namespace FairwayFinder.Identity;
 
-public class ApplicationUser : IdentityUser
+public class ApplicationUser : IdentityUser, IAuditable
 {
     public string? FirstName { get; set; }
     public string? LastName { get; set; }

@@ -49,9 +49,9 @@
                         <RadzenBadge Text="@text" BadgeStyle="@style" Shade="Shade.Lighter" />
                     </Template>
                 </RadzenDataGridColumn>
-                <RadzenDataGridColumn TItem="PendingInviteDto" Property="CreatedOn" Title="Sent" Width="140px" FormatString="{0:MMM d, yyyy}" />
-                <RadzenDataGridColumn TItem="PendingInviteDto" Property="ExpiresOn" Title="Expires" Width="140px" FormatString="{0:MMM d, yyyy}" />
-                <RadzenDataGridColumn TItem="PendingInviteDto" Property="ClaimedOn" Title="Claimed" Width="140px" FormatString="{0:MMM d, yyyy}" />
+                <RadzenDataGridColumn TItem="PendingInviteDto" Property="CreatedOn" Title="Sent" Width="170px" FormatString="{0:MMM d, yyyy h:mm tt}" />
+                <RadzenDataGridColumn TItem="PendingInviteDto" Property="ExpiresOn" Title="Expires" Width="170px" FormatString="{0:MMM d, yyyy h:mm tt}" />
+                <RadzenDataGridColumn TItem="PendingInviteDto" Property="ClaimedOn" Title="Claimed" Width="170px" FormatString="{0:MMM d, yyyy h:mm tt}" />
                 <RadzenDataGridColumn TItem="PendingInviteDto" Title="Actions" Width="120px" Sortable="false" Filterable="false">
                     <Template Context="invite">
                         @if (invite.ClaimedOn is null)

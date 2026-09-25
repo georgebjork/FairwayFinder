@@ -1,5 +1,27 @@
 # Games with Friends — live side-game scoring
 
+> **Status: shipped, with corrections.** Match Play and Skins are implemented end to end —
+> schema, engines, reader, service, API, admin console, telemetry, push. Stroke Play, Nassau, and
+> Stableford are deferred; `GameType` reserves 2, 3, 4 for them.
+>
+> Review before implementation found defects in the design below. The document is kept for its
+> reasoning, but **where it disagrees with the code, the code is right.** The material deviations:
+>
+> | Area | What changed |
+> |---|---|
+> | Match play | The result **freezes at the deciding hole**. As drafted, a match won 4 & 3 re-read as "1 UP" once the group played 16–18 out for a skins game. `DecidedOnHole` is now actually set. |
+> | The walk | §2's `CompletedHoleNumbers` (a set) and §6's "stop at the first incomplete hole" (a prefix) contradicted each other. Replaced by one `SettledHoleNumbers` prefix, which both engines walk. A gap can no longer let skins carryover leap a hole. |
+> | Hole set | Derived from the game's **own** shape flags, fixed at create — not intersected across participants' teeboxes, which let a nine-hole tee joining late shrink an eighteen-hole game. `Game` gained `FullRound`/`FrontNine`/`BackNine`. |
+> | Teeboxes | Linking a round **forces** `participant.TeeboxId = round.TeeboxId`; the round's scores join to holes on that teebox. Archived tees are refused when *chosen*, allowed when *inherited* from a round. Course membership and hole coverage are validated. |
+> | Snapshot | `FinalScoreboard` is serialized as `GameScoreboard` (the base type) or the polymorphic discriminator is omitted and it cannot be read back. A completed game **serves the snapshot** instead of recomputing — otherwise the column is decorative. |
+> | Stroke index | The cited `StatsCalculator` fallback was not a usable precedent (it walks in-memory DTOs and ignores `TeeboxGroupId`). The reader runs a new lineage-scoped query, gated so clean courses pay nothing. |
+> | Handicaps | Allowance rounds **away from zero** (.NET's default is banker's, which is not the golf convention); `StrokesReceived` guards a zero hole count; rank ties break on hole number. A game's course handicap is defined as strokes over *the holes that game covers* — nine-hole games are not auto-halved. |
+> | Authorization | Adding a registered user requires an existing friendship. Host-entered strokes are refused for a participant scored from a linked round, and permitted for the host or the participant themselves. |
+> | ETag | Hashes the **whole serialized response**. The drafted hash missed handicaps and rules, so changing a handicap left a polling phone stale indefinitely. |
+> | Naming | `Game.State` (was `Status`) vs `GameResultStatus` — `.Status` now means one thing everywhere. |
+> | Plumbing | `LinkRoundAsync` takes a nullable round id so a bad link can be undone. Join codes are generated from an unambiguous alphabet with a collision retry, and looked up filtered on state. `Scoreboard` is nullable while a game is in setup. `FairwayFinder.Games` is registered in **both** `ServiceDefaults` OTel arrays. `DisplayNameHelper` replaced five duplicates, not two. |
+
+
 ## Context
 
 FairwayFinder tracks a single golfer's round in isolation. The hole-by-hole entry flow

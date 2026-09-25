@@ -1,6 +1,8 @@
+using FairwayFinder.Shared;
+
 namespace FairwayFinder.Data.Entities;
 
-public partial class HoleStat
+public partial class HoleStat : IAuditable
 {
     public long HoleStatsId { get; set; }
 
@@ -24,11 +26,11 @@ public partial class HoleStat
 
     public string CreatedBy { get; set; } = null!;
 
-    public DateOnly CreatedOn { get; set; }
+    public DateTime CreatedOn { get; set; }
 
     public string UpdatedBy { get; set; } = null!;
 
-    public DateOnly UpdatedOn { get; set; }
+    public DateTime UpdatedOn { get; set; }
 
     public bool IsDeleted { get; set; }
 

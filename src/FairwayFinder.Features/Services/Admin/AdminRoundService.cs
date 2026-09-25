@@ -1,6 +1,7 @@
 using FairwayFinder.Data;
 using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Enums;
+using FairwayFinder.Features.Helpers;
 using FairwayFinder.Features.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -75,7 +76,6 @@ public class AdminRoundService(
         return rounds.Select(r =>
         {
             userMap.TryGetValue(r.UserId, out var u);
-            var name = u is null ? "" : $"{u.FirstName} {u.LastName}".Trim();
             var email = u?.Email ?? string.Empty;
             // Mirrors RoundResponse.ScoreToPar: the pars actually played when there are any,
             // falling back to the teebox only for a round with no scores on record.
@@ -88,7 +88,7 @@ public class AdminRoundService(
             {
                 RoundId = r.RoundId,
                 UserId = r.UserId,
-                PlayerName = string.IsNullOrWhiteSpace(name) ? (string.IsNullOrWhiteSpace(email) ? "Unknown" : email) : name,
+                PlayerName = DisplayNameHelper.BuildForAdmin(u?.FirstName, u?.LastName, email),
                 PlayerEmail = email,
                 DatePlayed = r.DatePlayed,
                 Score = r.Score,
@@ -128,7 +128,6 @@ public class AdminRoundService(
 
         round.ExcludeFromStats = exclude;
         round.UpdatedBy = adminUserId;
-        round.UpdatedOn = DateOnly.FromDateTime(DateTime.UtcNow);
 
         await db.SaveChangesAsync();
         return true;

@@ -48,7 +48,13 @@ public sealed class NoOpPushNotificationService : IPushNotificationService
 
     public Task UnregisterDeviceAsync(string deviceToken, CancellationToken ct = default) => Task.CompletedTask;
 
-    public Task<int> SendToUserAsync(string userId, string title, string body, int? badge = null, CancellationToken ct = default)
+    public Task<int> SendToUserAsync(
+        string userId,
+        string title,
+        string body,
+        int? badge = null,
+        IReadOnlyDictionary<string, string>? data = null,
+        CancellationToken ct = default)
         => Task.FromResult(0);
 }
 
@@ -87,7 +93,13 @@ public sealed class StubFriendService : IFriendService
     public Task<FriendshipStatusInfo> GetFriendshipStatusWithUserAsync(string viewerUserId, string targetUserId)
         => throw new NotSupportedException();
 
-    public Task<bool> AreFriendsAsync(string userIdA, string userIdB) => throw new NotSupportedException();
+    /// <summary>
+    /// Answers from the same list <see cref="GetFriendsAsync"/> serves, so a test that stubs
+    /// someone as a friend gets a consistent answer from both — which the game service needs,
+    /// because it gates adding a player on this.
+    /// </summary>
+    public Task<bool> AreFriendsAsync(string userIdA, string userIdB)
+        => Task.FromResult(_friends.Any(f => f.UserId == userIdA || f.UserId == userIdB));
 }
 
 /// <summary>
@@ -103,9 +115,20 @@ public sealed class CountingPushNotificationService : IPushNotificationService
 
     public Task UnregisterDeviceAsync(string deviceToken, CancellationToken ct = default) => Task.CompletedTask;
 
-    public Task<int> SendToUserAsync(string userId, string title, string body, int? badge = null, CancellationToken ct = default)
+    public Task<int> SendToUserAsync(
+        string userId,
+        string title,
+        string body,
+        int? badge = null,
+        IReadOnlyDictionary<string, string>? data = null,
+        CancellationToken ct = default)
     {
         Sent.Add((userId, title, body));
+        // Kept separately so the existing tuple assertions stay untouched.
+        Routes.Add(data);
         return Task.FromResult(1);
     }
+
+    /// <summary>The routing keys sent with each push, in the same order as <see cref="Sent"/>.</summary>
+    public List<IReadOnlyDictionary<string, string>?> Routes { get; } = [];
 }

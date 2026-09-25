@@ -37,6 +37,12 @@ public class RoundResponse
     /// tracking flags. Exposed so API clients don't have to replicate the derivation.
     /// </summary>
     public RoundTrackingLevel TrackingLevel => RoundTracking.Classify(UsingShotTracking, UsingHoleStats);
+
+    /// <summary>
+    /// Games this round was played for. Populated on the single-round read only — a rounds list
+    /// would pay for this per row, and the list screen has no use for it.
+    /// </summary>
+    public List<RoundGameSummary> Games { get; set; } = [];
     
     // Course info
     public long CourseId { get; set; }

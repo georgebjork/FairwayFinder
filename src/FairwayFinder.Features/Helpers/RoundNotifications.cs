@@ -22,6 +22,7 @@ public static class RoundNotifications
         IPushNotificationService pushService,
         ILogger logger,
         string userId,
+        long roundId,
         long courseId,
         int score)
     {
@@ -39,9 +40,22 @@ public static class RoundNotifications
             var title = $"{posterName} posted a round";
             var body = $"Shot {score} at {courseName}";
 
+            // A friend's round is read through the poster's public id, so the tap needs both.
+            var publicId = await dbContext.UserProfiles
+                .Where(p => p.UserId == userId && !p.IsDeleted)
+                .Select(p => p.PublicIdentifier)
+                .FirstOrDefaultAsync();
+
+            var data = new Dictionary<string, string>
+            {
+                ["type"] = "round",
+                ["roundId"] = roundId.ToString(),
+                ["userPublicId"] = publicId.ToString()
+            };
+
             foreach (var friend in friends)
             {
-                await pushService.SendToUserAsync(friend.UserId, title, body);
+                await pushService.SendToUserAsync(friend.UserId, title, body, data: data);
             }
         }
         catch (Exception ex)

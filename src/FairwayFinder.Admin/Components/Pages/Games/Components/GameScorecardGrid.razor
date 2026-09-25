@@ -1,0 +1,111 @@
+@using FairwayFinder.Features.Data
+@using FairwayFinder.Features.Games
+
+@*
+    Holes across, players down. Each cell carries gross, and — when the game plays net — the net
+    score with the strokes received. This is the view that makes a mistyped handicap obvious at a
+    glance, which is the whole reason the repair page exists.
+*@
+
+<div style="overflow-x: auto;">
+    <table class="rz-p-0" style="border-collapse: collapse; width: 100%; min-width: 720px;">
+        <thead>
+            <tr>
+                <th style="@HeaderCell; text-align: left; position: sticky; left: 0; background: var(--rz-base-background-color);">Player</th>
+                @foreach (var hole in State.HoleNumbers)
+                {
+                    <th style="@HeaderCell">@hole</th>
+                }
+                <th style="@HeaderCell">Tot</th>
+            </tr>
+            <tr>
+                <th style="@SubHeaderCell; text-align: left; position: sticky; left: 0; background: var(--rz-base-background-color);">Par</th>
+                @foreach (var hole in State.HoleNumbers)
+                {
+                    <th style="@SubHeaderCell">@ParOn(hole)</th>
+                }
+                <th style="@SubHeaderCell">@State.HoleNumbers.Sum(ParOn)</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var participant in State.Participants)
+            {
+                <tr>
+                    <td style="@BodyCell; text-align: left; position: sticky; left: 0; background: var(--rz-base-background-color);">
+                        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@participant.DisplayName</RadzenText>
+                    </td>
+                    @foreach (var hole in State.HoleNumbers)
+                    {
+                        var line = LineFor(participant.ParticipantId, hole);
+                        <td style="@BodyCell">
+                            @if (line?.Strokes is { } strokes)
+                            {
+                                <RadzenStack Gap="0" AlignItems="AlignItems.Center">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@strokes</RadzenText>
+                                    @if (State.Rules.UseNet && line.Value.StrokesReceived != 0)
+                                    {
+                                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+                                            @line.Value.Net (@FormatStrokes(line.Value.StrokesReceived))
+                                        </RadzenText>
+                                    }
+                                </RadzenStack>
+                            }
+                            else
+                            {
+                                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-disabled-color);">—</RadzenText>
+                            }
+                        </td>
+                    }
+                    <td style="@BodyCell">
+                        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@TotalFor(participant.ParticipantId)</RadzenText>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public GameStateResponse State { get; set; } = null!;
+
+    /// <summary>
+    /// The scoring lines behind the board. Supplied by the page so this component stays a pure
+    /// renderer — it never reads the database.
+    /// </summary>
+    [Parameter] public IReadOnlyDictionary<long, IReadOnlyDictionary<int, GameHoleLine>> Lines { get; set; }
+        = new Dictionary<long, IReadOnlyDictionary<int, GameHoleLine>>();
+
+    private const string HeaderCell =
+        "padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--rz-border-color); text-align: center; font-weight: 600;";
+
+    private const string SubHeaderCell =
+        "padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--rz-border-color); text-align: center; font-weight: 400; color: var(--rz-text-secondary-color);";
+
+    private const string BodyCell =
+        "padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--rz-border-color); text-align: center;";
+
+    private GameHoleLine? LineFor(long participantId, int holeNumber)
+        => Lines.TryGetValue(participantId, out var holes) && holes.TryGetValue(holeNumber, out var line)
+            ? line
+            : null;
+
+    private int ParOn(int holeNumber)
+    {
+        // Par is per-participant (tees can differ), so the card shows the first player's.
+        var first = State.Participants.FirstOrDefault();
+        return first is null ? 0 : LineFor(first.ParticipantId, holeNumber)?.Par ?? 0;
+    }
+
+    private string TotalFor(long participantId)
+    {
+        var total = State.HoleNumbers
+            .Select(n => LineFor(participantId, n)?.Strokes)
+            .Where(s => s is not null)
+            .Sum(s => s!.Value);
+
+        return total == 0 ? "—" : total.ToString();
+    }
+
+    private static string FormatStrokes(int strokesReceived)
+        => strokesReceived > 0 ? $"+{strokesReceived}" : strokesReceived.ToString();
+}

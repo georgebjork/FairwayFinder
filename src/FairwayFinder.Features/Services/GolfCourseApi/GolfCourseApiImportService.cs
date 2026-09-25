@@ -190,8 +190,6 @@ public class GolfCourseApiImportService
             .Where(m => apiCourseIds.Contains(m.ApiCourseId))
             .ToDictionaryAsync(m => m.ApiCourseId, m => m.CourseId, ct);
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-
         foreach (var apiCourse in pageResponse.Courses)
         {
             try
@@ -202,7 +200,7 @@ public class GolfCourseApiImportService
                 if (existingMappings.TryGetValue(apiCourse.Id, out var localCourseId))
                 {
                     // Mapping exists — update the course in-place
-                    await UpdateCourseAsync(dbContext, localCourseId, apiCourse, today, ct);
+                    await UpdateCourseAsync(dbContext, localCourseId, apiCourse, ct);
                     result.CoursesUpdated++;
                     FairwayFinderDiagnostics.GcaUpdated.Add(1);
                 }
@@ -215,7 +213,7 @@ public class GolfCourseApiImportService
                 else
                 {
                     // No mapping — insert new course
-                    await InsertCourseAsync(dbContext, apiCourse, today, ct);
+                    await InsertCourseAsync(dbContext, apiCourse, ct);
                     result.CoursesImported++;
                     FairwayFinderDiagnostics.GcaImported.Add(1);
                 }
@@ -236,7 +234,7 @@ public class GolfCourseApiImportService
 
     // ── Insert (new course) — 3 saves total ──
 
-    private async Task InsertCourseAsync(ApplicationDbContext dbContext, GolfCourseApiCourse apiCourse, DateOnly today, CancellationToken ct)
+    private async Task InsertCourseAsync(ApplicationDbContext dbContext, GolfCourseApiCourse apiCourse, CancellationToken ct)
     {
         // Save 1: Insert course to get CourseId
         var course = new Course
@@ -250,9 +248,7 @@ public class GolfCourseApiImportService
             Latitude = apiCourse.Location?.Latitude,
             Longitude = apiCourse.Location?.Longitude,
             CreatedBy = SystemUser,
-            CreatedOn = today,
             UpdatedBy = SystemUser,
-            UpdatedOn = today,
             IsDeleted = false
         };
 
@@ -264,8 +260,8 @@ public class GolfCourseApiImportService
 
         if (apiCourse.Tees is not null)
         {
-            AddTeeboxesToContext(dbContext, course.CourseId, apiCourse.Tees.Male, false, today, teeboxApiMap);
-            AddTeeboxesToContext(dbContext, course.CourseId, apiCourse.Tees.Female, true, today, teeboxApiMap);
+            AddTeeboxesToContext(dbContext, course.CourseId, apiCourse.Tees.Male, false, teeboxApiMap);
+            AddTeeboxesToContext(dbContext, course.CourseId, apiCourse.Tees.Female, true, teeboxApiMap);
         }
 
         if (teeboxApiMap.Count > 0)
@@ -286,9 +282,7 @@ public class GolfCourseApiImportService
                     Yardage = apiHole.Yardage,
                     Handicap = apiHole.Handicap,
                     CreatedBy = SystemUser,
-                    CreatedOn = today,
                     UpdatedBy = SystemUser,
-                    UpdatedOn = today,
                     IsDeleted = false
                 });
             }
@@ -308,7 +302,6 @@ public class GolfCourseApiImportService
         long courseId,
         List<GolfCourseApiTeeBox> apiTeeBoxes,
         bool isWomens,
-        DateOnly today,
         List<(Teebox, List<GolfCourseApiHole>)> teeboxApiMap)
     {
         foreach (var apiTee in apiTeeBoxes)
@@ -341,9 +334,7 @@ public class GolfCourseApiImportService
                 IsNineHole = isNineHole,
                 IsWomens = isWomens,
                 CreatedBy = SystemUser,
-                CreatedOn = today,
                 UpdatedBy = SystemUser,
-                UpdatedOn = today,
                 IsDeleted = false
             };
 
@@ -354,7 +345,7 @@ public class GolfCourseApiImportService
 
     // ── Update (existing mapped course) — 3 queries + 1 save ──
 
-    private async Task UpdateCourseAsync(ApplicationDbContext dbContext, long courseId, GolfCourseApiCourse apiCourse, DateOnly today, CancellationToken ct)
+    private async Task UpdateCourseAsync(ApplicationDbContext dbContext, long courseId, GolfCourseApiCourse apiCourse, CancellationToken ct)
     {
         // Query 1: Load the course
         var course = await dbContext.Courses.FirstOrDefaultAsync(c => c.CourseId == courseId, ct);
@@ -369,7 +360,6 @@ public class GolfCourseApiImportService
         course.Latitude = apiCourse.Location?.Latitude;
         course.Longitude = apiCourse.Location?.Longitude;
         course.UpdatedBy = SystemUser;
-        course.UpdatedOn = today;
 
         // Query 2: Load all non-deleted teeboxes for this course
         var existingTeeboxes = await dbContext.Teeboxes
@@ -391,8 +381,8 @@ public class GolfCourseApiImportService
         // Process both genders
         if (apiCourse.Tees is not null)
         {
-            ProcessTeeboxUpdates(dbContext, courseId, apiCourse.Tees.Male, false, existingTeeboxes, holesByTeebox, today, newTeeboxHoles);
-            ProcessTeeboxUpdates(dbContext, courseId, apiCourse.Tees.Female, true, existingTeeboxes, holesByTeebox, today, newTeeboxHoles);
+            ProcessTeeboxUpdates(dbContext, courseId, apiCourse.Tees.Male, false, existingTeeboxes, holesByTeebox, newTeeboxHoles);
+            ProcessTeeboxUpdates(dbContext, courseId, apiCourse.Tees.Female, true, existingTeeboxes, holesByTeebox, newTeeboxHoles);
         }
 
         // If there are new teeboxes, save to get their IDs, then add their holes
@@ -414,9 +404,7 @@ public class GolfCourseApiImportService
                         Yardage = apiHole.Yardage,
                         Handicap = apiHole.Handicap,
                         CreatedBy = SystemUser,
-                        CreatedOn = today,
                         UpdatedBy = SystemUser,
-                        UpdatedOn = today,
                         IsDeleted = false
                     });
                 }
@@ -434,7 +422,6 @@ public class GolfCourseApiImportService
         bool isWomens,
         List<Teebox> existingTeeboxes,
         Dictionary<long, List<Hole>> holesByTeebox,
-        DateOnly today,
         List<(Teebox, List<GolfCourseApiHole>)> newTeeboxHoles)
     {
         var genderTeeboxes = existingTeeboxes.Where(t => t.IsWomens == isWomens).ToList();
@@ -471,7 +458,6 @@ public class GolfCourseApiImportService
                 existingTeebox.YardageTotal = apiTee.TotalYards;
                 existingTeebox.IsNineHole = isNineHole;
                 existingTeebox.UpdatedBy = SystemUser;
-                existingTeebox.UpdatedOn = today;
 
                 // Update holes in-place
                 var teeboxHoles = holesByTeebox.GetValueOrDefault(existingTeebox.TeeboxId, []);
@@ -490,7 +476,6 @@ public class GolfCourseApiImportService
                         existingHole.Yardage = apiHole.Yardage;
                         existingHole.Handicap = apiHole.Handicap;
                         existingHole.UpdatedBy = SystemUser;
-                        existingHole.UpdatedOn = today;
                     }
                     else
                     {
@@ -503,14 +488,11 @@ public class GolfCourseApiImportService
                             Yardage = apiHole.Yardage,
                             Handicap = apiHole.Handicap,
                             CreatedBy = SystemUser,
-                            CreatedOn = today,
                             UpdatedBy = SystemUser,
-                            UpdatedOn = today,
                             IsDeleted = false
                         });
                     }
                 }
-
 
             }
             else
@@ -529,9 +511,7 @@ public class GolfCourseApiImportService
                     IsNineHole = isNineHole,
                     IsWomens = isWomens,
                     CreatedBy = SystemUser,
-                    CreatedOn = today,
                     UpdatedBy = SystemUser,
-                    UpdatedOn = today,
                     IsDeleted = false
                 };
 
@@ -539,7 +519,6 @@ public class GolfCourseApiImportService
                 newTeeboxHoles.Add((teebox, holes));
             }
         }
-
 
     }
 

@@ -1,4 +1,5 @@
 using FairwayFinder.Data;
+using FairwayFinder.Features.Helpers;
 using Microsoft.EntityFrameworkCore;
 
 namespace FairwayFinder.Features.Services.Admin;
@@ -37,7 +38,6 @@ public class AdminDeviceService(IDbContextFactory<ApplicationDbContext> dbContex
         return devices.Select(d =>
         {
             userMap.TryGetValue(d.UserId, out var u);
-            var name = u is null ? "" : $"{u.FirstName} {u.LastName}".Trim();
             var email = u?.Email ?? string.Empty;
 
             return new AdminDeviceListItemDto
@@ -49,9 +49,7 @@ public class AdminDeviceService(IDbContextFactory<ApplicationDbContext> dbContex
                 CreatedAt = d.CreatedAt,
                 LastSeenAt = d.LastSeenAt,
                 UserId = d.UserId,
-                PlayerName = string.IsNullOrWhiteSpace(name)
-                    ? (string.IsNullOrWhiteSpace(email) ? "Unknown" : email)
-                    : name,
+                PlayerName = DisplayNameHelper.BuildForAdmin(u?.FirstName, u?.LastName, email),
                 PlayerEmail = email
             };
         }).ToList();

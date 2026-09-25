@@ -9,15 +9,18 @@ public static class FairwayFinderDiagnostics
     public const string StatsName   = "FairwayFinder.Stats";
     public const string ImportsName = "FairwayFinder.Imports";
     public const string EmailName   = "FairwayFinder.Email";
+    public const string GamesName   = "FairwayFinder.Games";
 
     public static readonly Meter RoundsMeter  = new(RoundsName,  "1.0.0");
     public static readonly Meter StatsMeter   = new(StatsName,   "1.0.0");
     public static readonly Meter ImportsMeter = new(ImportsName, "1.0.0");
     public static readonly Meter EmailMeter   = new(EmailName,   "1.0.0");
+    public static readonly Meter GamesMeter   = new(GamesName,   "1.0.0");
 
     public static readonly ActivitySource RoundsActivity  = new(RoundsName);
     public static readonly ActivitySource StatsActivity   = new(StatsName);
     public static readonly ActivitySource ImportsActivity = new(ImportsName);
+    public static readonly ActivitySource GamesActivity  = new(GamesName);
 
     // ── Rounds ──
     public static readonly Counter<long> RoundsCreated =
@@ -34,6 +37,16 @@ public static class FairwayFinderDiagnostics
         RoundsMeter.CreateCounter<long>("fairwayfinder.shots.logged", description: "Individual shots logged");
     public static readonly Histogram<double> RoundSaveDuration =
         RoundsMeter.CreateHistogram<double>("fairwayfinder.round.save.duration", unit: "ms", description: "Time to persist a round create/update");
+
+    // ── Games ──
+    public static readonly Counter<long> GamesCreated =
+        GamesMeter.CreateCounter<long>("fairwayfinder.games.created", description: "Games created");
+    public static readonly Counter<long> GamesStarted =
+        GamesMeter.CreateCounter<long>("fairwayfinder.games.started", description: "Games moved from setup to active");
+    public static readonly Counter<long> GamesCompleted =
+        GamesMeter.CreateCounter<long>("fairwayfinder.games.completed", description: "Games posted with a final scoreboard");
+    public static readonly Counter<long> GameHolesPosted =
+        GamesMeter.CreateCounter<long>("fairwayfinder.game.holes.posted", description: "Host-entered per-hole writes during a game");
 
     // ── Stats ──
     public static readonly Histogram<double> StatsDashDuration =
@@ -96,6 +109,9 @@ public static class FairwayFinderDiagnostics
         public const string StatsCalcStrokesGained = "stats.calc.strokes_gained";
         public const string ImportsGcaRun = "imports.gca.run";
         public const string ImportsTgtrTransfer = "imports.tgtr.transfer";
+        public const string GameScore = "game.score";
+        public const string GameCreate = "game.create";
+        public const string GameComplete = "game.complete";
     }
 
     /// <summary>
@@ -117,6 +133,10 @@ public static class FairwayFinderDiagnostics
         // Email
         public const string Kind = "kind";
         public const string Reason = "reason";
+
+        // Games
+        public const string GameType = "game_type";
+        public const string GameHasGuests = "game_has_guests";
     }
 
     /// <summary>
@@ -147,6 +167,10 @@ public static class FairwayFinderDiagnostics
         public const string TgtrImported = "tgtr.imported";
         public const string TgtrSkipped = "tgtr.skipped";
         public const string TgtrErrors = "tgtr.errors";
+
+        public const string GameId = "game.id";
+        public const string GameType = "game.type";
+        public const string GameParticipants = "game.participants";
     }
 
     /// <summary>

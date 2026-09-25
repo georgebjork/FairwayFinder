@@ -5,6 +5,8 @@ using FairwayFinder.Features.Services;
 using FairwayFinder.Features.Services.Email;
 using FairwayFinder.Features.Services.Admin;
 using FairwayFinder.Features.Services.GolfCourseApi;
+using FairwayFinder.Features.Games;
+using FairwayFinder.Features.Games.Engines;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Features.Services.TGTR;
 using FairwayFinder.Shared.Settings;
@@ -30,6 +32,17 @@ public static class ServiceRegistration
         services.AddTransient<ICourseService, CourseService>();
         services.AddTransient<IProfileService, ProfileService>();
         services.AddTransient<IFriendService, FriendService>();
+        services.AddTransient<IGameService, GameService>();
+
+        // The reader is the one place a game's two score sources converge. Transient like the
+        // service that owns it; it holds no state between calls.
+        services.AddTransient<GameScoreReader>();
+
+        // Scoring engines are pure and stateless, so one instance each. The resolver indexes them
+        // by GameType; adding a game type is a class and a line here.
+        services.AddSingleton<IGameScoringEngine, MatchPlayScoringEngine>();
+        services.AddSingleton<IGameScoringEngine, SkinsScoringEngine>();
+        services.AddSingleton<IGameScoringEngineResolver, GameScoringEngineResolver>();
 
         // Invitations and request logging are used by both hosts: the API exposes invite
         // endpoints and purges request logs on a timer, the admin console manages both by hand.
@@ -78,6 +91,7 @@ public static class ServiceRegistration
         services.AddTransient<AdminDashboardService>();
         services.AddTransient<AdminRoundService>();
         services.AddTransient<AdminDeviceService>();
+        services.AddTransient<AdminGameService>();
 
         // TGTR integration
         services.AddHttpClient<TgtrHttpClient>(client =>
