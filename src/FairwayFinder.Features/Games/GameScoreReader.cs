@@ -53,7 +53,7 @@ public sealed class GameScoreReader(IDbContextFactory<ApplicationDbContext> dbCo
     {
         if (game.FullRound) return [.. Enumerable.Range(1, 18)];
         if (game.FrontNine) return [.. Enumerable.Range(1, 9)];
-        if (game.BackNine) return [.. Enumerable.Range(10, 9)];
+        if (game.BackNine) return [.. Enumerable.Range(10, 9)]; // (start, count) so thats why the 9 is there. Looks weird.
 
         // Shape is validated on create, so this is unreachable in practice.
         return [.. Enumerable.Range(1, 18)];

@@ -1,6 +1,8 @@
+@using System.Security.Claims
 @using FairwayFinder.Features.Services.Admin
 @using FairwayFinder.Admin.Components.Pages.Users.Dialogs
 @using FairwayFinder.Admin.Components.Shared.Dialogs
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserAdminService UserAdminService
 @inject DialogService DialogService
 @inject NotificationService NotificationService
@@ -120,6 +122,7 @@
     private List<UserAdminDto> _users = new();
     private bool _loading = true;
     private string _searchQuery = string.Empty;
+    private string _currentUserId = string.Empty;
 
     private IEnumerable<UserAdminDto> FilteredUsers => string.IsNullOrWhiteSpace(_searchQuery)
         ? _users
@@ -129,6 +132,9 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _currentUserId = authState.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+
         await LoadUsersAsync();
     }
 
@@ -171,7 +177,7 @@
     private async Task OnEditUserClicked(UserAdminDto user)
     {
         var result = await DialogService.OpenAsync<EditUserDialog>("Edit User",
-            new Dictionary<string, object> { { "User", user } },
+            new Dictionary<string, object> { { "User", user }, { "ActingAdminUserId", _currentUserId } },
             new DialogOptions
             {
                 Width = "450px",

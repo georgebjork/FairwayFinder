@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using dotAPNS;
+using FairwayFinder.Data;
 using FairwayFinder.Features.HttpClients;
 using FairwayFinder.Features.Services;
 using FairwayFinder.Features.Services.Email;
@@ -10,6 +11,7 @@ using FairwayFinder.Features.Games.Engines;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Features.Services.TGTR;
 using FairwayFinder.Shared.Settings;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -25,6 +27,22 @@ public static class ServiceRegistration
     /// </summary>
     public static IServiceCollection RegisterFeatureServices(this IServiceCollection services, ConfigurationManager config, bool isDevelopment)
     {
+        // ── Data Protection ─────────────────────────────────────
+        // Registered here, in the one method both hosts call, because the two must agree exactly
+        // or password reset silently breaks: Identity's reset tokens are Data Protection payloads,
+        // so the admin console mints a token the API has to decrypt.
+        //
+        // Two things have to match. PersistKeysToDbContext puts the key ring in Postgres instead of
+        // each container's own filesystem, where it would be unreadable by the other host and thrown
+        // away on every redeploy. SetApplicationName pins the application discriminator, which is
+        // otherwise derived from the content root path and so differs between Admin and Api — that
+        // discriminator is part of the purpose chain, so a mismatch fails decryption even with a
+        // shared key ring. Changing this string invalidates every outstanding reset link and admin
+        // auth cookie.
+        services.AddDataProtection()
+            .PersistKeysToDbContext<ApplicationDbContext>()
+            .SetApplicationName("FairwayFinder");
+
         // Domain services
         services.AddTransient<IRoundService, RoundService>();
         services.AddTransient<IRoundEntryService, RoundEntryService>();
@@ -48,6 +66,10 @@ public static class ServiceRegistration
         // endpoints and purges request logs on a timer, the admin console manages both by hand.
         services.AddTransient<IUserInvitationService, UserInvitationService>();
         services.AddTransient<ApiRequestLogService>();
+
+        // Password reset is reachable from both hosts: a golfer requests it from the app via the
+        // API, and an admin sends the same link on their behalf from the console.
+        services.AddTransient<IPasswordResetService, PasswordResetService>();
 
         // APNS push notifications
         services.AddHttpClient("apns");

@@ -1,13 +1,15 @@
 ﻿using FairwayFinder.Data.Entities;
 using FairwayFinder.Data.Interceptors;
 using FairwayFinder.Identity;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace FairwayFinder.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) 
-    : IdentityDbContext<ApplicationUser>(options)
+    : IdentityDbContext<ApplicationUser>(options), IDataProtectionKeyContext
 {
     public virtual DbSet<Course> Courses { get; set; }
     public virtual DbSet<Hole> Holes { get; set; }
@@ -32,6 +34,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public virtual DbSet<Game> Games { get; set; }
     public virtual DbSet<GameParticipant> GameParticipants { get; set; }
     public virtual DbSet<GameHoleScore> GameHoleScores { get; set; }
+
+    // The Data Protection key ring. It lives in the database because the admin console and the API
+    // are separate deployments that both mint and validate Identity tokens (password reset links
+    // above all). A container-local key ring would mean a link issued by one host is undecryptable
+    // by the other — and lost entirely on every redeploy. See RegisterFeatureServices.
+    public virtual DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
     // Audit timestamps are stamped here rather than in DI so the interceptor is present for every
     // context, including the hand-built in-memory options used by the tests.
@@ -594,6 +602,18 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
             entity.HasIndex(e => e.ApiCourseId).IsUnique().HasDatabaseName("ix_golf_course_api_course_map_api_course_id");
             entity.HasOne(e => e.Course).WithMany().HasForeignKey(e => e.CourseId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // DataProtectionKey — owned by the framework, mapped here only to match table naming.
+        // Not IAuditable: the key ring is written by Data Protection's own key manager, which
+        // knows nothing about created_on/updated_on.
+        modelBuilder.Entity<DataProtectionKey>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("data_protection_key_pkey");
+            entity.ToTable("data_protection_key");
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.FriendlyName).HasColumnName("friendly_name");
+            entity.Property(e => e.Xml).HasColumnName("xml");
         });
     }
 }

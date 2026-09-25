@@ -19,6 +19,14 @@
         <Using Include="Xunit" />
     </ItemGroup>
 
+    <!-- PasswordResetServiceTests stands up a real Identity token provider to prove an
+         admin-minted reset link redeems against the API. AddDefaultTokenProviders and
+         DataProtectorTokenProvider ship in the ASP.NET Core shared framework, which a plain
+         test library does not otherwise reference. -->
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
     <ItemGroup>
         <ProjectReference Include="..\..\src\FairwayFinder.Features\FairwayFinder.Features.csproj" />
     </ItemGroup>

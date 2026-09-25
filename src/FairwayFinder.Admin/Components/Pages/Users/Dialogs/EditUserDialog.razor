@@ -1,7 +1,9 @@
 @using FairwayFinder.Features.Services.Admin
+@using FairwayFinder.Features.Services.Interfaces
 @using FairwayFinder.Admin.Components.Shared.Dialogs
 @inject DialogService DialogService
 @inject UserAdminService UserAdminService
+@inject IPasswordResetService PasswordResetService
 @inject NotificationService NotificationService
 @inject NavigationManager NavigationManager
 
@@ -61,6 +63,9 @@
                 <RadzenButton Text="View rounds" Icon="sports_golf" ButtonStyle="ButtonStyle.Light"
                               Variant="Variant.Outlined" Size="ButtonSize.Small" ButtonType="ButtonType.Button"
                               Click="OnViewRounds" />
+                <RadzenButton Text="Send password reset" Icon="lock_reset" ButtonStyle="ButtonStyle.Secondary"
+                              Variant="Variant.Outlined" Size="ButtonSize.Small" ButtonType="ButtonType.Button"
+                              IsBusy="_sendingReset" BusyText="Sending..." Click="OnSendPasswordReset" />
                 <RadzenButton Text="Delete" Icon="delete" ButtonStyle="ButtonStyle.Danger"
                               Variant="Variant.Outlined" Size="ButtonSize.Small" ButtonType="ButtonType.Button"
                               IsBusy="_busy" Click="OnDelete" />
@@ -78,9 +83,13 @@
 @code {
     [Parameter] public UserAdminDto User { get; set; } = default!;
 
+    /// <summary>The signed-in admin. Recorded against the send, never used to identify the target.</summary>
+    [Parameter] public string ActingAdminUserId { get; set; } = string.Empty;
+
     private EditUserModel _model = new();
     private List<string> _errors = new();
     private bool _busy;
+    private bool _sendingReset;
 
     protected override void OnParametersSet()
     {
@@ -170,6 +179,33 @@
         {
             _errors = result.Errors.Select(e => e.Description).ToList();
         }
+    }
+
+    // Sends the golfer the same link the app's own "forgot password" flow would mail them, for
+    // the case where they can't receive or follow that one themselves. The admin never sees or
+    // sets the password — the link still has to be redeemed on the user's device.
+    private async Task OnSendPasswordReset()
+    {
+        var confirmed = await DialogService.Confirm(
+            $"Email a password reset link to {User.Email}? Any link sent earlier stops working once this one is used.",
+            "Send Password Reset",
+            new ConfirmOptions { OkButtonText = "Send", CancelButtonText = "Cancel" });
+
+        if (confirmed != true) return;
+
+        _sendingReset = true;
+        var result = await PasswordResetService.SendResetLinkAsAdminAsync(User.Id, ActingAdminUserId);
+        _sendingReset = false;
+
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = result.Success ? NotificationSeverity.Success : NotificationSeverity.Error,
+            Summary = result.Success ? "Reset Link Sent" : "Send Failed",
+            Detail = result.Success
+                ? $"A password reset link is on its way to {User.Email}."
+                : result.Error ?? "Could not send the reset link.",
+            Duration = result.Success ? 4000 : 6000
+        });
     }
 
     private void OnViewRounds()

@@ -12,12 +12,20 @@
     </ItemGroup>
 
     <ItemGroup>
+      <!-- DataProtection is pinned ahead of the EntityFrameworkCore shim below it: the shim's own
+           10.0.7 release drags EF Core up to 10.0.7 with it, which the rest of the solution is not
+           on. Referencing the patched DataProtection directly clears CVE-2026-40372 without that. -->
+      <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="10.0.7" />
+      <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="10.0.0" />
       <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
+      <!-- Pulled in transitively by DataProtection to serialize the key ring. Pinned to the first
+           version clearing its outstanding advisories; it is a leaf, so this forces nothing else up. -->
+      <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.10" />
       <PackageReference Include="Npgsql" Version="10.0.1" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     </ItemGroup>
