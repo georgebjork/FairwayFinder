@@ -27,6 +27,13 @@ public interface IUserInvitationService
     Task<List<PendingInviteDto>> GetPendingInvitesAsync();
 
     /// <summary>
+    /// Re-sends the invitation email for an existing unclaimed invite, rolling its expiry forward
+    /// so an already-expired invite becomes usable again. The invitation code is unchanged, so a
+    /// link already sitting in the recipient's inbox keeps working.
+    /// </summary>
+    Task<CreateInviteResult> ResendInviteAsync(int id, string resentByUserId);
+
+    /// <summary>
     /// Soft-deletes (revokes) an invitation.
     /// </summary>
     Task<bool> RevokeInviteAsync(int id, string revokedByUserId);

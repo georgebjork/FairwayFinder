@@ -52,13 +52,21 @@
                 <RadzenDataGridColumn TItem="PendingInviteDto" Property="CreatedOn" Title="Sent" Width="170px" FormatString="{0:MMM d, yyyy h:mm tt}" />
                 <RadzenDataGridColumn TItem="PendingInviteDto" Property="ExpiresOn" Title="Expires" Width="170px" FormatString="{0:MMM d, yyyy h:mm tt}" />
                 <RadzenDataGridColumn TItem="PendingInviteDto" Property="ClaimedOn" Title="Claimed" Width="170px" FormatString="{0:MMM d, yyyy h:mm tt}" />
-                <RadzenDataGridColumn TItem="PendingInviteDto" Title="Actions" Width="120px" Sortable="false" Filterable="false">
+                <RadzenDataGridColumn TItem="PendingInviteDto" Title="Actions" Width="210px" Sortable="false" Filterable="false">
                     <Template Context="invite">
                         @if (invite.ClaimedOn is null)
                         {
-                            <RadzenButton Text="Revoke" Icon="block" ButtonStyle="ButtonStyle.Danger"
-                                          Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
-                                          Click="@(() => OnRevokeClicked(invite))" />
+                            <RadzenStack Orientation="Orientation.Horizontal" Gap="0.5rem">
+                                <RadzenButton Text="Resend" Icon="forward_to_inbox" ButtonStyle="ButtonStyle.Secondary"
+                                              Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
+                                              IsBusy="@(_resendingId == invite.Id)"
+                                              Disabled="@(_resendingId is not null)"
+                                              Click="@(() => OnResendClicked(invite))" />
+                                <RadzenButton Text="Revoke" Icon="block" ButtonStyle="ButtonStyle.Danger"
+                                              Size="ButtonSize.ExtraSmall" Variant="Variant.Outlined"
+                                              Disabled="@(_resendingId is not null)"
+                                              Click="@(() => OnRevokeClicked(invite))" />
+                            </RadzenStack>
                         }
                     </Template>
                 </RadzenDataGridColumn>
@@ -71,6 +79,7 @@
     private List<PendingInviteDto> _invites = new();
     private bool _loading = true;
     private string? _userId;
+    private int? _resendingId;
 
     protected override void OnInitialized()
     {
@@ -119,6 +128,50 @@
                 Detail = "The invitation has been sent.",
                 Duration = 4000
             });
+        }
+    }
+
+    private async Task OnResendClicked(PendingInviteDto invite)
+    {
+        if (string.IsNullOrEmpty(_userId)) return;
+
+        var confirmed = await DialogService.Confirm(
+            $"Resend the invitation email to {invite.Email}? The existing link stays valid and its expiry is extended.",
+            "Confirm Resend",
+            new ConfirmOptions { OkButtonText = "Resend", CancelButtonText = "Cancel" });
+
+        if (confirmed != true) return;
+
+        _resendingId = invite.Id;
+        try
+        {
+            var result = await InviteService.ResendInviteAsync(invite.Id, _userId);
+
+            if (result.Success)
+            {
+                await LoadInvitesAsync();
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Success,
+                    Summary = "Invite Resent",
+                    Detail = $"The invitation to {invite.Email} has been sent again.",
+                    Duration = 4000
+                });
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Resend Failed",
+                    Detail = result.Error ?? "Could not resend the invite.",
+                    Duration = 6000
+                });
+            }
+        }
+        finally
+        {
+            _resendingId = null;
         }
     }
 

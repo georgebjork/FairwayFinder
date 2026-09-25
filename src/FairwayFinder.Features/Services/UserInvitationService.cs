@@ -152,6 +152,41 @@ public class UserInvitationService : IUserInvitationService
             .ToListAsync();
     }
 
+    public async Task<CreateInviteResult> ResendInviteAsync(int id, string resentByUserId)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+
+        var invite = await dbContext.UserInvitations
+            .FirstOrDefaultAsync(i => i.Id == id && !i.IsDeleted);
+
+        if (invite is null)
+            return new CreateInviteResult { Success = false, Error = "That invitation no longer exists." };
+
+        if (invite.ClaimedOn is not null)
+            return new CreateInviteResult { Success = false, Error = "That invitation has already been claimed." };
+
+        // Roll the validity window forward. Without this, resending an expired invite would mail out
+        // a link that still fails validation. The identifier is deliberately left alone so any copy
+        // of the original link keeps working.
+        invite.ExpiresOn = DateTime.UtcNow.AddDays(InviteValidityDays);
+        invite.UpdatedBy = resentByUserId;
+        await dbContext.SaveChangesAsync();
+
+        var link = $"{_registrationUrlBase}?code={invite.InvitationIdentifier}";
+
+        try
+        {
+            await _emailSender.SendInvitationEmailAsync(invite.SentToEmail, link, _appInstallUrl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to resend invitation email to {Email}", invite.SentToEmail);
+            return new CreateInviteResult { Success = false, Error = "The invitation was extended but the email failed to send." };
+        }
+
+        return new CreateInviteResult { Success = true };
+    }
+
     public async Task<bool> RevokeInviteAsync(int id, string revokedByUserId)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
