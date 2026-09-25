@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -52,10 +55,31 @@ public static class Extensions
 
     public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
+        // Paths not worth a span. The health endpoints are always excluded; the rest are read from
+        // the API's request-log exclusions so the two cannot drift — if a path isn't worth a row in
+        // ApiRequestLog it isn't worth paying the exporter for either. Admin has no such section
+        // and simply falls back to the health endpoints.
+        var excludedPaths = new[] { HealthEndpointPath, AlivenessEndpointPath }
+            .Concat(builder.Configuration.GetSection("RequestLogging:ExcludedPathPrefixes").Get<string[]>() ?? [])
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(prefix => new PathString(prefix))
+            .ToArray();
+
         builder.Logging.AddOpenTelemetry(logging =>
         {
-            logging.IncludeFormattedMessage = true;
-            logging.IncludeScopes = true;
+            // Both false on purpose.
+            //
+            // IncludeFormattedMessage=true makes the OTLP serializer write the rendered text as the
+            // body AND the message template as an {OriginalFormat} attribute — you pay for both.
+            // With it false the template becomes the body and that attribute is never emitted.
+            // Substituted values still ship as their own attributes, so nothing is actually lost,
+            // and identical events group cleanly instead of fanning out on interpolated values.
+            //
+            // IncludeScopes flattens every ASP.NET Core and Blazor circuit scope onto every record
+            // (CircuitId, ConnectionId, RequestPath, EF command scopes). trace_id/span_id
+            // correlation rides on the record itself, not on scopes, so nothing is lost there either.
+            logging.IncludeFormattedMessage = false;
+            logging.IncludeScopes = false;
         });
 
         builder.Services.AddOpenTelemetry()
@@ -67,15 +91,15 @@ public static class Extensions
                 }))
             .WithMetrics(metrics =>
             {
+                // Deliberately NOT AddAspNetCoreInstrumentation()/AddHttpClientInstrumentation():
+                // those subscribe to a whole family of meters (Routing, Diagnostics, Kestrel,
+                // RateLimiting, Http.Connections, SignalR), none of which we query. Naming the
+                // meters we actually want is both smaller and explicit about what ships.
                 metrics
-                    .AddAspNetCoreInstrumentation()
-                    .AddHttpClientInstrumentation()
-                    .AddRuntimeInstrumentation()
                     .AddMeter(
-                        "Microsoft.AspNetCore.Hosting",
-                        "Microsoft.AspNetCore.Server.Kestrel",
-                        "System.Net.Http",
-                        "Npgsql");
+                        "Microsoft.AspNetCore.Hosting",  // http.server.* — route latency, in-flight requests
+                        "System.Net.Http",               // http.client.* — outbound latency, pool and queue
+                        "Npgsql");                       // db.client.* — pool health, command duration
 
                 foreach (var meter in FairwayFinderMeters)
                 {
@@ -88,11 +112,20 @@ public static class Extensions
                     .AddAspNetCoreInstrumentation(options =>
                     {
                         options.Filter = context =>
-                            !context.Request.Path.StartsWithSegments(HealthEndpointPath) &&
-                            !context.Request.Path.StartsWithSegments(AlivenessEndpointPath);
+                        {
+                            foreach (var excluded in excludedPaths)
+                            {
+                                if (context.Request.Path.StartsWithSegments(excluded))
+                                {
+                                    return false;
+                                }
+                            }
+
+                            return true;
+                        };
                     })
                     .AddHttpClientInstrumentation()
-                    .AddSource("Npgsql");
+                    .AddNpgsql();
 
                 foreach (var source in FairwayFinderSources)
                 {
