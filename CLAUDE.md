@@ -209,6 +209,16 @@ src/FairwayFinder.Admin/Components/
 - Match layout using Radzen components and layout controls (e.g., `RadzenStack`).
 - Use Radzen CSS classes only when no suitable Radzen layout component exists.
 
+### Displaying scores and games
+
+- Show any hole score with `Shared/Scoring/ScoreMark` (circle/square birdie–bogey notation) and put
+  `ScoreMarkLegend` under the card, so every page marks scores the same way.
+- The game scorecard (`Games/Components/GameScorecardGrid`) knows nothing about game types. It renders
+  `GameCardModel`, which reduces each scoreboard to sides, per-hole winners (`Awards`, with an optional
+  tag like `L`/`H`/`×3`), a result chip and a running standing. **A new game type adds one case to
+  `GameCardModel.From`** and a test in `GameCardModelTests`; don't add type checks to the grid.
+  Without that case the card still shows scores and sides, just no hole winners.
+
 ### Radzen CSS Variables (Use These — Never Hardcode Colors)
 
 ```css

@@ -1,0 +1,37 @@
+@*
+    One hole's score in scorecard notation: circles under par, squares over, doubled for two or
+    more. Gross against the golfer's own par, the way a card is marked by hand, so it reads the
+    same in a net game. Use this anywhere a hole score is shown so every page marks scores alike.
+*@
+
+<span class="score-mark @Shape" title="@Title">@Strokes</span>
+
+@code {
+    [Parameter, EditorRequired] public int Strokes { get; set; }
+    [Parameter, EditorRequired] public int Par { get; set; }
+
+    private int ToPar => Strokes - Par;
+
+    private string Shape => ToPar switch
+    {
+        <= -2 => "eagle",
+        -1 => "birdie",
+        0 => "par",
+        1 => "bogey",
+        _ => "double"
+    };
+
+    private string Title => Strokes == 1 ? "Hole in one" : NameFor(ToPar);
+
+    public static string NameFor(int toPar) => toPar switch
+    {
+        <= -3 => "Albatross",
+        -2 => "Eagle",
+        -1 => "Birdie",
+        0 => "Par",
+        1 => "Bogey",
+        2 => "Double bogey",
+        3 => "Triple bogey",
+        _ => $"+{toPar}"
+    };
+}

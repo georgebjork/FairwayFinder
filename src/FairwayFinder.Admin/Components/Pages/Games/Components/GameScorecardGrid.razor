@@ -2,67 +2,173 @@
 @using FairwayFinder.Features.Games
 
 @*
-    Holes across, players down. Each cell carries gross, and — when the game plays net — the net
-    score with the strokes received. This is the view that makes a mistyped handicap obvious at a
-    glance, which is the whole reason the repair page exists.
+    Holes across, players down, grouped by side. Every score carries its birdie/bogey mark, dots
+    for strokes received, and — in a net game — the net score beneath it, so a mistyped handicap
+    is obvious at a glance. The cells that won a hole are lit in the winning side's colour, and the
+    rows under the players say who took each hole and where the game stood after it.
+
+    Everything game-specific comes from GameCardModel; this component never inspects a scoreboard
+    type, so a new game type needs no changes here.
 *@
 
-<div style="overflow-x: auto;">
-    <table class="rz-p-0" style="border-collapse: collapse; width: 100%; min-width: 720px;">
+<div class="game-card-wrapper">
+    <table class="game-card">
         <thead>
             <tr>
-                <th style="@HeaderCell; text-align: left; position: sticky; left: 0; background: var(--rz-base-background-color);">Player</th>
-                @foreach (var hole in State.HoleNumbers)
+                <th class="name-cell">Hole</th>
+                @foreach (var segment in Segments)
                 {
-                    <th style="@HeaderCell">@hole</th>
+                    @foreach (var hole in segment.Holes)
+                    {
+                        <th class="hole-cell">@hole</th>
+                    }
+                    <th class="total-cell">@segment.Label</th>
                 }
-                <th style="@HeaderCell">Tot</th>
             </tr>
-            <tr>
-                <th style="@SubHeaderCell; text-align: left; position: sticky; left: 0; background: var(--rz-base-background-color);">Par</th>
-                @foreach (var hole in State.HoleNumbers)
+            <tr class="meta-row">
+                <th class="name-cell">Par</th>
+                @foreach (var segment in Segments)
                 {
-                    <th style="@SubHeaderCell">@ParOn(hole)</th>
+                    @foreach (var hole in segment.Holes)
+                    {
+                        <td class="hole-cell">@ParOn(hole)</td>
+                    }
+                    <td class="total-cell">@segment.Holes.Sum(ParOn)</td>
                 }
-                <th style="@SubHeaderCell">@State.HoleNumbers.Sum(ParOn)</th>
+            </tr>
+            <tr class="meta-row">
+                <th class="name-cell">Hcp</th>
+                @foreach (var segment in Segments)
+                {
+                    @foreach (var hole in segment.Holes)
+                    {
+                        <td class="hole-cell">@StrokeIndexOn(hole)</td>
+                    }
+                    <td class="total-cell"></td>
+                }
             </tr>
         </thead>
+
         <tbody>
-            @foreach (var participant in State.Participants)
+            @foreach (var participant in OrderedParticipants)
             {
-                <tr>
-                    <td style="@BodyCell; text-align: left; position: sticky; left: 0; background: var(--rz-base-background-color);">
-                        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@participant.DisplayName</RadzenText>
-                    </td>
-                    @foreach (var hole in State.HoleNumbers)
+                var side = _model.SideOf(participant.ParticipantId);
+                <tr class="player-row @SideClass(side?.Index)">
+                    <th class="name-cell">
+                        <div class="player-name">@participant.DisplayName</div>
+                        <div class="player-meta">
+                            @(side is not null && participant.Team is not null ? $"Team {participant.Team} · " : "")plays off @participant.PlayingHandicap
+                        </div>
+                    </th>
+                    @foreach (var segment in Segments)
                     {
-                        var line = LineFor(participant.ParticipantId, hole);
-                        <td style="@BodyCell">
-                            @if (line?.Strokes is { } strokes)
-                            {
-                                <RadzenStack Gap="0" AlignItems="AlignItems.Center">
-                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@strokes</RadzenText>
-                                    @if (State.Rules.UseNet && line.Value.StrokesReceived != 0)
+                        @foreach (var holeNumber in segment.Holes)
+                        {
+                            var line = LineFor(participant.ParticipantId, holeNumber);
+                            var hole = _model.Hole(holeNumber);
+                            var won = hole is not null && hole.Awards.ContainsKey(participant.ParticipantId);
+                            var tag = won ? hole!.Awards[participant.ParticipantId] : null;
+
+                            <td class="hole-cell score-cell @(won ? "won" : "") @(hole?.AfterDecided == true ? "after-decided" : "")"
+                                title="@CellTitle(line, won, tag)">
+                                @if (line?.Strokes is { } strokes)
+                                {
+                                    @if (tag is not null)
                                     {
-                                        <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
-                                            @line.Value.Net (@FormatStrokes(line.Value.StrokesReceived))
-                                        </RadzenText>
+                                        <span class="award-tag">@tag</span>
                                     }
-                                </RadzenStack>
-                            }
-                            else
+                                    @if (line.Value.StrokesReceived != 0)
+                                    {
+                                        <span class="pops">@PopsFor(line.Value.StrokesReceived)</span>
+                                    }
+                                    <ScoreMark Strokes="strokes" Par="line.Value.Par" />
+                                    @if (Rules.UseNet && line.Value.StrokesReceived != 0)
+                                    {
+                                        <div class="net-score">net @line.Value.Net</div>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="no-score">–</span>
+                                }
+                            </td>
+                        }
+                        <td class="total-cell">
+                            <div>@GrossTotal(participant.ParticipantId, segment.Holes)</div>
+                            @if (Rules.UseNet && NetTotal(participant.ParticipantId, segment.Holes) is { } net)
                             {
-                                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="color: var(--rz-text-disabled-color);">—</RadzenText>
+                                <div class="net-score">net @net</div>
                             }
                         </td>
                     }
-                    <td style="@BodyCell">
-                        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@TotalFor(participant.ParticipantId)</RadzenText>
-                    </td>
                 </tr>
             }
         </tbody>
+
+        @if (_model.Holes.Count > 0)
+        {
+            <tfoot>
+                <tr class="outcome-row">
+                    <th class="name-cell">@_model.ResultLabel</th>
+                    @foreach (var segment in Segments)
+                    {
+                        @foreach (var holeNumber in segment.Holes)
+                        {
+                            var hole = _model.Hole(holeNumber);
+                            <td class="hole-cell @(hole?.AfterDecided == true ? "after-decided" : "")">
+                                @if (hole is not null)
+                                {
+                                    <span class="chip @ChipClass(hole.Result)" title="@hole.Result.Title">@hole.Result.Text</span>
+                                }
+                            </td>
+                        }
+                        <td class="total-cell"></td>
+                    }
+                </tr>
+
+                @if (_model.StandingLabel is not null)
+                {
+                    <tr class="outcome-row">
+                        <th class="name-cell">@_model.StandingLabel</th>
+                        @foreach (var segment in Segments)
+                        {
+                            @foreach (var holeNumber in segment.Holes)
+                            {
+                                var hole = _model.Hole(holeNumber);
+                                <td class="hole-cell @(hole?.AfterDecided == true ? "after-decided" : "")">
+                                    @if (hole?.Standing is { } standing)
+                                    {
+                                        <span class="standing @ChipClass(standing)" title="@standing.Title">@standing.Text</span>
+                                    }
+                                </td>
+                            }
+                            <td class="total-cell"></td>
+                        }
+                    </tr>
+                }
+            </tfoot>
+        }
     </table>
+</div>
+
+<div class="rz-mt-3">
+    <ScoreMarkLegend>
+        <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+            <span class="pops legend-pops">••</span> strokes received
+        </RadzenText>
+        @if (_model.Holes.Count > 0)
+        {
+            <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                <span class="legend-won"></span> won the hole
+            </RadzenText>
+        }
+        @if (_model.Holes.Values.Any(h => h.AfterDecided))
+        {
+            <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                Faded holes were played after the match was decided
+            </RadzenText>
+        }
+    </ScoreMarkLegend>
 </div>
 
 @code {
@@ -75,19 +181,46 @@
     [Parameter] public IReadOnlyDictionary<long, IReadOnlyDictionary<int, GameHoleLine>> Lines { get; set; }
         = new Dictionary<long, IReadOnlyDictionary<int, GameHoleLine>>();
 
-    private const string HeaderCell =
-        "padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--rz-border-color); text-align: center; font-weight: 600;";
+    private GameCardModel _model = null!;
+    private List<(string Label, List<int> Holes)> _segments = [];
 
-    private const string SubHeaderCell =
-        "padding: 0.25rem 0.5rem; border-bottom: 1px solid var(--rz-border-color); text-align: center; font-weight: 400; color: var(--rz-text-secondary-color);";
+    private GameRules Rules => State.Rules;
+    private IReadOnlyList<(string Label, List<int> Holes)> Segments => _segments;
 
-    private const string BodyCell =
-        "padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--rz-border-color); text-align: center;";
+    protected override void OnParametersSet()
+    {
+        _model = GameCardModel.From(State, Lines);
+        _segments = BuildSegments(State.HoleNumbers);
+    }
+
+    /// <summary>Out and In with a subtotal each when the game covers both nines, otherwise one run.</summary>
+    private static List<(string Label, List<int> Holes)> BuildSegments(IReadOnlyList<int> holeNumbers)
+    {
+        var front = holeNumbers.Where(h => h <= 9).OrderBy(h => h).ToList();
+        var back = holeNumbers.Where(h => h > 9).OrderBy(h => h).ToList();
+
+        if (front.Count == 0 || back.Count == 0)
+        {
+            return [("Tot", [.. holeNumbers.OrderBy(h => h)])];
+        }
+
+        return [("Out", front), ("In", back), ("Tot", [])];
+    }
+
+    /// <summary>Players grouped by side so teammates sit together under one colour.</summary>
+    private IEnumerable<GameParticipantResponse> OrderedParticipants => State.Participants
+        .Select((p, i) => (p, i))
+        .OrderBy(x => _model.SideOf(x.p.ParticipantId)?.Index ?? 0)
+        .ThenBy(x => x.i)
+        .Select(x => x.p);
 
     private GameHoleLine? LineFor(long participantId, int holeNumber)
         => Lines.TryGetValue(participantId, out var holes) && holes.TryGetValue(holeNumber, out var line)
             ? line
             : null;
+
+    /// <summary>The "Tot" segment has no holes of its own: it totals the whole game.</summary>
+    private IEnumerable<int> HolesIn(List<int> segment) => segment.Count == 0 ? State.HoleNumbers : segment;
 
     private int ParOn(int holeNumber)
     {
@@ -96,16 +229,51 @@
         return first is null ? 0 : LineFor(first.ParticipantId, holeNumber)?.Par ?? 0;
     }
 
-    private string TotalFor(long participantId)
-    {
-        var total = State.HoleNumbers
-            .Select(n => LineFor(participantId, n)?.Strokes)
-            .Where(s => s is not null)
-            .Sum(s => s!.Value);
+    private int ParOn(List<int> segment) => HolesIn(segment).Sum(ParOn);
 
-        return total == 0 ? "—" : total.ToString();
+    private string StrokeIndexOn(int holeNumber)
+    {
+        var first = State.Participants.FirstOrDefault();
+        return first is null ? "" : LineFor(first.ParticipantId, holeNumber)?.StrokeIndex.ToString() ?? "";
     }
 
-    private static string FormatStrokes(int strokesReceived)
-        => strokesReceived > 0 ? $"+{strokesReceived}" : strokesReceived.ToString();
+    private string GrossTotal(long participantId, List<int> segment)
+    {
+        var scores = HolesIn(segment).Select(h => LineFor(participantId, h)?.Strokes).Where(s => s is not null).ToList();
+        return scores.Count == 0 ? "–" : scores.Sum()!.Value.ToString();
+    }
+
+    private int? NetTotal(long participantId, List<int> segment)
+    {
+        var nets = HolesIn(segment).Select(h => LineFor(participantId, h)?.Net).Where(n => n is not null).ToList();
+        return nets.Count == 0 ? null : nets.Sum();
+    }
+
+    private static string PopsFor(int strokesReceived)
+        => strokesReceived > 0 ? new string('•', strokesReceived) : "+" + -strokesReceived;
+
+    private static string CellTitle(GameHoleLine? line, bool won, string? tag)
+    {
+        if (line?.Strokes is not { } strokes) return "Not scored";
+
+        var parts = new List<string> { $"{strokes} — {(strokes == 1 ? "Hole in one" : ScoreMark.NameFor(strokes - line.Value.Par))}" };
+        if (line.Value.StrokesReceived > 0) parts.Add($"gets {line.Value.StrokesReceived}, net {line.Value.Net}");
+        if (line.Value.StrokesReceived < 0) parts.Add($"gives {-line.Value.StrokesReceived}, net {line.Value.Net}");
+        if (won) parts.Add(tag switch
+        {
+            "L" => "won the low ball",
+            "H" => "won the high ball",
+            "LH" or "HL" => "won low and high",
+            null => "won the hole",
+            _ => $"won {tag.TrimStart('×')} skins"
+        });
+
+        return string.Join(" · ", parts);
+    }
+
+    private static string SideClass(int? index) => index is { } i ? $"side side-{i % 4}" : "";
+
+    private static string ChipClass(GameCardChip chip) => chip.SideIndex is { } i
+        ? $"side-{i % 4} owned"
+        : chip.IsWin ? "win" : "neutral";
 }

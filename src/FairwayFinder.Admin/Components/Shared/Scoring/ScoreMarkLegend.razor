@@ -1,0 +1,26 @@
+@* The key for ScoreMark. Put it under any card that uses the notation. *@
+
+<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap">
+    @foreach (var (toPar, label) in Entries)
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.25rem">
+            <ScoreMark Strokes="@(4 + toPar)" Par="4" />
+            <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">@label</RadzenText>
+        </RadzenStack>
+    }
+    @ChildContent
+</RadzenStack>
+
+@code {
+    /// <summary>Game-specific keys (pops, hole winners) appended after the score marks.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private static readonly (int ToPar, string Label)[] Entries =
+    [
+        (-2, "Eagle or better"),
+        (-1, "Birdie"),
+        (0, "Par"),
+        (1, "Bogey"),
+        (2, "Double or worse")
+    ];
+}

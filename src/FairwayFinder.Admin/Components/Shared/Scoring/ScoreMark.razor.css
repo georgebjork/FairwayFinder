@@ -1,0 +1,38 @@
+.score-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 1.6rem;
+    height: 1.6rem;
+    margin: 3px;
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--rz-text-color);
+}
+
+.score-mark.birdie,
+.score-mark.eagle {
+    border-radius: 50%;
+    border: 2px solid var(--rz-success);
+    color: var(--rz-success);
+}
+
+.score-mark.eagle {
+    background-color: color-mix(in srgb, var(--rz-success) 20%, transparent);
+    outline: 2px solid var(--rz-success);
+    outline-offset: 1px;
+}
+
+.score-mark.bogey {
+    border: 2px solid var(--rz-warning);
+}
+
+.score-mark.double {
+    border: 2px solid var(--rz-danger);
+    color: var(--rz-danger);
+    background-color: color-mix(in srgb, var(--rz-danger) 12%, transparent);
+    outline: 2px solid var(--rz-danger);
+    outline-offset: 1px;
+}

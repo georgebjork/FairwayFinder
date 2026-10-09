@@ -131,8 +131,33 @@ else
                                     GridLines="DataGridGridLines.Horizontal">
                         <Columns>
                             <RadzenDataGridColumn TItem="GameStanding" Property="Position" Title="Pos" Width="70px" TextAlign="TextAlign.Center" />
-                            <RadzenDataGridColumn TItem="GameStanding" Property="DisplayName" Title="Player" />
-                            <RadzenDataGridColumn TItem="GameStanding" Property="Value" Title="Standing" Width="140px" TextAlign="TextAlign.Center" />
+                            <RadzenDataGridColumn TItem="GameStanding" Title="Player">
+                                <Template Context="s">
+                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+                                        @if (s.IsLeader)
+                                        {
+                                            <RadzenIcon Icon="emoji_events" Style="color: var(--rz-warning);"
+                                                        title="@(board.IsDecided ? "Winner" : "Leading")" />
+                                        }
+                                        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0"
+                                                    style="@(s.IsLeader ? "font-weight: 600;" : "")">@s.DisplayName</RadzenText>
+                                    </RadzenStack>
+                                </Template>
+                            </RadzenDataGridColumn>
+                            <RadzenDataGridColumn TItem="GameStanding" Title="Standing" Width="140px" TextAlign="TextAlign.Center">
+                                <Template Context="s">
+                                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0"
+                                                style="@(s.IsLeader ? "font-weight: 600; color: var(--rz-success);" : "")">@s.Value</RadzenText>
+                                </Template>
+                            </RadzenDataGridColumn>
+                            @if (board is SkinsScoreboard { Tallies: var tallies } && tallies.Any(t => t.Value is not null))
+                            {
+                                <RadzenDataGridColumn TItem="GameStanding" Title="Won" Width="120px" TextAlign="TextAlign.Center">
+                                    <Template Context="s">
+                                        @(tallies.FirstOrDefault(t => t.ParticipantId == s.ParticipantId)?.Value?.ToString("C") ?? "")
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            }
                         </Columns>
                     </RadzenDataGrid>
                 </RadzenStack>
