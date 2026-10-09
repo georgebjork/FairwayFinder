@@ -36,7 +36,7 @@
     @* ── Filters ── *@
     <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="0.75rem">
         <RadzenTextBox Placeholder="Search path, route, or user email..." @bind-Value="_search"
-                       Style="width: 320px;" @onkeydown="OnSearchKeyDown" />
+                       Style="width: 320px;" @oninput="OnSearchInput" @onkeydown="OnSearchKeyDown" />
         <RadzenDropDown TValue="int?" Data="_statusOptions" @bind-Value="_statusCode"
                         TextProperty="Label" ValueProperty="Value"
                         AllowClear="true" Placeholder="Any status" Style="width: 180px;" Change="ApplyFilters" />
@@ -112,6 +112,9 @@
 
     private string _search = string.Empty;
     private int? _statusCode = 200;
+
+    private const int SearchDebounceMs = 300;
+    private CancellationTokenSource? _searchDebounce;
 
     private readonly List<StatusOption> _statusOptions =
     [
@@ -223,7 +226,12 @@
         }
     }
 
-    public void Dispose() => _refreshTimer?.Dispose();
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
+        _searchDebounce?.Cancel();
+        _searchDebounce?.Dispose();
+    }
 
     private async Task OnLoadData(LoadDataArgs args)
     {
@@ -260,17 +268,46 @@
 
     private async Task ResetFilters()
     {
+        CancelPendingSearch();
         _search = string.Empty;
         _statusCode = null;
         await _grid.Reload();
     }
 
+    // Search as the user types, reloading once they pause for SearchDebounceMs.
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? string.Empty;
+
+        var cts = CancelPendingSearch();
+        try
+        {
+            await Task.Delay(SearchDebounceMs, cts.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        await _grid.Reload();
+    }
+
+    // Enter skips the debounce and searches immediately.
     private async Task OnSearchKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
         {
+            CancelPendingSearch();
             await _grid.Reload();
         }
+    }
+
+    private CancellationTokenSource CancelPendingSearch()
+    {
+        _searchDebounce?.Cancel();
+        _searchDebounce?.Dispose();
+        _searchDebounce = new CancellationTokenSource();
+        return _searchDebounce;
     }
 
     private async Task OnPurgeClicked()
