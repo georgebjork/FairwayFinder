@@ -942,6 +942,30 @@ public class GameService : IGameService
                 }
 
                 break;
+
+            case GameType.HighLow:
+                if (teamed == 0)
+                {
+                    return Fail(GameResultStatus.ParticipantCountInvalid,
+                        "High-Low is a team game — put everyone on one of two teams.");
+                }
+
+                var teams = participants.GroupBy(p => p.Team!.Value).Select(g => g.Count()).ToList();
+
+                if (teams.Count != 2)
+                {
+                    return Fail(GameResultStatus.ParticipantCountInvalid,
+                        $"High-Low needs exactly two teams; this game has {teams.Count}.");
+                }
+
+                // High ball compares each side's worst score, which is only fair ball for ball.
+                if (teams[0] != teams[1] || teams[0] < 2)
+                {
+                    return Fail(GameResultStatus.ParticipantCountInvalid,
+                        "High-Low needs two teams of the same size, at least two each.");
+                }
+
+                break;
         }
 
         return null;

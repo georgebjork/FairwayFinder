@@ -104,6 +104,7 @@ public static class GameNotifications
     {
         GameType.MatchPlay => "Match",
         GameType.Skins => "Skins game",
+        GameType.HighLow => "High-Low",
         _ => "Game"
     };
 }

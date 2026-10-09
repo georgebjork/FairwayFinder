@@ -39,7 +39,7 @@ public class GamePreviewAndHolesTests
         var rounds = new RoundService(factory, friends, push, NullLogger<RoundService>.Instance);
         var entry = new RoundEntryService(factory, rounds, friends, push, NullLogger<RoundEntryService>.Instance);
 
-        var resolver = new GameScoringEngineResolver([new MatchPlayScoringEngine(), new SkinsScoringEngine()]);
+        var resolver = new GameScoringEngineResolver([new MatchPlayScoringEngine(), new SkinsScoringEngine(), new HighLowScoringEngine()]);
         var reader = new GameScoreReader(factory);
         var games = new GameService(factory, resolver, reader, friends, push, NullLogger<GameService>.Instance);
 

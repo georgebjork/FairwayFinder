@@ -71,7 +71,7 @@ public class Game : IAuditable
 
 /// <summary>
 /// Persisted as int. Never renumber: 2, 3, 4 are reserved for StrokePlay, Nassau, and Stableford
-/// when those engines ship. Only values with a registered scoring engine are declared, so
+/// when those engines ship, which is why HighLow is 5. Only values with a registered scoring engine are declared, so
 /// <c>IsInEnum()</c> on the create request is enough to keep an unscoreable game out of the
 /// database.
 /// </summary>
@@ -79,7 +79,8 @@ public class Game : IAuditable
 public enum GameType
 {
     MatchPlay = 0,
-    Skins = 1
+    Skins = 1,
+    HighLow = 5
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

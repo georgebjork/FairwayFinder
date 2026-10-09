@@ -64,4 +64,25 @@ public static class GameSides
 
         return best;
     }
+
+    /// <summary>
+    /// A side's worst ball on one hole: the high ball in High-Low. Null when nobody on the side has
+    /// played the hole.
+    /// </summary>
+    public static int? WorstBall(GameSide side, int holeNumber, bool useNet)
+    {
+        int? worst = null;
+
+        foreach (var member in side.Members)
+        {
+            if (!member.Holes.TryGetValue(holeNumber, out var hole)) continue;
+
+            var score = hole.Effective(useNet);
+            if (score is null) continue;
+
+            if (worst is null || score > worst) worst = score;
+        }
+
+        return worst;
+    }
 }

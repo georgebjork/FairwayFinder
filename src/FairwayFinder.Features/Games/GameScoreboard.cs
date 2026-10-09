@@ -14,6 +14,7 @@ namespace FairwayFinder.Features.Games;
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "gameType")]
 [JsonDerivedType(typeof(MatchPlayScoreboard), "MatchPlay")]
 [JsonDerivedType(typeof(SkinsScoreboard), "Skins")]
+[JsonDerivedType(typeof(HighLowScoreboard), "HighLow")]
 public abstract record GameScoreboard
 {
     /// <summary>Holes every participant has scored, in an unbroken run. Not "holes anyone scored".</summary>
@@ -109,3 +110,50 @@ public sealed record SkinsTally(
     string DisplayName,
     int SkinsWon,
     decimal? Value);
+
+// ── High-Low ──
+
+public sealed record HighLowScoreboard : GameScoreboard
+{
+    /// <summary>The side ahead on points. Null when level.</summary>
+    public required long? LeaderParticipantId { get; init; }
+
+    /// <summary>The points between the two sides.</summary>
+    public required int Margin { get; init; }
+
+    public required IReadOnlyList<HighLowSideTally> Sides { get; init; }
+
+    public required IReadOnlyList<HighLowHole> Holes { get; init; }
+}
+
+public sealed record HighLowSideTally(
+    long SideKeyParticipantId,
+    IReadOnlyList<long> ParticipantIds,
+    string DisplayName,
+    int Points);
+
+/// <summary>
+/// One settled hole. A won-by of null means that point tied and went to nobody.
+/// </summary>
+public sealed record HighLowHole(
+    int HoleNumber,
+    int Par,
+    IReadOnlyList<HighLowHoleSide> Sides,
+    long? LowWonBySideParticipantId,
+    long? HighWonBySideParticipantId,
+    long? RunningLeaderParticipantId,
+    int RunningMargin);
+
+/// <summary>
+/// One side's showing on a hole: its low and high balls, and who made each, so the card can show
+/// whose score counted.
+/// </summary>
+public sealed record HighLowHoleSide(
+    long SideKeyParticipantId,
+    IReadOnlyList<long> ParticipantIds,
+    string DisplayName,
+    int? Low,
+    long? LowParticipantId,
+    int? High,
+    long? HighParticipantId,
+    int Points);

@@ -60,6 +60,7 @@ public static class ServiceRegistration
         // by GameType; adding a game type is a class and a line here.
         services.AddSingleton<IGameScoringEngine, MatchPlayScoringEngine>();
         services.AddSingleton<IGameScoringEngine, SkinsScoringEngine>();
+        services.AddSingleton<IGameScoringEngine, HighLowScoringEngine>();
         services.AddSingleton<IGameScoringEngineResolver, GameScoringEngineResolver>();
 
         // Invitations and request logging are used by both hosts: the API exposes invite

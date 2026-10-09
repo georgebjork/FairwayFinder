@@ -48,7 +48,7 @@ public class GameServiceTests
         var rounds = new RoundService(factory, friends, push, NullLogger<RoundService>.Instance);
         var entry = new RoundEntryService(factory, rounds, friends, push, NullLogger<RoundEntryService>.Instance);
 
-        var resolver = new GameScoringEngineResolver([new MatchPlayScoringEngine(), new SkinsScoringEngine()]);
+        var resolver = new GameScoringEngineResolver([new MatchPlayScoringEngine(), new SkinsScoringEngine(), new HighLowScoringEngine()]);
         var reader = new GameScoreReader(factory);
         var games = new GameService(factory, resolver, reader, friends, push, NullLogger<GameService>.Instance);
 
@@ -772,6 +772,81 @@ public class GameServiceTests
 
         Assert.Equal(GameResultStatus.ParticipantCountInvalid, result.Status);
         Assert.Contains("individual game", result.Detail);
+    }
+
+    /// <summary>
+    /// A High-Low game hosted on team 1, with guests added on the given teams. A null team means
+    /// the host plays without one.
+    /// </summary>
+    private static async Task<long> HighLowGameAsync(Harness h, int? hostTeam, params int?[] guestTeams)
+    {
+        var created = await h.Games.CreateGameAsync(CreateRequest(h, GameType.HighLow, team: hostTeam), HostId);
+        Assert.True(created.IsOk);
+
+        var gameId = created.Value!.GameId;
+
+        for (var i = 0; i < guestTeams.Length; i++)
+        {
+            var added = await h.Games.AddParticipantAsync(gameId, new AddParticipantRequest
+            {
+                DisplayName = $"Guest {i + 1}",
+                TeeboxId = h.TeeboxId,
+                Team = guestTeams[i]
+            }, HostId);
+            Assert.True(added.IsOk);
+        }
+
+        return gameId;
+    }
+
+    [Fact]
+    public async Task StartGameAsync_starts_a_two_on_two_high_low_game()
+    {
+        var h = await CreateAsync(nameof(StartGameAsync_starts_a_two_on_two_high_low_game));
+        var gameId = await HighLowGameAsync(h, 1, 1, 2, 2);
+
+        var result = await h.Games.StartGameAsync(gameId, HostId);
+
+        Assert.True(result.IsOk);
+        Assert.IsType<HighLowScoreboard>(result.Value!.Scoreboard);
+    }
+
+    [Fact]
+    public async Task StartGameAsync_refuses_a_high_low_game_without_teams()
+    {
+        var h = await CreateAsync(nameof(StartGameAsync_refuses_a_high_low_game_without_teams));
+        var gameId = await HighLowGameAsync(h, null, null, null, null);
+
+        var result = await h.Games.StartGameAsync(gameId, HostId);
+
+        Assert.Equal(GameResultStatus.ParticipantCountInvalid, result.Status);
+        Assert.Contains("team game", result.Detail);
+    }
+
+    [Fact]
+    public async Task StartGameAsync_refuses_a_high_low_game_with_three_teams()
+    {
+        var h = await CreateAsync(nameof(StartGameAsync_refuses_a_high_low_game_with_three_teams));
+        var gameId = await HighLowGameAsync(h, 1, 1, 2, 2, 3, 3);
+
+        var result = await h.Games.StartGameAsync(gameId, HostId);
+
+        Assert.Equal(GameResultStatus.ParticipantCountInvalid, result.Status);
+        Assert.Contains("exactly two teams", result.Detail);
+    }
+
+    [Theory]
+    [InlineData(new[] { 1, 1, 2 })] // 3 v 1
+    [InlineData(new[] { 2 })]       // 1 v 1
+    public async Task StartGameAsync_refuses_a_high_low_game_with_uneven_or_solo_teams(int[] guestTeams)
+    {
+        var h = await CreateAsync($"{nameof(StartGameAsync_refuses_a_high_low_game_with_uneven_or_solo_teams)}-{guestTeams.Length}");
+        var gameId = await HighLowGameAsync(h, 1, [.. guestTeams.Select(t => (int?)t)]);
+
+        var result = await h.Games.StartGameAsync(gameId, HostId);
+
+        Assert.Equal(GameResultStatus.ParticipantCountInvalid, result.Status);
+        Assert.Contains("same size", result.Detail);
     }
 
     [Fact]

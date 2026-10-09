@@ -182,6 +182,66 @@ public class GameEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
     }
 
     [Fact]
+    public async Task High_low_two_on_two_from_create_to_posted_result()
+    {
+        var host = await SignInNewUserAsync(firstName: "Host");
+        var course = await Data.CreateCourseAsync();
+
+        var request = NewGame(course, GameType.HighLow);
+        request.Team = 1;
+        var game = await CreateGameAsync(host, request);
+
+        // Three guests make it two on two. Starting short a player is refused.
+        game = await ReadAsync<GameStateResponse>(await host.Client.PostAsJsonAsync($"/api/games/{game.GameId}/participants",
+            new AddParticipantRequest { DisplayName = "Partner", TeeboxId = course.TeeboxId, Team = 1 }));
+        game = await ReadAsync<GameStateResponse>(await host.Client.PostAsJsonAsync($"/api/games/{game.GameId}/participants",
+            new AddParticipantRequest { DisplayName = "Opponent A", TeeboxId = course.TeeboxId, Team = 2 }));
+
+        var uneven = await host.Client.PostAsync($"/api/games/{game.GameId}/start", null);
+        var problem = await ReadAsync<JsonElement>(uneven, HttpStatusCode.Conflict);
+        Assert.Contains("same size", problem.GetProperty("detail").GetString());
+
+        game = await ReadAsync<GameStateResponse>(await host.Client.PostAsJsonAsync($"/api/games/{game.GameId}/participants",
+            new AddParticipantRequest { DisplayName = "Opponent B", TeeboxId = course.TeeboxId, Team = 2 }));
+        game = await ReadAsync<GameStateResponse>(await host.Client.PostAsync($"/api/games/{game.GameId}/start", null));
+        Assert.Equal(GameState.Active, game.State);
+
+        var hostId = ParticipantIdOf(game, host.Id);
+        var partnerId = game.Participants.Single(p => p.DisplayName == "Partner").ParticipantId;
+        var oppAId = game.Participants.Single(p => p.DisplayName == "Opponent A").ParticipantId;
+        var oppBId = game.Participants.Single(p => p.DisplayName == "Opponent B").ParticipantId;
+
+        // Team 1 shoots par and par+1; team 2 shoots par and par+2. Lows tie every hole, team 1
+        // takes every high: one point a hole.
+        foreach (var hole in game.HoleNumbers)
+        {
+            var par = course.Pars[hole - 1];
+            await ScoreAsync(host, game.GameId, hostId, hole, par);
+            await ScoreAsync(host, game.GameId, partnerId, hole, par + 1);
+            await ScoreAsync(host, game.GameId, oppAId, hole, par);
+            game = await ScoreAsync(host, game.GameId, oppBId, hole, par + 2);
+        }
+
+        var raw = await GetAsync<JsonElement>(host.Client, $"/api/games/{game.GameId}");
+        var board = raw.GetProperty("scoreboard");
+        Assert.Equal("HighLow", board.GetProperty("gameType").GetString());
+        Assert.True(board.GetProperty("isDecided").GetBoolean());
+        Assert.Equal(9, board.GetProperty("margin").GetInt32());
+
+        var leader = game.Scoreboard!.Standings.Single(s => s.IsLeader);
+        Assert.Equal(hostId, leader.ParticipantId);
+        Assert.Equal("9 pts", leader.Value);
+
+        var posted = await ReadAsync<GameStateResponse>(await host.Client.PostAsync($"/api/games/{game.GameId}/complete", null));
+        Assert.Equal(GameState.Completed, posted.State);
+
+        // The posted snapshot reads back as a High-Low board.
+        var snapshot = await GetAsync<JsonElement>(host.Client, $"/api/games/{game.GameId}");
+        Assert.Equal("HighLow", snapshot.GetProperty("scoreboard").GetProperty("gameType").GetString());
+        Assert.Equal(9, snapshot.GetProperty("scoreboard").GetProperty("margin").GetInt32());
+    }
+
+    [Fact]
     public async Task Host_can_edit_and_remove_participants_during_setup()
     {
         var host = await SignInNewUserAsync();
