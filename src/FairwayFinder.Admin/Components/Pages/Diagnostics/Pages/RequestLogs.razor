@@ -39,9 +39,7 @@
                        Style="width: 320px;" @onkeydown="OnSearchKeyDown" />
         <RadzenDropDown TValue="int?" Data="_statusOptions" @bind-Value="_statusCode"
                         TextProperty="Label" ValueProperty="Value"
-                        AllowClear="true" Placeholder="Any status" Style="width: 180px;" />
-        <RadzenButton Text="Apply" Icon="search" ButtonStyle="ButtonStyle.Primary" Variant="Variant.Outlined"
-                      Size="ButtonSize.Small" Click="ApplyFilters" />
+                        AllowClear="true" Placeholder="Any status" Style="width: 180px;" Change="ApplyFilters" />
         <RadzenButton Text="Reset" Icon="clear" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
                       Size="ButtonSize.Small" Click="ResetFilters" />
     </RadzenStack>
@@ -113,7 +111,7 @@
     private bool _loading;
 
     private string _search = string.Empty;
-    private int? _statusCode;
+    private int? _statusCode = 200;
 
     private readonly List<StatusOption> _statusOptions =
     [
