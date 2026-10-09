@@ -47,7 +47,7 @@
     <RadzenDataGrid @ref="_grid" TItem="ApiRequestLogListItemDto" Data="_logs" Count="_totalCount"
                     LoadData="OnLoadData" IsLoading="_loading"
                     AllowPaging="true" PageSize="25" PageSizeOptions="@(new[] { 25, 50, 100 })"
-                    PagerHorizontalAlign="HorizontalAlign.Right"
+                    PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.TopAndBottom"
                     ShowPagingSummary="true"
                     PagingSummaryFormat="Displaying page {0} of {1} (total {2} requests)"
                     ExpandMode="DataGridExpandMode.Single"
