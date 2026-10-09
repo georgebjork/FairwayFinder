@@ -218,3 +218,6 @@ static string BuildAppLandingPage(string? appInstallUrl)
         </html>
         """;
 }
+
+// Exposes the generated entry point to WebApplicationFactory in the integration tests.
+public partial class Program;

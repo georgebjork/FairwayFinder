@@ -11,12 +11,45 @@ dotnet build FairwayFinder.sln
 # Run via Aspire AppHost (recommended - orchestrates PostgreSQL + Admin + Api)
 dotnet run --project src/FairwayFinder.AppHost/
 
-# Run tests
+# Run all tests (unit + integration; integration tests need Docker running)
 dotnet test
 
 # Run single test project
 dotnet test tests/FairwayFinder.Features.Tests/
+dotnet test tests/FairwayFinder.Api.IntegrationTests/
+dotnet test tests/FairwayFinder.Admin.IntegrationTests/
 ```
+
+## Testing
+
+| Project | What it covers |
+|---|---|
+| **FairwayFinder.Features.Tests** | Unit tests: services built by hand over EF InMemory, scoring engines, calculators. Fast, no Docker. |
+| **FairwayFinder.Api.IntegrationTests** | The real API host (`WebApplicationFactory<Program>`) over HTTP: JWT auth, validation, ProblemDetails, every endpoint group. |
+| **FairwayFinder.Admin.IntegrationTests** | The real admin host: startup migrations and seeding, page authorization, cookie login, and admin/import services. |
+| **FairwayFinder.IntegrationTests.Common** | Shared infrastructure (not a test project): `PostgresFixture`, `FairwayFinderFactory`, `TestData`, fakes. |
+
+Integration tests run against **real Postgres in a Testcontainers container**, one per test assembly,
+wiped with Respawn before each test. They have to use real Postgres: the filtered unique indexes, `ILIKE`,
+`ExecuteUpdate`/`ExecuteDelete`, unique-violation retries and migrations all behave differently, or not
+at all, on InMemory. Only the edges are faked: `RecordingEmailSender` (read invite/reset links from
+`Email`), `FakeApnsClient` (the real `PushNotificationService` still runs), and `StubHttpHandler` for
+GolfCourseAPI/TGTR.
+
+**Keep the suite growing with the app:**
+
+- **New API endpoint**: add tests to the matching `Endpoints/*Tests.cs` in Api.IntegrationTests, through HTTP
+  with `SignInNewUserAsync()`. `EndpointAuthorizationConventionTests` fails for any endpoint that neither
+  requires auth nor is on its explicit anonymous list. Never add to that list without a reason.
+- **New admin page**: `PageAuthorizationTests` discovers it by reflection and checks its `AdminOnly` policy and
+  redirects automatically. If its route has a new parameter name, add a placeholder in `Resolve`.
+  Prerendering is off, so page bodies are not rendered over HTTP. Test the service the page calls instead.
+- **New Features service behaviour that depends on Postgres** (constraints, concurrency, raw SQL, `ILike`):
+  write an integration test, not an InMemory unit test.
+- **New entity or schema change**: `MigrationTests` fails if the model changed without a migration.
+- **Arranging data**: add builders to `TestData` instead of constructing entities inline, so a schema change is
+  fixed in one place. Prefer driving the real flow (e.g. `RoundFlows.PlayCompletedRoundAsync`) over inserting rows.
+- **New startup-required config key**: add it to `TestSettings`, or neither host will boot under test.
 
 ## Architecture Overview
 
