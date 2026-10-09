@@ -218,6 +218,7 @@ src/FairwayFinder.Admin/Components/
   tag like `L`/`H`/`×3`), a result chip and a running standing. **A new game type adds one case to
   `GameCardModel.From`** and a test in `GameCardModelTests`; don't add type checks to the grid.
   Without that case the card still shows scores and sides, just no hole winners.
+- Adding a whole new game type end to end: use the `new-game-type` skill.
 
 ### Radzen CSS Variables (Use These — Never Hardcode Colors)
 
