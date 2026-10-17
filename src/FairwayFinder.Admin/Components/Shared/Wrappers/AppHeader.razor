@@ -7,8 +7,8 @@
                           Click="@OnToggleSidebar" />
             <a href="/" style="text-decoration: none; color: inherit;">
                 <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                    <RadzenIcon Icon="admin_panel_settings" Style="font-size: 1.5rem;" />
-                    <RadzenText TextStyle="TextStyle.H6" class="rz-m-0">FairwayFinder Admin</RadzenText>
+                    <RadzenImage Path="branding/wordmark-white.png" AlternateText="FairwayFinder" class="ff-wordmark" />
+                    <span class="ff-admin-badge">Admin</span>
                 </RadzenStack>
             </a>
         </RadzenStack>
@@ -20,8 +20,7 @@
                         <Template>
                             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
                                 <RadzenGravatar Email="@context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value" />
-                                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@context.User.Identity?.Name</RadzenText>
-                                <RadzenIcon Icon="arrow_drop_down" />
+                                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" Style="color: var(--rz-on-primary);">@context.User.Identity?.Name</RadzenText>
                             </RadzenStack>
                         </Template>
                         <ChildContent>

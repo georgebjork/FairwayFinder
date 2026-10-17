@@ -1,9 +1,83 @@
+/* Brand: the purple from FairwayFinderIcon-Purple.icon/icon.json, display-p3(0.39209, 0.24707, 0.87061).
+   The hex values are its sRGB equivalent; wide-gamut screens get the exact P3 colour below. */
+:root {
+    --ff-brand: #6a3de7;
+    --rz-primary: var(--ff-brand);
+    --rz-primary-light: #7c54ea;
+    --rz-primary-lighter: rgba(106, 61, 231, 0.16);
+    --rz-primary-dark: #6238d5;
+    --rz-primary-darker: #502ead;
+    --rz-on-primary: #ffffff;
+    --rz-on-primary-lighter: #9e81ef;
+    --rz-header-background-color: var(--ff-brand);
+    --rz-header-color: #ffffff;
+    --rz-header-border: none;
+}
+
+@supports (color: color(display-p3 1 1 1)) {
+    :root {
+        --ff-brand: color(display-p3 0.39209 0.24707 0.87061);
+    }
+}
+
+/* The header sits on brand purple in both appearances, so everything on it stays white. */
+.rz-header {
+    --rz-profile-menu-top-item-background-color: transparent;
+    --rz-profile-menu-toggle-button-color: var(--rz-on-primary);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+}
+
+.rz-header .rz-button.rz-variant-text {
+    color: var(--rz-on-primary);
+}
+
+.rz-header ul.rz-profile-menu {
+    border: none;
+    border-radius: var(--rz-border-radius);
+    transition: background-color var(--rz-transition);
+}
+
+.rz-header ul.rz-profile-menu:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.ff-admin-badge {
+    color: var(--rz-on-primary);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 999px;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    line-height: 1;
+}
+
+/* Selected sidebar item gets the brand accent instead of Radzen's secondary colour. */
+.rz-sidebar {
+    --rz-panel-menu-item-active-indicator: var(--ff-brand);
+}
+
+.rz-panel-menu .rz-navigation-item-wrapper-active {
+    background-image: linear-gradient(90deg, rgba(106, 61, 231, 0.35), rgba(106, 61, 231, 0.08));
+}
+
+.rz-panel-menu .rz-navigation-item-wrapper-active .rz-navigation-item-icon {
+    color: #b9a3f5;
+}
+
+.ff-wordmark {
+    height: 32px;
+    width: auto;
+    display: block;
+}
+
 html, body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
 a, .btn-link {
-    color: #006bb7;
+    color: var(--rz-primary);
 }
 
 .btn-primary {
