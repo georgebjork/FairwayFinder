@@ -145,7 +145,10 @@
     }
 
     private void OnRowClick(DataGridRowMouseEventArgs<AdminGameListItemDto> args)
-        => NavigationManager.NavigateTo($"/games/{args.Data.GameId}");
+    {
+        if (args.Data is { } game)
+            NavigationManager.NavigateTo($"/games/{game.GameId}");
+    }
 
     private static string FormatGameType(GameType gameType) => gameType switch
     {

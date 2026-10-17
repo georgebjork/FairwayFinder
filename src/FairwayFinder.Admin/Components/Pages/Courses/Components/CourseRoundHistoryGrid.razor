@@ -73,7 +73,7 @@
 
     private void OnRowRender(RowRenderEventArgs<RoundResponse> args)
     {
-        if (ShowExclusionState && args.Data.ExcludeFromStats)
+        if (ShowExclusionState && args.Data is { ExcludeFromStats: true })
         {
             args.Attributes["style"] = "opacity: 0.6;";
         }

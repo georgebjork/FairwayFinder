@@ -143,7 +143,10 @@
     }
 
     private void OnRowClick(DataGridRowMouseEventArgs<AdminRoundListItemDto> args)
-        => NavigationManager.NavigateTo($"/rounds/{args.Data.RoundId}");
+    {
+        if (args.Data is { } round)
+            NavigationManager.NavigateTo($"/rounds/{round.RoundId}");
+    }
 
     private static string FormatToPar(int toPar) => toPar switch
     {
