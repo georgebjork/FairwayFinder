@@ -1,4 +1,3 @@
-@using FairwayFinder.Admin.Components.Shared.Layout.Breadcrumb
 @using FairwayFinder.Admin.Components.Shared.Wrappers
 @inherits LayoutComponentBase
 
@@ -7,11 +6,16 @@
 <RadzenDialog />
 <RadzenContextMenu />
 <RadzenNotification />
+<ThemeModeSync />
 
 <RadzenLayout>
     <AppHeader OnToggleSidebar="ToggleSidebar" />
 
     <RadzenSidebar Responsive="true" @bind-Expanded="_sidebarExpanded">
+        <a href="/" class="ff-rail-brand">
+            <img src="branding/wordmark-white.png" alt="FairwayFinder" />
+            <span>Admin console</span>
+        </a>
         <RadzenPanelMenu>
             <RadzenPanelMenuItem Text="Overview" Icon="dashboard" Path="/" Match="NavLinkMatch.All" />
             <RadzenPanelMenuItem Text="Users" Icon="people" Path="/users" />
@@ -28,13 +32,10 @@
     </RadzenSidebar>
 
     <RadzenBody>
-        <Breadcrumb />
-        <div class="rz-p-4">
+        <div class="ff-page">
             @Body
         </div>
     </RadzenBody>
-
-    <AppFooter />
 </RadzenLayout>
 
 <div id="blazor-error-ui" data-nosnippet>

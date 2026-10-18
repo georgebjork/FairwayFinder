@@ -1,0 +1,413 @@
+/* ==========================================================================
+   FairwayFinder admin theme: "Yardage Book"
+
+   A layer over Radzen's default/dark themes. Tokens live on <html data-mode>,
+   which wwwroot/js/theme-mode.js keeps in step with the appearance toggle.
+   `:root[data-mode]` outranks Radzen's `:root`, so load order doesn't matter.
+
+   The one loud element is the ink rail (sidebar) with its contour texture.
+   Everything else is flat paper, hairlines, and condensed tabular numerals.
+   ========================================================================== */
+
+/* --- Tokens shared by both modes ---------------------------------------- */
+:root {
+    /* Brand purple from FairwayFinderIcon-Purple.icon: display-p3(0.39209 0.24707 0.87061). */
+    --ff-brand: #6a3de7;
+    --ff-ink: #1b1535;
+    --ff-fairway: #2f9e6b;
+    --ff-sand: #d6a945;
+    --ff-flag: #d64550;
+    --ff-water: #3a8fc4;
+
+    --ff-font: 'Archivo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --ff-radius-panel: 10px;
+    --ff-radius-control: 6px;
+    --ff-radius-tag: 4px;
+}
+
+@supports (color: color(display-p3 1 1 1)) {
+    :root {
+        --ff-brand: color(display-p3 0.39209 0.24707 0.87061);
+    }
+}
+
+/* --- Mode palettes ------------------------------------------------------- */
+/* Radzen colours almost everything from the --rz-base-* ramp, so each mode
+   remaps the whole ramp to a violet-tinted neutral. The two Radzen themes use
+   the ramp in opposite directions, hence two ramps rather than one. */
+:root[data-mode="light"] {
+    --ff-paper: #f5f4f9;
+    --ff-card: #ffffff;
+    --ff-line: #e3e0ee;
+    --ff-text: #1e1a2e;
+    --ff-text-2: #6b6680;
+
+    --rz-base-50: #ffffff;
+    --rz-base-100: #f5f4f9;
+    --rz-base-200: #ebe9f2;
+    --rz-base-300: #e3e0ee;
+    --rz-base-400: #c4c0d4;
+    --rz-base-500: #9590ab;
+    --rz-base-600: #6b6680;
+    --rz-base-700: #4c4763;
+    --rz-base-800: #1e1a2e;
+    --rz-base-900: #15121f;
+    --rz-base: #e3e0ee;
+}
+
+:root[data-mode="dark"] {
+    --ff-paper: #141122;
+    --ff-card: #1c1830;
+    --ff-line: #2d2846;
+    --ff-text: #ecebf3;
+    --ff-text-2: #a19cb5;
+
+    --rz-base-50: #ffffff;
+    --rz-base-100: #ecebf3;
+    --rz-base-200: #d9d6e6;
+    --rz-base-300: #a19cb5;
+    --rz-base-400: #858099;
+    --rz-base-500: #6a6580;
+    --rz-base-600: #4f4a66;
+    --rz-base-700: #2d2846;
+    --rz-base-800: #1c1830;
+    --rz-base-900: #141122;
+    --rz-base: #4f4a66;
+}
+
+/* --- Radzen mapping (both modes) ---------------------------------------- */
+:root[data-mode] {
+    --rz-text-font-family: var(--ff-font);
+
+    --rz-body-background-color: var(--ff-paper);
+    --rz-base-background-color: var(--ff-card);
+    --rz-panel-background-color: var(--ff-card);
+    --rz-text-color: var(--ff-text);
+    --rz-text-title-color: var(--ff-text);
+    --rz-text-secondary-color: var(--ff-text-2);
+    --rz-text-tertiary-color: var(--ff-text-2);
+    --rz-text-caption-color: var(--ff-text-2);
+    --rz-border-normal: 1px solid var(--ff-line);
+
+    --rz-primary: var(--ff-brand);
+    --rz-primary-light: #7c54ea;
+    --rz-primary-lighter: rgba(106, 61, 231, 0.14);
+    --rz-primary-dark: #6238d5;
+    --rz-primary-darker: #502ead;
+    --rz-on-primary: #ffffff;
+    --rz-on-primary-lighter: #8f6ef0;
+
+    /* Radzen uses "secondary" for hover, focus and selection; keep those on-brand. */
+    --rz-secondary: var(--ff-brand);
+    --rz-secondary-light: #7c54ea;
+    --rz-secondary-lighter: rgba(106, 61, 231, 0.10);
+    --rz-secondary-dark: #6238d5;
+    --rz-secondary-darker: #502ead;
+    --rz-on-secondary-lighter: var(--ff-text);
+    --rz-outline-color: var(--ff-brand);
+
+    --rz-success: var(--ff-fairway);
+    --rz-warning: var(--ff-sand);
+    --rz-danger: var(--ff-flag);
+    --rz-info: var(--ff-water);
+
+    /* Chart series and game team colours (GameScorecardGrid .side-0..3). */
+    --rz-series-1: var(--ff-brand);
+    --rz-series-2: var(--ff-fairway);
+    --rz-series-3: var(--ff-sand);
+    --rz-series-4: var(--ff-water);
+    --rz-series-5: var(--ff-flag);
+    --rz-series-6: #9a7ff0;
+
+    --rz-chart-axis-color: var(--ff-line);
+
+    /* Shape: panels > controls > tags. */
+    --rz-border-radius: var(--ff-radius-control);
+    --rz-card-border-radius: var(--ff-radius-panel);
+    --rz-card-shadow: none;
+    --rz-card-border: 1px solid var(--ff-line);
+    --rz-button-border-radius: var(--ff-radius-control);
+    --rz-input-border-radius: var(--ff-radius-control);
+    --rz-badge-border-radius: var(--ff-radius-tag);
+    --rz-dialog-border-radius: var(--ff-radius-panel);
+    --rz-tabs-tab-selected-top-border-color: var(--ff-brand);
+
+    /* Grids read like a scorecard: quiet header, hairline rows. */
+    --rz-grid-header-background-color: var(--ff-card);
+    --rz-grid-header-text-transform: none;
+    --rz-grid-header-font-size: 0.8125rem;
+    --rz-grid-header-color: var(--ff-text-2);
+    --rz-grid-stripe-background-color: color-mix(in srgb, var(--ff-paper) 60%, var(--ff-card));
+    --rz-grid-hover-background-color: color-mix(in srgb, var(--ff-brand) 8%, transparent);
+    --rz-grid-hover-color: var(--ff-text);
+    --rz-grid-selected-background-color: color-mix(in srgb, var(--ff-brand) 16%, transparent);
+
+    /* Top bar: quiet, on the card surface. */
+    --rz-header-background-color: var(--ff-card);
+    --rz-header-color: var(--ff-text);
+    --rz-header-border: 1px solid var(--ff-line);
+    --rz-header-min-height: 3.5rem;
+
+    /* Pages set their own padding (.ff-page, .ff-login). */
+    --rz-layout-body-padding: 0;
+
+    /* The rail. Same ink in both modes. */
+    --rz-sidebar-background-color: var(--ff-ink);
+    --rz-sidebar-border-inline-end: none;
+    --rz-sidebar-width: 232px;
+    --rz-panel-menu-item-background-color: transparent;
+    --rz-panel-menu-item-border: none;
+    --rz-panel-menu-item-color: rgba(255, 255, 255, 0.7);
+    --rz-panel-menu-item-hover-color: #ffffff;
+    --rz-panel-menu-item-hover-background-color: rgba(255, 255, 255, 0.06);
+    --rz-panel-menu-item-active-color: #ffffff;
+    --rz-panel-menu-item-active-background-color: rgba(255, 255, 255, 0.08);
+    --rz-panel-menu-item-padding-inline: 1.75rem 1rem;
+    --rz-panel-menu-item-padding-block: 0.625rem;
+
+    /* Headings: condensed. */
+    --rz-text-h3-letter-spacing: 0;
+    --rz-text-h4-letter-spacing: 0;
+    --rz-text-h4-font-size: clamp(1.75rem, 2.4vw, 2.25rem);
+    --rz-text-h5-letter-spacing: 0;
+    --rz-text-h6-letter-spacing: 0;
+}
+
+body {
+    background-color: var(--ff-paper);
+    color: var(--ff-text);
+    font-family: var(--ff-font);
+}
+
+/* --- Type ---------------------------------------------------------------- */
+.rz-text-h1, .rz-text-h2, .rz-text-h3, .rz-text-h4, .rz-text-h5, .rz-text-h6,
+.ff-condensed {
+    font-stretch: 75%;
+    font-weight: 600;
+}
+
+.rz-grid-table td,
+.ff-numeric {
+    font-variant-numeric: tabular-nums;
+}
+
+.rz-grid-table thead th .rz-column-title {
+    font-stretch: 87.5%;
+}
+
+/* --- Layout: the rail runs the full height, the top bar sits beside it --- */
+.rz-layout {
+    grid-template-areas:
+        "rz-sidebar rz-header"
+        "rz-sidebar rz-body"
+        "rz-sidebar rz-footer";
+}
+
+.rz-sidebar {
+    background-image: url(../branding/contours.svg);
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: 100% auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.rz-sidebar .rz-panel-menu {
+    background-color: transparent;
+}
+
+/* Active item: a small pennant instead of Radzen's bar. */
+.rz-panel-menu .rz-navigation-item-active::before,
+.rz-panel-menu .rz-navigation-item-wrapper-active::before {
+    width: 9px;
+    height: 11px;
+    inset-block: 50% auto;
+    inset-inline-start: 0.875rem;
+    transform: translateY(-50%);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+    background-color: #9a7ff0;
+}
+
+.ff-page {
+    padding: 2rem 2.5rem 3rem;
+}
+
+@media (max-width: 768px) {
+    .ff-page {
+        padding: 1.25rem 1rem 2rem;
+    }
+}
+
+.ff-rail-brand {
+    display: block;
+    padding: 1.25rem 1.25rem 1.5rem 1.75rem;
+    text-decoration: none;
+}
+
+.ff-rail-brand img {
+    height: 30px;
+    width: auto;
+    display: block;
+}
+
+.ff-rail-brand span {
+    display: block;
+    margin-top: 0.375rem;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.75rem;
+}
+
+.rz-header .rz-breadcrumb {
+    padding: 0;
+}
+
+.ff-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background-color: var(--ff-brand);
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.rz-header ul.rz-profile-menu {
+    background-color: transparent;
+    border: none;
+}
+
+/* --- Components ---------------------------------------------------------- */
+.rz-card {
+    box-shadow: none;
+}
+
+.rz-button {
+    text-transform: none;
+    font-weight: 600;
+    box-shadow: none;
+}
+
+/* Light buttons read as quiet outlined controls on paper. */
+.rz-button.rz-light {
+    background-color: transparent;
+    border: 1px solid var(--ff-line);
+    color: var(--ff-text);
+}
+
+.rz-button.rz-light:not(.rz-state-disabled):hover {
+    background-color: color-mix(in srgb, var(--ff-brand) 8%, transparent);
+}
+
+.rz-badge {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 600;
+}
+
+.rz-dialog {
+    border: 1px solid var(--ff-line);
+}
+
+.rz-grid-table td {
+    border-color: var(--ff-line);
+}
+
+/* --- Focus and motion ---------------------------------------------------- */
+:focus-visible {
+    outline: 2px solid var(--ff-brand);
+    outline-offset: 2px;
+}
+
+.rz-sidebar :focus-visible {
+    outline-color: #ffffff;
+    outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}
+
+/* --- Dashboard status line ----------------------------------------------- */
+.ff-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--ff-text);
+    text-decoration: none;
+}
+
+.ff-status:hover {
+    color: var(--ff-brand);
+}
+
+.ff-status-dot {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+}
+
+/* --- Login --------------------------------------------------------------- */
+/* Error pages share AuthenticationLayout, so the split lives on the login page. */
+.ff-login {
+    display: grid;
+    grid-template-columns: minmax(280px, 2fr) 3fr;
+    min-height: 100dvh;
+}
+
+.ff-login-rail {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 3rem;
+    background-color: var(--ff-ink);
+    background-image: url(../branding/contours.svg);
+    background-repeat: no-repeat;
+    background-position: center bottom;
+    background-size: cover;
+}
+
+.ff-login-rail img {
+    width: min(260px, 100%);
+    height: auto;
+}
+
+.ff-login-rail p {
+    margin: 0.75rem 0 0;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.ff-login-main {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1.5rem;
+    background-color: var(--ff-paper);
+}
+
+@media (max-width: 768px) {
+    .ff-login {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+    }
+
+    .ff-login-rail {
+        padding: 2rem 1.5rem 1.5rem;
+        min-height: 9rem;
+    }
+
+    .ff-login-rail img {
+        width: 180px;
+    }
+
+    .ff-login-main {
+        align-items: flex-start;
+        padding-top: 2.5rem;
+    }
+}

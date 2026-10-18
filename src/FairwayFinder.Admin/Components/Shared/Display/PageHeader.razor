@@ -1,0 +1,23 @@
+@* Page title, optional subtitle, and the page's actions on the right. *@
+
+<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.End" Wrap="FlexWrap.Wrap" Gap="1rem" class="ff-page-header">
+    <RadzenStack Gap="0.25rem">
+        <RadzenText TextStyle="TextStyle.H4" TagName="TagName.H1" class="rz-m-0">@Title</RadzenText>
+        @if (!string.IsNullOrEmpty(Subtitle))
+        {
+            <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" Style="color: var(--rz-text-secondary-color);">@Subtitle</RadzenText>
+        }
+    </RadzenStack>
+    @if (ChildContent is not null)
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+            @ChildContent
+        </RadzenStack>
+    }
+</RadzenStack>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

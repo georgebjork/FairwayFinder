@@ -1,0 +1,34 @@
+@implements IDisposable
+@inject ThemeService ThemeService
+@inject IJSRuntime JS
+
+@* Keeps <html data-mode> and the ff-mode cookie in step with RadzenAppearanceToggle. *@
+
+@code {
+    protected override void OnInitialized()
+    {
+        ThemeService.ThemeChanged += OnThemeChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        // The circuit's ThemeService starts empty; seed it from the mode the server rendered
+        // so the toggle shows the right state.
+        var mode = await JS.InvokeAsync<string>("ffThemeMode.get");
+        ThemeService.SetTheme(mode == "light" ? "default" : "dark", true);
+    }
+
+    private void OnThemeChanged()
+    {
+        var mode = ThemeService.Theme?.Contains("dark", StringComparison.OrdinalIgnoreCase) == true ? "dark" : "light";
+        _ = InvokeAsync(() => JS.InvokeVoidAsync("ffThemeMode.set", mode).AsTask());
+    }
+
+    public void Dispose()
+    {
+        ThemeService.ThemeChanged -= OnThemeChanged;
+    }
+}

@@ -1,13 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-mode="@Mode">
 
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <base href="/"/>
     <ResourcePreloader/>
-    <RadzenTheme Theme="dark" />
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap"/>
+    <RadzenTheme Theme="@(Mode == "light" ? "default" : "dark")" />
     <link rel="stylesheet" href="@Assets["app.css"]"/>
+    <link rel="stylesheet" href="@Assets["css/fairway-theme.css"]"/>
     <link rel="stylesheet" href="@Assets["FairwayFinder.Admin.styles.css"]"/>
     <ImportMap/>
     <link rel="icon" type="image/png" sizes="32x32" href="favicon.png"/>
@@ -17,9 +21,10 @@
     <HeadOutlet/>
 </head>
 
-<body style="background-color: #1e1e2e;">
+<body>
 <Routes @rendermode="PageRenderMode"/>
 <ReconnectModal/>
+<script src="@Assets["js/theme-mode.js"]"></script>
 <script src="@Assets["_framework/blazor.web.js"]"></script>
 <script src="_content/Radzen.Blazor/Radzen.Blazor.js?v=@(typeof(Radzen.Colors).Assembly.GetName().Version)"></script>
 </body>
@@ -28,6 +33,9 @@
 
 @code {
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+
+    // Set by wwwroot/js/theme-mode.js when the appearance toggle is used.
+    private string Mode => HttpContext.Request.Cookies["ff-mode"] == "light" ? "light" : "dark";
 
     private IComponentRenderMode? PageRenderMode =>
         HttpContext.AcceptsInteractiveRouting() ? new InteractiveServerRenderMode(prerender: false) : null;

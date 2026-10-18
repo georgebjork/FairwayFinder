@@ -1,0 +1,9 @@
+@* A joined grid of ScorecardCells that share hairlines, like the boxes on a scorecard. *@
+
+<div class="scorecard-strip">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

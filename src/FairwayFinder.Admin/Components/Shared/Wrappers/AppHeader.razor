@@ -1,30 +1,25 @@
-@inject NavigationManager NavigationManager
+@using FairwayFinder.Admin.Components.Shared.Layout.Breadcrumb
 
 <RadzenHeader>
-    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Gap="0" class="rz-p-2">
-        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-            <RadzenButton Icon="menu" ButtonStyle="ButtonStyle.Light" Variant="Variant.Text" Size="ButtonSize.Small"
-                          Click="@OnToggleSidebar" />
-            <a href="/" style="text-decoration: none; color: inherit;">
-                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                    <RadzenImage Path="branding/wordmark-white.png" AlternateText="FairwayFinder" class="ff-wordmark" />
-                    <span class="ff-admin-badge">Admin</span>
-                </RadzenStack>
-            </a>
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween" Gap="1rem" class="rz-px-4" Style="min-height: var(--rz-header-min-height);">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.75rem">
+            <RadzenButton Icon="menu" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" Size="ButtonSize.Small"
+                          Click="@OnToggleSidebar" aria-label="Toggle navigation" />
+            <Breadcrumb />
         </RadzenStack>
         <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-            <RadzenAppearanceToggle />
+            <RadzenAppearanceToggle LightTheme="default" DarkTheme="dark" ButtonStyle="ButtonStyle.Base" Variant="Variant.Text" />
             <AuthorizeView>
                 <Authorized>
                     <RadzenProfileMenu>
                         <Template>
                             <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
-                                <RadzenGravatar Email="@context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value" />
-                                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" Style="color: var(--rz-on-primary);">@context.User.Identity?.Name</RadzenText>
+                                <span class="ff-avatar" aria-hidden="true">@Initial(context.User.Identity?.Name)</span>
+                                <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">@context.User.Identity?.Name</RadzenText>
                             </RadzenStack>
                         </Template>
                         <ChildContent>
-                            <RadzenProfileMenuItem Text="Sign Out" Icon="logout" Path="/authentication/logout" />
+                            <RadzenProfileMenuItem Text="Sign out" Icon="logout" Path="/authentication/logout" />
                         </ChildContent>
                     </RadzenProfileMenu>
                 </Authorized>
@@ -35,4 +30,7 @@
 
 @code {
     [Parameter] public EventCallback OnToggleSidebar { get; set; }
+
+    private static string Initial(string? name) =>
+        string.IsNullOrWhiteSpace(name) ? "?" : char.ToUpperInvariant(name.Trim()[0]).ToString();
 }

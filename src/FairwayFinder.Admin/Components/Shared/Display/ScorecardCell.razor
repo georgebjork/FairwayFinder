@@ -1,0 +1,31 @@
+@* One box in a ScorecardStrip: label, a condensed value, and a short note. *@
+
+@if (string.IsNullOrEmpty(Href))
+{
+    <div class="@CssClass">@Body</div>
+}
+else
+{
+    <a class="@CssClass" href="@Href">@Body</a>
+}
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter, EditorRequired] public string Value { get; set; } = "";
+    [Parameter] public string? Note { get; set; }
+    [Parameter] public ScorecardTone Tone { get; set; }
+    [Parameter] public string? Href { get; set; }
+
+    private string CssClass => Tone == ScorecardTone.None
+        ? "scorecard-cell"
+        : $"scorecard-cell tone-{Tone.ToString().ToLowerInvariant()}";
+
+    private RenderFragment Body => @<text>
+        <span class="label">@Label</span>
+        <span class="value">@Value</span>
+        @if (!string.IsNullOrEmpty(Note))
+        {
+            <span class="note">@Note</span>
+        }
+    </text>;
+}

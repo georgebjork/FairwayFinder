@@ -1,0 +1,50 @@
+.scorecard-cell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 1rem 1.25rem 1.125rem;
+    background-color: var(--ff-card);
+    color: var(--ff-text);
+    text-decoration: none;
+}
+
+a.scorecard-cell:hover {
+    background-color: color-mix(in srgb, var(--ff-brand) 6%, var(--ff-card));
+}
+
+/* Status tick on the top edge. */
+.scorecard-cell[class*="tone-"]::before {
+    content: "";
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 1.25rem;
+    width: 1.5rem;
+    height: 3px;
+    border-radius: 0 0 2px 2px;
+    background-color: var(--tone);
+}
+
+.tone-brand { --tone: var(--ff-brand); }
+.tone-fairway { --tone: var(--ff-fairway); }
+.tone-sand { --tone: var(--ff-sand); }
+.tone-flag { --tone: var(--ff-flag); }
+.tone-water { --tone: var(--ff-water); }
+
+.label {
+    font-size: 0.8125rem;
+    color: var(--ff-text-2);
+}
+
+.value {
+    font-size: 2.25rem;
+    line-height: 1;
+    font-weight: 600;
+    font-stretch: 75%;
+    font-variant-numeric: tabular-nums;
+}
+
+.note {
+    font-size: 0.8125rem;
+    color: var(--ff-text-2);
+}
