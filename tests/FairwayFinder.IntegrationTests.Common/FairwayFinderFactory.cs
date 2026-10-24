@@ -65,7 +65,7 @@ public abstract class FairwayFinderFactory<TEntryPoint> : WebApplicationFactory<
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
-        builder.UseTestSettings(Postgres.ConnectionString, SettingOverrides);
+        builder.UseTestSettings(Postgres.ConnectionString, Postgres.LogsConnectionString, SettingOverrides);
 
         builder.ConfigureTestServices(services =>
         {

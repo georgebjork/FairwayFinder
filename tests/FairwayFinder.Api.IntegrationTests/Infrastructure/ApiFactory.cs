@@ -28,6 +28,11 @@ public sealed class ApiFactory : FairwayFinderFactory<Program>
             .CreateDbContextAsync();
         await db.Database.MigrateAsync();
 
+        var logDb = await scope.ServiceProvider
+            .GetRequiredService<IDbContextFactory<LogDbContext>>()
+            .CreateDbContextAsync();
+        await logDb.Database.MigrateAsync();
+
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         foreach (var role in new[] { ApplicationRoles.Admin, ApplicationRoles.User })
         {

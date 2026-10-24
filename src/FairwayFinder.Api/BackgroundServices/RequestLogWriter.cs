@@ -11,7 +11,7 @@ namespace FairwayFinder.Api.BackgroundServices;
 /// </summary>
 public class RequestLogWriter(
     Channel<ApiRequestLog> channel,
-    IDbContextFactory<ApplicationDbContext> dbContextFactory,
+    IDbContextFactory<LogDbContext> dbContextFactory,
     ILogger<RequestLogWriter> logger) : BackgroundService
 {
     private const int MaxBatchSize = 100;

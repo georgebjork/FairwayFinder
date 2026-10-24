@@ -197,6 +197,46 @@ public sealed class TestData(IServiceProvider services)
         return invitation;
     }
 
+    /// <summary>
+    /// An application log row as the Serilog database sink would write it. Inserted directly, so the
+    /// tests control the timestamp; use a real <c>ILogger</c> to test the sink itself.
+    /// </summary>
+    public async Task<AppLogEntry> CreateAppLogAsync(
+        string message,
+        string level = "Error",
+        DateTime? timestamp = null,
+        string application = "FairwayFinder.Api",
+        string? userId = null,
+        string? userEmail = null,
+        string? sourceContext = "FairwayFinder.Features.Services.RoundService",
+        string? exception = "System.InvalidOperationException: boom\n   at Somewhere()")
+    {
+        await using var db = CreateLogDbContext();
+
+        var entry = new AppLogEntry
+        {
+            Timestamp = timestamp ?? DateTime.UtcNow,
+            Level = level,
+            Message = message,
+            MessageTemplate = message,
+            Exception = exception,
+            SourceContext = sourceContext,
+            Application = application,
+            UserId = userId,
+            UserEmail = userEmail,
+            RequestPath = "/api/rounds",
+            TraceId = Guid.NewGuid().ToString("N"),
+            Properties = "{\"RoundId\": 5}",
+        };
+        db.AppLogs.Add(entry);
+        await db.SaveChangesAsync();
+
+        return entry;
+    }
+
     public ApplicationDbContext CreateDbContext() =>
         services.GetRequiredService<IDbContextFactory<ApplicationDbContext>>().CreateDbContext();
+
+    public LogDbContext CreateLogDbContext() =>
+        services.GetRequiredService<IDbContextFactory<LogDbContext>>().CreateDbContext();
 }

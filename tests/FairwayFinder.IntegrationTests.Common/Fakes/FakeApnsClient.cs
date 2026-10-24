@@ -13,12 +13,21 @@ public sealed class FakeApnsClient : IApnsClient
 
     public IReadOnlyList<ApplePush> Sent => _sent.ToArray();
 
-    public void Clear() => _sent.Clear();
+    /// <summary>When set, every send throws this instead of succeeding, as a network failure would.</summary>
+    public Exception? FailWith { get; set; }
+
+    public void Clear()
+    {
+        _sent.Clear();
+        FailWith = null;
+    }
 
     public Task<ApnsResponse> Send(ApplePush push) => SendAsync(push);
 
     public Task<ApnsResponse> SendAsync(ApplePush push, CancellationToken ct = default)
     {
+        if (FailWith is not null) throw FailWith;
+
         _sent.Enqueue(push);
         return Task.FromResult(ApnsResponse.Successful());
     }

@@ -9,12 +9,14 @@ using FairwayFinder.Features.Services.GolfCourseApi;
 using FairwayFinder.Features.Games;
 using FairwayFinder.Features.Games.Engines;
 using FairwayFinder.Features.Services.Interfaces;
+using FairwayFinder.Features.Services.Logging;
 using FairwayFinder.Features.Services.TGTR;
 using FairwayFinder.Shared.Settings;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Serilog.Core;
 
 namespace FairwayFinder.Features;
 
@@ -68,6 +70,13 @@ public static class ServiceRegistration
         services.AddTransient<IUserInvitationService, UserInvitationService>();
         services.AddTransient<ApiRequestLogService>();
 
+        // Warning-or-worse events from both hosts go to the logs database for the admin console.
+        // Registered as a plain ILogEventSink so the host's Serilog ReadFrom.Services picks it up.
+        if (config.GetSection("AppLogging").Get<AppLoggingSettings>()?.Enabled ?? true)
+        {
+            services.AddSingleton<ILogEventSink, DatabaseLogSink>();
+        }
+
         // Password reset is reachable from both hosts: a golfer requests it from the app via the
         // API, and an admin sends the same link on their behalf from the console.
         services.AddTransient<IPasswordResetService, PasswordResetService>();
@@ -115,6 +124,7 @@ public static class ServiceRegistration
         services.AddTransient<AdminRoundService>();
         services.AddTransient<AdminDeviceService>();
         services.AddTransient<AdminGameService>();
+        services.AddTransient<AppLogService>();
 
         // TGTR integration
         services.AddHttpClient<TgtrHttpClient>(client =>

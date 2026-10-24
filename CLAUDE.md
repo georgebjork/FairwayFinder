@@ -30,7 +30,7 @@ dotnet test tests/FairwayFinder.Admin.IntegrationTests/
 | **FairwayFinder.IntegrationTests.Common** | Shared infrastructure (not a test project): `PostgresFixture`, `FairwayFinderFactory`, `TestData`, fakes. |
 
 Integration tests run against **real Postgres in a Testcontainers container**, one per test assembly,
-wiped with Respawn before each test. They have to use real Postgres: the filtered unique indexes, `ILIKE`,
+holding both databases (`db-fairwayfinder` and `db-fairwayfinder-logs`), each wiped with Respawn before each test. They have to use real Postgres: the filtered unique indexes, `ILIKE`,
 `ExecuteUpdate`/`ExecuteDelete`, unique-violation retries and migrations all behave differently, or not
 at all, on InMemory. Only the edges are faked: `RecordingEmailSender` (read invite/reset links from
 `Email`), `FakeApnsClient` (the real `PushNotificationService` still runs), and `StubHttpHandler` for
@@ -137,6 +137,34 @@ Features cannot throw the API's exception types (the dependency runs Api → Fea
 - PostgreSQL in all environments. Dev uses a container via Aspire.
 - Schema includes ASP.NET Core Identity tables + golf domain tables.
 - EF Core manages all queries and migrations.
+
+### Two databases
+
+| Connection string | Context | Holds | Migrations |
+|---|---|---|---|
+| `fairwayfinder` | `ApplicationDbContext` | Identity, golf data, Data Protection keys | `Migrations/` |
+| `fairwayfinder-logs` | `LogDbContext` | `api_request_log`, `app_log` | `Migrations/Logs` (`--context LogDbContext --output-dir Migrations/Logs`) |
+
+Same server in production, different database, so log volume and retention purges never touch golf
+data. Admin migrates both at startup. Diagnostics go in `LogDbContext`, never in `ApplicationDbContext`.
+
+### Logging
+
+Serilog owns logging in both hosts (`ServiceDefaults/LoggingExtensions.cs`): readable console in
+Development, compact JSON elsewhere, OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Levels live in the
+`Serilog` config section, not `Logging`.
+
+- **Warning and worse also go to `app_log`** through `DatabaseLogSink` (Features/Services/Logging), a DI
+  `ILogEventSink` that `ReadFrom.Services` picks up. The admin console shows them at `/app-logs`.
+  Settings: the `AppLogging` section.
+- **Who caused it**: `UseUserLogContext()` pushes `UserId`/`UserEmail` onto every event in an authenticated
+  request; `LogContextCircuitHandler` does the same inside Admin's Blazor circuits.
+- **Log with message templates, never interpolation** (`LogError(ex, "Round {RoundId} failed", id)`): the
+  template groups occurrences and each value is stored as a property.
+- **Pick levels deliberately**: everything at Warning+ is persisted. A 4xx is the client's mistake, not
+  an error — `GlobalExceptionHandler` logs those at Information.
+- `LogDbContext` uses `NullLoggerFactory` and the writer runs inside `LogWriteScope`, so a failing log
+  write cannot log about itself back into the sink. Keep both.
 
 ### Dates and audit stamps
 

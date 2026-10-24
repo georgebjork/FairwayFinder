@@ -84,7 +84,7 @@ public class AdminOperationsServiceTests(AdminFactory factory) : AdminTestBase(f
     public async Task Request_log_search_is_case_insensitive_and_paged_newest_first()
     {
         var now = DateTime.UtcNow;
-        await using (var db = Db())
+        await using (var db = LogDb())
         {
             db.ApiRequestLogs.AddRange(
                 Log("/api/rounds", 200, now.AddMinutes(-3), "Golfer@Test.com"),
@@ -107,7 +107,7 @@ public class AdminOperationsServiceTests(AdminFactory factory) : AdminTestBase(f
     [Fact]
     public async Task Request_log_purge_deletes_only_rows_past_retention()
     {
-        await using (var db = Db())
+        await using (var db = LogDb())
         {
             db.ApiRequestLogs.AddRange(
                 Log("/old", 200, DateTime.UtcNow.AddDays(-45)),
@@ -118,7 +118,7 @@ public class AdminOperationsServiceTests(AdminFactory factory) : AdminTestBase(f
         var removed = await Service<ApiRequestLogService>().PurgeOlderThanAsync(30);
 
         Assert.Equal(1, removed);
-        await using var check = Db();
+        await using var check = LogDb();
         Assert.Equal("/new", (await check.ApiRequestLogs.SingleAsync()).Path);
     }
 

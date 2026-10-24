@@ -24,9 +24,10 @@ public static class TestSettings
     public const string TgtrBaseUrl = "https://tgtr.test/";
     public const string GolfCourseApiBaseUrl = "https://golfcourseapi.test/";
 
-    public static Dictionary<string, string?> For(string connectionString) => new()
+    public static Dictionary<string, string?> For(string connectionString, string logsConnectionString) => new()
     {
         ["ConnectionStrings:fairwayfinder"] = connectionString,
+        ["ConnectionStrings:fairwayfinder-logs"] = logsConnectionString,
 
         ["Jwt:Secret"] = JwtSecret,
         ["Jwt:Issuer"] = JwtIssuer,
@@ -51,6 +52,8 @@ public static class TestSettings
 
         ["Resend:ApiKey"] = "re_test",
         ["RequestLogging:Enabled"] = "false",
+        // The database log sink stays on so its tests see real rows; a short flush keeps them fast.
+        ["AppLogging:FlushIntervalMs"] = "100",
 
         ["SeedUser:Email"] = "",
         ["SeedUser:Password"] = "",
@@ -59,9 +62,10 @@ public static class TestSettings
     public static IWebHostBuilder UseTestSettings(
         this IWebHostBuilder builder,
         string connectionString,
+        string logsConnectionString,
         IReadOnlyDictionary<string, string?>? overrides = null)
     {
-        var settings = For(connectionString);
+        var settings = For(connectionString, logsConnectionString);
         if (overrides is not null)
         {
             foreach (var (key, value) in overrides)

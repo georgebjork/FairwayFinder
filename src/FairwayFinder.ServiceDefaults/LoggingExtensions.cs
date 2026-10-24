@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using Serilog.Context;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
 using Serilog.Sinks.OpenTelemetry;
@@ -121,6 +122,31 @@ public static class LoggingExtensions
                     diagnostics.Set("UserId", userId);
                 }
             };
+        });
+
+        return app;
+    }
+
+    /// <summary>
+    /// Puts the signed-in user on every log event raised for the rest of the request, so a warning
+    /// or error can be traced back to who caused it. Register directly after <c>UseAuthentication</c>.
+    /// </summary>
+    public static WebApplication UseUserLogContext(this WebApplication app)
+    {
+        app.Use(async (context, next) =>
+        {
+            var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId is null)
+            {
+                await next(context);
+                return;
+            }
+
+            using (LogContext.PushProperty("UserId", userId))
+            using (LogContext.PushProperty("UserEmail", context.User.FindFirstValue(ClaimTypes.Email)))
+            {
+                await next(context);
+            }
         });
 
         return app;

@@ -1,0 +1,399 @@
+@page "/app-logs"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = Policies.AdminOnly)]
+@implements IDisposable
+@using FairwayFinder.Features.Services.Admin
+@using FairwayFinder.Admin.Components.Shared.Dialogs
+@using FairwayFinder.Admin.Components.Shared.Layout.Breadcrumb
+@inject AppLogService AppLogService
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject BreadcrumbState BreadcrumbState
+
+<PageTitle>Error Logs</PageTitle>
+
+<RadzenStack Gap="1.5rem">
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.SpaceBetween" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="1rem">
+        <RadzenText TextStyle="TextStyle.H4" class="rz-m-0">Error Logs</RadzenText>
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="0.75rem">
+            @* ── Auto-refresh control + countdown ── *@
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.4rem">
+                <RadzenButton Icon="@(_paused ? "play_arrow" : "pause")"
+                              Text="@(_paused ? "Resume" : "Pause")"
+                              ButtonStyle="ButtonStyle.Base" Variant="Variant.Flat" Size="ButtonSize.Small"
+                              Click="TogglePause" />
+                <RadzenIcon Icon="@(AutoRefreshActive ? "sync" : "sync_disabled")"
+                            Style="@($"font-size: 1rem; color: {(AutoRefreshActive ? "var(--rz-success)" : "var(--rz-text-disabled-color)")};")" />
+                <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color); min-width: 150px;">
+                    @RefreshStatusText
+                </RadzenText>
+            </RadzenStack>
+            <RadzenButton Text="Purge older than 30 days" Icon="delete_sweep" ButtonStyle="ButtonStyle.Danger"
+                          Size="ButtonSize.Small" Click="OnPurgeClicked" />
+        </RadzenStack>
+    </RadzenStack>
+
+    @* ── Filters ── *@
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap" Gap="0.75rem">
+        <RadzenTextBox Placeholder="Search message, source, or user email..." @bind-Value="_search"
+                       Style="width: 320px;" @oninput="OnSearchInput" @onkeydown="OnSearchKeyDown" />
+        <RadzenDropDown TValue="string" Data="_levelOptions" @bind-Value="_level"
+                        AllowClear="true" Placeholder="Any level" Style="width: 160px;" Change="ApplyFilters" />
+        <RadzenDropDown TValue="string" Data="_applications" @bind-Value="_application"
+                        AllowClear="true" Placeholder="Any application" Style="width: 220px;" Change="ApplyFilters" />
+        <RadzenButton Text="Reset" Icon="clear" ButtonStyle="ButtonStyle.Light" Variant="Variant.Outlined"
+                      Size="ButtonSize.Small" Click="ResetFilters" />
+    </RadzenStack>
+
+    <RadzenDataGrid @ref="_grid" TItem="AppLogListItemDto" Data="_logs" Count="_totalCount"
+                    LoadData="OnLoadData" IsLoading="_loading"
+                    AllowPaging="true" PageSize="25" PageSizeOptions="@(new[] { 25, 50, 100 })"
+                    PagerHorizontalAlign="HorizontalAlign.Right" PagerPosition="PagerPosition.TopAndBottom"
+                    ShowPagingSummary="true"
+                    PagingSummaryFormat="Displaying page {0} of {1} (total {2} entries)"
+                    ExpandMode="DataGridExpandMode.Single"
+                    RowExpand="OnRowExpand" RowCollapse="OnRowCollapse"
+                    EmptyText="No warnings or errors logged.">
+        <Columns>
+            <RadzenDataGridColumn TItem="AppLogListItemDto" Property="Timestamp" Title="Time (UTC)" Width="170px" FormatString="{0:yyyy-MM-dd HH:mm:ss}" />
+            <RadzenDataGridColumn TItem="AppLogListItemDto" Property="Level" Title="Level" Width="100px" TextAlign="TextAlign.Center">
+                <Template Context="log">
+                    <RadzenBadge Text="@log.Level" BadgeStyle="@LevelBadgeStyle(log.Level)" Shade="Shade.Lighter" />
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="AppLogListItemDto" Title="App" Width="90px">
+                <Template Context="log">@ShortApplication(log.Application)</Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="AppLogListItemDto" Title="Message">
+                <Template Context="log">
+                    <RadzenStack Gap="0">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.35rem">
+                            @if (log.HasException)
+                            {
+                                <RadzenIcon Icon="bug_report" title="Has a stack trace" Style="font-size: 1rem; color: var(--rz-danger);" />
+                            }
+                            <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0"
+                                        style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@log.Message</RadzenText>
+                        </RadzenStack>
+                        <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">@ShortSource(log.SourceContext)</RadzenText>
+                    </RadzenStack>
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="AppLogListItemDto" Title="User" Width="220px">
+                <Template Context="log">
+                    @if (string.IsNullOrEmpty(log.UserEmail) && string.IsNullOrEmpty(log.UserId))
+                    {
+                        <span style="color: var(--rz-text-secondary-color);">System</span>
+                    }
+                    else
+                    {
+                        @(log.UserEmail ?? log.UserId)
+                    }
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+        <Template Context="log">
+            <RadzenCard Variant="Variant.Outlined" class="rz-mx-4 rz-my-2 rz-p-3">
+                @if (!_details.TryGetValue(log.AppLogId, out var detail))
+                {
+                    <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small" />
+                }
+                else if (detail is null)
+                {
+                    <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0">This entry has been purged.</RadzenText>
+                }
+                else
+                {
+                    <RadzenStack Gap="1rem">
+                        <RadzenRow RowGap="1rem">
+                            <RadzenColumn Size="12">@Field("Message", detail.Message)</RadzenColumn>
+                            <RadzenColumn Size="12" SizeSM="6" SizeLG="4">@Field("Timestamp (UTC)", detail.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff"))</RadzenColumn>
+                            <RadzenColumn Size="12" SizeSM="6" SizeLG="4">@Field("Level", detail.Level)</RadzenColumn>
+                            <RadzenColumn Size="12" SizeSM="6" SizeLG="4">@Field("Application", detail.Application)</RadzenColumn>
+                            <RadzenColumn Size="12" SizeSM="6" SizeLG="4">@Field("User email", detail.UserEmail)</RadzenColumn>
+                            <RadzenColumn Size="12" SizeSM="6" SizeLG="8">@Field("User id", detail.UserId)</RadzenColumn>
+                            <RadzenColumn Size="12" SizeLG="4">@Field("Request path", detail.RequestPath)</RadzenColumn>
+                            <RadzenColumn Size="12" SizeLG="8">@Field("Trace id", detail.TraceId)</RadzenColumn>
+                            <RadzenColumn Size="12">@Field("Source", detail.SourceContext)</RadzenColumn>
+                            <RadzenColumn Size="12">@Field("Message template", detail.MessageTemplate)</RadzenColumn>
+                        </RadzenRow>
+                        @if (!string.IsNullOrEmpty(detail.Exception))
+                        {
+                            @Block("Stack trace", detail.Exception)
+                        }
+                        @if (!string.IsNullOrEmpty(detail.Properties))
+                        {
+                            @Block("Properties", detail.Properties)
+                        }
+                    </RadzenStack>
+                }
+            </RadzenCard>
+        </Template>
+    </RadzenDataGrid>
+</RadzenStack>
+
+@code {
+    private RadzenDataGrid<AppLogListItemDto> _grid = default!;
+    private IEnumerable<AppLogListItemDto> _logs = Enumerable.Empty<AppLogListItemDto>();
+    private int _totalCount;
+    private bool _loading;
+
+    private string _search = string.Empty;
+    private string? _level;
+    private string? _application;
+
+    private readonly List<string> _levelOptions = ["Warning", "Error", "Fatal"];
+    private List<string> _applications = [];
+
+    // Detail rows (stack trace, properties) are loaded on expand; null means the row was purged.
+    private readonly Dictionary<long, AppLogDetailDto?> _details = new();
+
+    private const int SearchDebounceMs = 300;
+    private CancellationTokenSource? _searchDebounce;
+
+    private const int RefreshIntervalSeconds = 10;
+
+    private bool _initialLoadDone;
+    private System.Threading.Timer? _refreshTimer;
+    private bool _paused;
+    private int _secondsUntilRefresh = RefreshIntervalSeconds;
+
+    // Current page window, tracked so the silent auto-refresh re-fetches exactly what's shown.
+    private int _lastSkip;
+    private int _lastTop = 25;
+
+    // When a row detail is expanded, auto-refresh is frozen so the open row isn't collapsed.
+    private AppLogListItemDto? _expandedItem;
+
+    private bool AutoRefreshActive => !_paused && _expandedItem is null;
+
+    private string RefreshStatusText =>
+        _paused ? "Auto-refresh paused"
+        : _expandedItem is not null ? "Paused while row open"
+        : $"Next refresh in {_secondsUntilRefresh}s";
+
+    protected override void OnInitialized()
+    {
+        BreadcrumbState.Set(
+            new BreadcrumbItem("Overview", "/"),
+            new BreadcrumbItem("Error Logs")
+        );
+    }
+
+    // Radzen's automatic initial LoadData does not fire under this app's interactive-routing
+    // render setup, so kick off the first load once the grid has rendered, then start the
+    // auto-refresh ticker (1s cadence to drive the countdown; reloads every RefreshIntervalSeconds).
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialLoadDone)
+        {
+            _initialLoadDone = true;
+            _applications = await AppLogService.GetApplicationsAsync();
+            await _grid.Reload();
+            _refreshTimer = new System.Threading.Timer(_ => _ = OnTickAsync(), null,
+                TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+        }
+    }
+
+    private async Task OnTickAsync()
+    {
+        try
+        {
+            // Frozen while paused or a row is expanded: only keep the indicator text current.
+            if (!AutoRefreshActive)
+            {
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+
+            if (_secondsUntilRefresh <= 1)
+            {
+                _secondsUntilRefresh = RefreshIntervalSeconds;
+                // Skip if a load is already in flight to avoid overlapping fetches.
+                if (!_loading)
+                    await InvokeAsync(RefreshSilentlyAsync);
+            }
+            else
+            {
+                _secondsUntilRefresh--;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch
+        {
+            // Timer ticks must never surface an unhandled exception onto the circuit.
+        }
+    }
+
+    // Re-fetches the current page and swaps the grid data in place — no loading overlay and no
+    // Reload, so the rows update without the flash that a full Reload causes.
+    private async Task RefreshSilentlyAsync()
+    {
+        var result = await FetchAsync(_lastSkip, _lastTop);
+        _logs = result.Items;
+        _totalCount = result.TotalCount;
+        StateHasChanged();
+    }
+
+    private void TogglePause()
+    {
+        _paused = !_paused;
+        if (!_paused) _secondsUntilRefresh = RefreshIntervalSeconds;
+    }
+
+    private async Task OnRowExpand(AppLogListItemDto item)
+    {
+        _expandedItem = item;
+
+        if (!_details.ContainsKey(item.AppLogId))
+        {
+            _details[item.AppLogId] = await AppLogService.GetLogDetailAsync(item.AppLogId);
+        }
+    }
+
+    private void OnRowCollapse(AppLogListItemDto item)
+    {
+        if (ReferenceEquals(_expandedItem, item))
+        {
+            _expandedItem = null;
+            _secondsUntilRefresh = RefreshIntervalSeconds;
+        }
+    }
+
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
+        _searchDebounce?.Cancel();
+        _searchDebounce?.Dispose();
+    }
+
+    private async Task OnLoadData(LoadDataArgs args)
+    {
+        _loading = true;
+
+        try
+        {
+            _lastSkip = args.Skip ?? 0;
+            _lastTop = args.Top ?? 25;
+
+            var result = await FetchAsync(_lastSkip, _lastTop);
+            _logs = result.Items;
+            _totalCount = result.TotalCount;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private Task<PagedResult<AppLogListItemDto>> FetchAsync(int skip, int top) =>
+        AppLogService.GetLogsAsync(
+            skip, top,
+            search: string.IsNullOrWhiteSpace(_search) ? null : _search,
+            level: _level,
+            application: _application);
+
+    private async Task ApplyFilters() => await _grid.Reload();
+
+    private async Task ResetFilters()
+    {
+        CancelPendingSearch();
+        _search = string.Empty;
+        _level = null;
+        _application = null;
+        await _grid.Reload();
+    }
+
+    // Search as the user types, reloading once they pause for SearchDebounceMs.
+    private async Task OnSearchInput(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? string.Empty;
+
+        var cts = CancelPendingSearch();
+        try
+        {
+            await Task.Delay(SearchDebounceMs, cts.Token);
+        }
+        catch (TaskCanceledException)
+        {
+            return;
+        }
+
+        await _grid.Reload();
+    }
+
+    // Enter skips the debounce and searches immediately.
+    private async Task OnSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            CancelPendingSearch();
+            await _grid.Reload();
+        }
+    }
+
+    private CancellationTokenSource CancelPendingSearch()
+    {
+        _searchDebounce?.Cancel();
+        _searchDebounce?.Dispose();
+        _searchDebounce = new CancellationTokenSource();
+        return _searchDebounce;
+    }
+
+    private async Task OnPurgeClicked()
+    {
+        var confirmed = await DialogService.OpenAsync<DeleteConfirmDialog>("Purge Error Logs",
+            new Dictionary<string, object>
+            {
+                { "EntityName", "all error log entries older than 30 days" },
+                { "WarningMessage", "This permanently removes matching log rows and cannot be undone." }
+            },
+            new DialogOptions
+            {
+                Width = "450px",
+                CloseDialogOnOverlayClick = false,
+                CloseDialogOnEsc = true
+            });
+
+        if (confirmed is not true) return;
+
+        var deleted = await AppLogService.PurgeOlderThanAsync(30);
+        _details.Clear();
+        await _grid.Reload();
+
+        NotificationService.Notify(new NotificationMessage
+        {
+            Severity = NotificationSeverity.Success,
+            Summary = "Logs Purged",
+            Detail = $"Removed {deleted} error log {(deleted == 1 ? "entry" : "entries")}.",
+            Duration = 4000
+        });
+    }
+
+    private static BadgeStyle LevelBadgeStyle(string level) => level switch
+    {
+        "Fatal" or "Error" => BadgeStyle.Danger,
+        "Warning" => BadgeStyle.Warning,
+        _ => BadgeStyle.Light
+    };
+
+    // "FairwayFinder.Api" → "Api".
+    private static string ShortApplication(string application) =>
+        application.StartsWith("FairwayFinder.") ? application["FairwayFinder.".Length..] : application;
+
+    // The class name is what you recognise; the namespace is in the expanded detail.
+    private static string ShortSource(string? source) =>
+        string.IsNullOrEmpty(source) ? "—" : source[(source.LastIndexOf('.') + 1)..];
+
+    // Labelled value used inside the expandable row detail.
+    private RenderFragment Field(string label, string? value) =>@<RadzenStack Gap="0.1rem">
+        <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">@label</RadzenText>
+        <RadzenText TextStyle="TextStyle.Body2" class="rz-m-0" style="word-break: break-all;">@(string.IsNullOrEmpty(value) ? "—" : value)</RadzenText>
+    </RadzenStack>;
+
+    // Labelled preformatted block for stack traces and JSON: kept verbatim, scrolls rather than wraps.
+    private RenderFragment Block(string label, string value) =>@<RadzenStack Gap="0.25rem">
+        <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">@label</RadzenText>
+        <pre class="rz-p-3 rz-m-0" style="background: var(--rz-base-background-color); border: 1px solid var(--rz-border-color); border-radius: 4px; color: var(--rz-text-color); font-size: 0.8rem; max-height: 420px; overflow: auto; white-space: pre;">@value</pre>
+    </RadzenStack>;
+}

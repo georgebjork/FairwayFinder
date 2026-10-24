@@ -14,8 +14,13 @@ var apnsP8Contents = builder.AddParameter("apns-p8-contents", secret: true);
 
 // Pinned to 17.6: Aspire 13.6 defaults to Postgres 18, which won't start on the existing PG17 data
 // volume and mounts at a different path. Moving to 18 needs a dump/restore, not just a tag bump.
+//
+// And to bookworm: the volume was initialised on Debian 12 (glibc 2.36), and the plain 17.6 tag now
+// ships trixie (glibc 2.41). On a mismatched collation version Postgres still opens existing
+// databases but refuses CREATE DATABASE from template1 — so Aspire silently fails to create any new
+// database. Leaving bookworm needs a REINDEX + ALTER DATABASE ... REFRESH COLLATION VERSION first.
 var postgres = builder.AddPostgres("postgres", username, password, port: 5432)
-    .WithImageTag("17.6")
+    .WithImageTag("17.6-bookworm")
     .WithContainerName("fairwayfinder-postgres")
     .WithLifetime(ContainerLifetime.Persistent)
     .WithVolume("fairwayfinder-data", "/var/lib/postgresql/data")
@@ -24,9 +29,14 @@ var postgres = builder.AddPostgres("postgres", username, password, port: 5432)
 
 var dbFairwayfinder = postgres.AddDatabase("fairwayfinder", "db-fairwayfinder");
 
+// Request logs and Warning+ application logs. Same server, separate database, as in production.
+var dbLogs = postgres.AddDatabase("fairwayfinder-logs", "db-fairwayfinder-logs");
+
 builder.AddProject<Projects.FairwayFinder_Admin>("fairwayfinder-admin")
     .WithReference(dbFairwayfinder)
     .WaitFor(dbFairwayfinder)
+    .WithReference(dbLogs)
+    .WaitFor(dbLogs)
     .WithEnvironment("Resend__ApiKey", resendApiKey)
     .WithEnvironment("GolfCourseApi__ApiKey", golfCourseApiKey)
     .WithApns(apnsBundleId, apnsKeyId, apnsTeamId, apnsP8Contents)
@@ -37,6 +47,8 @@ builder.AddProject<Projects.FairwayFinder_Admin>("fairwayfinder-admin")
 builder.AddProject<Projects.FairwayFinder_Api>("fairwayfinder-api")
     .WithReference(dbFairwayfinder)
     .WaitFor(dbFairwayfinder)
+    .WithReference(dbLogs)
+    .WaitFor(dbLogs)
     .WithEnvironment("Jwt__Secret", jwtSecret)
     .WithApns(apnsBundleId, apnsKeyId, apnsTeamId, apnsP8Contents)
     .WithHttpHealthCheck("/health")

@@ -10,7 +10,21 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
         Exception exception,
         CancellationToken cancellationToken)
     {
-        logger.LogError(exception, "An exception occurred: {Message}", exception.Message);
+        var statusCode = exception switch
+        {
+            HttpResponseException httpEx => httpEx.StatusCode,
+            BadHttpRequestException badReq => badReq.StatusCode,
+            ValidationException => StatusCodes.Status400BadRequest,
+            _ => StatusCodes.Status500InternalServerError
+        };
+
+        // Only a server fault is an error. A 4xx is the client's mistake answered as designed (a
+        // missing round, a failed validation), so it stays out of the Warning+ error log and keeps
+        // no stack trace; the request itself is still in the request log.
+        if (statusCode >= StatusCodes.Status500InternalServerError)
+            logger.LogError(exception, "An exception occurred: {Message}", exception.Message);
+        else
+            logger.LogInformation("Request rejected with {StatusCode}: {Message}", statusCode, exception.Message);
 
         var result = exception switch
         {

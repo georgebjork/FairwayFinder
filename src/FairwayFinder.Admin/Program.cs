@@ -20,6 +20,13 @@ var connectionString = builder.Configuration.GetConnectionString("fairwayfinder"
 
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
+
+// Logs database: request logs and Warning+ application logs, kept apart from golf data.
+var logsConnectionString = builder.Configuration.GetConnectionString("fairwayfinder-logs")
+    ?? throw new InvalidOperationException("Connection string 'fairwayfinder-logs' not found.");
+
+builder.Services.AddDbContextFactory<LogDbContext>(options =>
+    options.UseNpgsql(logsConnectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddRazorComponents()
@@ -87,6 +94,7 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
+app.UseUserLogContext();
 app.UseAuthorization();
 
 app.UseAntiforgery();

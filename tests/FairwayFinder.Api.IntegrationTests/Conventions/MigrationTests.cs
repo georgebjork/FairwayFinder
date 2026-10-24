@@ -24,4 +24,23 @@ public class MigrationTests(ApiFactory factory) : ApiTestBase(factory)
             "The EF model has changes that are not captured in a migration. Run `dotnet ef migrations add <Name> " +
             "--project src/FairwayFinder.Data --startup-project src/FairwayFinder.Admin`.");
     }
+
+    [Fact]
+    public async Task Every_logs_migration_applies_cleanly_to_an_empty_postgres()
+    {
+        await using var db = LogDb();
+
+        Assert.Empty(await db.Database.GetPendingMigrationsAsync());
+        Assert.NotEmpty(await db.Database.GetAppliedMigrationsAsync());
+    }
+
+    [Fact]
+    public void Logs_model_has_no_changes_missing_a_migration()
+    {
+        using var db = LogDb();
+        Assert.False(db.Database.HasPendingModelChanges(),
+            "The logs EF model has changes that are not captured in a migration. Run `dotnet ef migrations add <Name> " +
+            "--context LogDbContext --output-dir Migrations/Logs --project src/FairwayFinder.Data " +
+            "--startup-project src/FairwayFinder.Admin`.");
+    }
 }

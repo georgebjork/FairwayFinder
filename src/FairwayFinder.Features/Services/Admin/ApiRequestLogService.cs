@@ -7,7 +7,7 @@ namespace FairwayFinder.Features.Services.Admin;
 /// Read + retention surface over the API request log. Consumed by the admin dashboard (paged
 /// read + manual purge) and by the API's daily purge background service.
 /// </summary>
-public class ApiRequestLogService(IDbContextFactory<ApplicationDbContext> dbContextFactory)
+public class ApiRequestLogService(IDbContextFactory<LogDbContext> dbContextFactory)
 {
     /// <summary>
     /// Server-side paged read, newest first. Applies optional filters, then returns the requested

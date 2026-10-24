@@ -27,30 +27,65 @@ public sealed class PostgresFixture : IAsyncLifetime
         .WithDatabase("db-fairwayfinder")
         .Build();
 
+    private const string LogsDatabase = "db-fairwayfinder-logs";
+
     private Respawner? _respawner;
+    private Respawner? _logsRespawner;
 
     public string ConnectionString => _container.GetConnectionString();
 
-    public Task InitializeAsync() => _container.StartAsync();
+    /// <summary>The logs database, in the same container as in production it is on the same server.</summary>
+    public string LogsConnectionString => new NpgsqlConnectionStringBuilder(ConnectionString)
+    {
+        Database = LogsDatabase
+    }.ConnectionString;
+
+    public async Task InitializeAsync()
+    {
+        await _container.StartAsync();
+
+        // Created up front rather than by MigrateAsync: the API host never creates databases, and
+        // the API's tests migrate the schema themselves.
+        await using var connection = new NpgsqlConnection(ConnectionString);
+        await connection.OpenAsync();
+        await using var create = new NpgsqlCommand($"CREATE DATABASE \"{LogsDatabase}\"", connection);
+        await create.ExecuteNonQueryAsync();
+    }
 
     public Task DisposeAsync() => _container.DisposeAsync().AsTask();
 
     /// <summary>
-    /// Deletes every test-written row. The schema must already be migrated: the respawner reads
-    /// the table graph the first time it runs.
+    /// Deletes every test-written row in both databases. The schemas must already be migrated: the
+    /// respawners read the table graph the first time they run.
     /// </summary>
     public async Task ResetAsync()
     {
-        await using var connection = new NpgsqlConnection(ConnectionString);
-        await connection.OpenAsync();
-
-        _respawner ??= await Respawner.CreateAsync(connection, new RespawnerOptions
+        await using (var connection = new NpgsqlConnection(ConnectionString))
         {
-            DbAdapter = DbAdapter.Postgres,
-            SchemasToInclude = ["public"],
-            TablesToIgnore = TablesToKeep,
-        });
+            await connection.OpenAsync();
 
-        await _respawner.ResetAsync(connection);
+            _respawner ??= await Respawner.CreateAsync(connection, new RespawnerOptions
+            {
+                DbAdapter = DbAdapter.Postgres,
+                SchemasToInclude = ["public"],
+                TablesToIgnore = TablesToKeep,
+            });
+
+            await _respawner.ResetAsync(connection);
+        }
+
+        await using (var logs = new NpgsqlConnection(LogsConnectionString))
+        {
+            await logs.OpenAsync();
+
+            _logsRespawner ??= await Respawner.CreateAsync(logs, new RespawnerOptions
+            {
+                DbAdapter = DbAdapter.Postgres,
+                SchemasToInclude = ["public"],
+                TablesToIgnore = ["__EFMigrationsHistory"],
+            });
+
+            await _logsRespawner.ResetAsync(logs);
+        }
     }
 }

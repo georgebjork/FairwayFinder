@@ -14,6 +14,7 @@ public static class RegisterSettings
         services.Configure<ResendSettings>(config.GetSection("Resend"));
         services.Configure<SeedUserSettings>(config.GetSection("SeedUser"));
         services.Configure<RequestLoggingSettings>(config.GetSection("RequestLogging"));
+        services.Configure<AppLoggingSettings>(config.GetSection("AppLogging"));
 
         return services;
     }

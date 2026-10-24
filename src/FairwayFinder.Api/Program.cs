@@ -31,6 +31,13 @@ var connectionString = builder.Configuration.GetConnectionString("fairwayfinder"
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+// Logs database: request logs and Warning+ application logs, kept apart from golf data.
+var logsConnectionString = builder.Configuration.GetConnectionString("fairwayfinder-logs")
+    ?? throw new InvalidOperationException("Connection string 'fairwayfinder-logs' not found.");
+
+builder.Services.AddDbContextFactory<LogDbContext>(options =>
+    options.UseNpgsql(logsConnectionString));
+
 // ── Identity (same password policy as Web, no cookie config) ─
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
@@ -145,6 +152,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseAuthentication();
+app.UseUserLogContext();
 app.UseAuthorization();
 
 // ── Endpoints ───────────────────────────────────────────────

@@ -18,6 +18,7 @@ public interface IApplicationStartupService
 public class ApplicationStartupService : IApplicationStartupService
 {
     private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
+    private readonly IDbContextFactory<LogDbContext> _logDbContextFactory;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IProfileService _profileService;
@@ -26,6 +27,7 @@ public class ApplicationStartupService : IApplicationStartupService
 
     public ApplicationStartupService(
         IDbContextFactory<ApplicationDbContext> dbContextFactory,
+        IDbContextFactory<LogDbContext> logDbContextFactory,
         RoleManager<IdentityRole> roleManager,
         UserManager<ApplicationUser> userManager,
         IProfileService profileService,
@@ -33,6 +35,7 @@ public class ApplicationStartupService : IApplicationStartupService
         ILogger<ApplicationStartupService> logger)
     {
         _dbContextFactory = dbContextFactory;
+        _logDbContextFactory = logDbContextFactory;
         _roleManager = roleManager;
         _userManager = userManager;
         _profileService = profileService;
@@ -45,6 +48,11 @@ public class ApplicationStartupService : IApplicationStartupService
         _logger.LogInformation("Running database migrations...");
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
         await dbContext.Database.MigrateAsync();
+
+        // The logs database too. MigrateAsync creates it if it doesn't exist yet, which needs the
+        // CREATEDB privilege; without it, create db-fairwayfinder-logs by hand once.
+        await using var logDbContext = await _logDbContextFactory.CreateDbContextAsync();
+        await logDbContext.Database.MigrateAsync();
         _logger.LogInformation("Database migrations completed.");
     }
 

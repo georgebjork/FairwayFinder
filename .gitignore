@@ -35,6 +35,8 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+# ...except the logs database's EF migrations, which are source.
+!src/FairwayFinder.Data/Migrations/Logs/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
