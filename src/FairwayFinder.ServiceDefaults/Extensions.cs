@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Http;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
 using OpenTelemetry;
+using OpenTelemetry.Context.Propagation;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -56,6 +58,16 @@ public static class Extensions
     public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
         var excludedPaths = GetExcludedPaths(builder.Configuration);
+
+        // Every request is the root of its own trace (see IgnoreIncomingTraceContextPropagator). The
+        // incoming traceparent is read twice, so both readers are switched off: ASP.NET Core's
+        // hosting layer through the DI propagator, and the OTel ASP.NET Core instrumentation, which
+        // re-extracts with the SDK's default propagator and would re-parent the span to the caller.
+        // An empty composite extracts nothing; .NET's HttpClient still injects our context outbound
+        // through DistributedContextPropagator.Current, which this leaves alone.
+        builder.Services.AddSingleton<DistributedContextPropagator>(
+            new IgnoreIncomingTraceContextPropagator(DistributedContextPropagator.CreateDefaultPropagator()));
+        Sdk.SetDefaultTextMapPropagator(new CompositeTextMapPropagator([]));
 
         builder.Services.AddOpenTelemetry()
             .ConfigureResource(resource => resource
