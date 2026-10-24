@@ -69,6 +69,8 @@ using (var scope = app.Services.CreateScope())
     await startupService.SeedDefaultUserAsync();
 }
 
+app.UseFairwayFinderRequestLogging();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

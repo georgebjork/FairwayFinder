@@ -5,7 +5,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Npgsql;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
@@ -40,6 +39,7 @@ public static class Extensions
 
     public static TBuilder AddServiceDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
+        builder.ConfigureSerilog();
         builder.ConfigureOpenTelemetry();
         builder.AddDefaultHealthChecks();
         builder.Services.AddServiceDiscovery();
@@ -55,32 +55,7 @@ public static class Extensions
 
     public static TBuilder ConfigureOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
-        // Paths not worth a span. The health endpoints are always excluded; the rest are read from
-        // the API's request-log exclusions so the two cannot drift — if a path isn't worth a row in
-        // ApiRequestLog it isn't worth paying the exporter for either. Admin has no such section
-        // and simply falls back to the health endpoints.
-        var excludedPaths = new[] { HealthEndpointPath, AlivenessEndpointPath }
-            .Concat(builder.Configuration.GetSection("RequestLogging:ExcludedPathPrefixes").Get<string[]>() ?? [])
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Select(prefix => new PathString(prefix))
-            .ToArray();
-
-        builder.Logging.AddOpenTelemetry(logging =>
-        {
-            // Both false on purpose.
-            //
-            // IncludeFormattedMessage=true makes the OTLP serializer write the rendered text as the
-            // body AND the message template as an {OriginalFormat} attribute — you pay for both.
-            // With it false the template becomes the body and that attribute is never emitted.
-            // Substituted values still ship as their own attributes, so nothing is actually lost,
-            // and identical events group cleanly instead of fanning out on interpolated values.
-            //
-            // IncludeScopes flattens every ASP.NET Core and Blazor circuit scope onto every record
-            // (CircuitId, ConnectionId, RequestPath, EF command scopes). trace_id/span_id
-            // correlation rides on the record itself, not on scopes, so nothing is lost there either.
-            logging.IncludeFormattedMessage = false;
-            logging.IncludeScopes = false;
-        });
+        var excludedPaths = GetExcludedPaths(builder.Configuration);
 
         builder.Services.AddOpenTelemetry()
             .ConfigureResource(resource => resource
@@ -137,6 +112,19 @@ public static class Extensions
 
         return builder;
     }
+
+    /// <summary>
+    /// Paths not worth a span or a request log line. The health endpoints are always excluded; the
+    /// rest are read from the API's request-log exclusions so the three cannot drift — if a path
+    /// isn't worth a row in ApiRequestLog it isn't worth paying the exporter for either. Admin has
+    /// no such section and simply falls back to the health endpoints.
+    /// </summary>
+    internal static PathString[] GetExcludedPaths(IConfiguration configuration) =>
+        new[] { HealthEndpointPath, AlivenessEndpointPath }
+            .Concat(configuration.GetSection("RequestLogging:ExcludedPathPrefixes").Get<string[]>() ?? [])
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(prefix => new PathString(prefix))
+            .ToArray();
 
     private static TBuilder AddOpenTelemetryExporters<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {

@@ -124,6 +124,7 @@ var app = builder.Build();
 app.MapDefaultEndpoints();
 
 // ── Middleware Pipeline ─────────────────────────────────────
+app.UseFairwayFinderRequestLogging();
 app.UseExceptionHandler();
 
 // Log every request (outermost app middleware): sees the final status code and the
