@@ -84,6 +84,10 @@ public static class Extensions
             .WithTracing(tracing =>
             {
                 tracing
+                    // The default (parent-based) sampler obeys the caller's traceparent, so a client
+                    // sending an unsampled header ("-00") silently drops the request span and every
+                    // DB span under it. The phone doesn't get to decide what the API records.
+                    .SetSampler(new AlwaysOnSampler())
                     .AddAspNetCoreInstrumentation(options =>
                     {
                         options.Filter = context =>

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Context;
 using Serilog.Events;
+using Serilog.Filters;
 using Serilog.Formatting.Compact;
 using Serilog.Sinks.OpenTelemetry;
 
@@ -51,24 +52,36 @@ public static class LoggingExtensions
             // and OTEL_RESOURCE_ATTRIBUTES, which is everything Aspire sets.
             if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT")))
             {
-                logger.WriteTo.OpenTelemetry(options =>
-                {
-                    // The template is the body rather than the rendered text, and not repeated as a
-                    // message_template.text attribute. Substituted values still ship as attributes,
-                    // and identical events group cleanly instead of fanning out on interpolated values.
-                    options.IncludedData = (options.IncludedData | IncludedData.TemplateBody)
-                                           & ~IncludedData.MessageTemplateTextAttribute;
-                    options.ResourceAttributes = new Dictionary<string, object>
+                logger.WriteTo.Logger(otlp => otlp
+                    .Filter.ByIncludingOnly(ShipToOtlp)
+                    .WriteTo.OpenTelemetry(options =>
                     {
-                        ["service.name"] = builder.Environment.ApplicationName,
-                        ["deployment.environment"] = builder.Environment.EnvironmentName
-                    };
-                });
+                        // The template is the body rather than the rendered text, and not repeated as a
+                        // message_template.text attribute. Substituted values still ship as attributes,
+                        // and identical events group cleanly instead of fanning out on interpolated values.
+                        options.IncludedData = (options.IncludedData | IncludedData.TemplateBody)
+                                               & ~IncludedData.MessageTemplateTextAttribute;
+                        options.ResourceAttributes = new Dictionary<string, object>
+                        {
+                            ["service.name"] = builder.Environment.ApplicationName,
+                            ["deployment.environment"] = builder.Environment.EnvironmentName
+                        };
+                    }));
             }
         });
 
         return builder;
     }
+
+    private static readonly Func<LogEvent, bool> FromFairwayFinder = Matching.FromSource("FairwayFinder");
+
+    /// <summary>
+    /// What is worth paying the OTLP backend for: Warning and worse from anything, plus our own
+    /// Information. The per-request summary line and framework chatter stay on the console, where
+    /// they cost nothing; traces already carry every request.
+    /// </summary>
+    private static bool ShipToOtlp(LogEvent logEvent) =>
+        logEvent.Level >= LogEventLevel.Warning || FromFairwayFinder(logEvent);
 
     /// <summary>
     /// One summary line per request in place of ASP.NET Core's several. Register it before
