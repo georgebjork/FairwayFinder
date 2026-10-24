@@ -143,7 +143,7 @@ Features cannot throw the API's exception types (the dependency runs Api → Fea
 | Connection string | Context | Holds | Migrations |
 |---|---|---|---|
 | `fairwayfinder` | `ApplicationDbContext` | Identity, golf data, Data Protection keys | `Migrations/` |
-| `fairwayfinder-logs` | `LogDbContext` | `api_request_log`, `app_log` | `Migrations/Logs` (`--context LogDbContext --output-dir Migrations/Logs`) |
+| `fairwayfinderlogs` | `LogDbContext` | `api_request_log`, `app_log` | `Migrations/Logs` (`--context LogDbContext --output-dir Migrations/Logs`) |
 
 Same server in production, different database, so log volume and retention purges never touch golf
 data. Admin migrates both at startup. Diagnostics go in `LogDbContext`, never in `ApplicationDbContext`.

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace FairwayFinder.Data;
 
 /// <summary>
-/// The logs database (<c>fairwayfinder-logs</c>): diagnostics written by the system, kept apart from
+/// The logs database (<c>fairwayfinderlogs</c>): diagnostics written by the system, kept apart from
 /// golf data so log volume and retention purges never touch the main database. Same server in
 /// production, different database. Migrations live in <c>Migrations/Logs</c>.
 /// </summary>

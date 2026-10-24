@@ -30,7 +30,7 @@ var postgres = builder.AddPostgres("postgres", username, password, port: 5432)
 var dbFairwayfinder = postgres.AddDatabase("fairwayfinder", "db-fairwayfinder");
 
 // Request logs and Warning+ application logs. Same server, separate database, as in production.
-var dbLogs = postgres.AddDatabase("fairwayfinder-logs", "db-fairwayfinder-logs");
+var dbLogs = postgres.AddDatabase("fairwayfinderlogs", "db-fairwayfinder-logs");
 
 builder.AddProject<Projects.FairwayFinder_Admin>("fairwayfinder-admin")
     .WithReference(dbFairwayfinder)

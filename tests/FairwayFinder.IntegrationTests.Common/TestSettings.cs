@@ -27,7 +27,7 @@ public static class TestSettings
     public static Dictionary<string, string?> For(string connectionString, string logsConnectionString) => new()
     {
         ["ConnectionStrings:fairwayfinder"] = connectionString,
-        ["ConnectionStrings:fairwayfinder-logs"] = logsConnectionString,
+        ["ConnectionStrings:fairwayfinderlogs"] = logsConnectionString,
 
         ["Jwt:Secret"] = JwtSecret,
         ["Jwt:Issuer"] = JwtIssuer,

@@ -22,8 +22,8 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 // Logs database: request logs and Warning+ application logs, kept apart from golf data.
-var logsConnectionString = builder.Configuration.GetConnectionString("fairwayfinder-logs")
-    ?? throw new InvalidOperationException("Connection string 'fairwayfinder-logs' not found.");
+var logsConnectionString = builder.Configuration.GetConnectionString("fairwayfinderlogs")
+    ?? throw new InvalidOperationException("Connection string 'fairwayfinderlogs' not found.");
 
 builder.Services.AddDbContextFactory<LogDbContext>(options =>
     options.UseNpgsql(logsConnectionString));
