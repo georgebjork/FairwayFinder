@@ -9,10 +9,15 @@ on:
   workflow_dispatch:
 
 permissions:
+  contents: read
   packages: write
 
 jobs:
+  test:
+    uses: ./.github/workflows/build-and-test.yml
+
   build-and-push-image:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

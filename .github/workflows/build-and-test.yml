@@ -1,0 +1,51 @@
+name: Build and Test
+
+on:
+  pull_request:
+    branches:
+      - main
+  # Called by the image pipelines so nothing is pushed to GHCR without passing tests.
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-and-test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore FairwayFinder.sln
+
+      - name: Build
+        run: dotnet build FairwayFinder.sln --configuration Release --no-restore
+
+      # Integration tests start Postgres with Testcontainers; ubuntu-latest runners have Docker.
+      - name: Test
+        run: >
+          dotnet test FairwayFinder.sln
+          --configuration Release
+          --no-build
+          --logger "trx;LogFilePrefix=results"
+          --results-directory TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/*.trx
+          if-no-files-found: ignore
