@@ -8,7 +8,6 @@ using Serilog;
 using Serilog.Context;
 using Serilog.Events;
 using Serilog.Filters;
-using Serilog.Formatting.Compact;
 using Serilog.Sinks.OpenTelemetry;
 
 namespace FairwayFinder.ServiceDefaults;
@@ -18,6 +17,11 @@ public static class LoggingExtensions
     // One line per event, readable at a glance in a terminal or the Aspire console view.
     private const string DevelopmentConsoleTemplate =
         "[{Timestamp:HH:mm:ss.fff} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}";
+
+    // Same line without the timestamp: the hosting platform's log viewer already prefixes one.
+    // Structured fields go to the OTLP backend, so stdout is only ever read by a person.
+    private const string ProductionConsoleTemplate =
+        "[{Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}";
 
     /// <summary>
     /// Replaces the default logger factory with Serilog, so every <c>ILogger&lt;T&gt;</c> in the app
@@ -36,16 +40,9 @@ public static class LoggingExtensions
                 .Enrich.FromLogContext()
                 .Enrich.WithProperty("Application", builder.Environment.ApplicationName);
 
-            if (builder.Environment.IsDevelopment())
-            {
-                logger.WriteTo.Console(outputTemplate: DevelopmentConsoleTemplate);
-            }
-            else
-            {
-                // Newline-delimited JSON (CLEF) on stdout: @t, @m, @i, @l, @x, @tr, @sp plus every
-                // template property as its own field, so a log shipper can index without parsing.
-                logger.WriteTo.Console(new RenderedCompactJsonFormatter());
-            }
+            logger.WriteTo.Console(outputTemplate: builder.Environment.IsDevelopment()
+                ? DevelopmentConsoleTemplate
+                : ProductionConsoleTemplate);
 
             // Same switch as the trace/metric exporters: only ship when an OTLP endpoint exists.
             // The sink itself reads OTEL_EXPORTER_OTLP_ENDPOINT/_PROTOCOL/_HEADERS, OTEL_SERVICE_NAME

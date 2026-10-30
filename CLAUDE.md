@@ -150,8 +150,8 @@ data. Admin migrates both at startup. Diagnostics go in `LogDbContext`, never in
 
 ### Logging
 
-Serilog owns logging in both hosts (`ServiceDefaults/LoggingExtensions.cs`): readable console in
-Development, compact JSON elsewhere, OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Levels live in the
+Serilog owns logging in both hosts (`ServiceDefaults/LoggingExtensions.cs`): readable console everywhere
+(no timestamp outside Development, since the host prefixes one), OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Levels live in the
 `Serilog` config section, not `Logging`.
 
 - **Warning and worse also go to `app_log`** through `DatabaseLogSink` (Features/Services/Logging), a DI
