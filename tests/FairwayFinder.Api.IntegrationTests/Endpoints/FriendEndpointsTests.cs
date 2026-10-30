@@ -189,4 +189,30 @@ public class FriendEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
         Assert.Equal(false, accepted.Properties[AnalyticsEvents.Props.AutoAccepted]);
         Assert.Empty(Analytics.For(alice.Id, AnalyticsEvents.FriendRequestAccepted));
     }
+
+    [Fact]
+    public async Task Viewing_a_friends_rounds_and_stats_is_recorded_for_the_viewer_not_the_friend()
+    {
+        var viewer = await SignInNewUserAsync();
+        var friend = await SignInNewUserAsync();
+        await MakeFriendsAsync(viewer, friend);
+        var course = await Data.CreateCourseAsync();
+        var roundId = await PlayCompletedRoundAsync(friend.Client, course);
+        var publicId = (await GetAsync<UserProfileResponse>(friend.Client, "/api/profile")).PublicIdentifier;
+
+        await AssertStatusAsync(HttpStatusCode.OK, await viewer.Client.GetAsync($"/api/friends/{publicId}/rounds"));
+        await AssertStatusAsync(HttpStatusCode.OK, await viewer.Client.GetAsync($"/api/friends/{publicId}/rounds/{roundId}"));
+        await AssertStatusAsync(HttpStatusCode.OK, await viewer.Client.GetAsync($"/api/friends/{publicId}/stats"));
+
+        var views = Analytics.For(viewer.Id, AnalyticsEvents.FriendActivityViewed)
+            .Select(v => v.Properties[AnalyticsEvents.Props.View])
+            .ToList();
+        Assert.Equal(
+            [AnalyticsEvents.FriendViews.Rounds, AnalyticsEvents.FriendViews.Round, AnalyticsEvents.FriendViews.Stats],
+            views);
+
+        // Looking at a friend's stats is not the friend looking at their own.
+        Assert.Empty(Analytics.For(friend.Id, AnalyticsEvents.StatsViewed));
+        Assert.Empty(Analytics.For(viewer.Id, AnalyticsEvents.StatsViewed));
+    }
 }

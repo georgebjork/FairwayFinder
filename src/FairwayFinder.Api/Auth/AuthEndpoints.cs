@@ -21,7 +21,8 @@ public static class AuthEndpoints
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             JwtTokenService tokenService,
-            IProductAnalytics analytics) =>
+            IProductAnalytics analytics,
+            ActiveGolferTracker activeGolfers) =>
         {
             var user = await userManager.FindByEmailAsync(request.Email);
             if (user is null)
@@ -43,6 +44,8 @@ public static class AuthEndpoints
             var refreshToken = await tokenService.IssueRefreshTokenAsync(user.Id, request.DeviceName);
 
             analytics.Capture(user.Id, AnalyticsEvents.UserLoggedIn, personProperties: PersonProperties(user));
+            // The request was anonymous, so the active-golfer middleware could not see who this was.
+            activeGolfers.MarkActive(user.Id);
 
             return Results.Ok(BuildLoginResponse(accessToken, refreshToken, expiresAt, user));
         });
@@ -121,6 +124,7 @@ public static class AuthEndpoints
             IProfileService profileService,
             JwtTokenService tokenService,
             IProductAnalytics analytics,
+            ActiveGolferTracker activeGolfers,
             ILoggerFactory loggerFactory) =>
         {
             // The email is taken from the invite, never the request — this enforces
@@ -150,6 +154,7 @@ public static class AuthEndpoints
             await userManager.AddToRoleAsync(user, ApplicationRoles.User);
             await inviteService.ClaimInviteAsync(request.Code);
             analytics.Capture(user.Id, AnalyticsEvents.UserSignedUp, personProperties: PersonProperties(user));
+            activeGolfers.MarkActive(user.Id);
 
             // Create the user's profile up front so they are immediately searchable as a friend.
             // Best-effort: a failure here must not fail registration (the profile is also

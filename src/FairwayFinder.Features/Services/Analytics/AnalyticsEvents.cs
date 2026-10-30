@@ -7,6 +7,8 @@ namespace FairwayFinder.Features.Services.Analytics;
 public static class AnalyticsEvents
 {
     // ── Account ──
+    /// <summary>The golfer used the app today. At most one per golfer per UTC day; see <see cref="ActiveGolferTracker"/>.</summary>
+    public const string AppActive = "app_active";
     public const string UserSignedUp = "user_signed_up";
     public const string UserLoggedIn = "user_logged_in";
     public const string PushDeviceRegistered = "push_device_registered";
@@ -14,6 +16,11 @@ public static class AnalyticsEvents
     // ── Rounds ──
     public const string RoundStarted = "round_started";
     public const string RoundCompleted = "round_completed";
+    public const string RoundEdited = "round_edited";
+    public const string RoundDeleted = "round_deleted";
+
+    // ── Stats ──
+    public const string StatsViewed = "stats_viewed";
 
     // ── Games ──
     public const string GameCreated = "game_created";
@@ -25,6 +32,7 @@ public static class AnalyticsEvents
     // ── Friends ──
     public const string FriendRequestSent = "friend_request_sent";
     public const string FriendRequestAccepted = "friend_request_accepted";
+    public const string FriendActivityViewed = "friend_activity_viewed";
 
     /// <summary>Property names shared across events, so the same fact is filterable everywhere.</summary>
     public static class Props
@@ -42,6 +50,26 @@ public static class AnalyticsEvents
         public const string GameType = "game_type";
         public const string Players = "players";
         public const string AutoAccepted = "auto_accepted";
+        public const string Scope = "scope";
+        public const string BaselineLevel = "baseline_level";
+        public const string Filtered = "filtered";
+        public const string View = "view";
+    }
+
+    /// <summary>Which stats screen the golfer opened.</summary>
+    public static class StatsScopes
+    {
+        public const string Overall = "overall";
+        public const string Course = "course";
+        public const string CourseHoles = "course_holes";
+    }
+
+    /// <summary>What the golfer looked at on a friend's profile.</summary>
+    public static class FriendViews
+    {
+        public const string Rounds = "rounds";
+        public const string Round = "round";
+        public const string Stats = "stats";
     }
 
     /// <summary>How a round reached the server.</summary>

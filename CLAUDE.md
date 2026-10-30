@@ -174,9 +174,13 @@ Everything is switched on by `PostHog:ProjectToken` (bound straight onto the SDK
 `PostHog:HostUrl` works too). Without a token, which is the case in dev and tests, `IProductAnalytics` is
 `NullProductAnalytics` and nothing is sent.
 
-- **Events come from the Features services**, next to the matching `FairwayFinderDiagnostics` counter, via
-  `IProductAnalytics.Capture(userId, AnalyticsEvents.X, ...)`. Add names to `AnalyticsEvents`. Never use
-  inline strings, or one event splits into two in PostHog.
+- **Events come from the Features services** when only golfer paths call the method, next to the matching
+  `FairwayFinderDiagnostics` counter, via `IProductAnalytics.Capture(userId, AnalyticsEvents.X, ...)`. When the
+  admin console or another golfer's view also calls it (`StatsService`, `RoundService.UpdateRoundAsync`/
+  `DeleteRoundAsync`, friend views), capture in the API endpoint instead, where the signed-in user is the one
+  acting. Add names to `AnalyticsEvents`. Never use inline strings, or one event splits into two in PostHog.
+- **`app_active`** is sent once per golfer per UTC day by `ActiveGolferTracker`, from the first authenticated
+  API request (`UseActiveGolferTracking`) or a login/register. Use it for active golfers and overall retention.
 - **The distinct id is the golfer's Identity user id**, the same one the iOS app passes to `identify`,
   which is what joins server and app events. Never an email, and never the acting admin's id on a
   golfer's behalf: admin paths do not emit golfer events.

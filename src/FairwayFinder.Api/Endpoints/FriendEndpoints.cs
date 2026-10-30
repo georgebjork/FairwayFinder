@@ -2,6 +2,7 @@ using FairwayFinder.Api.Exceptions;
 using FairwayFinder.Api.Extensions;
 using FairwayFinder.Api.Validators;
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.Features.Services.Interfaces;
 
 namespace FairwayFinder.Api.Endpoints;
@@ -101,12 +102,14 @@ public static class FriendEndpoints
             HttpContext ctx,
             IFriendService friendService,
             IProfileService profileService,
-            IRoundService roundService) =>
+            IRoundService roundService,
+            IProductAnalytics analytics) =>
         {
             var userId = ctx.User.GetUserId();
             var targetUserId = await EnsureFriendAccessAsync(publicId, userId, friendService, profileService);
 
             var rounds = await roundService.GetRoundsByUserIdAsync(targetUserId);
+            CaptureFriendActivityViewed(analytics, userId, AnalyticsEvents.FriendViews.Rounds);
             return Results.Ok(rounds);
         });
 
@@ -116,7 +119,8 @@ public static class FriendEndpoints
             HttpContext ctx,
             IFriendService friendService,
             IProfileService profileService,
-            IRoundService roundService) =>
+            IRoundService roundService,
+            IProductAnalytics analytics) =>
         {
             var userId = ctx.User.GetUserId();
             var targetUserId = await EnsureFriendAccessAsync(publicId, userId, friendService, profileService);
@@ -132,6 +136,7 @@ public static class FriendEndpoints
             if (round is null || !round.IsComplete)
                 throw new NotFoundException("Round", roundId);
 
+            CaptureFriendActivityViewed(analytics, userId, AnalyticsEvents.FriendViews.Round);
             return Results.Ok(round);
         });
 
@@ -140,12 +145,14 @@ public static class FriendEndpoints
             HttpContext ctx,
             IFriendService friendService,
             IProfileService profileService,
-            IStatsService statsService) =>
+            IStatsService statsService,
+            IProductAnalytics analytics) =>
         {
             var userId = ctx.User.GetUserId();
             var targetUserId = await EnsureFriendAccessAsync(publicId, userId, friendService, profileService);
 
             var stats = await statsService.GetUserStatsAsync(targetUserId);
+            CaptureFriendActivityViewed(analytics, userId, AnalyticsEvents.FriendViews.Stats);
             return Results.Ok(stats);
         });
 
@@ -171,4 +178,12 @@ public static class FriendEndpoints
 
         return targetUserId;
     }
+
+    /// <summary>
+    /// Recorded for the viewer, never the friend being viewed: it measures whether the social
+    /// features bring golfers back. Which friend is left out on purpose.
+    /// </summary>
+    private static void CaptureFriendActivityViewed(IProductAnalytics analytics, string viewerUserId, string view)
+        => analytics.Capture(viewerUserId, AnalyticsEvents.FriendActivityViewed,
+            new Dictionary<string, object?> { [AnalyticsEvents.Props.View] = view });
 }

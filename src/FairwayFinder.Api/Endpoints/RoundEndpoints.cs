@@ -3,6 +3,7 @@ using FairwayFinder.Api.Extensions;
 using FairwayFinder.Api.Validators;
 using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Enums;
+using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.Features.Services.Interfaces;
 
 namespace FairwayFinder.Api.Endpoints;
@@ -90,7 +91,7 @@ public static class RoundEndpoints
         .WithSummary("[Deprecated] Submit a whole round at once. Use POST /rounds/start, " +
                      "PUT /rounds/{roundId}/holes/{holeNumber}, then POST /rounds/{roundId}/complete.");
 
-        group.MapPut("/{roundId:long}", async (long roundId, UpdateRoundRequest request, HttpContext ctx, IRoundService roundService) =>
+        group.MapPut("/{roundId:long}", async (long roundId, UpdateRoundRequest request, HttpContext ctx, IRoundService roundService, IProductAnalytics analytics) =>
         {
             var userId = ctx.User.GetUserId();
             request.UserId = userId;
@@ -105,7 +106,12 @@ public static class RoundEndpoints
                 throw new ConflictException($"Round {roundId} is still in progress. Post it before editing it.");
 
             var success = await roundService.UpdateRoundAsync(request);
-            return success ? Results.NoContent() : throw new NotFoundException("Round", roundId);
+            if (!success) throw new NotFoundException("Round", roundId);
+
+            // Here, not in RoundService: the admin console repairs rounds through the same method.
+            analytics.Capture(userId, AnalyticsEvents.RoundEdited,
+                new Dictionary<string, object?> { [AnalyticsEvents.Props.RoundId] = roundId });
+            return Results.NoContent();
         }).AddEndpointFilter<ValidationFilter<UpdateRoundRequest>>();
 
         // ── Hole-by-hole entry ──
@@ -228,13 +234,17 @@ public static class RoundEndpoints
             return success ? Results.NoContent() : throw new NotFoundException("Round", roundId);
         });
 
-        group.MapDelete("/{roundId:long}", async (long roundId, HttpContext ctx, IRoundService roundService) =>
+        group.MapDelete("/{roundId:long}", async (long roundId, HttpContext ctx, IRoundService roundService, IProductAnalytics analytics) =>
         {
             var userId = ctx.User.GetUserId();
             await EnsureRoundAccess(roundService, roundId, userId);
 
             var success = await roundService.DeleteRoundAsync(roundId, userId);
-            return success ? Results.NoContent() : throw new NotFoundException("Round", roundId);
+            if (!success) throw new NotFoundException("Round", roundId);
+
+            analytics.Capture(userId, AnalyticsEvents.RoundDeleted,
+                new Dictionary<string, object?> { [AnalyticsEvents.Props.RoundId] = roundId });
+            return Results.NoContent();
         });
 
         group.MapGet("/{roundId:long}/shots", async (long roundId, HttpContext ctx, IRoundService roundService) =>
