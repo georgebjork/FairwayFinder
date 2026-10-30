@@ -72,13 +72,16 @@ public static class LoggingExtensions
 
     private static readonly Func<LogEvent, bool> FromFairwayFinder = Matching.FromSource("FairwayFinder");
 
+    private static readonly Func<LogEvent, bool> FromRequestLogging =
+        Matching.FromSource("Serilog.AspNetCore.RequestLoggingMiddleware");
+
     /// <summary>
     /// What is worth paying the OTLP backend for: Warning and worse from anything, plus our own
-    /// Information. The per-request summary line and framework chatter stay on the console, where
-    /// they cost nothing; traces already carry every request.
+    /// Information and the one summary line per request, which carries the user, route, status and
+    /// timing as filterable fields. Framework Information chatter stays on the console.
     /// </summary>
     private static bool ShipToOtlp(LogEvent logEvent) =>
-        logEvent.Level >= LogEventLevel.Warning || FromFairwayFinder(logEvent);
+        logEvent.Level >= LogEventLevel.Warning || FromFairwayFinder(logEvent) || FromRequestLogging(logEvent);
 
     /// <summary>
     /// One summary line per request in place of ASP.NET Core's several. Register it before

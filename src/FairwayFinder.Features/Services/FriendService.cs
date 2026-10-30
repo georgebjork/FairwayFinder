@@ -67,7 +67,14 @@ public class FriendService : IFriendService
                 user.Email,
                 profile.PublicIdentifier
             }
-        ).Take(take).ToListAsync();
+        )
+            // Without an order, Take picks whichever rows Postgres reaches first, so the same
+            // search could return a different set from one call to the next.
+            .OrderBy(u => u.FirstName)
+            .ThenBy(u => u.LastName)
+            .ThenBy(u => u.Id)
+            .Take(take)
+            .ToListAsync();
 
         if (matchedUsers.Count == 0)
         {
