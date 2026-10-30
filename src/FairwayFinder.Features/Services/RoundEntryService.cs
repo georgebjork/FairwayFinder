@@ -5,6 +5,7 @@ using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Diagnostics;
 using FairwayFinder.Features.Enums;
 using FairwayFinder.Features.Helpers;
+using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.Features.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -19,6 +20,7 @@ public class RoundEntryService : IRoundEntryService
     private readonly IRoundService _roundService;
     private readonly IFriendService _friendService;
     private readonly IPushNotificationService _pushService;
+    private readonly IProductAnalytics _analytics;
     private readonly ILogger<RoundEntryService> _logger;
 
     public RoundEntryService(
@@ -26,12 +28,14 @@ public class RoundEntryService : IRoundEntryService
         IRoundService roundService,
         IFriendService friendService,
         IPushNotificationService pushService,
+        IProductAnalytics analytics,
         ILogger<RoundEntryService> logger)
     {
         _dbContextFactory = dbContextFactory;
         _roundService = roundService;
         _friendService = friendService;
         _pushService = pushService;
+        _analytics = analytics;
         _logger = logger;
     }
 
@@ -128,6 +132,14 @@ public class RoundEntryService : IRoundEntryService
         {
             { FairwayFinderDiagnostics.Tags.ShotTracking, request.UsingShotTracking },
             { FairwayFinderDiagnostics.Tags.HoleStats, request.UsingHoleStats }
+        });
+        _analytics.Capture(userId, AnalyticsEvents.RoundStarted, new Dictionary<string, object?>
+        {
+            [AnalyticsEvents.Props.RoundId] = round.RoundId,
+            [AnalyticsEvents.Props.CourseId] = request.CourseId,
+            [AnalyticsEvents.Props.TeeboxId] = request.TeeboxId,
+            [AnalyticsEvents.Props.ShotTracking] = request.UsingShotTracking,
+            [AnalyticsEvents.Props.HoleStats] = round.UsingHoleStats
         });
 
         return RoundEntryResult<StartRoundResponse>.Ok(new StartRoundResponse
@@ -358,6 +370,17 @@ public class RoundEntryService : IRoundEntryService
         if (transaction is not null) await transaction.CommitAsync();
 
         await RecordCompletionTelemetryAsync(dbContext, round, holeNumbers.Count, stopwatch);
+        _analytics.Capture(userId, AnalyticsEvents.RoundCompleted, new Dictionary<string, object?>
+        {
+            [AnalyticsEvents.Props.RoundId] = round.RoundId,
+            [AnalyticsEvents.Props.CourseId] = round.CourseId,
+            [AnalyticsEvents.Props.Holes] = holeNumbers.Count,
+            [AnalyticsEvents.Props.Score] = totals.Total,
+            [AnalyticsEvents.Props.ToPar] = totals.Total - totals.ParEntered,
+            [AnalyticsEvents.Props.ShotTracking] = round.UsingShotTracking,
+            [AnalyticsEvents.Props.HoleStats] = round.UsingHoleStats,
+            [AnalyticsEvents.Props.Entry] = AnalyticsEvents.EntryModes.HoleByHole
+        });
 
         // The one place friends hear about the round — never at start, never per hole.
         await RoundNotifications.NotifyFriendsOfNewRoundAsync(

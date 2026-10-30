@@ -7,6 +7,7 @@ using FairwayFinder.Features.Diagnostics;
 using FairwayFinder.Features.Enums;
 using FairwayFinder.Features.Games;
 using FairwayFinder.Features.Helpers;
+using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.Features.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -18,17 +19,20 @@ public class RoundService : IRoundService
     private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
     private readonly IFriendService _friendService;
     private readonly IPushNotificationService _pushService;
+    private readonly IProductAnalytics _analytics;
     private readonly ILogger<RoundService> _logger;
 
     public RoundService(
         IDbContextFactory<ApplicationDbContext> dbContextFactory,
         IFriendService friendService,
         IPushNotificationService pushService,
+        IProductAnalytics analytics,
         ILogger<RoundService> logger)
     {
         _dbContextFactory = dbContextFactory;
         _friendService = friendService;
         _pushService = pushService;
+        _analytics = analytics;
         _logger = logger;
     }
 
@@ -535,6 +539,20 @@ public class RoundService : IRoundService
             activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundId, round.RoundId);
             activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundHoles, holeCount);
             activity?.SetTag(FairwayFinderDiagnostics.ActivityTags.RoundShotTracking, request.UsingShotTracking);
+
+            // The same event as the hole-by-hole path, told apart by entry, so every posted
+            // round counts once however it arrived.
+            _analytics.Capture(userId, AnalyticsEvents.RoundCompleted, new Dictionary<string, object?>
+            {
+                [AnalyticsEvents.Props.RoundId] = round.RoundId,
+                [AnalyticsEvents.Props.CourseId] = request.CourseId,
+                [AnalyticsEvents.Props.Holes] = totals.HoleCount,
+                [AnalyticsEvents.Props.Score] = totalScore,
+                [AnalyticsEvents.Props.ToPar] = totalScore - totals.ParEntered,
+                [AnalyticsEvents.Props.ShotTracking] = request.UsingShotTracking,
+                [AnalyticsEvents.Props.HoleStats] = request.UsingHoleStats,
+                [AnalyticsEvents.Props.Entry] = AnalyticsEvents.EntryModes.FullCard
+            });
 
             await NotifyFriendsOfNewRoundAsync(dbContext, userId, round.RoundId, request.CourseId, totalScore);
 

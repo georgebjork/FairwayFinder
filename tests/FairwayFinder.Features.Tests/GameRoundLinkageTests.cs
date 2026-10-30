@@ -1,4 +1,5 @@
 using FairwayFinder.Data.Entities;
+using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Enums;
 using FairwayFinder.Features.Games;
@@ -38,12 +39,12 @@ public class GameRoundLinkageTests
         var push = new CountingPushNotificationService();
         var friends = new StubFriendService(FriendId);
 
-        var rounds = new RoundService(factory, friends, push, NullLogger<RoundService>.Instance);
-        var entry = new RoundEntryService(factory, rounds, friends, push, NullLogger<RoundEntryService>.Instance);
+        var rounds = new RoundService(factory, friends, push, NullProductAnalytics.Instance, NullLogger<RoundService>.Instance);
+        var entry = new RoundEntryService(factory, rounds, friends, push, NullProductAnalytics.Instance, NullLogger<RoundEntryService>.Instance);
 
         var resolver = new GameScoringEngineResolver([new MatchPlayScoringEngine(), new SkinsScoringEngine(), new HighLowScoringEngine()]);
         var reader = new GameScoreReader(factory);
-        var games = new GameService(factory, resolver, reader, friends, push, NullLogger<GameService>.Instance);
+        var games = new GameService(factory, resolver, reader, friends, push, NullProductAnalytics.Instance, NullLogger<GameService>.Instance);
 
         await using var db = factory.CreateDbContext();
 

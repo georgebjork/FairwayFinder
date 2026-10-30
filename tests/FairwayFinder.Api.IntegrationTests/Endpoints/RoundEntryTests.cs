@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FairwayFinder.Api.IntegrationTests.Infrastructure;
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Services.Analytics;
 using Microsoft.EntityFrameworkCore;
 using static FairwayFinder.Api.IntegrationTests.Infrastructure.RoundFlows;
 
@@ -222,5 +223,29 @@ public class RoundEntryTests(ApiFactory factory) : ApiTestBase(factory)
 
         var stats = await GetJsonAsync(golfer.Client, "/api/stats");
         Assert.Equal(0, stats.GetProperty("totalRounds").GetInt32());
+    }
+
+    [Fact]
+    public async Task Starting_and_posting_a_round_records_both_analytics_events_for_the_golfer()
+    {
+        var golfer = await SignInNewUserAsync();
+        var course = await Data.CreateCourseAsync();
+
+        var roundId = await PlayCompletedRoundAsync(golfer.Client, course, overPar: 1);
+
+        var started = Assert.Single(Analytics.For(golfer.Id, AnalyticsEvents.RoundStarted));
+        Assert.Equal(roundId, started.Properties[AnalyticsEvents.Props.RoundId]);
+        Assert.Equal(course.CourseId, started.Properties[AnalyticsEvents.Props.CourseId]);
+
+        var completed = Assert.Single(Analytics.For(golfer.Id, AnalyticsEvents.RoundCompleted));
+        Assert.Equal(roundId, completed.Properties[AnalyticsEvents.Props.RoundId]);
+        Assert.Equal(18, completed.Properties[AnalyticsEvents.Props.Holes]);
+        Assert.Equal(course.Par + 18, completed.Properties[AnalyticsEvents.Props.Score]);
+        Assert.Equal(18, completed.Properties[AnalyticsEvents.Props.ToPar]);
+        Assert.Equal(AnalyticsEvents.EntryModes.HoleByHole, completed.Properties[AnalyticsEvents.Props.Entry]);
+
+        // A retried post is idempotent, and must not count the round twice.
+        await golfer.Client.PostAsync($"/api/rounds/{roundId}/complete", null);
+        Assert.Single(Analytics.For(golfer.Id, AnalyticsEvents.RoundCompleted));
     }
 }

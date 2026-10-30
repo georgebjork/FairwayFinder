@@ -5,6 +5,7 @@ using FairwayFinder.Features.HttpClients;
 using FairwayFinder.Features.Services;
 using FairwayFinder.Features.Services.Email;
 using FairwayFinder.Features.Services.Admin;
+using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.Features.Services.GolfCourseApi;
 using FairwayFinder.Features.Games;
 using FairwayFinder.Features.Games.Engines;
@@ -16,6 +17,8 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using PostHog;
+using PostHog.Config;
 using Serilog.Core;
 
 namespace FairwayFinder.Features;
@@ -75,6 +78,22 @@ public static class ServiceRegistration
         if (config.GetSection("AppLogging").Get<AppLoggingSettings>()?.Enabled ?? true)
         {
             services.AddSingleton<ILogEventSink, DatabaseLogSink>();
+        }
+
+        // ── PostHog ─────────────────────────────────────────────
+        // Product events and error tracking. Without a project token (local dev, tests) both are
+        // off: events go to a no-op and no exception sink is registered. Logs and traces reach
+        // PostHog separately, over OTLP, configured by the OTEL_* environment variables.
+        if (!string.IsNullOrWhiteSpace(config["PostHog:ProjectToken"]))
+        {
+            services.Configure<PostHogOptions>(config.GetSection("PostHog"));
+            services.AddPostHog();
+            services.AddSingleton<IProductAnalytics, PostHogProductAnalytics>();
+            services.AddSingleton<ILogEventSink, PostHogExceptionSink>();
+        }
+        else
+        {
+            services.AddSingleton<IProductAnalytics>(NullProductAnalytics.Instance);
         }
 
         // Password reset is reachable from both hosts: a golfer requests it from the app via the

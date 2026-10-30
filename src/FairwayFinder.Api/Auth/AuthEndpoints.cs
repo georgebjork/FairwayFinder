@@ -1,6 +1,7 @@
 using FairwayFinder.Api.Exceptions;
 using FairwayFinder.Api.Validators;
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -19,7 +20,8 @@ public static class AuthEndpoints
             LoginRequest request,
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            JwtTokenService tokenService) =>
+            JwtTokenService tokenService,
+            IProductAnalytics analytics) =>
         {
             var user = await userManager.FindByEmailAsync(request.Email);
             if (user is null)
@@ -39,6 +41,8 @@ public static class AuthEndpoints
             var roles = await userManager.GetRolesAsync(user);
             var (accessToken, expiresAt) = tokenService.GenerateAccessToken(user, roles);
             var refreshToken = await tokenService.IssueRefreshTokenAsync(user.Id, request.DeviceName);
+
+            analytics.Capture(user.Id, AnalyticsEvents.UserLoggedIn, personProperties: PersonProperties(user));
 
             return Results.Ok(BuildLoginResponse(accessToken, refreshToken, expiresAt, user));
         });
@@ -116,6 +120,7 @@ public static class AuthEndpoints
             IUserInvitationService inviteService,
             IProfileService profileService,
             JwtTokenService tokenService,
+            IProductAnalytics analytics,
             ILoggerFactory loggerFactory) =>
         {
             // The email is taken from the invite, never the request — this enforces
@@ -144,6 +149,7 @@ public static class AuthEndpoints
 
             await userManager.AddToRoleAsync(user, ApplicationRoles.User);
             await inviteService.ClaimInviteAsync(request.Code);
+            analytics.Capture(user.Id, AnalyticsEvents.UserSignedUp, personProperties: PersonProperties(user));
 
             // Create the user's profile up front so they are immediately searchable as a friend.
             // Best-effort: a failure here must not fail registration (the profile is also
@@ -178,5 +184,15 @@ public static class AuthEndpoints
         Email = user.Email!,
         FirstName = user.FirstName,
         LastName = user.LastName
+    };
+
+    /// <summary>
+    /// What PostHog shows for the person, so a golfer is recognisable in it rather than a bare id.
+    /// Refreshed on every login, so a name change catches up.
+    /// </summary>
+    private static Dictionary<string, object?> PersonProperties(ApplicationUser user) => new()
+    {
+        ["email"] = user.Email,
+        ["name"] = $"{user.FirstName} {user.LastName}".Trim()
     };
 }

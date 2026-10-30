@@ -7,6 +7,7 @@ using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Diagnostics;
 using FairwayFinder.Features.Games;
 using FairwayFinder.Features.Helpers;
+using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.Features.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -29,6 +30,7 @@ public class GameService : IGameService
     private readonly GameScoreReader _reader;
     private readonly IFriendService _friendService;
     private readonly IPushNotificationService _pushService;
+    private readonly IProductAnalytics _analytics;
     private readonly ILogger<GameService> _logger;
 
     public GameService(
@@ -37,6 +39,7 @@ public class GameService : IGameService
         GameScoreReader reader,
         IFriendService friendService,
         IPushNotificationService pushService,
+        IProductAnalytics analytics,
         ILogger<GameService> logger)
     {
         _dbContextFactory = dbContextFactory;
@@ -44,6 +47,7 @@ public class GameService : IGameService
         _reader = reader;
         _friendService = friendService;
         _pushService = pushService;
+        _analytics = analytics;
         _logger = logger;
     }
 
@@ -126,6 +130,7 @@ public class GameService : IGameService
         {
             { FairwayFinderDiagnostics.Tags.GameType, game.GameType.ToString() }
         });
+        CaptureGameEvent(hostUserId, AnalyticsEvents.GameCreated, game);
 
         return await BuildStateAsync(game.GameId);
     }
@@ -305,6 +310,8 @@ public class GameService : IGameService
 
             await dbContext.SaveChangesAsync();
         }
+
+        CaptureGameEvent(userId, AnalyticsEvents.GameJoined, game);
 
         return await BuildStateAsync(game.GameId);
     }
@@ -576,6 +583,7 @@ public class GameService : IGameService
             { FairwayFinderDiagnostics.Tags.GameType, game.GameType.ToString() },
             { FairwayFinderDiagnostics.Tags.GameHasGuests, participants.Any(p => p.UserId is null) }
         });
+        CaptureGameEvent(hostUserId, AnalyticsEvents.GameStarted, game, participants.Count);
 
         var state = await BuildStateAsync(gameId);
 
@@ -617,6 +625,7 @@ public class GameService : IGameService
         {
             { FairwayFinderDiagnostics.Tags.GameType, game.GameType.ToString() }
         });
+        CaptureGameEvent(hostUserId, AnalyticsEvents.GameCompleted, game, participants.Count);
 
         // The field and their strokes are unchanged by posting, so the read that produced the
         // snapshot is still the right answer — no need to gather all of it again.
@@ -642,8 +651,18 @@ public class GameService : IGameService
 
         await dbContext.SaveChangesAsync();
 
+        CaptureGameEvent(hostUserId, AnalyticsEvents.GameAbandoned, game);
+
         return await BuildStateAsync(gameId);
     }
+
+    private void CaptureGameEvent(string userId, string eventName, Game game, int? players = null)
+        => _analytics.Capture(userId, eventName, new Dictionary<string, object?>
+        {
+            [AnalyticsEvents.Props.GameId] = game.GameId,
+            [AnalyticsEvents.Props.GameType] = game.GameType.ToString(),
+            [AnalyticsEvents.Props.Players] = players
+        });
 
     // ── Building the response ──
 

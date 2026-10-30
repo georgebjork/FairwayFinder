@@ -1,4 +1,5 @@
 using FairwayFinder.Data.Entities;
+using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Services;
 using FairwayFinder.Features.Tests.Helpers;
@@ -24,6 +25,7 @@ public class RoundServiceExcludeFromStatsTests
             factory,
             new ThrowingFriendService(),
             new NoOpPushNotificationService(),
+            NullProductAnalytics.Instance,
             NullLogger<RoundService>.Instance);
 
         return (service, factory);

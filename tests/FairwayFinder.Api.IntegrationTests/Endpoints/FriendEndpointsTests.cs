@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using FairwayFinder.Api.IntegrationTests.Infrastructure;
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Services.Analytics;
 using static FairwayFinder.Api.IntegrationTests.Infrastructure.RoundFlows;
 
 namespace FairwayFinder.Api.IntegrationTests.Endpoints;
@@ -173,5 +174,19 @@ public class FriendEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
 
         await AssertStatusAsync(HttpStatusCode.NotFound,
             await alice.Client.GetAsync($"/api/friends/{bobPublicId}/rounds/{carolsRound}"));
+    }
+
+    [Fact]
+    public async Task Sending_and_accepting_a_request_records_each_golfers_own_event()
+    {
+        var alice = await SignInNewUserAsync();
+        var bob = await SignInNewUserAsync();
+
+        await MakeFriendsAsync(alice, bob);
+
+        Assert.Single(Analytics.For(alice.Id, AnalyticsEvents.FriendRequestSent));
+        var accepted = Assert.Single(Analytics.For(bob.Id, AnalyticsEvents.FriendRequestAccepted));
+        Assert.Equal(false, accepted.Properties[AnalyticsEvents.Props.AutoAccepted]);
+        Assert.Empty(Analytics.For(alice.Id, AnalyticsEvents.FriendRequestAccepted));
     }
 }

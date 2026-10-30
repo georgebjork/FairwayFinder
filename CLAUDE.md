@@ -33,7 +33,8 @@ Integration tests run against **real Postgres in a Testcontainers container**, o
 holding both databases (`db-fairwayfinder` and `db-fairwayfinder-logs`), each wiped with Respawn before each test. They have to use real Postgres: the filtered unique indexes, `ILIKE`,
 `ExecuteUpdate`/`ExecuteDelete`, unique-violation retries and migrations all behave differently, or not
 at all, on InMemory. Only the edges are faked: `RecordingEmailSender` (read invite/reset links from
-`Email`), `FakeApnsClient` (the real `PushNotificationService` still runs), and `StubHttpHandler` for
+`Email`), `FakeApnsClient` (the real `PushNotificationService` still runs), `RecordingProductAnalytics`
+(assert PostHog events with `Analytics.For(userId, AnalyticsEvents.X)`), and `StubHttpHandler` for
 GolfCourseAPI/TGTR.
 
 **Keep the suite growing with the app:**
@@ -152,7 +153,8 @@ data. Admin migrates both at startup. Diagnostics go in `LogDbContext`, never in
 
 Serilog owns logging in both hosts (`ServiceDefaults/LoggingExtensions.cs`): readable console everywhere
 (no timestamp outside Development, since the host prefixes one), OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Levels live in the
-`Serilog` config section, not `Logging`.
+`Serilog` config section, not `Logging`. In production the OTLP logs and traces go to PostHog
+(`OTEL_EXPORTER_OTLP_ENDPOINT=https://us.i.posthog.com/i`, `http/protobuf`, `Authorization=Bearer%20phc_...`).
 
 - **Warning and worse also go to `app_log`** through `DatabaseLogSink` (Features/Services/Logging), a DI
   `ILogEventSink` that `ReadFrom.Services` picks up. The admin console shows them at `/app-logs`.
@@ -165,6 +167,22 @@ Serilog owns logging in both hosts (`ServiceDefaults/LoggingExtensions.cs`): rea
   an error — `GlobalExceptionHandler` logs those at Information.
 - `LogDbContext` uses `NullLoggerFactory` and the writer runs inside `LogWriteScope`, so a failing log
   write cannot log about itself back into the sink. Keep both.
+
+### Product analytics (PostHog)
+
+Everything is switched on by `PostHog:ProjectToken` (bound straight onto the SDK's `PostHogOptions`, so
+`PostHog:HostUrl` works too). Without a token, which is the case in dev and tests, `IProductAnalytics` is
+`NullProductAnalytics` and nothing is sent.
+
+- **Events come from the Features services**, next to the matching `FairwayFinderDiagnostics` counter, via
+  `IProductAnalytics.Capture(userId, AnalyticsEvents.X, ...)`. Add names to `AnalyticsEvents`. Never use
+  inline strings, or one event splits into two in PostHog.
+- **The distinct id is the golfer's Identity user id**, the same one the iOS app passes to `identify`,
+  which is what joins server and app events. Never an email, and never the acting admin's id on a
+  golfer's behalf: admin paths do not emit golfer events.
+- **Errors**: `PostHogExceptionSink` (a DI `ILogEventSink`, like `DatabaseLogSink`) sends Error+ events
+  that carry an exception to PostHog Error Tracking, keyed by the event's `UserId`. It resolves the
+  client lazily, because the client needs the logger factory that Serilog is still building.
 
 ### Dates and audit stamps
 

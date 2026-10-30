@@ -2,6 +2,7 @@ using FairwayFinder.Data;
 using FairwayFinder.Data.Entities;
 using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Helpers;
+using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -15,17 +16,20 @@ public class FriendService : IFriendService
     private readonly IDbContextFactory<ApplicationDbContext> _dbContextFactory;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IPushNotificationService _pushService;
+    private readonly IProductAnalytics _analytics;
     private readonly ILogger<FriendService> _logger;
 
     public FriendService(
         IDbContextFactory<ApplicationDbContext> dbContextFactory,
         UserManager<ApplicationUser> userManager,
         IPushNotificationService pushService,
+        IProductAnalytics analytics,
         ILogger<FriendService> logger)
     {
         _dbContextFactory = dbContextFactory;
         _userManager = userManager;
         _pushService = pushService;
+        _analytics = analytics;
         _logger = logger;
     }
 
@@ -221,6 +225,8 @@ public class FriendService : IFriendService
                         existing.RespondedOn = nowUtc;
                         existing.UpdatedBy = requesterUserId;
                         await dbContext.SaveChangesAsync();
+                        _analytics.Capture(requesterUserId, AnalyticsEvents.FriendRequestAccepted,
+                            new Dictionary<string, object?> { [AnalyticsEvents.Props.AutoAccepted] = true });
                         await NotifyFriendRequestAcceptedAsync(dbContext, requesterUserId, addresseeUserId);
                         return existing.FriendshipId;
                     }
@@ -235,6 +241,7 @@ public class FriendService : IFriendService
                     existing.RespondedOn = null;
                     existing.UpdatedBy = requesterUserId;
                     await dbContext.SaveChangesAsync();
+                    _analytics.Capture(requesterUserId, AnalyticsEvents.FriendRequestSent);
                     await NotifyFriendRequestSentAsync(dbContext, requesterUserId, addresseeUserId);
                     return existing.FriendshipId;
             }
@@ -253,6 +260,7 @@ public class FriendService : IFriendService
 
         dbContext.Friendships.Add(friendship);
         await dbContext.SaveChangesAsync();
+        _analytics.Capture(requesterUserId, AnalyticsEvents.FriendRequestSent);
         await NotifyFriendRequestSentAsync(dbContext, requesterUserId, addresseeUserId);
         return friendship.FriendshipId;
     }
@@ -275,6 +283,8 @@ public class FriendService : IFriendService
         friendship.RespondedOn = DateTime.UtcNow;
         friendship.UpdatedBy = userId;
         await dbContext.SaveChangesAsync();
+        _analytics.Capture(userId, AnalyticsEvents.FriendRequestAccepted,
+            new Dictionary<string, object?> { [AnalyticsEvents.Props.AutoAccepted] = false });
         await NotifyFriendRequestAcceptedAsync(dbContext, userId, friendship.RequesterUserId);
         return true;
     }

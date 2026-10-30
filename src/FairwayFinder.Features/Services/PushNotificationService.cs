@@ -1,6 +1,7 @@
 using dotAPNS;
 using FairwayFinder.Data;
 using FairwayFinder.Data.Entities;
+using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Shared.Settings;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,7 @@ public class PushNotificationService(
     IDbContextFactory<ApplicationDbContext> dbContextFactory,
     IApnsClient apnsClient,
     IOptions<ApnsSettings> apnsSettings,
+    IProductAnalytics analytics,
     ILogger<PushNotificationService> logger) : IPushNotificationService
 {
     private readonly ApnsSettings _settings = apnsSettings.Value;
@@ -48,6 +50,9 @@ public class PushNotificationService(
         }
 
         await db.SaveChangesAsync(ct);
+
+        // The app re-registers its token on every launch; only a new device is news.
+        if (existing is null) analytics.Capture(userId, AnalyticsEvents.PushDeviceRegistered);
     }
 
     public async Task UnregisterDeviceAsync(string deviceToken, CancellationToken ct = default)
