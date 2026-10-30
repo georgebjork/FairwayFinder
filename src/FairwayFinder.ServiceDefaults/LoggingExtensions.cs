@@ -53,11 +53,9 @@ public static class LoggingExtensions
                     .Filter.ByIncludingOnly(ShipToOtlp)
                     .WriteTo.OpenTelemetry(options =>
                     {
-                        // The template is the body rather than the rendered text, and not repeated as a
-                        // message_template.text attribute. Substituted values still ship as attributes,
-                        // and identical events group cleanly instead of fanning out on interpolated values.
-                        options.IncludedData = (options.IncludedData | IncludedData.TemplateBody)
-                                               & ~IncludedData.MessageTemplateTextAttribute;
+                        // Default IncludedData: the body is the rendered message, so the log viewer reads
+                        // like the console, and the template rides along as message_template.text to
+                        // group identical events by. Substituted values ship as attributes either way.
                         options.ResourceAttributes = new Dictionary<string, object>
                         {
                             ["service.name"] = builder.Environment.ApplicationName,
