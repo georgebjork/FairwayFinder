@@ -2,7 +2,7 @@
 
 Golfers are ASP.NET Core Identity users. Accounts are invite-only: an admin sends an email invitation, and the recipient registers in the iOS app with the code from the link. Each golfer has a `UserProfile` with a public id, and golfers can friend each other to see one another's rounds and stats. This page also covers password reset.
 
-Related: [API overview](../api/overview.md) (JWT, refresh tokens, AASA and landing pages), [notifications and email](notifications-and-email.md), [admin console](../admin/console.md), [analytics](../operations/analytics.md).
+Related: [API overview](../api/overview.md) (JWT, refresh tokens, AASA and landing pages), [notifications and email](notifications-and-email.md), [admin console](../admin/console.md).
 
 ## Identity and roles
 
@@ -165,7 +165,6 @@ Friend endpoints address the other golfer by `PublicIdentifier` (`src/FairwayFin
 ### Side effects
 
 - **Push notifications**: a sent request notifies the addressee ("X sent you a friend request"); an accept or auto-accept notifies the original requester. Failures are logged and swallowed. See [notifications and email](notifications-and-email.md).
-- **Analytics**: `friend_request_sent`, `friend_request_accepted` (with `auto_accepted`) from the service; `friend_activity_viewed` from the endpoint, for the viewer only. See [analytics](../operations/analytics.md).
 
 ## Password reset
 
@@ -214,8 +213,8 @@ sequenceDiagram
 
 | Test file | Covers |
 |---|---|
-| `tests/FairwayFinder.Api.IntegrationTests/Auth/AuthEndpointsTests.cs` | Login, lockout, refresh rotation and reuse, invite lookup, register (role, profile, claim), forgot/reset password (including revoking earlier sessions), login validation, analytics. |
-| `tests/FairwayFinder.Api.IntegrationTests/Endpoints/FriendEndpointsTests.cs` | Search, request lifecycle, auto-accept/conflicts, removal, friend round/stats visibility, in-progress rounds hidden, analytics. |
+| `tests/FairwayFinder.Api.IntegrationTests/Auth/AuthEndpointsTests.cs` | Login, lockout, refresh rotation and reuse, invite lookup, register (role, profile, claim), forgot/reset password (including revoking earlier sessions), login validation. |
+| `tests/FairwayFinder.Api.IntegrationTests/Endpoints/FriendEndpointsTests.cs` | Search, request lifecycle, auto-accept/conflicts, removal, friend round/stats visibility, in-progress rounds hidden. |
 | `tests/FairwayFinder.Api.IntegrationTests/Endpoints/AdminInviteEndpointsTests.cs` | Admin invite endpoints. |
 | `tests/FairwayFinder.Api.IntegrationTests/Endpoints/ProfileAndLookupEndpointsTests.cs` | Profile endpoints. |
 | `tests/FairwayFinder.Features.Tests/PasswordResetServiceTests.cs` | Cross-host token redemption, single use, enumeration-safe failures, admin path. |

@@ -9,7 +9,6 @@ using FairwayFinder.Api.OpenApi;
 using FairwayFinder.Data;
 using FairwayFinder.Data.Entities;
 using FairwayFinder.Features;
-using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.Identity;
 using FairwayFinder.ServiceDefaults;
 using FairwayFinder.Shared;
@@ -17,7 +16,6 @@ using FairwayFinder.Shared.Settings;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -112,10 +110,6 @@ if (!builder.Environment.IsDevelopment()
 // ── Domain Services (reuse existing registration) ───────────
 builder.Services.RegisterFeatureServices(builder.Configuration, builder.Environment.IsDevelopment());
 
-// One app_active event per golfer per day; the API is the only host golfers use.
-builder.Services.TryAddSingleton(TimeProvider.System);
-builder.Services.AddSingleton<ActiveGolferTracker>();
-
 // ── Request Logging ─────────────────────────────────────────
 var requestLoggingSettings = builder.Configuration.GetSection("RequestLogging").Get<RequestLoggingSettings>()
     ?? new RequestLoggingSettings();
@@ -169,7 +163,6 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseUserLogContext();
-app.UseActiveGolferTracking();
 app.UseAuthorization();
 
 // ── Endpoints ───────────────────────────────────────────────

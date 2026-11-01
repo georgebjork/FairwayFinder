@@ -4,7 +4,6 @@ using System.Text.Json;
 using FairwayFinder.Api.IntegrationTests.Infrastructure;
 using FairwayFinder.Data.Entities;
 using FairwayFinder.Features.Data;
-using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.IntegrationTests.Common;
 using static FairwayFinder.Api.IntegrationTests.Infrastructure.RoundFlows;
 
@@ -412,27 +411,5 @@ public class GameEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
 
         var problem = await ReadAsync<JsonElement>(response, HttpStatusCode.BadRequest);
         Assert.True(problem.GetProperty("errors").TryGetProperty("HandicapAllowancePercent", out _));
-    }
-
-    [Fact]
-    public async Task Game_lifecycle_records_analytics_events_for_whoever_acted()
-    {
-        var host = await SignInNewUserAsync();
-        var player = await SignInNewUserAsync();
-        var course = await Data.CreateCourseAsync();
-
-        var game = await CreateGameAsync(host, NewGame(course, GameType.Skins));
-        game = await JoinAsync(player, game, course);
-        await host.Client.PostAsync($"/api/games/{game.GameId}/start", null);
-        await host.Client.PostAsync($"/api/games/{game.GameId}/abandon", null);
-
-        var created = Assert.Single(Analytics.For(host.Id, AnalyticsEvents.GameCreated));
-        Assert.Equal(game.GameId, created.Properties[AnalyticsEvents.Props.GameId]);
-        Assert.Equal(nameof(GameType.Skins), created.Properties[AnalyticsEvents.Props.GameType]);
-
-        Assert.Single(Analytics.For(player.Id, AnalyticsEvents.GameJoined));
-        var started = Assert.Single(Analytics.For(host.Id, AnalyticsEvents.GameStarted));
-        Assert.Equal(2, started.Properties[AnalyticsEvents.Props.Players]);
-        Assert.Single(Analytics.For(host.Id, AnalyticsEvents.GameAbandoned));
     }
 }

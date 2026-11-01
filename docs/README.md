@@ -49,7 +49,6 @@ Start with [Getting started](getting-started.md), then [Architecture overview](a
 | Doc | Covers |
 |---|---|
 | [Logging and observability](operations/logging-and-observability.md) | Serilog, `app_log`, request logs, OpenTelemetry, health checks |
-| [Product analytics](operations/analytics.md) | PostHog events, active golfer tracking, error tracking |
 | [Testing](testing.md) | Test projects, Testcontainers fixtures, fakes, conventions tests |
 
 ## Design records

@@ -21,7 +21,7 @@ describes the code (see [Differences from the spec](#differences-from-the-origin
 | `SgCategoryOffsets` | `src/FairwayFinder.Features/Helpers/SgCategoryOffsets.cs` | Record of the four per-round category offsets |
 | `BaselineLevel` | `src/FairwayFinder.Features/Enums/BaselineLevel.cs` | `Tour`, `Scratch` (default), `Hcp5`…`Hcp25` |
 | `ShotCategory`, `LieType`, `DistanceUnit` | `src/FairwayFinder.Features/Enums/` | SG categories, lies, `yards`/`feet` |
-| `StatsEndpoints` | `src/FairwayFinder.Api/Endpoints/StatsEndpoints.cs` | `/api/stats/*`, level resolution, `stats_viewed` event |
+| `StatsEndpoints` | `src/FairwayFinder.Api/Endpoints/StatsEndpoints.cs` | `/api/stats/*`, level resolution |
 | DTOs | `src/FairwayFinder.Features/Data/UserStatsResponse.cs`, `CourseStatsResponse.cs`, `CourseHoleStatsResponse.cs`, `StrokesGainedSummary.cs`, `StrokesGainedHoleResult.cs`, `StrokesGainedTrendPoint.cs`, `StatsFilter.cs` | Responses and filter |
 
 ## Data flow
@@ -289,7 +289,4 @@ row in `LevelOffsets`, and an entry in `DisplayName`/`AllInDisplayOrder`.
 
 Activities and histograms under `FairwayFinderDiagnostics.StatsActivity`: user, course and
 course-hole generate/calculate spans with child spans per group, and `StatsDashDuration`,
-`StatsCourseDuration`, `StatsCourseHolesDuration` tagged with whether rounds or SG were present. The
-`stats_viewed` PostHog event (scope, level, filtered, course) is captured in `StatsEndpoints`, not the
-service, because the admin console and friend endpoints also call `StatsService`. See
-[../operations/analytics.md](../operations/analytics.md).
+`StatsCourseDuration`, `StatsCourseHolesDuration` tagged with whether rounds or SG were present.

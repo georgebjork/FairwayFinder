@@ -35,7 +35,7 @@ Both `Program.cs` files throw at startup if `BundleId`, `KeyId`, `TeamId` or `P8
 
 | Call | Behaviour |
 |---|---|
-| `POST /api/devices` `{ deviceToken, deviceName? }` | `RegisterDeviceAsync`. Upsert by token. A new token is inserted active. An existing token is reassigned to the caller, reactivated, and `LastSeenAt` bumped. The app calls this on every launch. Only a brand-new token emits the `push_device_registered` analytics event. |
+| `POST /api/devices` `{ deviceToken, deviceName? }` | `RegisterDeviceAsync`. Upsert by token. A new token is inserted active. An existing token is reassigned to the caller, reactivated, and `LastSeenAt` bumped. The app calls this on every launch. |
 | `DELETE /api/devices/{token}` | `UnregisterDeviceAsync(userId, token)`. Sets `IsActive = false` only when the token is registered to the caller. A token that is unknown or someone else's is left alone, and both answer 204, so the response reveals nothing about other golfers' tokens. |
 | `POST /api/devices/test` | Admin role only. Sends a push with the given title/body/badge to every active device of `targetUserId` and returns how many succeeded. |
 
@@ -118,6 +118,6 @@ Integration tests replace the sender with `RecordingEmailSender`, which keeps se
 
 | Test file | Covers |
 |---|---|
-| `tests/FairwayFinder.Api.IntegrationTests/Endpoints/DeviceEndpointsTests.cs` | Register upsert, token moving between accounts, unregister, unregistering another golfer's token is a no-op, validation, admin-only test push reaching the fake APNs client, analytics only for new devices. |
+| `tests/FairwayFinder.Api.IntegrationTests/Endpoints/DeviceEndpointsTests.cs` | Register upsert, token moving between accounts, unregister, unregistering another golfer's token is a no-op, validation, admin-only test push reaching the fake APNs client. |
 | `tests/FairwayFinder.Api.IntegrationTests/Endpoints/FriendEndpointsTests.cs` | Request and accept notify each golfer. |
 | `tests/FairwayFinder.IntegrationTests.Common/Fakes/FakeApnsClient.cs`, `RecordingEmailSender.cs` | The fakes. The real `PushNotificationService` still runs over the fake client. |

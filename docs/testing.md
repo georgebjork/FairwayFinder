@@ -6,8 +6,8 @@ There are three test projects and one shared library. Unit tests cover pure logi
 
 | Project | Kind | Covers | Needs Docker |
 |---|---|---|---|
-| `tests/FairwayFinder.Features.Tests` | Unit | Scoring engines, `StatsCalculator`, strokes-gained calculator/baseline/offsets, handicap and display-name helpers, services built by hand over EF InMemory (`RoundEntryService`, `GameService`, `AdminGameService`, `CourseService`, `PasswordResetService`, invitations), audit stamping, the logging and PostHog sinks, `ActiveGolferTracker` | No |
-| `tests/FairwayFinder.Api.IntegrationTests` | Integration | The real API host over HTTP: JWT auth, validation, ProblemDetails, every endpoint group, analytics events, app logs, tracing, and the convention tests | Yes |
+| `tests/FairwayFinder.Features.Tests` | Unit | Scoring engines, `StatsCalculator`, strokes-gained calculator/baseline/offsets, handicap and display-name helpers, services built by hand over EF InMemory (`RoundEntryService`, `GameService`, `AdminGameService`, `CourseService`, `PasswordResetService`, invitations), audit stamping, the logging sink | No |
+| `tests/FairwayFinder.Api.IntegrationTests` | Integration | The real API host over HTTP: JWT auth, validation, ProblemDetails, every endpoint group, app logs, tracing, and the convention tests | Yes |
 | `tests/FairwayFinder.Admin.IntegrationTests` | Integration | The real Admin host: startup migrations and seeding, page authorization, cookie login, admin and import services. Also `GameCardModelTests`, which are plain unit tests of the admin scorecard model. | Yes |
 | `tests/FairwayFinder.IntegrationTests.Common` | Library (not a test project) | `PostgresFixture`, `FairwayFinderFactory`, `IntegrationTestBase`, `TestSettings`, `TestData`, fakes | |
 
@@ -50,7 +50,7 @@ flowchart TB
         FF["FairwayFinderFactory&lt;TEntryPoint&gt;<br/>WebApplicationFactory + fakes + TestSettings"]
         ITB["IntegrationTestBase&lt;TFactory, TEntryPoint&gt;<br/>reset before each test, Db(), LogDb(), Data"]
         TD["TestData builders"]
-        FK["Fakes: RecordingEmailSender, FakeApnsClient,<br/>RecordingProductAnalytics, StubHttpHandler"]
+        FK["Fakes: RecordingEmailSender, FakeApnsClient,<br/>StubHttpHandler"]
     end
     FF --> PF
     FF --> FK
@@ -76,7 +76,7 @@ flowchart TB
 
 - Environment is `Testing`.
 - Applies `TestSettings` (plus per-factory `SettingOverrides`) with `UseSetting`.
-- Swaps the edges for fakes: `IEmailSender` → `RecordingEmailSender`, `IApnsClient` → `FakeApnsClient`, `IProductAnalytics` → `RecordingProductAnalytics`. Everything between the HTTP request and the database row is the production code path.
+- Swaps the edges for fakes: `IEmailSender` → `RecordingEmailSender`, `IApnsClient` → `FakeApnsClient`. Everything between the HTTP request and the database row is the production code path.
 - `ResetAsync()` resets both databases and clears every fake.
 - Lifecycle: start container → `PrepareDatabaseAsync()` (abstract, per host) → first reset.
 
@@ -105,7 +105,7 @@ The URL bases are public constants (`TestSettings.RegistrationUrlBase`, `Passwor
 | Member | Use |
 |---|---|
 | `Data` | `TestData` builders |
-| `Email`, `Apns`, `Analytics` | The fakes, for assertions |
+| `Email`, `Apns` | The fakes, for assertions |
 | `Db()`, `LogDb()` | A fresh `ApplicationDbContext` / `LogDbContext` for arranging or asserting on rows directly |
 | `WithServiceAsync<TService>(...)` | Resolve a service in its own scope, as a request would |
 
@@ -138,7 +138,6 @@ All in `tests/FairwayFinder.IntegrationTests.Common/Fakes/`, all cleared before 
 |---|---|---|
 | `RecordingEmailSender` | `IEmailSender` | `Email.Sent`, or `Email.LastTo(address, SentEmailKind.Invitation \| PasswordReset \| Confirmation)` to read the link a golfer would click. |
 | `FakeApnsClient` | `IApnsClient` | Only the network hop is faked; the real `PushNotificationService` still looks up devices, builds payloads and deactivates dead tokens. Assert on `Apns.Sent`. Set `FailWith` to simulate a network failure. |
-| `RecordingProductAnalytics` | `IProductAnalytics` | `Analytics.For(userId, AnalyticsEvents.X)` returns the captured events with their properties and person properties. `Analytics.Captured` for everything. See [operations/analytics.md](operations/analytics.md). |
 | `StubHttpHandler` | Primary handler for GolfCourseAPI and TGTR clients (Admin only) | `ExternalHttp.RespondJson(path, body)` or `Respond(path, req => ...)`. Unregistered paths return 404, so a test never reaches the internet. `ExternalHttp.Requests` records what was sent. |
 
 ### `TestData` builders
@@ -165,7 +164,7 @@ Don't construct entities inline in a test; add a builder here.
 - `UpsertHoleAsync(client, roundId, hole, score)` → `PUT /api/rounds/{id}/holes/{n}`
 - `PlayCompletedRoundAsync(client, course, overPar, datePlayed?)` → start, write every hole at par + `overPar`, `POST .../complete`
 
-Prefer driving the real flow over inserting rows. It also exercises the analytics events, push notifications and diagnostics on the way.
+Prefer driving the real flow over inserting rows. It also exercises the push notifications and diagnostics on the way.
 
 ## Convention tests
 
@@ -199,12 +198,11 @@ public class RoundReadTests(ApiFactory factory) : ApiTestBase(factory)
         var round = await GetJsonAsync(me.Client, $"/api/rounds/{roundId}");
 
         Assert.Equal(course.CourseId, round.GetProperty("courseId").GetInt64());
-        Assert.Single(Analytics.For(me.Id, AnalyticsEvents.RoundCompleted));
     }
 }
 ```
 
-Cover the happy path, the auth boundary (another golfer gets 404/403, anonymous gets 401), validation (400 ProblemDetails), and any analytics event or push the endpoint should produce. `EndpointAuthorizationConventionTests` will catch a missing `.RequireAuthorization()` on its own.
+Cover the happy path, the auth boundary (another golfer gets 404/403, anonymous gets 401), validation (400 ProblemDetails), and any push the endpoint should produce. `EndpointAuthorizationConventionTests` will catch a missing `.RequireAuthorization()` on its own.
 
 ### New admin page
 
@@ -213,22 +211,21 @@ Cover the happy path, the auth boundary (another golfer gets 404/403, anonymous 
 ### New Features service behaviour
 
 - Pure logic (calculators, scoring engines, helpers): a plain unit test in `FairwayFinder.Features.Tests`. `Helpers/GameScoringTestData` holds shared fixtures for the game engines.
-- Service logic that only reads and writes rows: build the service by hand over `InMemoryDbContextFactory(uniqueDbName)` (`Helpers/InMemoryDbContextFactory.cs`), passing `NullProductAnalytics.Instance`, `NullLogger<T>.Instance`, and doubles from `Helpers/RoundServiceTestDoubles.cs` (`StubFriendService`, `ThrowingFriendService`, `NoOpPushNotificationService`, `CountingPushNotificationService`). Use the test name as the database name so tests don't share state. `RoundEntryServiceTests` shows the pattern with a `Harness` record.
+- Service logic that only reads and writes rows: build the service by hand over `InMemoryDbContextFactory(uniqueDbName)` (`Helpers/InMemoryDbContextFactory.cs`), passing `NullLogger<T>.Instance` and doubles from `Helpers/RoundServiceTestDoubles.cs` (`StubFriendService`, `ThrowingFriendService`, `NoOpPushNotificationService`, `CountingPushNotificationService`). Use the test name as the database name so tests don't share state. `RoundEntryServiceTests` shows the pattern with a `Harness` record.
 - Anything that depends on Postgres (constraints, concurrency, raw SQL, `ILike`, `ExecuteUpdate`/`ExecuteDelete`, unique-violation retries): an integration test, not an InMemory unit test.
 
-`FairwayFinder.Features` has `InternalsVisibleTo("FairwayFinder.Features.Tests")`, which is how the sink tests reach their internal constructors.
+`FairwayFinder.Features` has `InternalsVisibleTo("FairwayFinder.Features.Tests")`, which is how the sink tests reach the sink's internal constructor.
 
 ### New entity or schema change
 
 Add the migration. `MigrationTests` fails until you do. Add or update the `TestData` builder for it.
 
-### Logging and analytics
+### Logging
 
-- Analytics: assert with `Analytics.For(userId, AnalyticsEvents.X)` in the API test that drives the action.
 - `app_log`: log through a real `ILogger` resolved from `Services` and poll `LogDb()` until the row appears, since the sink writes in batches (`AppLogTests.WaitForAsync`).
 
 ## Gotchas
 
-- `TestData.CreateCompletedRoundAsync` goes through the deprecated whole-card `CreateRoundAsync`, so it records a `round_completed` event with `entry = full_card`. Use `RoundFlows` when the test cares how the round was entered.
+- `TestData.CreateCompletedRoundAsync` goes through the deprecated whole-card `CreateRoundAsync`, not hole-by-hole entry. Use `RoundFlows` when the test cares how the round was entered.
 - Request logging is off in tests and its hosted services are removed from the API host. The request-log purge is covered by calling `ApiRequestLogService.PurgeOlderThanAsync` directly (`AdminOperationsServiceTests`).
 - Tests within an assembly run serially. Don't add parallelism: they share a database that is wiped before each test.

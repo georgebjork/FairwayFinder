@@ -84,8 +84,7 @@ The full key list is in [Hosting and configuration](hosting-and-configuration.md
 | `Resend__ApiKey` | Required (startup check outside Development): invite and reset emails | Same |
 | `GolfCourseApi__ApiKey` | | Needed for imports |
 | `SeedUser__*` | | Optional, first admin account |
-| `PostHog__ProjectToken` | Optional, turns on analytics and error tracking | Same |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`, `_PROTOCOL`, `_HEADERS` | Optional; production ships logs and traces to PostHog (`https://us.i.posthog.com/i`, `http/protobuf`, `Authorization=Bearer%20phc_...`) | Same |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`, `_PROTOCOL`, `_HEADERS` | Optional; ships logs, traces and metrics to whatever OTLP backend they point at | Same |
 
 The database user for Admin needs rights to run migrations. If it lacks `CREATEDB`, create `db-fairwayfinder-logs` by hand before the first start. Admin migrates both databases at startup and the Api assumes the schema is there, so after a release that includes a migration, the Admin container has to start (and finish migrating) before the new Api serves traffic that depends on the change.
 

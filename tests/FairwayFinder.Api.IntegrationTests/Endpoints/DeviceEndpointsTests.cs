@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using FairwayFinder.Api.IntegrationTests.Infrastructure;
 using FairwayFinder.Features.Data;
-using FairwayFinder.Features.Services.Analytics;
 using Microsoft.EntityFrameworkCore;
 
 namespace FairwayFinder.Api.IntegrationTests.Endpoints;
@@ -88,17 +87,5 @@ public class DeviceEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
         var result = await ReadAsync<SendTestPushResponse>(await admin.Client.PostAsJsonAsync("/api/devices/test", request));
         Assert.Equal(1, result.Sent);
         Assert.Single(Apns.Sent);
-    }
-
-    [Fact]
-    public async Task Only_a_new_device_records_an_analytics_event()
-    {
-        var golfer = await SignInNewUserAsync();
-
-        // The app re-registers the same token on every launch.
-        await RegisterDeviceAsync(golfer, "launch-token");
-        await RegisterDeviceAsync(golfer, "launch-token");
-
-        Assert.Single(Analytics.For(golfer.Id, AnalyticsEvents.PushDeviceRegistered));
     }
 }

@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using FairwayFinder.Api.IntegrationTests.Infrastructure;
 using FairwayFinder.Features.Data;
-using FairwayFinder.Features.Services.Analytics;
 using static FairwayFinder.Api.IntegrationTests.Infrastructure.RoundFlows;
 
 namespace FairwayFinder.Api.IntegrationTests.Endpoints;
@@ -174,45 +173,5 @@ public class FriendEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
 
         await AssertStatusAsync(HttpStatusCode.NotFound,
             await alice.Client.GetAsync($"/api/friends/{bobPublicId}/rounds/{carolsRound}"));
-    }
-
-    [Fact]
-    public async Task Sending_and_accepting_a_request_records_each_golfers_own_event()
-    {
-        var alice = await SignInNewUserAsync();
-        var bob = await SignInNewUserAsync();
-
-        await MakeFriendsAsync(alice, bob);
-
-        Assert.Single(Analytics.For(alice.Id, AnalyticsEvents.FriendRequestSent));
-        var accepted = Assert.Single(Analytics.For(bob.Id, AnalyticsEvents.FriendRequestAccepted));
-        Assert.Equal(false, accepted.Properties[AnalyticsEvents.Props.AutoAccepted]);
-        Assert.Empty(Analytics.For(alice.Id, AnalyticsEvents.FriendRequestAccepted));
-    }
-
-    [Fact]
-    public async Task Viewing_a_friends_rounds_and_stats_is_recorded_for_the_viewer_not_the_friend()
-    {
-        var viewer = await SignInNewUserAsync();
-        var friend = await SignInNewUserAsync();
-        await MakeFriendsAsync(viewer, friend);
-        var course = await Data.CreateCourseAsync();
-        var roundId = await PlayCompletedRoundAsync(friend.Client, course);
-        var publicId = (await GetAsync<UserProfileResponse>(friend.Client, "/api/profile")).PublicIdentifier;
-
-        await AssertStatusAsync(HttpStatusCode.OK, await viewer.Client.GetAsync($"/api/friends/{publicId}/rounds"));
-        await AssertStatusAsync(HttpStatusCode.OK, await viewer.Client.GetAsync($"/api/friends/{publicId}/rounds/{roundId}"));
-        await AssertStatusAsync(HttpStatusCode.OK, await viewer.Client.GetAsync($"/api/friends/{publicId}/stats"));
-
-        var views = Analytics.For(viewer.Id, AnalyticsEvents.FriendActivityViewed)
-            .Select(v => v.Properties[AnalyticsEvents.Props.View])
-            .ToList();
-        Assert.Equal(
-            [AnalyticsEvents.FriendViews.Rounds, AnalyticsEvents.FriendViews.Round, AnalyticsEvents.FriendViews.Stats],
-            views);
-
-        // Looking at a friend's stats is not the friend looking at their own.
-        Assert.Empty(Analytics.For(friend.Id, AnalyticsEvents.StatsViewed));
-        Assert.Empty(Analytics.For(viewer.Id, AnalyticsEvents.StatsViewed));
     }
 }

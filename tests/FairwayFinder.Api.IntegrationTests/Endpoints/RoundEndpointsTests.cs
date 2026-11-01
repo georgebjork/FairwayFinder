@@ -4,7 +4,6 @@ using System.Text.Json;
 using FairwayFinder.Api.IntegrationTests.Infrastructure;
 using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Enums;
-using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.IntegrationTests.Common;
 using Microsoft.EntityFrameworkCore;
 using static FairwayFinder.Api.IntegrationTests.Infrastructure.RoundFlows;
@@ -180,8 +179,6 @@ public class RoundEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
             }).ToList(),
         });
         await AssertStatusAsync(HttpStatusCode.NoContent, response);
-        var edited = Assert.Single(Analytics.For(golfer.Id, AnalyticsEvents.RoundEdited));
-        Assert.Equal(roundId, edited.Properties[AnalyticsEvents.Props.RoundId]);
 
         var updated = await GetAsync<RoundResponse>(golfer.Client, $"/api/rounds/{roundId}");
         Assert.Equal(course.Par + 18, updated.Score);
@@ -311,7 +308,6 @@ public class RoundEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
         var roundId = await PlayCompletedRoundAsync(golfer.Client, course);
 
         await AssertStatusAsync(HttpStatusCode.NoContent, await golfer.Client.DeleteAsync($"/api/rounds/{roundId}"));
-        Assert.Single(Analytics.For(golfer.Id, AnalyticsEvents.RoundDeleted));
 
         await AssertStatusAsync(HttpStatusCode.NotFound, await golfer.Client.GetAsync($"/api/rounds/{roundId}"));
         Assert.Equal(0, (await GetJsonAsync(golfer.Client, "/api/rounds")).GetArrayLength());

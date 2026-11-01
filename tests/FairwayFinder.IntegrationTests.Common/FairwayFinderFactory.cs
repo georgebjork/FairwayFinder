@@ -1,5 +1,4 @@
 using dotAPNS;
-using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.IntegrationTests.Common.Fakes;
 using Microsoft.AspNetCore.Hosting;
@@ -16,7 +15,7 @@ namespace FairwayFinder.IntegrationTests.Common;
 /// the data, not the host, between runs.
 /// </summary>
 /// <remarks>
-/// Only the edges of the system are faked: outgoing email, Apple's push gateway and PostHog. Everything
+/// Only the edges of the system are faked: outgoing email and Apple's push gateway. Everything
 /// between the HTTP request and the database row is the production code path.
 /// </remarks>
 public abstract class FairwayFinderFactory<TEntryPoint> : WebApplicationFactory<TEntryPoint>, IAsyncLifetime
@@ -27,8 +26,6 @@ public abstract class FairwayFinderFactory<TEntryPoint> : WebApplicationFactory<
     public RecordingEmailSender Email { get; } = new();
 
     public FakeApnsClient Apns { get; } = new();
-
-    public RecordingProductAnalytics Analytics { get; } = new();
 
     /// <summary>Canned responses for third-party HTTP APIs, for hosts that wire it into their clients.</summary>
     public StubHttpHandler ExternalHttp { get; } = new();
@@ -62,7 +59,6 @@ public abstract class FairwayFinderFactory<TEntryPoint> : WebApplicationFactory<
         await Postgres.ResetAsync();
         Email.Clear();
         Apns.Clear();
-        Analytics.Clear();
         ExternalHttp.Clear();
     }
 
@@ -78,9 +74,6 @@ public abstract class FairwayFinderFactory<TEntryPoint> : WebApplicationFactory<
 
             services.RemoveAll<IApnsClient>();
             services.AddSingleton<IApnsClient>(Apns);
-
-            services.RemoveAll<IProductAnalytics>();
-            services.AddSingleton<IProductAnalytics>(Analytics);
 
             ConfigureTestServices(services);
         });

@@ -194,7 +194,7 @@ The rest of the console follows the same rule:
 - `RoundDetail`/`RoundEdit` keep `_adminUserId` and `_ownerUserId` as separate fields, with comments saying which is which.
 - `AdminGameService` participant methods take **only a participant id**, never a game id or user id, so a repair cannot move a player between games or reassign their line to another golfer. Relinking re-checks that the round belongs to the participant and is on the game's course.
 - `EditUserDialog` takes `User` (the target) and `ActingAdminUserId` as separate parameters.
-- Admin paths never emit golfer analytics events and never send pushes (`AdminGameService` has no `IPushNotificationService` on purpose). See [../operations/analytics.md](../operations/analytics.md).
+- Admin paths never send pushes (`AdminGameService` has no `IPushNotificationService` on purpose).
 
 When you add an admin action on someone else's data, pass the target id in, look the owner up server-side, and use the admin id only for stamping.
 
@@ -234,7 +234,7 @@ When you add an admin action on someone else's data, pass the target id in, look
 - `IStatsService.GetAvailableYearsAsync(userId)`, `GetUserCoursesAsync(userId)` for the filter options
 - `IStatsService.GetUserStatsAsync(userId, filter, level)`, called once per level, or once when both levels match
 
-`IStatsService` takes the target user id and level as plain parameters with no ownership guard, which lets the console compute anyone's stats. Because the admin console calls it too, the API endpoint captures the analytics event, not the service.
+`IStatsService` takes the target user id and level as plain parameters with no ownership guard, which lets the console compute anyone's stats.
 
 **`/stats/{userId}/course/{courseId}`**: one golfer on one course, with teebox, full-round and level filters, a per-hole grid (`Courses/Components/CourseHoleStatsGrid.razor`), metric tables, and round history (`Courses/Components/CourseRoundHistoryGrid.razor`, linking to `/rounds/{id}` and showing exclusion state). Calls `IStatsService.GetCourseStatsAsync(userId, courseId, teeboxId, fullRoundOnly, level)` and `IRoundService.GetRoundsWithDetailsAsync(userId, StatsFilter, level)`.
 
@@ -392,7 +392,7 @@ See [../data/database.md](../data/database.md) for the migrations workflow.
    - `BreadcrumbState.Set(new BreadcrumbItem("Overview", "/"), ...)`.
    - `<PageTitle>`.
    - If it acts on another user's data: take the target id as a parameter, re-resolve ownership server-side, and use the admin's id only for `CreatedBy`/`UpdatedBy` and logs.
-   - Don't emit golfer analytics events or pushes from admin paths.
+   - Don't send pushes from admin paths.
    - Radzen components and CSS variables only.
 4. **Navigation**: add a `RadzenPanelMenuItem` to `MainLayout.razor` if the page should appear in the sidebar.
 5. **Tests**: `PageAuthorizationTests` picks up the new route by reflection and checks anonymous → `/login`, golfer → `/access-denied`, admin → 200. If the route uses a parameter that isn't `:long`, check that `Resolve` produces a usable placeholder. Pages don't render over HTTP (prerender is off), so test the **service** the page calls in `tests/FairwayFinder.Admin.IntegrationTests/Services/`, against real Postgres. See [../testing.md](../testing.md).

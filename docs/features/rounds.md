@@ -75,8 +75,7 @@ stateDiagram-v2
    has par and hole ids pinned to the exact teebox version.
 
 The request validator requires at least one of `FullRound`, `FrontNine`, `BackNine`.
-Start emits the `round_started` analytics event and the `RoundsStarted` counter, but no
-notification.
+Start emits the `RoundsStarted` counter, but no notification.
 
 ### One open round per golfer
 
@@ -142,7 +141,7 @@ Points worth knowing:
     copy the client's stat fields (`ApplyClientHoleStat`). Existing shots on that hole are left
     in place in this case.
   - Otherwise, soft-delete any hole-stat row left over.
-- Emits the `RoundHolesPosted` counter. No notification, no analytics event.
+- Emits the `RoundHolesPosted` counter. No notification.
 
 ### Clear a hole (`RoundEntryService.ClearHoleAsync`)
 
@@ -165,7 +164,7 @@ indexes are filtered on `is_deleted = false`, a cleared hole can be entered agai
    actually played (the start request was a plan, the holes are the record), create or update
    `round_stats` with `ApplyScoringDistribution`, and set `IsComplete = true`.
 5. Record telemetry (`RoundsCreated`, `ShotsLogged`, `RoundSaveDuration` with operation
-   `complete`), capture `round_completed` with `entry = hole_by_hole`, and notify friends.
+   `complete`) and notify friends.
 6. Return the full `RoundResponse` at the caller's SG baseline level.
 
 `RoundsCreated` is counted at completion, not at start, so it stays comparable with the atomic path:
@@ -188,7 +187,7 @@ in the field and marked deprecated in OpenAPI. Differences from the hole-by-hole
   re-derived on create.
 - It saves in several `SaveChangesAsync` calls without an explicit transaction.
 - Unknown/archived teebox throws `InvalidOperationException` rather than returning a status.
-- It emits the same `round_completed` event with `entry = full_card`, and notifies friends.
+- It notifies friends, the same as completing a hole-by-hole round.
 
 ## Scoring rules (`RoundScoringHelper`)
 
@@ -292,8 +291,7 @@ The service then:
 - Writes hole stats through the shared helpers, `ApplyDerivedHoleStat` for shot-tracked holes and
   `ApplyClientHoleStat` for hole-stats rounds, the same as both other write paths.
 
-The `round_edited` analytics event is captured in the endpoint, not the service, because the admin
-console calls the same method. Admins edit through `AdminRoundService.UpdateRoundAsAdminAsync`,
+The admin console reuses this method: admins edit through `AdminRoundService.UpdateRoundAsAdminAsync`,
 which re-resolves the owner server-side and submits under that identity so the ownership guard still
 holds; see [../admin/console.md](../admin/console.md).
 
@@ -310,7 +308,7 @@ flag change.
 stats, shots and round stat, stamping `UpdatedBy`. The service matches on round id only and does no
 ownership check; the endpoint's `EnsureRoundAccess` does (404 if missing, 403 if not yours). The
 admin console relies on the missing guard to delete cross-owner. Deleting an open round is how the
-app discards it. `round_deleted` is captured in the endpoint.
+app discards it.
 
 ## Notifying friends
 
@@ -329,10 +327,8 @@ problem cannot cost the golfer their round. Delivery is covered in
 
 `FairwayFinderDiagnostics` counters and activities: `RoundsStarted`, `RoundHolesPosted`,
 `RoundsCreated`, `ShotsLogged`, `RoundsUpdated`, `RoundsDeleted`, `RoundSaveDuration` (tagged
-`create`/`update`/`complete`). PostHog events: `round_started`, `round_completed` (both paths, told
-apart by `entry`), `round_edited`, `round_deleted`. See
-[../operations/logging-and-observability.md](../operations/logging-and-observability.md) and
-[../operations/analytics.md](../operations/analytics.md).
+`create`/`update`/`complete`). See
+[../operations/logging-and-observability.md](../operations/logging-and-observability.md).
 
 ## Tests
 

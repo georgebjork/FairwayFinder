@@ -203,7 +203,7 @@ Per round:
 
 Steps 5 to 8 use three `SaveChangesAsync` calls with no surrounding transaction. If a round fails part way, its `round` row can exist without a `tgtr_round_map`, and a later run will import it again. Any exception for a round is caught, reported as "Unexpected error", and the next round continues.
 
-The transfer writes `RoundStat` and `HoleStat` itself rather than going through `RoundScoringHelper`, and the round is not announced to friends (no push) and emits no analytics. TGTR has no shot data, so imported rounds have none and contribute nothing to strokes gained.
+The transfer writes `RoundStat` and `HoleStat` itself rather than going through `RoundScoringHelper`, and the round is not announced to friends (no push). TGTR has no shot data, so imported rounds have none and contribute nothing to strokes gained.
 
 Result: `TgtrTransferResult` with `RoundsImported`, `RoundsSkipped`, and a list of `TgtrTransferError { TgtrRoundId, Reason }`. A fetch failure from the TGTR API is reported as a single error with round id 0. Telemetry: `imports.tgtr.transfer` activity, `Tgtr*` counters, and a duration histogram.
 

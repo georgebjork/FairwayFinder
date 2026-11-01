@@ -8,7 +8,6 @@ using System.Text.Json;
 using FairwayFinder.Api.Auth;
 using FairwayFinder.Api.IntegrationTests.Infrastructure;
 using FairwayFinder.Features.Data;
-using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.Identity;
 using FairwayFinder.IntegrationTests.Common;
 using FairwayFinder.IntegrationTests.Common.Fakes;
@@ -406,40 +405,5 @@ public class AuthEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
-    }
-
-    [Fact]
-    public async Task Register_and_login_record_analytics_events_with_the_golfers_details()
-    {
-        const string email = "tracked@test.fairwayfinder.pro";
-        var invite = await Data.CreateInvitationAsync(email);
-
-        using var client = AnonymousClient();
-        var registered = await ReadAsync<LoginResponse>(await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest
-        {
-            Code = invite.InvitationIdentifier,
-            FirstName = "Tracked",
-            LastName = "Golfer",
-            Password = "a-long-password",
-            PreferredTees = 0,
-        }));
-
-        var signedUp = Assert.Single(Analytics.For(registered.UserId, AnalyticsEvents.UserSignedUp));
-        Assert.Equal(email, signedUp.PersonProperties["email"]);
-        Assert.Equal("Tracked Golfer", signedUp.PersonProperties["name"]);
-
-        await LoginAsync(email, "a-long-password");
-        Assert.Single(Analytics.For(registered.UserId, AnalyticsEvents.UserLoggedIn));
-    }
-
-    [Fact]
-    public async Task A_failed_login_records_no_analytics_event()
-    {
-        var user = await Data.CreateUserAsync();
-        using var client = AnonymousClient();
-
-        await client.PostAsJsonAsync("/api/auth/login", new LoginRequest { Email = user.Email!, Password = "wrong-password" });
-
-        Assert.Empty(Analytics.For(user.Id, AnalyticsEvents.UserLoggedIn));
     }
 }

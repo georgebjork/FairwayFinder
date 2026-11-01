@@ -23,8 +23,6 @@ public abstract class IntegrationTestBase<TFactory, TEntryPoint>(TFactory factor
 
     protected FakeApnsClient Apns => Factory.Apns;
 
-    protected RecordingProductAnalytics Analytics => Factory.Analytics;
-
     public virtual Task InitializeAsync() => Factory.ResetAsync();
 
     public virtual Task DisposeAsync() => Task.CompletedTask;

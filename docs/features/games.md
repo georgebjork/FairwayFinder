@@ -376,7 +376,7 @@ Concurrency: two devices joining at once hit `ix_game_participant_game_user` and
 
 Recipients are registered participants other than the host (guests have no device; the host pressed the button). Payload data is `{ "type": "game", "gameId": "…" }` for routing a tap. Every send is wrapped in try/catch and logged at Error on failure: polling is the source of truth and a push failure must not cost the host their game. Joining, abandoning and admin repairs send nothing. Delivery is covered in [`notifications-and-email.md`](notifications-and-email.md).
 
-Telemetry: the `FairwayFinder.Games` meter and activity source (`games.created`, `games.started`, `games.completed`, `game.holes.posted`; activities `game.create`, `game.score`, `game.complete`) and PostHog events `game_created`, `game_joined`, `game_started`, `game_completed`, `game_abandoned`, captured in `GameService` for the acting golfer. See [`../operations/logging-and-observability.md`](../operations/logging-and-observability.md) and [`../operations/analytics.md`](../operations/analytics.md).
+Telemetry: the `FairwayFinder.Games` meter and activity source (`games.created`, `games.started`, `games.completed`, `game.holes.posted`; activities `game.create`, `game.score`, `game.complete`). See [`../operations/logging-and-observability.md`](../operations/logging-and-observability.md).
 
 ## Admin console
 

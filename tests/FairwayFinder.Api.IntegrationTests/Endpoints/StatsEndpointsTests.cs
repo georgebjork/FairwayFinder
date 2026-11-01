@@ -1,7 +1,6 @@
 using System.Net;
 using FairwayFinder.Api.IntegrationTests.Infrastructure;
 using FairwayFinder.Features.Data;
-using FairwayFinder.Features.Services.Analytics;
 using static FairwayFinder.Api.IntegrationTests.Infrastructure.RoundFlows;
 
 namespace FairwayFinder.Api.IntegrationTests.Endpoints;
@@ -117,27 +116,5 @@ public class StatsEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
 
         var course = Assert.Single(courses.EnumerateArray());
         Assert.Equal(tracked.CourseId, course.GetProperty("courseId").GetInt64());
-    }
-
-    [Fact]
-    public async Task Viewing_your_own_stats_records_which_screen_and_baseline()
-    {
-        var golfer = await SignInNewUserAsync();
-        var course = await Data.CreateCourseAsync();
-        await PlayCompletedRoundAsync(golfer.Client, course);
-
-        await AssertStatusAsync(HttpStatusCode.OK, await golfer.Client.GetAsync("/api/stats?year=2026"));
-        await AssertStatusAsync(HttpStatusCode.OK, await golfer.Client.GetAsync($"/api/stats/courses/{course.CourseId}"));
-
-        var views = Analytics.For(golfer.Id, AnalyticsEvents.StatsViewed);
-        Assert.Equal(2, views.Count);
-
-        var overall = Assert.Single(views, v => Equals(v.Properties[AnalyticsEvents.Props.Scope], AnalyticsEvents.StatsScopes.Overall));
-        Assert.Equal(true, overall.Properties[AnalyticsEvents.Props.Filtered]);
-        Assert.NotNull(overall.Properties[AnalyticsEvents.Props.BaselineLevel]);
-
-        var byCourse = Assert.Single(views, v => Equals(v.Properties[AnalyticsEvents.Props.Scope], AnalyticsEvents.StatsScopes.Course));
-        Assert.Equal(course.CourseId, byCourse.Properties[AnalyticsEvents.Props.CourseId]);
-        Assert.Equal(false, byCourse.Properties[AnalyticsEvents.Props.Filtered]);
     }
 }

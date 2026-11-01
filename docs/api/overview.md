@@ -13,7 +13,7 @@ Host wiring shared with the admin console (Serilog, OpenTelemetry, settings bind
 3. ASP.NET Core Identity over `ApplicationDbContext` with the same password policy as Admin: minimum 8 characters, no character-class rules, unique email. No cookie config, because the API never signs in with cookies.
 4. JWT bearer authentication. Startup throws if `Jwt:Secret` is missing or shorter than 32 characters.
 5. Shared settings, then an APNs check: startup throws unless `Apns:BundleId`, `KeyId`, `TeamId` and `P8Contents` are all set.
-6. `RegisterFeatureServices(...)` for the domain layer, plus `ActiveGolferTracker` and `TimeProvider.System`.
+6. `RegisterFeatureServices(...)` for the domain layer.
 7. The request-log channel, `RequestLoggingMiddleware`, and the two hosted services.
 8. `GlobalExceptionHandler` + `AddProblemDetails()`, FluentValidation validators from the API assembly, and OpenAPI with the bearer scheme transformer.
 
@@ -32,8 +32,7 @@ flowchart TD
     L --> H[UseHttpsRedirection]
     H --> AN["UseAuthentication<br/>(JWT bearer)"]
     AN --> U["UseUserLogContext<br/>(push UserId / UserEmail to LogContext)"]
-    U --> AG["UseActiveGolferTracking<br/>(app_active once per golfer per UTC day)"]
-    AG --> AZ[UseAuthorization]
+    U --> AZ[UseAuthorization]
     AZ --> F["Endpoint filters<br/>(ValidationFilter&lt;T&gt;)"]
     F --> EP[Endpoint handler -> Features service]
 ```
@@ -44,8 +43,7 @@ flowchart TD
 | Exception handler | `src/FairwayFinder.Api/Exceptions/GlobalExceptionHandler.cs` | Turns exceptions into ProblemDetails. See [Errors](#errors-and-problemdetails). |
 | Request log | `src/FairwayFinder.Api/Middleware/RequestLoggingMiddleware.cs` | Writes an `ApiRequestLog` row to a bounded channel; see [Background services](#background-services). |
 | Authentication | `Program.cs` | JWT bearer, the default authenticate and challenge scheme. |
-| User log context | `LoggingExtensions.UseUserLogContext` | Every log event for the rest of the request carries `UserId` and `UserEmail`, which is how `app_log` rows and PostHog exceptions are tied to a golfer. |
-| Active golfer | `src/FairwayFinder.Api/Middleware/ActiveGolferMiddleware.cs` | Reads the `NameIdentifier` claim directly (never `GetUserId()`, which throws) and calls `ActiveGolferTracker.MarkActive`. Tied to requests, not token refresh, because the app only refreshes after its token expires. |
+| User log context | `LoggingExtensions.UseUserLogContext` | Every log event for the rest of the request carries `UserId` and `UserEmail`, which is how `app_log` rows are tied to a golfer. |
 | Authorization | `Program.cs` | Default `AddAuthorization()`; policies are attached per route group. |
 
 Health endpoints (`/health`, `/alive`) come from `MapDefaultEndpoints()` and are only mapped in Development. Logging and tracing details are in [../operations/logging-and-observability.md](../operations/logging-and-observability.md).
@@ -115,7 +113,7 @@ sequenceDiagram
 
 ### Registration and password reset
 
-Registration is invite-only. `POST /api/auth/register` re-validates the invite code with `IUserInvitationService.ValidateInviteAsync` and takes the email **from the invite, never from the request**, so an account always matches who was invited. It then creates the user (email confirmed, role `User`), claims the invite, captures `user_signed_up`, creates the profile up front (best effort, logged on failure) so the golfer is searchable as a friend immediately, and returns tokens.
+Registration is invite-only. `POST /api/auth/register` re-validates the invite code with `IUserInvitationService.ValidateInviteAsync` and takes the email **from the invite, never from the request**, so an account always matches who was invited. It then creates the user (email confirmed, role `User`), claims the invite, creates the profile up front (best effort, logged on failure) so the golfer is searchable as a friend immediately, and returns tokens.
 
 Password reset mechanics live in `IPasswordResetService` (Features), because the admin console sends the same link from the other host. `forgot-password` always returns 204 so it cannot be used to enumerate accounts. See [../features/users-and-social.md](../features/users-and-social.md).
 
@@ -146,7 +144,7 @@ Middleware that must not fail a request (active-golfer tracking, request logging
 | `FluentValidation.ValidationException` | 400 | `ValidationProblemDetails` with `errors` grouped by property name |
 | Anything else | 500 | ProblemDetails, `detail` = "An unexpected error occurred" (no internals leaked) |
 
-Logging follows the rule in CLAUDE.md: only 5xx is logged at Error (with the exception, which also reaches `app_log` and PostHog Error Tracking). A 4xx is logged at Information without a stack trace, since it is the client's mistake answered as designed.
+Logging follows the rule in CLAUDE.md: only 5xx is logged at Error (with the exception, which also reaches `app_log`). A 4xx is logged at Information without a stack trace, since it is the client's mistake answered as designed.
 
 `HttpResponseException` carries a `Value` object (for example `{ error, message, id }`), but the handler forwards only the message. Anything else the client needs must be returned directly. `POST /api/rounds/start` does this for `ActiveRoundExists` so the app gets the open round's id.
 
@@ -229,7 +227,7 @@ flowchart LR
 
 `RequestLogging` settings: `Enabled` (true), `RetentionDays` (30), `ChannelCapacity` (10000), `ExcludedPathPrefixes` (`/health`, `/alive`, `/openapi`, `/scalar`, `/.well-known`, `/register`, `/reset-password`). The same prefix list is reused by OpenTelemetry tracing and the Serilog summary, so a path not worth a request-log row is not traced either. The admin console shows the rows at its request-logs page ([../admin/console.md](../admin/console.md)).
 
-These are the only hosted services in the API. The GolfCourseAPI import job is registered by `RegisterAdminServices` and runs only in Admin. The `app_log` and PostHog log sinks are Serilog sinks, not hosted services; see [../operations/logging-and-observability.md](../operations/logging-and-observability.md).
+These are the only hosted services in the API. The GolfCourseAPI import job is registered by `RegisterAdminServices` and runs only in Admin. The `app_log` sink is a Serilog sink, not a hosted service; see [../operations/logging-and-observability.md](../operations/logging-and-observability.md).
 
 ## Public web surface
 
@@ -253,9 +251,8 @@ There is no `wwwroot` and no static file middleware.
 4. **Check ownership** in the endpoint (`EnsureRoundAccess`-style) or in the service via a result status. Prefer 404 over 403 when a 403 would reveal that something exists.
 5. **Validate**: add an `AbstractValidator<T>` in `Validators/` and attach `.AddEndpointFilter<ValidationFilter<T>>()`.
 6. **Errors**: throw `NotFoundException`/`ForbiddenException`/`ConflictException`, or map a service result status in one helper like `MapHoleResult`. Return a body directly only when the client needs more than a message.
-7. **Analytics**: if the service method is only ever called for the signed-in golfer, capture in the service. If the admin console or a friend view also calls it, capture in the endpoint (see `StatsEndpoints.CaptureStatsViewed`). Add the name to `AnalyticsEvents`. See [../operations/analytics.md](../operations/analytics.md).
-8. **Tests** in `tests/FairwayFinder.Api.IntegrationTests/Endpoints/*Tests.cs`, through HTTP, using `SignInNewUserAsync()` (or `SignInNewAdminAsync()`). Cover the happy path, auth (401 without a token, 403/404 for another golfer's data), and validation. See [../testing.md](../testing.md).
-9. **Auth convention test**: `EndpointAuthorizationConventionTests` fails for any endpoint that neither requires authorization nor is on its `AnonymousEndpoints` list. Do not add to that list without a reason; if you do, the route must be `.AllowAnonymous()` and get a test in `PublicEndpointsTests` or `AuthEndpointsTests`. Anything under `/api/admin/` must also be on `AdminOnlyEndpoints` and require the `Admin` role.
-10. **Config**: a new startup-required config key must be added to `TestSettings` or the host will not boot under test.
+7. **Tests** in `tests/FairwayFinder.Api.IntegrationTests/Endpoints/*Tests.cs`, through HTTP, using `SignInNewUserAsync()` (or `SignInNewAdminAsync()`). Cover the happy path, auth (401 without a token, 403/404 for another golfer's data), and validation. See [../testing.md](../testing.md).
+8. **Auth convention test**: `EndpointAuthorizationConventionTests` fails for any endpoint that neither requires authorization nor is on its `AnonymousEndpoints` list. Do not add to that list without a reason; if you do, the route must be `.AllowAnonymous()` and get a test in `PublicEndpointsTests` or `AuthEndpointsTests`. Anything under `/api/admin/` must also be on `AdminOnlyEndpoints` and require the `Admin` role.
+9. **Config**: a new startup-required config key must be added to `TestSettings` or the host will not boot under test.
 
 The current anonymous list: `POST /api/auth/login`, `/refresh`, `/logout`, `/forgot-password`, `/reset-password`, `/register`, `GET /api/auth/invites/{code}`, `GET /.well-known/apple-app-site-association`, `GET /register`, `GET /reset-password`. Admin-only: `GET`/`POST /api/admin/invites/`, `DELETE /api/admin/invites/{id:int}`, `POST /api/devices/test`.

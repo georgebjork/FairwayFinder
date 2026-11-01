@@ -2,7 +2,7 @@
 
 Both hosts log through Serilog, export traces, metrics and logs over OTLP when an endpoint is configured, persist Warning-and-worse events to the logs database for the admin console, and (API only) record one row per HTTP request. This page covers how each of those is wired, what ends up where, and how to look at it.
 
-Product analytics and PostHog Error Tracking are covered in [analytics.md](analytics.md). The logs database itself (`LogDbContext`, migrations) is in [../data/database.md](../data/database.md).
+The logs database itself (`LogDbContext`, migrations) is in [../data/database.md](../data/database.md).
 
 ## The pipeline
 
@@ -12,13 +12,12 @@ Every `ILogger<T>` in both hosts writes through Serilog. `AddServiceDefaults()` 
 flowchart LR
     E["ILogger&lt;T&gt; call<br/>(message template + properties)"] --> S["Serilog logger<br/>levels from 'Serilog' config section<br/>Enrich.FromLogContext + Application"]
     S --> C["Console<br/>(always)"]
-    S -->|"OTEL_EXPORTER_OTLP_ENDPOINT set<br/>and ShipToOtlp filter"| O["OTLP sink<br/>(Aspire dashboard locally,<br/>PostHog in production)"]
+    S -->|"OTEL_EXPORTER_OTLP_ENDPOINT set<br/>and ShipToOtlp filter"| O["OTLP sink<br/>(Aspire dashboard locally,<br/>any OTLP backend in production)"]
     S -->|"DI ILogEventSink<br/>AppLogging:Enabled"| D["DatabaseLogSink<br/>Warning+ only"]
     D -->|"batched on Serilog's<br/>background loop"| W["AppLogBatchWriter"] --> T[("app_log<br/>db-fairwayfinder-logs")]
-    S -->|"DI ILogEventSink<br/>PostHog:ProjectToken set"| P["PostHogExceptionSink<br/>Error+ with exception"] --> PH["PostHog Error Tracking"]
 ```
 
-The two DI sinks are registered in `RegisterFeatureServices()` (`src/FairwayFinder.Features/ServiceRegistration.cs`) as plain `ILogEventSink` singletons. `ReadFrom.Services(services)` in `ConfigureSerilog` picks up every registered `ILogEventSink`, so adding a sink is a DI registration, not a change to the logger setup.
+The DI sink is registered in `RegisterFeatureServices()` (`src/FairwayFinder.Features/ServiceRegistration.cs`) as a plain `ILogEventSink` singleton. `ReadFrom.Services(services)` in `ConfigureSerilog` picks up every registered `ILogEventSink`, so adding a sink is a DI registration, not a change to the logger setup.
 
 There is deliberately no static `Log.Logger` or bootstrap logger. The integration tests build several hosts per process, and a frozen bootstrap logger can only be frozen once.
 
@@ -35,7 +34,7 @@ Structured fields are not printed. Stdout is only meant to be read by a person; 
 
 ### OTLP
 
-Only wired when the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable is set. Aspire sets it for both hosts in local dev, so logs, traces and metrics show up in the Aspire dashboard. In production the endpoint is PostHog (`https://us.i.posthog.com/i`, `http/protobuf`, `OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer%20phc_...`). The sink reads the standard `OTEL_*` variables itself; the code only adds `service.name` and `deployment.environment` resource attributes.
+Only wired when the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable is set. Aspire sets it for both hosts in local dev, so logs, traces and metrics show up in the Aspire dashboard. In production, point `OTEL_EXPORTER_OTLP_ENDPOINT` (plus `OTEL_EXPORTER_OTLP_PROTOCOL` and `OTEL_EXPORTER_OTLP_HEADERS` as the backend requires) at whichever OTLP backend should receive them. The sink reads the standard `OTEL_*` variables itself; the code only adds `service.name` and `deployment.environment` resource attributes.
 
 Not everything is shipped. `ShipToOtlp` lets through:
 
@@ -45,7 +44,7 @@ Not everything is shipped. `ShipToOtlp` lets through:
 
 Framework Information chatter (EF, hosting, routing) stays on the console only.
 
-The repo moved from Axiom to PostHog for OTLP in late October 2026 (`git log`: "fix otel in axiom I think", then "move to posthog"). Nothing in code is vendor-specific; the destination is purely the `OTEL_*` environment.
+Nothing in code is vendor-specific; the destination is purely the `OTEL_*` environment.
 
 ### The database sink (`app_log`)
 
@@ -58,10 +57,6 @@ The repo moved from Axiom to PostHog for OTLP in late October 2026 (`git log`: "
 - **Mapping**: `AppLogEntryMapper` turns a `LogEvent` into an `AppLogEntry`. `SourceContext`, `UserId`, `UserEmail`, `RequestPath` and `Application` get their own columns; every other property is serialized into the `properties` JSON column. The message is rendered with `{Message:l}` so string values are not wrapped in quotes. Values are truncated to the column lengths in `AppLogColumns`.
 
 `AppLogEntry` columns (`src/FairwayFinder.Data/Entities/AppLogEntry.cs`): `Timestamp` (UTC), `Level`, `Message`, `MessageTemplate`, `Exception` (full `ToString()`), `SourceContext`, `Application` (`FairwayFinder.Api` or `FairwayFinder.Admin`), `UserId`, `UserEmail`, `RequestPath`, `TraceId`, `Properties`. Rows are immutable and have no audit fields.
-
-### PostHog exception sink
-
-`PostHogExceptionSink` sends Error-or-worse events that carry an exception to PostHog Error Tracking. It is only registered when `PostHog:ProjectToken` is set. Details, including how it picks the distinct id, are in [analytics.md](analytics.md#error-tracking).
 
 ## Settings
 
@@ -90,14 +85,14 @@ The repo moved from Axiom to PostHog for OTLP in late October 2026 (`git log`: "
 
 ## Levels policy
 
-Everything at Warning or above is persisted to `app_log` and shipped to OTLP, and Error-with-exception goes to PostHog Error Tracking. Choose the level for what it costs and who needs to see it:
+Everything at Warning or above is persisted to `app_log` and shipped to OTLP. Choose the level for what it costs and who needs to see it:
 
 | Level | Use for | Where it ends up |
 |---|---|---|
 | Debug | Detail useful only while debugging. Static-file request summaries. | Console, if enabled. |
 | Information | Normal events worth seeing in a trace: purge counts, writer start/stop, rejected 4xx requests. | Console; OTLP if from a `FairwayFinder*` source. |
-| Warning | Something unexpected that the code handled: a dropped request-log entry, an analytics capture failure. | Console, OTLP, `app_log`. |
-| Error | A real failure: an unhandled exception, a failed batch write, a failed purge. | All of the above, plus PostHog Error Tracking when an exception is attached. |
+| Warning | Something unexpected that the code handled: a dropped request-log entry. | Console, OTLP, `app_log`. |
+| Error | A real failure: an unhandled exception, a failed batch write, a failed purge. | All of the above. |
 
 A 4xx is the client's mistake, not an error. `GlobalExceptionHandler` (`src/FairwayFinder.Api/Exceptions/GlobalExceptionHandler.cs`) logs status 500+ at Error with the exception and anything below at Information without a stack trace. The request is still in `api_request_log`.
 
@@ -108,7 +103,7 @@ logger.LogError(ex, "Round {RoundId} failed", roundId);   // yes
 logger.LogError(ex, $"Round {roundId} failed");           // no
 ```
 
-The template is what groups occurrences (`message_template` in `app_log`, `log_message_template` in PostHog, `message_template.text` over OTLP), and each value is stored as a filterable property.
+The template is what groups occurrences (`message_template` in `app_log`, `message_template.text` over OTLP), and each value is stored as a filterable property.
 
 ## Who caused it: user context enrichment
 
@@ -120,7 +115,7 @@ The template is what groups occurrences (`message_template` in `app_log`, `log_m
 | `LogContextCircuitHandler` (`src/FairwayFinder.Admin/Services/LogContextCircuitHandler.cs`) | A Blazor `CircuitHandler` that wraps each inbound circuit activity (click, form submit, JS interop callback) in the same two properties. Reads the user once per circuit. | Admin interactive pages, which run outside any HTTP request. Registered in `src/FairwayFinder.Admin/Startup/ServiceRegistration.cs`. |
 | Request summary `EnrichDiagnosticContext` | Adds `RouteTemplate` and `UserId` to the per-request summary line. | The summary line only. |
 
-`UserId` and `UserEmail` become columns in `app_log`, and `UserId` is the PostHog distinct id for captured exceptions. Background jobs (purges, imports) have no user, so their events carry neither.
+`UserId` and `UserEmail` become columns in `app_log`. Background jobs (purges, imports) have no user, so their events carry neither.
 
 ## Request logging
 
@@ -219,7 +214,7 @@ Metric tag keys are flat (`holes`, `shot_tracking`, `game_type`, `result`, `kind
   - `Sdk.SetDefaultTextMapPropagator` is set to an empty composite so the OTel ASP.NET Core instrumentation does not re-extract the header.
   - The sampler is `AlwaysOnSampler`.
   - `tests/FairwayFinder.Api.IntegrationTests/Logging/TracingTests.cs` guards this.
-- **Correlation**: Serilog events carry the current trace id. It is stored in `app_log.trace_id` and sent to PostHog as `trace_id`. `api_request_log.trace_id` holds `Activity.Current.Id` (the full W3C id, not just the trace id part), falling back to `HttpContext.TraceIdentifier`.
+- **Correlation**: Serilog events carry the current trace id. It is stored in `app_log.trace_id` and exported over OTLP with each log event. `api_request_log.trace_id` holds `Activity.Current.Id` (the full W3C id, not just the trace id part), falling back to `HttpContext.TraceIdentifier`.
 
 ## Health checks
 
@@ -236,8 +231,7 @@ The admin console page at `/health` (`src/FairwayFinder.Admin/Components/Pages/D
 | Live console output, traces, metrics, structured logs (local) | Aspire dashboard, after `dotnet run --project src/FairwayFinder.AppHost/` |
 | Warnings and errors from both hosts | Admin console `/app-logs` (`AppLogs.razor`, backed by `AppLogService`). Auto-refreshes (pausable). Filter by level and application, search message, source or user email, expand an entry for the stack trace and properties, purge. |
 | Every API request | Admin console `/logs` (`RequestLogs.razor`, backed by `ApiRequestLogService`). Search path, route or user email; filter by status. |
-| Production logs and traces | PostHog, via OTLP |
-| Production exceptions, grouped | PostHog Error Tracking (see [analytics.md](analytics.md#error-tracking)) |
+| Production logs and traces | Whatever OTLP backend `OTEL_EXPORTER_OTLP_ENDPOINT` points at |
 | Health | Admin console `/health` |
 
 The admin pages are described with the rest of the console in [../admin/console.md](../admin/console.md).

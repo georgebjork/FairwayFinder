@@ -15,7 +15,7 @@ flowchart TD
         feat["RegisterFeatureServices()"]
         sd --> db --> idn --> set --> apns --> feat
     end
-    feat --> apiOnly["Api: JWT bearer, ActiveGolferTracker,<br/>request-log channel + writer + purge,<br/>GlobalExceptionHandler, FluentValidation, OpenAPI"]
+    feat --> apiOnly["Api: JWT bearer,<br/>request-log channel + writer + purge,<br/>GlobalExceptionHandler, FluentValidation, OpenAPI"]
     feat --> adminOnly["Admin: Razor components + Radzen,<br/>cookie auth + AdminOnly policy,<br/>RegisterAdminServices(), RegisterAdminWebServices(),<br/>Npgsql health check"]
     adminOnly --> mig["After Build(): migrate both DBs,<br/>ensure roles, seed admin user"]
 ```
@@ -32,11 +32,10 @@ The order of the steps differs slightly between the two files (the Api reads the
 4. JWT: binds `Jwt` to `JwtSettings` (`src/FairwayFinder.Api/Auth/JwtSettings.cs`), throws unless `Jwt:Secret` is at least 32 characters, registers `JwtTokenService`, and configures `JwtBearer` as the default authenticate and challenge scheme with issuer, audience, lifetime and signing-key validation and `ClockSkew = TimeSpan.Zero` (an expired access token is rejected at once, so the app must refresh). Token issuing and refresh tokens are covered in [API overview](../api/overview.md).
 5. `RegisterSharedSettings`, then the [APNs and Resend checks](#startup-checks).
 6. `RegisterFeatureServices(configuration, isDevelopment)`.
-7. `TimeProvider.System` (via `TryAddSingleton`, so tests can swap it) and the singleton `ActiveGolferTracker`.
-8. Request logging to the database: a bounded `Channel<ApiRequestLog>` sized by `RequestLogging:ChannelCapacity` with `DropWrite` on overflow, the scoped `RequestLoggingMiddleware`, and two hosted services, `RequestLogWriter` (drains the channel into `api_request_log`) and `RequestLogPurgeService` (deletes rows older than `RequestLogging:RetentionDays`, at startup and every 24 hours).
-9. `GlobalExceptionHandler` plus `AddProblemDetails()`.
-10. FluentValidation validators from the Api assembly (`src/FairwayFinder.Api/Validators`).
-11. OpenAPI with `BearerSecuritySchemeTransformer`, so Scalar shows a bearer auth input.
+7. Request logging to the database: a bounded `Channel<ApiRequestLog>` sized by `RequestLogging:ChannelCapacity` with `DropWrite` on overflow, the scoped `RequestLoggingMiddleware`, and two hosted services, `RequestLogWriter` (drains the channel into `api_request_log`) and `RequestLogPurgeService` (deletes rows older than `RequestLogging:RetentionDays`, at startup and every 24 hours).
+8. `GlobalExceptionHandler` plus `AddProblemDetails()`.
+9. FluentValidation validators from the Api assembly (`src/FairwayFinder.Api/Validators`).
+10. OpenAPI with `BearerSecuritySchemeTransformer`, so Scalar shows a bearer auth input.
 
 ### Api pipeline
 
@@ -47,7 +46,7 @@ flowchart TD
     c --> d["RequestLoggingMiddleware<br/>(api_request_log row via channel)"]
     d --> e["Development only:<br/>MapOpenApi, MapScalarApiReference"]
     e --> f[UseHttpsRedirection] --> g[UseAuthentication] --> h["UseUserLogContext<br/>(UserId, UserEmail on log events)"]
-    h --> i["UseActiveGolferTracking<br/>(app_active once per golfer per day)"] --> j[UseAuthorization]
+    h --> j[UseAuthorization]
     j --> k["Endpoint groups: auth, courses, rounds, stats, lookups,<br/>profile, friends, games, devices, admin invites"]
     j --> l["Public: /.well-known/apple-app-site-association,<br/>/register, /reset-password (anonymous)"]
 ```
@@ -56,7 +55,7 @@ The ordering is deliberate:
 
 - The Serilog request summary sits before `UseExceptionHandler` so it sees the final status code that the handler writes. The exception itself is logged by the handler, not twice.
 - `RequestLoggingMiddleware` runs inside the exception handler, so it records the status the client actually got, and it reads the user on the way out, after authentication has run further in.
-- `UseUserLogContext` and `UseActiveGolferTracking` come straight after `UseAuthentication`, because both read the `NameIdentifier` claim.
+- `UseUserLogContext` comes straight after `UseAuthentication`, because it reads the `NameIdentifier` claim.
 
 Endpoints and the public surface are documented in [API overview](../api/overview.md) and [Endpoint reference](../api/endpoints.md). `public partial class Program;` at the bottom exposes the entry point to `WebApplicationFactory` in the integration tests.
 
@@ -117,7 +116,6 @@ Identity's password-reset tokens are Data Protection payloads, and the admin con
 | `IGameScoringEngine` ×3 (`MatchPlay`, `Skins`, `HighLow`), `IGameScoringEngineResolver` | Singleton | Stateless engines indexed by `GameType` |
 | `IUserInvitationService`, `ApiRequestLogService` | Transient | Used by both hosts |
 | `ILogEventSink` → `DatabaseLogSink` | Singleton | Only if `AppLogging:Enabled` is not false. Picked up by Serilog's `ReadFrom.Services` |
-| PostHog: `PostHogOptions`, `AddPostHog()`, `IProductAnalytics` → `PostHogProductAnalytics`, `ILogEventSink` → `PostHogExceptionSink` | Singleton | Only when `PostHog:ProjectToken` is set; otherwise `IProductAnalytics` → `NullProductAnalytics.Instance` |
 | `IPasswordResetService` | Transient | |
 | Named `HttpClient` `"apns"`, `IApnsClient` (JWT auth from `ApnsSettings`) | Singleton | Built on first resolve, not at startup |
 | `IPushNotificationService` | Scoped | |
@@ -141,7 +139,7 @@ Every `HttpClient` from the factory gets `AddStandardResilienceHandler()` (retri
 `src/FairwayFinder.ServiceDefaults` is the Aspire-style shared project both hosts call first.
 
 - **`AddServiceDefaults()`** (`Extensions.cs`): `ConfigureSerilog()`, `ConfigureOpenTelemetry()`, a `self` liveness health check tagged `live`, service discovery, and resilience on every `HttpClient`.
-- **Serilog** (`LoggingExtensions.ConfigureSerilog`): replaces the logger factory. Levels from the `Serilog` section, sinks from DI (`ReadFrom.Services`, which is how `DatabaseLogSink` and `PostHogExceptionSink` attach), console always (with a timestamp only in Development), and an OTLP sink only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. The OTLP sink ships Warning+ from anything plus Information from `FairwayFinder.*` sources and the request summary line. There is intentionally no static bootstrap logger because the integration tests build several hosts per process.
+- **Serilog** (`LoggingExtensions.ConfigureSerilog`): replaces the logger factory. Levels from the `Serilog` section, sinks from DI (`ReadFrom.Services`, which is how `DatabaseLogSink` attaches), console always (with a timestamp only in Development), and an OTLP sink only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. The OTLP sink ships Warning+ from anything plus Information from `FairwayFinder.*` sources and the request summary line. There is intentionally no static bootstrap logger because the integration tests build several hosts per process.
 - **OpenTelemetry** (`ConfigureOpenTelemetry`): resource `service.name` = application name and `deployment.environment`. Metrics from the named meters only (`Microsoft.AspNetCore.Hosting`, `System.Net.Http`, `Npgsql`, and `FairwayFinder.Rounds/Stats/Imports/Email/Agents/Games`). Tracing with `AlwaysOnSampler`, ASP.NET Core (minus excluded paths), HttpClient and Npgsql instrumentation, and the `FairwayFinder.*` activity sources. Exporters are added only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set.
 - **Incoming trace context is ignored.** `IgnoreIncomingTraceContextPropagator` drops any `traceparent` from callers and the SDK's default text-map propagator is set to an empty composite. The callers are phones whose parent spans never reach the backend, which would otherwise leave every request orphaned under a missing root, and an unsampled `-00` header would drop spans. Outgoing calls still carry the context.
 - **Excluded paths** (`GetExcludedPaths`): `/health`, `/alive`, plus `RequestLogging:ExcludedPathPrefixes`. One list drives the trace filter, the Serilog request-summary level, and (in the Api) `RequestLoggingMiddleware`, so they cannot drift.
@@ -186,8 +184,6 @@ Configuration comes from `appsettings.json`, `appsettings.{Environment}.json`, u
 | `Apns:P8Contents` | Same | Startup | empty | The `.p8` key text |
 | `Apns:UseSandbox` | `PushNotificationService` | No | `false` in both `appsettings.json` files; `true` in both Development files | Sends to APNs' development server. Only Development uses it; App Store / TestFlight builds need the production server |
 | `Resend:ApiKey` | `ResendEmailSender` (non-Development); both `Program.cs` | Startup (outside Development) | empty | Placeholder in both `appsettings.json` files; production must set `Resend__ApiKey` on both hosts. The AppHost passes it only to Admin, which is fine because Aspire runs in Development |
-| `PostHog:ProjectToken` | `RegisterFeatureServices` | No | empty | Switches PostHog events and error tracking on. Bound onto the SDK's `PostHogOptions` |
-| `PostHog:HostUrl` | PostHog SDK | No | `https://us.i.posthog.com` | |
 | `Invites:RegistrationUrlBase` | `UserInvitationService` | No | `https://api.fairwayfinder.pro/register` (code fallback `https://fairwayfinder.pro/register`) | Invite link base |
 | `Invites:AppInstallUrl` | `UserInvitationService`; Api landing pages | No | TestFlight join link | Shown in invite emails and on `/register`, `/reset-password` |
 | `Auth:PasswordResetUrlBase` | `PasswordResetService` | No | `https://api.fairwayfinder.pro/reset-password` | Reset link base |
@@ -207,8 +203,8 @@ Configuration comes from `appsettings.json`, `appsettings.{Environment}.json`, u
 | `Claude:Model`, `Claude:ApiKey` | `ClaudeAgentFactory` (Agents) | No | not set | Same |
 | `Serilog:MinimumLevel:*` | Serilog | No | Information, with `Microsoft`, EF Core, Npgsql, `System.Net.Http`, Polly at Warning | Development raises `Microsoft.EntityFrameworkCore.Database.Command` to Information to show SQL |
 | `AllowedHosts` | ASP.NET Core | No | `*` | |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` (env) | ServiceDefaults | No | unset | Turns on the OTLP exporters and Serilog OTLP sink. Production points at PostHog |
-| `OTEL_EXPORTER_OTLP_PROTOCOL`, `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES` (env) | OTel SDK, Serilog OTLP sink | No | unset | Production: `http/protobuf`, `Authorization=Bearer%20phc_...` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` (env) | ServiceDefaults | No | unset | Turns on the OTLP exporters and Serilog OTLP sink. In production, point it at whichever OTLP backend should receive logs and traces |
+| `OTEL_EXPORTER_OTLP_PROTOCOL`, `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES` (env) | OTel SDK, Serilog OTLP sink | No | unset | Whatever the chosen backend needs (protocol, auth header) |
 | `ASPNETCORE_ENVIRONMENT` (env) | Both | No | `Production` | See below |
 
 ### What `Development` changes

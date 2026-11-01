@@ -22,7 +22,6 @@ flowchart LR
 
     apns["Apple Push<br/>Notification service"]
     resend["Resend<br/>(email)"]
-    posthog["PostHog<br/>events, errors,<br/>OTLP logs + traces"]
     gcapi["GolfCourseAPI"]
     tgtr["TGTR API"]
     openai["OpenAI / Anthropic"]
@@ -39,9 +38,7 @@ flowchart LR
 
     api --> apns
     api --> resend
-    api --> posthog
     admin --> resend
-    admin --> posthog
     admin --> gcapi
     admin --> tgtr
     agents -.-> openai
@@ -51,7 +48,6 @@ flowchart LR
 |---|---|---|---|
 | APNs | Api (Admin registers the client but does not send) | Push notifications for friend requests, rounds, games | [Notifications and email](../features/notifications-and-email.md) |
 | Resend | Both, outside Development | Invite and password-reset emails | [Notifications and email](../features/notifications-and-email.md) |
-| PostHog | Both | Product events, error tracking, and (via OTLP) logs and traces | [Analytics](../operations/analytics.md), [Logging and observability](../operations/logging-and-observability.md) |
 | GolfCourseAPI | Admin | Bulk course import | [Course imports](../features/course-imports.md) |
 | TGTR | Admin | Transferring a player's rounds from the external TGTR API, through mapped players, courses and teeboxes | [Course imports](../features/course-imports.md) |
 | OpenAI / Anthropic | Nobody yet | `FairwayFinder.Agents` scorecard OCR, kept for a future API feature | below |
