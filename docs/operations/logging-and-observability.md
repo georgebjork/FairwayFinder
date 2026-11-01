@@ -19,7 +19,7 @@ flowchart LR
 
 The DI sink is registered in `RegisterFeatureServices()` (`src/FairwayFinder.Features/ServiceRegistration.cs`) as a plain `ILogEventSink` singleton. `ReadFrom.Services(services)` in `ConfigureSerilog` picks up every registered `ILogEventSink`, so adding a sink is a DI registration, not a change to the logger setup.
 
-There is deliberately no static `Log.Logger` or bootstrap logger. The integration tests build several hosts per process, and a frozen bootstrap logger can only be frozen once.
+There is deliberately no static `Log.Logger` or bootstrap logger. The integration tests build several hosts per process, and a frozen bootstrap logger can only be frozen once. For the same reason `AddSerilog` is called with `preserveStaticLogger: true`: otherwise each host assigns its logger to `Log.Logger`, every host's `ILogger`s follow whichever was assigned last, and a second test host (`WithWebHostBuilder`) silently captures the first host's events.
 
 ### Console
 
@@ -160,7 +160,7 @@ sequenceDiagram
     W->>DB: AddRange + SaveChanges (LogDbContext)
 ```
 
-- `RequestLoggingMiddleware` (`src/FairwayFinder.Api/Middleware/RequestLoggingMiddleware.cs`) runs just inside the exception handler. When an endpoint throws, the status is still 200 as the exception passes back through it, because `GlobalExceptionHandler` only writes the real one afterwards, so the entry is built in `Response.OnCompleted` once the final status is on the response. The route template is captured on the way out instead, since the exception handler clears the endpoint before writing the error. It records method, path, route template, query string, status, duration, user id and email, IP (first `X-Forwarded-For` entry, else the remote address), user agent and trace id. Any failure is caught and logged; the request is never affected.
+- `RequestLoggingMiddleware` (`src/FairwayFinder.Api/Middleware/RequestLoggingMiddleware.cs`) runs just inside the exception handler. When an endpoint throws, the status is still 200 as the exception passes back through it, because `GlobalExceptionHandler` only writes the real one afterwards, so the entry is built in `Response.OnCompleted` once the final status is on the response. The route template is captured on the way out instead, since the exception handler clears the endpoint before writing the error. It records method, path, route template, query string, status, duration, user id and email, IP (`Connection.RemoteIpAddress`, which `UseForwardedHeaders` has already set from the proxy's `X-Forwarded-For` entry), user agent and trace id. Any failure is caught and logged; the request is never affected.
 - The channel is `BoundedChannelFullMode.DropWrite` with `ChannelCapacity` slots, registered in `src/FairwayFinder.Api/Program.cs`.
 - `RequestLogWriter` (`src/FairwayFinder.Api/BackgroundServices/RequestLogWriter.cs`) batch-inserts up to 100 entries at a time. A failed batch is logged at Error and discarded.
 

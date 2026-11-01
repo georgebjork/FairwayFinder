@@ -82,7 +82,9 @@ public class RequestLoggingMiddleware(
                 DurationMs = (int)elapsed.TotalMilliseconds,
                 UserId = user.FindFirstValue(ClaimTypes.NameIdentifier),
                 UserEmail = user.FindFirstValue(ClaimTypes.Email),
-                IpAddress = ResolveIpAddress(context),
+                // Already the client's address: UseForwardedHeaders runs first and takes it from the
+                // proxy's X-Forwarded-For entry (the left-most one is whatever the client claimed).
+                IpAddress = context.Connection.RemoteIpAddress?.ToString(),
                 UserAgent = Truncate(context.Request.Headers.UserAgent.ToString(), 512),
                 TraceId = Activity.Current?.Id ?? context.TraceIdentifier
             };
@@ -98,15 +100,6 @@ public class RequestLoggingMiddleware(
             // Logging must never disrupt the request.
             logger.LogError(ex, "Failed to enqueue request log entry");
         }
-    }
-
-    private static string? ResolveIpAddress(HttpContext context)
-    {
-        var forwarded = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(forwarded))
-            return Truncate(forwarded.Split(',')[0].Trim(), 64);
-
-        return context.Connection.RemoteIpAddress?.ToString();
     }
 
     private static string? Truncate(string? value, int max)

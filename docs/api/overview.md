@@ -26,10 +26,12 @@ The API never runs migrations. The admin host owns migrations and role seeding (
 ```mermaid
 flowchart TD
     A[Incoming request] --> R[Routing - implicit, endpoint selected]
-    R --> S["UseFairwayFinderRequestLogging<br/>(Serilog one-line summary)"]
+    R --> FH["UseForwardedHeaders<br/>(client IP and scheme from the proxy)"]
+    FH --> S["UseFairwayFinderRequestLogging<br/>(Serilog one-line summary)"]
     S --> E["UseExceptionHandler<br/>(GlobalExceptionHandler)"]
     E --> L["RequestLoggingMiddleware<br/>(api_request_log via channel)"]
-    L --> H[UseHttpsRedirection]
+    L --> RL["UseRateLimiter<br/>(per-IP, 429 when exceeded)"]
+    RL --> H[UseHttpsRedirection]
     H --> AN["UseAuthentication<br/>(JWT bearer)"]
     AN --> U["UseUserLogContext<br/>(push UserId / UserEmail to LogContext)"]
     U --> AZ[UseAuthorization]
@@ -39,9 +41,11 @@ flowchart TD
 
 | Step | Source | Notes |
 |---|---|---|
+| Forwarded headers | `src/FairwayFinder.Api/RateLimiting/RateLimitingConfiguration.cs` (`AddFairwayFinderForwardedHeaders`) | Sets `Connection.RemoteIpAddress` and the scheme from `X-Forwarded-For` / `X-Forwarded-Proto`. See [Rate limiting](#rate-limiting). |
 | Serilog request logging | `src/FairwayFinder.ServiceDefaults/LoggingExtensions.cs` (`UseFairwayFinderRequestLogging`) | One `HTTP {Method} {Path} responded {StatusCode}` line per request. Placed before the exception handler so it sees the final status. 5xx or an exception logs at Error; excluded paths drop to Verbose. Adds `RouteTemplate` and `UserId`. |
 | Exception handler | `src/FairwayFinder.Api/Exceptions/GlobalExceptionHandler.cs` | Turns exceptions into ProblemDetails. See [Errors](#errors-and-problemdetails). |
 | Request log | `src/FairwayFinder.Api/Middleware/RequestLoggingMiddleware.cs` | Writes an `ApiRequestLog` row to a bounded channel; see [Background services](#background-services). |
+| Rate limiter | `RateLimitingConfiguration.AddFairwayFinderRateLimiting` | After the request log, so throttled requests are still recorded as 429s; before authentication, so they cost no token validation. |
 | Authentication | `Program.cs` | JWT bearer, the default authenticate and challenge scheme. |
 | User log context | `LoggingExtensions.UseUserLogContext` | Every log event for the rest of the request carries `UserId` and `UserEmail`, which is how `app_log` rows are tied to a golfer. |
 | Authorization | `Program.cs` | Default `AddAuthorization()`; policies are attached per route group. |
@@ -50,7 +54,25 @@ Health endpoints (`/health`, `/alive`) come from `MapDefaultEndpoints()` and are
 
 > Ordering note: `RequestLoggingMiddleware` sits inside `UseExceptionHandler`, so when a handler throws (for example `NotFoundException`) the exception passes back through it before `GlobalExceptionHandler` writes the ProblemDetails response. It therefore writes its entry from `Response.OnCompleted`, after the final status is set, and captures the route template on the way out (the exception handler clears the endpoint before writing the error). Thrown 4xx/5xx are recorded with the status the client received.
 
-There is no rate limiting, CORS, response compression or output caching configured. Login lockout is the only brute-force protection (see below).
+There is no CORS, response compression or output caching configured.
+
+## Rate limiting
+
+Every request is limited per client IP with fixed windows (`src/FairwayFinder.Api/RateLimiting/`, settings in the `RateLimiting` section):
+
+| Bucket | Applies to | Committed limit | Why |
+|---|---|---|---|
+| `Api` | Every request that matches an endpoint (global limiter) | 300 / 60 s | A ceiling no real app session reaches |
+| `Unmatched` | Every request that matches no endpoint (global limiter) | 20 / 600 s | The app never requests unknown paths. Scanners probing `/login`, `/.env`, `/wp-login.php` shut themselves out without using up that IP's `Api` budget |
+| `Auth` | The whole `/api/auth` group (`RequireRateLimiting(AuthPolicy)`), on top of `Api` | 10 / 60 s | Login lockout protects one account; this stops one IP guessing passwords across many, and slows anyone trying to lock out other golfers |
+
+A rejected request gets `429` with a ProblemDetails body and a `Retry-After` header (seconds). Requests are not queued.
+
+**Client IP.** The container sits behind a TLS-terminating proxy, so `UseForwardedHeaders` runs first and takes the client address from `X-Forwarded-For`. The proxy's address isn't configured, so the headers are accepted from any sender, but with `ForwardLimit` 1 only the right-most entry counts: the one the proxy appended. A client can prepend whatever it likes and is still one client. This is only safe while the container is reachable solely through that proxy; if a second proxy (a CDN, say) is ever put in front, raise `ForwardLimit` and configure `KnownProxies`, or every request will appear to come from the CDN.
+
+`RateLimiting:Enabled` false swaps every bucket for a no-op limiter. The integration tests run that way, because all their requests share one address; `tests/FairwayFinder.Api.IntegrationTests/Auth/RateLimitingTests.cs` turns it back on in a separate host with small limits.
+
+Login lockout (below) still applies independently.
 
 ## Authentication
 
@@ -221,7 +243,7 @@ flowchart LR
 
 | Service | File | What it does |
 |---|---|---|
-| `RequestLoggingMiddleware` | `Middleware/RequestLoggingMiddleware.cs` | Builds an `ApiRequestLog` (method, path, route template, query string, status, duration, user id/email, IP from `X-Forwarded-For` or the connection, user agent, trace id) and `TryWrite`s it. If the channel is full the entry is dropped with a Warning. Exceptions are caught and logged; logging never affects the response. Skipped when `RequestLogging:Enabled` is false or the path matches `RequestLogging:ExcludedPathPrefixes`. |
+| `RequestLoggingMiddleware` | `Middleware/RequestLoggingMiddleware.cs` | Builds an `ApiRequestLog` (method, path, route template, query string, status, duration, user id/email, client IP (`Connection.RemoteIpAddress`, already resolved by `UseForwardedHeaders`), user agent, trace id) and `TryWrite`s it. If the channel is full the entry is dropped with a Warning. Exceptions are caught and logged; logging never affects the response. Skipped when `RequestLogging:Enabled` is false or the path matches `RequestLogging:ExcludedPathPrefixes`. |
 | `RequestLogWriter` | `BackgroundServices/RequestLogWriter.cs` | Drains the channel in batches of up to 100 into `LogDbContext.ApiRequestLogs`. A failed batch is logged and discarded. |
 | `RequestLogPurgeService` | `BackgroundServices/RequestLogPurgeService.cs` | On startup and every 24 hours, calls `ApiRequestLogService.PurgeOlderThanAsync(RequestLogging:RetentionDays)` to hard-delete old rows. |
 

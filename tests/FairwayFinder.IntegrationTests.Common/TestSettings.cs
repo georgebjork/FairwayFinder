@@ -52,6 +52,9 @@ public static class TestSettings
 
         ["Resend:ApiKey"] = "re_test",
         ["RequestLogging:Enabled"] = "false",
+        // Every test request comes from the same (absent) IP, so one shared bucket would throttle
+        // the suite. RateLimitingTests turns it back on in a host of its own.
+        ["RateLimiting:Enabled"] = "false",
         // The database log sink stays on so its tests see real rows; a short flush keeps them fast.
         ["AppLogging:FlushIntervalMs"] = "100",
 
