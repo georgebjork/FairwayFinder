@@ -143,6 +143,34 @@ public class GameEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
     }
 
     [Fact]
+    public async Task A_join_whose_round_cannot_be_linked_leaves_the_player_out_of_the_game()
+    {
+        var host = await SignInNewUserAsync();
+        var player = await SignInNewUserAsync();
+        var course = await Data.CreateCourseAsync();
+        var otherCourse = await Data.CreateCourseAsync();
+        var game = await CreateGameAsync(host, NewGame(course));
+
+        // Someone else's round, then the player's own round on a different course.
+        var hostsRound = await StartRoundAsync(host.Client, StartRequest(course, fullRound: false, frontNine: true));
+        var notOwned = await player.Client.PostAsJsonAsync("/api/games/join",
+            new JoinGameRequest { JoinCode = game.JoinCode, TeeboxId = course.TeeboxId, RoundId = hostsRound.RoundId }, Json);
+        await AssertStatusAsync(HttpStatusCode.Conflict, notOwned);
+
+        var elsewhere = await StartRoundAsync(player.Client, StartRequest(otherCourse, fullRound: false, frontNine: true));
+        var wrongCourse = await player.Client.PostAsJsonAsync("/api/games/join",
+            new JoinGameRequest { JoinCode = game.JoinCode, TeeboxId = course.TeeboxId, RoundId = elsewhere.RoundId }, Json);
+        await AssertStatusAsync(HttpStatusCode.Conflict, wrongCourse);
+
+        // Neither failure left a participant behind, so a clean join still works.
+        game = await GetAsync<GameStateResponse>(host.Client, $"/api/games/{game.GameId}");
+        Assert.DoesNotContain(game.Participants, p => p.UserId == player.Id);
+
+        game = await JoinAsync(player, game, course);
+        Assert.Contains(game.Participants, p => p.UserId == player.Id);
+    }
+
+    [Fact]
     public async Task Skins_with_a_guest_and_a_friend_added_by_the_host()
     {
         var host = await SignInNewUserAsync(firstName: "Host");
@@ -338,6 +366,38 @@ public class GameEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
         // The round's own read shows the game it belongs to.
         var roundView = await GetAsync<RoundResponse>(host.Client, $"/api/rounds/{round.RoundId}");
         Assert.Equal(game.GameId, Assert.Single(roundView.Games).GameId);
+    }
+
+    [Theory]
+    [InlineData(-11)]
+    [InlineData(55)]
+    public async Task Editing_a_participant_enforces_the_same_handicap_range_as_adding_one(int handicap)
+    {
+        var host = await SignInNewUserAsync();
+        var course = await Data.CreateCourseAsync();
+        var game = await CreateGameAsync(host, NewGame(course, GameType.Skins));
+        var hostId = ParticipantIdOf(game, host.Id);
+
+        var response = await host.Client.PutAsJsonAsync($"/api/games/{game.GameId}/participants/{hostId}",
+            new UpdateParticipantRequest { CourseHandicap = handicap });
+
+        var problem = await ReadAsync<JsonElement>(response, HttpStatusCode.BadRequest);
+        Assert.True(problem.GetProperty("errors").TryGetProperty("CourseHandicap", out _));
+        game = await GetAsync<GameStateResponse>(host.Client, $"/api/games/{game.GameId}");
+        Assert.Equal(0, game.Participants.Single(p => p.ParticipantId == hostId).CourseHandicap);
+    }
+
+    [Fact]
+    public async Task Linking_a_round_rejects_a_non_positive_round_id()
+    {
+        var host = await SignInNewUserAsync();
+        var course = await Data.CreateCourseAsync();
+        var game = await CreateGameAsync(host, NewGame(course));
+
+        var response = await host.Client.PostAsJsonAsync($"/api/games/{game.GameId}/round", new LinkRoundRequest { RoundId = 0 });
+
+        var problem = await ReadAsync<JsonElement>(response, HttpStatusCode.BadRequest);
+        Assert.True(problem.GetProperty("errors").TryGetProperty("RoundId", out _));
     }
 
     [Fact]

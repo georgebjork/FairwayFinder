@@ -136,7 +136,7 @@ The mapping row is only written on insert, so re-running the import updates rath
 
 The importer writes `Teebox` rows directly, not through `CourseService`, so some of the rules in [courses](courses.md) do not apply:
 
-- New teeboxes are inserted without setting `TeeboxGroupId`, so they keep the column default `0` rather than their own id as `CourseService.CreateTeeboxAsync` does.
+- New teeboxes (on first import and when a re-import adds a tee) start their own lineage after the save that gives them an id, through the same `Teebox.StartOwnLineage()` that `CourseService.CreateTeeboxAsync` calls (`Golf_course_api_imported_teeboxes_each_start_their_own_lineage`). Before this, imported teeboxes kept the column default `0`, which lumped them together in course stats and let the game stroke-index fallback borrow across courses. The `BackfillTeeboxGroupIds` migration (SQL only) repaired those rows: since a version has no parent link, it treats `0`-group teeboxes with the same course, name (case-insensitive), gender and hole count as one lineage rooted at the lowest `teebox_id`. A version that was renamed becomes its own lineage.
 - Updates change rating, slope, par and stroke index in place. Rounds already played on that teebox will show the new values, the same as the admin "Update this teebox" mode.
 - The update path does not exclude archived versions. Teeboxes are put in a dictionary keyed by name per gender, so a course with an archived and an active version of the same tee name throws for that course, and the course is recorded as an error.
 

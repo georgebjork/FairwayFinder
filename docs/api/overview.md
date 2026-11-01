@@ -50,7 +50,7 @@ flowchart TD
 
 Health endpoints (`/health`, `/alive`) come from `MapDefaultEndpoints()` and are only mapped in Development. Logging and tracing details are in [../operations/logging-and-observability.md](../operations/logging-and-observability.md).
 
-> Ordering caveat: `RequestLoggingMiddleware` sits inside `UseExceptionHandler`. When a handler throws (for example `NotFoundException`), the exception passes back through the middleware's `finally` before the handler writes the ProblemDetails response, so the status code it records for thrown errors is whatever the response held at that moment (normally 200), not the final 4xx/5xx. Responses returned as results (`Results.NotFound()`, `Results.Problem(...)`) are recorded correctly. The Serilog summary line is not affected because it sits outside the handler.
+> Ordering note: `RequestLoggingMiddleware` sits inside `UseExceptionHandler`, so when a handler throws (for example `NotFoundException`) the exception passes back through it before `GlobalExceptionHandler` writes the ProblemDetails response. It therefore writes its entry from `Response.OnCompleted`, after the final status is set, and captures the route template on the way out (the exception handler clears the endpoint before writing the error). Thrown 4xx/5xx are recorded with the status the client received.
 
 There is no rate limiting, CORS, response compression or output caching configured. Login lockout is the only brute-force protection (see below).
 
@@ -76,6 +76,7 @@ All token work lives in `src/FairwayFinder.Api/Auth/JwtTokenService.cs` (scoped)
 - **Rotate**: `POST /api/auth/refresh` calls `RotateRefreshTokenAsync`. A valid token is marked revoked (`RevokedAt = now`, `ReplacedByTokenHash = new hash`) and a new one is issued with the same `DeviceName`. A fresh access token is minted with the user's current roles, so a role change takes effect at the next refresh.
 - **Reuse detection**: presenting a token that is already revoked is treated as theft. The service logs a Warning and revokes every active refresh token for that user with one `ExecuteUpdate`, then returns 401. The legitimate client is signed out too, which is the intent.
 - **Revoke**: `POST /api/auth/logout` calls `RevokeRefreshTokenAsync` and always answers 204, whether the token existed or not. Access tokens are not revocable; they simply expire.
+- **Password reset**: a successful `POST /api/auth/reset-password` calls `JwtTokenService.RevokeAllForUserAsync`, so every refresh token issued before the reset stops working and other devices are signed out at their next refresh. Access tokens already issued still run until they expire (`Jwt:AccessTokenExpirationMinutes`). The revocation happens in the endpoint, not `PasswordResetService`, because refresh tokens are an API concern; `ResetPasswordResult.UserId` tells it whose tokens to revoke.
 
 ```mermaid
 sequenceDiagram
@@ -111,8 +112,6 @@ sequenceDiagram
     Tok->>DB: R2.RevokedAt = now
     API-->>App: 204
 ```
-
-`JwtTokenService.RevokeAllForUserAsync` exists but nothing calls it today. In particular a password reset does not revoke existing refresh tokens; sessions on other devices stay valid until their refresh token expires.
 
 ### Registration and password reset
 
@@ -179,13 +178,13 @@ group.MapPost("/start", handler).AddEndpointFilter<ValidationFilter<StartRoundRe
 | `UpdateRoundRequestValidator` | `UpdateRoundRequest` | same hole rules |
 | `StartRoundRequestValidator` | `StartRoundRequest` | must set one of `FullRound`/`FrontNine`/`BackNine` |
 | `UpsertHoleRequestValidator` | `UpsertHoleRequest` | score > 0, shot chain; no par rule because par is resolved server-side from the teebox |
-| `CreateGameRequestValidator`, `JoinGameRequestValidator`, `AddParticipantRequestValidator`, `UpsertGameHoleRequestValidator` | game requests | `GameType` must be a declared enum value; handicap allowance 1–100; course handicap -10 to 54; participant needs `UserId` or `DisplayName`; strokes > 0 |
+| `CreateGameRequestValidator`, `JoinGameRequestValidator`, `AddParticipantRequestValidator`, `UpdateParticipantRequestValidator`, `LinkRoundRequestValidator`, `UpsertGameHoleRequestValidator` | game requests | `GameType` must be a declared enum value; handicap allowance 1–100; course handicap -10 to 54 (also on update, when sent); participant needs `UserId` or `DisplayName`; teebox id > 0 and display name ≤ 128 on update, when sent; linked round id > 0 unless null; strokes > 0 |
 | `RegisterRequestValidator` | `RegisterRequest` | names ≤ 100, `PreferredTees` 0–1, password ≥ 8 |
 | `ForgotPasswordRequestValidator`, `ResetPasswordRequestValidator` | password reset | email format, token present, password ≥ 8 |
 | `SendInviteRequestValidator` | `SendInviteRequest` | email ≤ 256 |
 | `SendFriendRequestRequestValidator` | `SendFriendRequestRequest` | addressee id present |
 | `RegisterDeviceRequestValidator`, `SendTestPushRequestValidator` | device requests | token ≤ 256, title ≤ 200, body ≤ 1000, badge ≥ 0 |
-| `LoginRequestValidator` | `LoginRequest` | **not attached**: `/api/auth/login` has no `ValidationFilter`, so a malformed login just fails as 401 |
+| `LoginRequestValidator` | `LoginRequest` | email present and well-formed, password present. No length rule: login checks a password rather than enforcing the policy, and a short wrong guess should still be a 401 that counts toward lockout |
 
 Some rules are domain checks rather than shape checks and stay in the service (a teebox on the wrong course, a round not on the game's course). Those come back as 404/409 through the result mapping.
 

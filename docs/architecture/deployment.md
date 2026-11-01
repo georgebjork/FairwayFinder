@@ -80,8 +80,8 @@ The full key list is in [Hosting and configuration](hosting-and-configuration.md
 | `ConnectionStrings__fairwayfinder`, `ConnectionStrings__fairwayfinderlogs` | Required | Required |
 | `Jwt__Secret` (32+ characters) | Required | |
 | `Apns__BundleId`, `Apns__KeyId`, `Apns__TeamId`, `Apns__P8Contents` | Required | Required (startup check) |
-| `Apns__UseSandbox=false` | Needed: the Api's `appsettings.json` commits `true` | Already `false` |
-| `Resend__ApiKey` | Needed for invite and reset emails | Needed for invite and reset emails |
+| `Apns__UseSandbox` | Not needed: `appsettings.json` commits `false` | Same |
+| `Resend__ApiKey` | Required (startup check outside Development): invite and reset emails | Same |
 | `GolfCourseApi__ApiKey` | | Needed for imports |
 | `SeedUser__*` | | Optional, first admin account |
 | `PostHog__ProjectToken` | Optional, turns on analytics and error tracking | Same |

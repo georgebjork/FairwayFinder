@@ -46,7 +46,7 @@ public sealed class NoOpPushNotificationService : IPushNotificationService
     public Task RegisterDeviceAsync(string userId, string deviceToken, string? deviceName, CancellationToken ct = default)
         => Task.CompletedTask;
 
-    public Task UnregisterDeviceAsync(string deviceToken, CancellationToken ct = default) => Task.CompletedTask;
+    public Task UnregisterDeviceAsync(string userId, string deviceToken, CancellationToken ct = default) => Task.CompletedTask;
 
     public Task<int> SendToUserAsync(
         string userId,
@@ -113,7 +113,7 @@ public sealed class CountingPushNotificationService : IPushNotificationService
     public Task RegisterDeviceAsync(string userId, string deviceToken, string? deviceName, CancellationToken ct = default)
         => Task.CompletedTask;
 
-    public Task UnregisterDeviceAsync(string deviceToken, CancellationToken ct = default) => Task.CompletedTask;
+    public Task UnregisterDeviceAsync(string userId, string deviceToken, CancellationToken ct = default) => Task.CompletedTask;
 
     public Task<int> SendToUserAsync(
         string userId,

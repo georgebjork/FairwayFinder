@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FairwayFinder.Api.IntegrationTests.Infrastructure;
 using FairwayFinder.Features.Data;
+using FairwayFinder.Features.Enums;
 using FairwayFinder.Features.Services.Analytics;
 using FairwayFinder.IntegrationTests.Common;
 using Microsoft.EntityFrameworkCore;
@@ -190,6 +191,96 @@ public class RoundEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
         await using var db = Db();
         Assert.Equal(18, await db.Scores.CountAsync(s => s.RoundId == roundId && !s.IsDeleted));
     }
+
+    [Fact]
+    public async Task Editing_out_holes_removes_their_scores_and_keeps_the_rest_in_place()
+    {
+        var golfer = await SignInNewUserAsync();
+        var course = await Data.CreateCourseAsync();
+        var roundId = await PlayCompletedRoundAsync(golfer.Client, course);
+        var round = await GetAsync<RoundResponse>(golfer.Client, $"/api/rounds/{roundId}");
+        var frontNine = round.Holes.Where(h => h.HoleNumber <= 9).ToList();
+
+        var response = await golfer.Client.PutAsJsonAsync($"/api/rounds/{roundId}", new UpdateRoundRequest
+        {
+            RoundId = roundId,
+            TeeboxId = course.TeeboxId,
+            DatePlayed = DefaultDate,
+            Holes = frontNine.Select(h => new HoleScoreEntry
+            {
+                ScoreId = h.ScoreId, HoleId = h.HoleId, HoleNumber = h.HoleNumber, Par = h.Par, Score = (short)h.Par,
+            }).ToList(),
+        });
+        await AssertStatusAsync(HttpStatusCode.NoContent, response);
+
+        // The stored scores agree with the recomputed total, and the kept holes are the same rows.
+        await using var db = Db();
+        var live = await db.Scores.Where(s => s.RoundId == roundId && !s.IsDeleted).ToListAsync();
+        Assert.Equal(frontNine.Select(h => h.ScoreId).Order(), live.Select(s => s.ScoreId).Order());
+        var stored = await db.Rounds.SingleAsync(r => r.RoundId == roundId);
+        Assert.Equal(live.Sum(s => s.HoleScore), stored.Score);
+    }
+
+    [Fact]
+    public async Task Switching_an_edit_from_shot_tracking_to_hole_stats_drops_the_shots()
+    {
+        var golfer = await SignInNewUserAsync();
+        var course = await Data.CreateCourseAsync();
+        var holes = await GetAsync<List<HoleInfo>>(golfer.Client, $"/api/courses/teeboxes/{course.TeeboxId}/holes");
+
+        var created = await golfer.Client.PostAsJsonAsync("/api/rounds", new CreateRoundRequest
+        {
+            CourseId = course.CourseId,
+            TeeboxId = course.TeeboxId,
+            DatePlayed = DefaultDate,
+            FullRound = true,
+            UsingShotTracking = true,
+            Holes = holes.Select(h => new HoleScoreEntry
+            {
+                HoleId = h.HoleId, HoleNumber = h.HoleNumber, Par = h.Par, Score = (short)h.Par,
+                Shots = ShotChain(h.Par),
+            }).ToList(),
+        });
+        var roundId = await ReadAsync<long>(created, HttpStatusCode.Created);
+        var round = await GetAsync<RoundResponse>(golfer.Client, $"/api/rounds/{roundId}");
+
+        await using var db = Db();
+        var statIdsBefore = await db.HoleStats.Where(hs => hs.RoundId == roundId && !hs.IsDeleted)
+            .Select(hs => hs.HoleStatsId).OrderBy(id => id).ToListAsync();
+        Assert.Equal(18, statIdsBefore.Count);
+
+        var response = await golfer.Client.PutAsJsonAsync($"/api/rounds/{roundId}", new UpdateRoundRequest
+        {
+            RoundId = roundId,
+            TeeboxId = course.TeeboxId,
+            DatePlayed = DefaultDate,
+            UsingHoleStats = true,
+            Holes = round.Holes.Select(h => new HoleScoreEntry
+            {
+                ScoreId = h.ScoreId, HoleId = h.HoleId, HoleNumber = h.HoleNumber, Par = h.Par, Score = (short)h.Par,
+                NumberOfPutts = 3,
+            }).ToList(),
+        });
+        await AssertStatusAsync(HttpStatusCode.NoContent, response);
+
+        var scoreIds = round.Holes.Select(h => h.ScoreId).ToList();
+        Assert.False(await db.Shots.AnyAsync(s => scoreIds.Contains(s.ScoreId) && !s.IsDeleted));
+
+        // The hole stats were rewritten in place from the client's values, not replaced.
+        var statsAfter = await db.HoleStats.AsNoTracking().Where(hs => hs.RoundId == roundId && !hs.IsDeleted).ToListAsync();
+        Assert.Equal(statIdsBefore, statsAfter.Select(hs => hs.HoleStatsId).Order().ToList());
+        Assert.All(statsAfter, hs => Assert.Equal((short)3, hs.NumberOfPutts));
+    }
+
+    /// <summary>A valid shot chain of <paramref name="strokes"/> shots: a drive to the green, then putts.</summary>
+    private static List<ShotData> ShotChain(int strokes) =>
+        Enumerable.Range(0, strokes).Select(i => new ShotData
+        {
+            StartLie = i == 0 ? LieType.Tee : LieType.Green,
+            StartDistance = i == 0 ? 400 : 31 - i,
+            EndLie = i == strokes - 1 ? null : LieType.Green,
+            EndDistance = i == strokes - 1 ? null : 30 - i,
+        }).ToList();
 
     [Fact]
     public async Task Editing_a_round_still_in_progress_conflicts()

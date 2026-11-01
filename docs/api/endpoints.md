@@ -35,11 +35,11 @@ Request/response types for login, refresh and password reset live in `Auth/AuthD
 
 | Method + route | Request | Response | Status codes | Calls | Analytics |
 |---|---|---|---|---|---|
-| `POST /api/auth/login` | `LoginRequest`: `Email`, `Password`, `DeviceName?` (not validated) | `LoginResponse` | 200; 401 (unknown email or wrong password, empty body); 423 account locked out | `UserManager.FindByEmailAsync`, `SignInManager.CheckPasswordSignInAsync(lockoutOnFailure: true)`, `JwtTokenService.GenerateAccessToken`, `IssueRefreshTokenAsync` | `user_logged_in` (with `email`, `name` person properties); `ActiveGolferTracker.MarkActive` |
+| `POST /api/auth/login` | `LoginRequest`: `Email`, `Password`, `DeviceName?`. Validated | `LoginResponse` | 200; 400 missing or malformed email, missing password; 401 (unknown email or wrong password, empty body); 423 account locked out | `UserManager.FindByEmailAsync`, `SignInManager.CheckPasswordSignInAsync(lockoutOnFailure: true)`, `JwtTokenService.GenerateAccessToken`, `IssueRefreshTokenAsync` | `user_logged_in` (with `email`, `name` person properties); `ActiveGolferTracker.MarkActive` |
 | `POST /api/auth/refresh` | `RefreshRequest`: `RefreshToken` | `LoginResponse` with a new refresh token | 200; 401 (unknown, expired, revoked, or reused token; reuse revokes all the user's tokens) | `JwtTokenService.RotateRefreshTokenAsync` | none |
 | `POST /api/auth/logout` | `RefreshRequest` | none | 204 always | `JwtTokenService.RevokeRefreshTokenAsync` | none |
 | `POST /api/auth/forgot-password` | `ForgotPasswordRequest`: `Email`. Validated | none | 204 always (no account enumeration) | `IPasswordResetService.SendResetLinkAsync` | none |
-| `POST /api/auth/reset-password` | `ResetPasswordRequest`: `Email`, `Token` (Base64Url Identity token from the link), `NewPassword`. Validated | none | 204; 400 ProblemDetails with the service's error | `IPasswordResetService.ResetPasswordAsync` | none |
+| `POST /api/auth/reset-password` | `ResetPasswordRequest`: `Email`, `Token` (Base64Url Identity token from the link), `NewPassword`. Validated | none | 204; 400 ProblemDetails with the service's error | `IPasswordResetService.ResetPasswordAsync`, then `JwtTokenService.RevokeAllForUserAsync` on success (every existing session is signed out) | none |
 | `GET /api/auth/invites/{code}` | route `code` | `InviteValidationResult`: `Valid`, `Email?`, `Reason?` | 200 (invalid codes are 200 with `Valid = false`) | `IUserInvitationService.ValidateInviteAsync` | none |
 | `POST /api/auth/register` | `RegisterRequest`: `Code`, `FirstName`, `LastName`, `PreferredTees` (0 or 1), `Password`, `DeviceName?`. Validated. Email comes from the invite | `LoginResponse` | 200; 400 invalid invite or Identity error (e.g. duplicate email) | `ValidateInviteAsync`, `UserManager.CreateAsync`, `AddToRoleAsync(User)`, `ClaimInviteAsync`, `IProfileService.GetOrCreateProfileAsync` (best effort), token issue | `user_signed_up`; `MarkActive` |
 
@@ -169,9 +169,9 @@ Side games (match play, skins, high-low) played across several golfers' cards. T
 | `GET /api/games/preview` | query `joinCode` | `GameJoinPreviewResponse`: `GameId`, `GameType`, `State`, `CourseId`, `CourseName`, `DatePlayed`, `HoleNumbers`, `HostDisplayName`, `ParticipantCount`, `AlreadyJoined` | 200; 404 invalid code | `PreviewGameAsync` (does not join) | none |
 | `POST /api/games/join` | `JoinGameRequest`: `JoinCode` (≤ 12), `TeeboxId`, `CourseHandicap`, `RoundId?`, `Team?`. Validated | `GameStateResponse` | 200; 404; 409 (already joined, wrong course teebox, ...) | `JoinGameAsync` | `game_joined` *(service)* |
 | `POST /api/games/{gameId}/participants` | `AddParticipantRequest`: `UserId?` (a friend) or `DisplayName?` (a guest), `TeeboxId`, `CourseHandicap`, `Team?`. Validated | `GameStateResponse` | 200; 403 not host; 404; 409 (e.g. `NotFriends`) | `AddParticipantAsync` (host only) | none |
-| `PUT /api/games/{gameId}/participants/{participantId}` | `UpdateParticipantRequest`: `CourseHandicap?`, `TeeboxId?`, `Team?`, `DisplayName?` | `GameStateResponse` | 200; 403 (not host and not that participant); 404; 409 | `UpdateParticipantAsync` | none |
+| `PUT /api/games/{gameId}/participants/{participantId}` | `UpdateParticipantRequest`: `CourseHandicap?` (-10 to 54), `TeeboxId?` (> 0), `Team?`, `DisplayName?` (≤ 128); null leaves a field unchanged. Validated | `GameStateResponse` | 200; 403 (not host and not that participant); 404; 409 | `UpdateParticipantAsync` | none |
 | `DELETE /api/games/{gameId}/participants/{participantId}` | none | `GameStateResponse` | 200; 403; 404; 409 | `RemoveParticipantAsync` (host only) | none |
-| `POST /api/games/{gameId}/round` | `LinkRoundRequest`: `RoundId?` (`null` unlinks) | `GameStateResponse` | 200; 404; 409 (round not owned, not on the game's course, not active) | `LinkRoundAsync` | none |
+| `POST /api/games/{gameId}/round` | `LinkRoundRequest`: `RoundId?` (`null` unlinks, otherwise > 0). Validated | `GameStateResponse` | 200; 404; 409 (round not owned, not on the game's course, not active) | `LinkRoundAsync` | none |
 | `PUT /api/games/{gameId}/participants/{participantId}/holes/{holeNumber}` | `holeNumber` 1–18. `UpsertGameHoleRequest`: `Strokes` (> 0). Validated | `GameStateResponse` | 200; 403; 404 (participant, or hole not in game); 409 (game not active, participant scores via linked round) | `UpsertParticipantHoleAsync` | none |
 | `DELETE /api/games/{gameId}/participants/{participantId}/holes/{holeNumber}` | none | `GameStateResponse` | as above | `ClearParticipantHoleAsync` | none |
 | `POST /api/games/{gameId}/start` | none | `GameStateResponse` | 200; 403; 404; 409 (not in setup, wrong participant count, ...) | `StartGameAsync` (host only) | `game_started` *(service)* |
@@ -200,10 +200,10 @@ APNs device registration; delivery is covered in [../features/notifications-and-
 | Method + route | Auth | Request | Response | Status codes | Calls | Analytics |
 |---|---|---|---|---|---|---|
 | `POST /api/devices` | User | `RegisterDeviceRequest`: `DeviceToken` (≤ 256), `DeviceName?` (≤ 200). Validated | none | 204 | `IPushNotificationService.RegisterDeviceAsync(userId, token, name)` (upsert by token) | `push_device_registered` on first registration of a token *(service)* |
-| `DELETE /api/devices/{token}` | User | route `token` | none | 204 always | `UnregisterDeviceAsync(token)` (marks inactive) | none |
+| `DELETE /api/devices/{token}` | User | route `token` | none | 204 always | `UnregisterDeviceAsync(userId, token)` (marks inactive only if the token is the caller's) | none |
 | `POST /api/devices/test` | Admin | `SendTestPushRequest`: `TargetUserId`, `Title` (≤ 200), `Body` (≤ 1000), `Badge?`. Validated | `SendTestPushResponse`: `Sent` (devices delivered to) | 200; 403 non-admin | `SendToUserAsync` | none |
 
-`DELETE /api/devices/{token}` does not check that the token belongs to the caller; any signed-in golfer who knows a device token can deactivate it.
+`DELETE /api/devices/{token}` only deactivates a token registered to the caller. A token that is unknown or belongs to someone else is left alone, and the answer is the same 204 either way, so the endpoint cannot be used to discover or switch off another golfer's device.
 
 ## Admin invites (`Endpoints/AdminInviteEndpoints.cs`)
 

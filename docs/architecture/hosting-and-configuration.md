@@ -11,7 +11,7 @@ flowchart TD
         db["AddDbContextFactory&lt;ApplicationDbContext&gt;<br/>AddDbContextFactory&lt;LogDbContext&gt;<br/>(throw if a connection string is missing)"]
         idn["AddIdentity&lt;ApplicationUser, IdentityRole&gt;<br/>same password policy in both"]
         set["RegisterSharedSettings()"]
-        apns["APNs settings check<br/>(throw if incomplete)"]
+        apns["APNs settings check<br/>(throw if incomplete)<br/>Resend key check outside Development"]
         feat["RegisterFeatureServices()"]
         sd --> db --> idn --> set --> apns --> feat
     end
@@ -30,7 +30,7 @@ The order of the steps differs slightly between the two files (the Api reads the
 2. Two `IDbContextFactory` registrations, `ApplicationDbContext` on `ConnectionStrings:fairwayfinder` and `LogDbContext` on `ConnectionStrings:fairwayfinderlogs`. Either missing throws `InvalidOperationException`.
 3. ASP.NET Core Identity with the shared password policy (8 characters minimum, no character-class rules, unique email, no confirmed account required) and default token providers. No cookie configuration; the API never issues cookies.
 4. JWT: binds `Jwt` to `JwtSettings` (`src/FairwayFinder.Api/Auth/JwtSettings.cs`), throws unless `Jwt:Secret` is at least 32 characters, registers `JwtTokenService`, and configures `JwtBearer` as the default authenticate and challenge scheme with issuer, audience, lifetime and signing-key validation and `ClockSkew = TimeSpan.Zero` (an expired access token is rejected at once, so the app must refresh). Token issuing and refresh tokens are covered in [API overview](../api/overview.md).
-5. `RegisterSharedSettings`, then the [APNs check](#startup-checks).
+5. `RegisterSharedSettings`, then the [APNs and Resend checks](#startup-checks).
 6. `RegisterFeatureServices(configuration, isDevelopment)`.
 7. `TimeProvider.System` (via `TryAddSingleton`, so tests can swap it) and the singleton `ActiveGolferTracker`.
 8. Request logging to the database: a bounded `Channel<ApiRequestLog>` sized by `RequestLogging:ChannelCapacity` with `DropWrite` on overflow, the scoped `RequestLoggingMiddleware`, and two hosted services, `RequestLogWriter` (drains the channel into `api_request_log`) and `RequestLogPurgeService` (deletes rows older than `RequestLogging:RetentionDays`, at startup and every 24 hours).
@@ -69,7 +69,7 @@ Endpoints and the public surface are documented in [API overview](../api/overvie
 3. `AddRazorComponents().AddInteractiveServerComponents()` and `AddRadzenComponents()`.
 4. `AddFairwayFinderAuthentication()` (`src/FairwayFinder.Admin/Startup/AuthenticationConfiguration.cs`): Identity with the same password policy as the API, so a password set on one side is valid on the other, plus the application cookie: name `.fairway.finder.admin`, `Secure` always, 8 hours sliding, login `/login`, logout `/authentication/logout`, access denied `/access-denied`.
 5. `AddFairwayFinderAuthorization()` (`Startup/AuthorizationConfiguration.cs`): one policy, `Policies.AdminOnly`, requiring an authenticated user in the `Admin` role. There is deliberately no fallback policy; it would block the SignalR negotiation that interactive server pages use. Each page opts in with `[Authorize(Policy = Policies.AdminOnly)]`, and `AuthorizeRouteView` in `Components/Routes.razor` enforces it.
-6. `AddCascadingAuthenticationState()`, `RegisterSharedSettings`, the APNs check. The admin console never sends a push, but `FriendService`, `GameService` and the round notification helpers inject `IPushNotificationService`, which resolves the `IApnsClient` singleton, so the check is there to fail at boot instead of when an admin first opens a round.
+6. `AddCascadingAuthenticationState()`, `RegisterSharedSettings`, the APNs check, then the Resend key check outside Development (the console sends invites and password resets). The admin console never sends a push, but `FriendService`, `GameService` and the round notification helpers inject `IPushNotificationService`, which resolves the `IApnsClient` singleton, so the check is there to fail at boot instead of when an admin first opens a round.
 7. `RegisterFeatureServices`, `RegisterAdminServices`, and `RegisterAdminWebServices()` (`Startup/ServiceRegistration.cs`): `IdentityRedirectManager`, `BreadcrumbState`, `ApplicationStartupService`, the singleton `CircuitTrackingService` with its `TrackingCircuitHandler`, `LogContextCircuitHandler` (pushes the admin's user onto log events inside a Blazor circuit, where there is no per-request middleware), the hosted `AppLogPurgeService`, and `IHttpContextAccessor`.
 8. An Npgsql health check named `FairwayFinderDatabase` against the main connection string, shown on the admin Health page.
 
@@ -162,9 +162,10 @@ What stops a host from booting:
 | `ConnectionStrings:fairwayfinderlogs` present | Both | `Program.cs` |
 | `Jwt:Secret` present and at least 32 characters | Api | `Program.cs` |
 | `Apns:BundleId`, `KeyId`, `TeamId`, `P8Contents` all non-blank | Both | `Program.cs` |
+| `Resend:ApiKey` non-blank, outside Development only (Development uses `DevEmailSender`) | Both | `Program.cs` |
 | Both databases reachable and migratable | Admin | `ApplicationStartupService.RunMigrationsAsync` |
 
-`tests/FairwayFinder.IntegrationTests.Common/TestSettings.cs` holds a value for every key either host needs to boot. A new startup-required key must be added there too, or neither host starts under test.
+`tests/FairwayFinder.IntegrationTests.Common/TestSettings.cs` holds a value for every key either host needs to boot. A new startup-required key must be added there too, or neither host starts under test. Tests run in the `Testing` environment, so the Resend check is live under test; `tests/FairwayFinder.Api.IntegrationTests/Conventions/ProductionConfigurationTests.cs` asserts the Api refuses to boot without the key and that the committed `Apns:UseSandbox` is `false` outside Development.
 
 ## Configuration reference
 
@@ -183,8 +184,8 @@ Configuration comes from `appsettings.json`, `appsettings.{Environment}.json`, u
 | `Jwt:RefreshTokenExpirationDays` | `JwtTokenService` | No | 30 | |
 | `Apns:BundleId`, `Apns:KeyId`, `Apns:TeamId` | Both `Program.cs`; `IApnsClient` factory | Startup | empty | |
 | `Apns:P8Contents` | Same | Startup | empty | The `.p8` key text |
-| `Apns:UseSandbox` | `PushNotificationService` | No | Api `appsettings.json`: `true`; Admin: `false`; both Development files: `true` | Sends to APNs' development server. Production must set `Apns__UseSandbox=false` on the Api for App Store / TestFlight builds |
-| `Resend:ApiKey` | `ResendEmailSender` (non-Development) | Lazy | empty | Not in the Api's `appsettings.json` and not passed to the Api by the AppHost; production must set `Resend__ApiKey` on both hosts |
+| `Apns:UseSandbox` | `PushNotificationService` | No | `false` in both `appsettings.json` files; `true` in both Development files | Sends to APNs' development server. Only Development uses it; App Store / TestFlight builds need the production server |
+| `Resend:ApiKey` | `ResendEmailSender` (non-Development); both `Program.cs` | Startup (outside Development) | empty | Placeholder in both `appsettings.json` files; production must set `Resend__ApiKey` on both hosts. The AppHost passes it only to Admin, which is fine because Aspire runs in Development |
 | `PostHog:ProjectToken` | `RegisterFeatureServices` | No | empty | Switches PostHog events and error tracking on. Bound onto the SDK's `PostHogOptions` |
 | `PostHog:HostUrl` | PostHog SDK | No | `https://us.i.posthog.com` | |
 | `Invites:RegistrationUrlBase` | `UserInvitationService` | No | `https://api.fairwayfinder.pro/register` (code fallback `https://fairwayfinder.pro/register`) | Invite link base |

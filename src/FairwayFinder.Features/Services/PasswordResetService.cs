@@ -122,7 +122,7 @@ public class PasswordResetService : IPasswordResetService
         {
             // ResetPasswordAsync rolls the security stamp, which is what makes the link single-use.
             _logger.LogInformation("Password reset completed for {UserId}.", user.Id);
-            return ResetPasswordResult.Ok();
+            return ResetPasswordResult.Ok(user.Id);
         }
 
         // A rejected token and a rejected password are different failures to the user: one means

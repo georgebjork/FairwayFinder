@@ -206,21 +206,35 @@ public sealed class GameScoreReader(IDbContextFactory<ApplicationDbContext> dbCo
 
         if (needsFallback.Count == 0) return byTeebox;
 
-        var groupIds = needsFallback.Select(t => t.TeeboxGroupId).Distinct().ToList();
+        // A lineage is (course, group id), never the group id alone. Group 0 means "no lineage" —
+        // teeboxes written before every creation path assigned one — so it never borrows: on that
+        // value a bare group-id join would pull indexes from unrelated tees on other courses.
+        var lineageKeys = needsFallback
+            .Where(t => t.TeeboxGroupId > 0)
+            .Select(t => (t.CourseId, t.TeeboxGroupId))
+            .Distinct()
+            .ToList();
+
+        if (lineageKeys.Count == 0) return byTeebox;
+
+        var courseIds = lineageKeys.Select(k => k.CourseId).Distinct().ToList();
+        var groupIds = lineageKeys.Select(k => k.TeeboxGroupId).Distinct().ToList();
 
         var lineage = await dbContext.Holes.AsNoTracking()
             .Where(h => !h.IsDeleted && h.Handicap > 0)
             .Join(dbContext.Teeboxes.AsNoTracking()
-                    .Where(t => !t.IsDeleted && groupIds.Contains(t.TeeboxGroupId)),
+                    .Where(t => !t.IsDeleted
+                                && courseIds.Contains(t.CourseId)
+                                && groupIds.Contains(t.TeeboxGroupId)),
                 h => h.TeeboxId, t => t.TeeboxId,
-                (h, t) => new { t.TeeboxGroupId, h.HoleNumber, h.Handicap, h.TeeboxId })
+                (h, t) => new { t.CourseId, t.TeeboxGroupId, h.HoleNumber, h.Handicap, h.TeeboxId })
             .ToListAsync();
 
         // The newest version of each lineage wins — the same instinct as StatsCalculator's
         // per-hole fallback, but scoped to one tee rather than borrowing from whatever teebox
         // happens to have an index.
-        var fallbackByGroup = lineage
-            .GroupBy(x => x.TeeboxGroupId)
+        var fallbackByLineage = lineage
+            .GroupBy(x => (x.CourseId, x.TeeboxGroupId))
             .ToDictionary(
                 g => g.Key,
                 g => g.GroupBy(x => x.HoleNumber)
@@ -228,7 +242,7 @@ public sealed class GameScoreReader(IDbContextFactory<ApplicationDbContext> dbCo
 
         foreach (var teebox in needsFallback)
         {
-            if (!fallbackByGroup.TryGetValue(teebox.TeeboxGroupId, out var fallback)) continue;
+            if (!fallbackByLineage.TryGetValue((teebox.CourseId, teebox.TeeboxGroupId), out var fallback)) continue;
 
             foreach (var hole in byTeebox[teebox.TeeboxId].Values.Where(h => h.Handicap <= 0))
             {

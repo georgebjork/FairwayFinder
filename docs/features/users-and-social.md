@@ -193,12 +193,14 @@ sequenceDiagram
     iOS->>Api: POST /api/auth/reset-password { email, token, newPassword }
     Api->>PRS: ResetPasswordAsync
     PRS->>PRS: decode token, UserManager.ResetPasswordAsync
+    Api->>Api: on success, JwtTokenService.RevokeAllForUserAsync
     Api-->>iOS: 204, or 400 with a message
 ```
 
 - **No account enumeration.** `/forgot-password` always returns 204. Unknown emails, unconfirmed emails and send failures are logged but not reported. On redemption, an unknown email, a malformed token and an expired or used token all return the same message ("invalid or has expired").
 - **Bad password vs bad link.** If Identity rejects the new password (not an `InvalidToken` error), its messages are returned so the user knows to pick another password rather than request a new link.
 - **Single use.** `ResetPasswordAsync` rotates the security stamp, which invalidates the token.
+- **Signs out everywhere.** After a successful reset the API endpoint revokes every refresh token the golfer holds, so a device signed in with the old password cannot refresh. Access tokens already issued stay valid until they expire (`Jwt:AccessTokenExpirationMinutes`). This is done in the API, which owns refresh tokens; the service returns the user id in `ResetPasswordResult.UserId` for it.
 - **Token encoding.** Identity's token is base64url-encoded for the query string and decoded on redemption.
 - **Admin path.** `SendResetLinkAsAdminAsync(userId, adminId)` reports problems (missing user, no email, unconfirmed email, send failure) because the admin can act on them, and logs which admin sent it.
 - **Cross-host tokens.** The admin console mints tokens that the API must decrypt. Reset tokens are Data Protection payloads, so `RegisterFeatureServices` (`src/FairwayFinder.Features/ServiceRegistration.cs`) persists the key ring to Postgres (`data_protection_key`) and pins `SetApplicationName("FairwayFinder")`. Changing that name invalidates every outstanding reset link and admin cookie. `PasswordResetServiceTests` checks both conditions.
@@ -212,7 +214,7 @@ sequenceDiagram
 
 | Test file | Covers |
 |---|---|
-| `tests/FairwayFinder.Api.IntegrationTests/Auth/AuthEndpointsTests.cs` | Login, lockout, refresh rotation and reuse, invite lookup, register (role, profile, claim), forgot/reset password, analytics. |
+| `tests/FairwayFinder.Api.IntegrationTests/Auth/AuthEndpointsTests.cs` | Login, lockout, refresh rotation and reuse, invite lookup, register (role, profile, claim), forgot/reset password (including revoking earlier sessions), login validation, analytics. |
 | `tests/FairwayFinder.Api.IntegrationTests/Endpoints/FriendEndpointsTests.cs` | Search, request lifecycle, auto-accept/conflicts, removal, friend round/stats visibility, in-progress rounds hidden, analytics. |
 | `tests/FairwayFinder.Api.IntegrationTests/Endpoints/AdminInviteEndpointsTests.cs` | Admin invite endpoints. |
 | `tests/FairwayFinder.Api.IntegrationTests/Endpoints/ProfileAndLookupEndpointsTests.cs` | Profile endpoints. |

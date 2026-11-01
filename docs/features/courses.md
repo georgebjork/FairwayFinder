@@ -61,7 +61,7 @@ Called from the admin pages under `src/FairwayFinder.Admin/Components/Pages/Cour
 | `DeleteCourseAsync` | Soft-deletes the course, all its teeboxes, and all its holes. |
 | `GetTeeboxDetailAsync` | Teebox plus holes, for the edit form. |
 | `GetParHandicapTemplateAsync(courseId, isWomens, isNineHole)` | Pre-fills par and stroke index for a **new** teebox from the newest active tee with the same gender and hole count, falling back to any active tee with the same hole count. Returns empty if there is none. |
-| `CreateTeeboxAsync` | Inserts a teebox and its holes. Sets `TeeboxGroupId = TeeboxId` after the first save, so a new tee is its own lineage. |
+| `CreateTeeboxAsync` | Inserts a teebox and its holes. Calls `Teebox.StartOwnLineage()` (`TeeboxGroupId = TeeboxId`) after the first save, so a new tee is its own lineage. |
 | `UpdateTeeboxAsync(request, userId, cascade)` | Edit in place (see below). |
 | `CreateTeeboxVersionAsync(request, userId, cascade)` | Save as a new version (see below). |
 | `DeleteTeeboxAsync` | Soft-deletes a teebox and its holes. |
@@ -106,7 +106,7 @@ sequenceDiagram
     CS-->>Admin: new teebox id
 ```
 
-- **`TeeboxGroupId` is the lineage key.** Every version of the same logical tee shares it. A brand-new tee gets its own id as group id; the `AddTeeboxVersioning` migration backfilled existing rows the same way.
+- **`TeeboxGroupId` is the lineage key.** Every version of the same logical tee shares it. A brand-new tee gets its own id as group id through `Teebox.StartOwnLineage()`, which every path that creates a teebox from scratch calls (`CourseService.CreateTeeboxAsync` and both GolfCourseAPI import paths). The `AddTeeboxVersioning` migration backfilled existing rows the same way, and `BackfillTeeboxGroupIds` fixed the imported teeboxes that had been left at `0` (see [course imports](course-imports.md)). A lineage only ever spans one course: consumers that look a lineage up key it by course and group id.
 - **Archived means superseded, not deleted.** The source keeps `IsDeleted = false` and keeps its holes, so historical rounds still resolve their original rating, slope and stroke index. `ArchivedOn` is a UTC `DateTime` and `ArchivedBy` is the admin.
 - **Only active tees are offered for new rounds.** `GetTeeboxesAsync` and `GetParHandicapTemplateAsync` filter `ArchivedOn == null`. `CreateTeeboxVersionAsync` refuses to version an already-archived teebox (returns `0`).
 - **Siblings are captured before the new version is inserted**, so the freshly created row is not picked up and versioned again.
@@ -115,7 +115,7 @@ sequenceDiagram
 
 - `StatsService` course stats (`src/FairwayFinder.Features/Services/StatsService.cs`) groups rounds by `Teebox.TeeboxGroupId`, so the teebox filter shows one option per logical tee (labelled with its most-used name) and the incoming `teeboxId` filter is a group id.
 - `StatsCalculator` per-hole stats take par, yardage and stroke index from the newest version played (highest `TeeboxId`).
-- `GameScoreReader` borrows a missing stroke index from another version in the same lineage.
+- `GameScoreReader` borrows a missing stroke index from another version in the same lineage on the same course.
 - `RoundTeebox` (in `Data/RoundResponse.cs`) exposes `TeeboxGroupId` to the client.
 
 See [stats and strokes gained](stats-and-strokes-gained.md) and [games](games.md) for those consumers.
@@ -137,7 +137,7 @@ Holes are matched by `HoleNumber`. Tests: `tests/FairwayFinder.Features.Tests/Co
 
 The stroke index ranks holes 1 to 18 by difficulty and drives net scoring in [games](games.md) and the per-hole stats views. Because the column is a non-nullable `int`, an unknown index is stored as `0`, which happens with some imported data. Consumers handle it:
 
-- `GameScoreReader` fills `0` values from the newest version in the same `TeeboxGroupId` that has a value.
+- `GameScoreReader` fills `0` values from the newest version in the same lineage (same course and `TeeboxGroupId`, never group `0`) that has a value.
 - `StatsCalculator` falls back to any version of the hole with a value.
 - The admin teebox form pre-fills from `GetParHandicapTemplateAsync` so a new tee starts with the course's existing indexes.
 
@@ -146,7 +146,7 @@ Nothing validates that a teebox's indexes are a permutation of 1..18.
 ## Where course data comes from
 
 - **Admin entry** through the pages above.
-- **GolfCourseAPI import**, which bulk-creates and updates courses, teeboxes and holes. See [course imports](course-imports.md). The importer writes teeboxes directly rather than through `CourseService`, so imported teeboxes are left with `TeeboxGroupId = 0` instead of their own id, and re-imports change rating and slope in place.
+- **GolfCourseAPI import**, which bulk-creates and updates courses, teeboxes and holes. See [course imports](course-imports.md). The importer writes teeboxes directly rather than through `CourseService`, but starts each new teebox's lineage the same way (`StartOwnLineage()`). Re-imports change rating and slope in place.
 - **TGTR transfer** only maps to existing courses and teeboxes; it never creates them.
 
 ## Tests
@@ -156,4 +156,6 @@ Nothing validates that a teebox's indexes are a permutation of 1..18.
 | `tests/FairwayFinder.Features.Tests/CourseServiceTeeboxVersioningTests.cs` | Group id on create, versioning archives and clones, archived source rejected, archived hidden from pickers, detail ordering. |
 | `tests/FairwayFinder.Features.Tests/CourseServiceCascadeTests.cs` | Cascade in place and by version, same-gender only, par/SI template. |
 | `tests/FairwayFinder.Admin.IntegrationTests/Services/CourseManagementTests.cs` | Create/read, in-place edit, re-rating a played teebox leaves old rounds alone, deleted course disappears from search (real Postgres). |
+| `tests/FairwayFinder.Admin.IntegrationTests/Services/ExternalImportTests.cs` | `Golf_course_api_imported_teeboxes_each_start_their_own_lineage`: imported and re-imported tees get their own group id. |
+| `tests/FairwayFinder.Admin.IntegrationTests/Services/GameScoreReaderTests.cs` | Stroke-index fallback borrows within a lineage and never from another course. |
 | `tests/FairwayFinder.Api.IntegrationTests/Endpoints/CourseEndpointsTests.cs` | Case-insensitive search, missing query is 400, teeboxes and holes, preferred-tee filter, auth required. |

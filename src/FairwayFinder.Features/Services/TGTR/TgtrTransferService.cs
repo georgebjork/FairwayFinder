@@ -404,12 +404,17 @@ public class TgtrTransferService
             // Compute from hole scores if stats not provided
             foreach (var hs in tgtrRound.HoleScores)
             {
+                if (hs.Score == 1)
+                {
+                    roundStat.HoleInOne++;
+                    continue;
+                }
+
                 var diff = hs.Score - hs.Par;
                 switch (diff)
                 {
                     case <= -3:
-                        if (hs.Score == 1) roundStat.HoleInOne++;
-                        else roundStat.DoubleEagles++;
+                        roundStat.DoubleEagles++;
                         break;
                     case -2:
                         roundStat.Eagles++;

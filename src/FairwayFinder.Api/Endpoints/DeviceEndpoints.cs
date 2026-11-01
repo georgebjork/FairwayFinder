@@ -20,9 +20,11 @@ public static class DeviceEndpoints
             return Results.NoContent();
         }).AddEndpointFilter<ValidationFilter<RegisterDeviceRequest>>();
 
-        group.MapDelete("/{token}", async (string token, IPushNotificationService pushService) =>
+        // Always 204: a token that is unknown or registered to someone else is left alone, and the
+        // response does not say which, so this cannot be used to probe for other golfers' tokens.
+        group.MapDelete("/{token}", async (string token, HttpContext ctx, IPushNotificationService pushService) =>
         {
-            await pushService.UnregisterDeviceAsync(token);
+            await pushService.UnregisterDeviceAsync(ctx.User.GetUserId(), token);
             return Results.NoContent();
         });
 

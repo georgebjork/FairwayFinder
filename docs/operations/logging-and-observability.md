@@ -156,16 +156,16 @@ sequenceDiagram
     participant W as RequestLogWriter (BackgroundService)
     participant DB as api_request_log
 
-    Client->>MW: request
+    Client->>MW: request (MW registers Response.OnCompleted)
     MW->>App: next()
-    App-->>MW: response (final status, authenticated user)
-    MW->>Ch: TryWrite(entry), dropped with a Warning if full
-    MW-->>Client: response
+    App-->>MW: returns or throws (route template captured)
+    MW-->>Client: response (GlobalExceptionHandler sets the status if it threw)
+    MW->>Ch: OnCompleted: TryWrite(entry with final status), dropped with a Warning if full
     W->>Ch: WaitToReadAsync, drain up to 100
     W->>DB: AddRange + SaveChanges (LogDbContext)
 ```
 
-- `RequestLoggingMiddleware` (`src/FairwayFinder.Api/Middleware/RequestLoggingMiddleware.cs`) is the outermost app middleware after the exception handler, so it sees the final status code and the principal on the way out. It records method, path, route template, query string, status, duration, user id and email, IP (first `X-Forwarded-For` entry, else the remote address), user agent and trace id. Any failure is caught and logged; the request is never affected.
+- `RequestLoggingMiddleware` (`src/FairwayFinder.Api/Middleware/RequestLoggingMiddleware.cs`) runs just inside the exception handler. When an endpoint throws, the status is still 200 as the exception passes back through it, because `GlobalExceptionHandler` only writes the real one afterwards, so the entry is built in `Response.OnCompleted` once the final status is on the response. The route template is captured on the way out instead, since the exception handler clears the endpoint before writing the error. It records method, path, route template, query string, status, duration, user id and email, IP (first `X-Forwarded-For` entry, else the remote address), user agent and trace id. Any failure is caught and logged; the request is never affected.
 - The channel is `BoundedChannelFullMode.DropWrite` with `ChannelCapacity` slots, registered in `src/FairwayFinder.Api/Program.cs`.
 - `RequestLogWriter` (`src/FairwayFinder.Api/BackgroundServices/RequestLogWriter.cs`) batch-inserts up to 100 entries at a time. A failed batch is logged at Error and discarded.
 
@@ -246,6 +246,7 @@ The admin pages are described with the rest of the console in [../admin/console.
 
 - `tests/FairwayFinder.Features.Tests/Logging/DatabaseLogSinkTests.cs`: the level and source filter, the `LogWriteScope` guard, the mapper.
 - `tests/FairwayFinder.Api.IntegrationTests/Logging/AppLogTests.cs`: real rows in the real logs database, user attribution inside a request, 4xx not stored. Uses a polling `WaitForAsync` because writes are batched (`TestSettings` sets `AppLogging:FlushIntervalMs` to 100).
+- `tests/FairwayFinder.Api.IntegrationTests/Logging/RequestLogTests.cs`: a request that throws `NotFoundException` lands in `api_request_log` as 404 with its route template. Request logging is off in the shared test host, so the test switches it on and runs its own `RequestLogWriter` for its duration.
 - `tests/FairwayFinder.Api.IntegrationTests/Logging/TracingTests.cs`: root spans regardless of `traceparent`.
 - `tests/FairwayFinder.Admin.IntegrationTests/Services/AppLogServiceTests.cs` and `AdminOperationsServiceTests.cs`: paging, filtering, purge for both tables.
 

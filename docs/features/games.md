@@ -43,7 +43,7 @@ The rule fields are stored for every game type, whatever the type. Match play an
 
 - `DisplayName`: a snapshot taken when they were added (via `DisplayNameHelper.Build`, falling back to `"Guest"`), so scoring never touches `AspNetUsers`. Guests' names are free text.
 - `TeeboxId`: par and stroke index come from the participant's own tees, so a mixed-tee field is normal.
-- `CourseHandicap`: strokes over **the holes this game covers**, not necessarily an 18-hole course handicap. A nine-hole game expects the nine-hole number; nothing halves it automatically. Validated to -10..54.
+- `CourseHandicap`: strokes over **the holes this game covers**, not necessarily an 18-hole course handicap. A nine-hole game expects the nine-hole number; nothing halves it automatically. Validated to -10..54 on create, join, add participant and update participant (where it is optional and only checked when sent).
 - `Team`: null for individual games, an int for team games.
 - `RoundId`: optional link to the participant's own round.
 
@@ -170,6 +170,8 @@ Update and link have no state guard. On a completed game they change the partici
 
 **Join after start.** Joining is the one path that changes the field of a running game, so `JoinGameAsync` re-runs `ValidateField` with the joiner included when the game is not in Setup. Without that, a third player could walk into a live two-sided match and match play would stop scoring.
 
+**Join with a round.** If `RoundId` is supplied, `JoinGameAsync` links it before saving, so the participant row and its link are written in one `SaveChanges`. A link failure (`RoundNotOwned`, `RoundNotOnGameCourse`, a teebox error) returns the 409 with no participant left behind, and the golfer can simply join again.
+
 **Complete.** `CompleteGameAsync` reads and scores the game, serializes the board into `game.final_scoreboard`, sets `Completed`, then reuses that same read to build the response.
 
 ### Field validation (`ValidateField`)
@@ -216,7 +218,7 @@ All handicap math lives in `GameHandicapHelper` and runs once, in the reader. En
 
 Handicaps are computed for every game, but only matter when `UseNet` is true. Nothing is stored: playing handicap, strokes received and the whole scoreboard are re-derived on every read, so changing a handicap on a live game takes effect on the next poll.
 
-**Missing stroke indexes.** Imported courses sometimes leave `hole.handicap` at 0. `GameScoreReader.LoadHolesAsync` borrows the index from the newest teebox (highest `TeeboxId`) in the same `TeeboxGroupId` lineage that has one. The lineage query only runs when some teebox in the field has a gap.
+**Missing stroke indexes.** Imported courses sometimes leave `hole.handicap` at 0. `GameScoreReader.LoadHolesAsync` borrows the index from the newest teebox (highest `TeeboxId`) in the same lineage that has one. A lineage is keyed by course *and* `TeeboxGroupId`, so an index is never borrowed from another course, and a teebox still on group `0` (no lineage) borrows nothing. The lineage query only runs when some teebox in the field has a gap. Tests: `tests/FairwayFinder.Admin.IntegrationTests/Services/GameScoreReaderTests.cs`.
 
 ## Reader → engine
 

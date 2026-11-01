@@ -1,8 +1,9 @@
 # Games with Friends — live side-game scoring
 
 > **Status: shipped, with corrections.** Match Play and Skins are implemented end to end —
-> schema, engines, reader, service, API, admin console, telemetry, push. Stroke Play, Nassau, and
-> Stableford are deferred; `GameType` reserves 2, 3, 4 for them.
+> schema, engines, reader, service, API, admin console, telemetry, push. High-Low (`GameType` 5)
+> shipped later and is not covered by this plan; see `docs/features/games.md`. Stroke Play, Nassau,
+> and Stableford are deferred; `GameType` reserves 2, 3, 4 for them.
 >
 > Review before implementation found defects in the design below. The document is kept for its
 > reasoning, but **where it disagrees with the code, the code is right.** The material deviations:

@@ -40,7 +40,7 @@ var logsConnectionString = builder.Configuration.GetConnectionString("fairwayfin
 builder.Services.AddDbContextFactory<LogDbContext>(options =>
     options.UseNpgsql(logsConnectionString));
 
-// ── Identity (same password policy as Web, no cookie config) ─
+// ── Identity (same password policy as Admin, no cookie config) ─
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.SignIn.RequireConfirmedAccount = false;
@@ -100,6 +100,15 @@ if (string.IsNullOrWhiteSpace(apnsSettings.BundleId)
         "Apns configuration is incomplete. Set BundleId, KeyId, TeamId, and P8Contents via user-secrets (dev) or environment variables (prod).");
 }
 
+// Outside Development every invite and password-reset email goes through Resend. Without a key
+// those would only fail when a golfer asks for one, so refuse to start instead.
+if (!builder.Environment.IsDevelopment()
+    && string.IsNullOrWhiteSpace(builder.Configuration.GetSection("Resend").Get<ResendSettings>()?.ApiKey))
+{
+    throw new InvalidOperationException(
+        "Resend:ApiKey is not configured. Set it via environment variable Resend__ApiKey; invite and password-reset emails cannot be sent without it.");
+}
+
 // ── Domain Services (reuse existing registration) ───────────
 builder.Services.RegisterFeatureServices(builder.Configuration, builder.Environment.IsDevelopment());
 
@@ -140,8 +149,9 @@ app.MapDefaultEndpoints();
 app.UseFairwayFinderRequestLogging();
 app.UseExceptionHandler();
 
-// Log every request (outermost app middleware): sees the final status code and the
-// authenticated principal on the way back out.
+// Log every request. It sits inside UseExceptionHandler so it can still see the matched endpoint
+// (the handler clears it before writing the error), and it records once the response completes,
+// so a thrown request is logged with the status GlobalExceptionHandler wrote, not a default 200.
 app.UseMiddleware<RequestLoggingMiddleware>();
 
 if (app.Environment.IsDevelopment())

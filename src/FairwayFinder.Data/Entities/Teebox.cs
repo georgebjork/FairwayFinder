@@ -33,6 +33,13 @@ public partial class Teebox : IAuditable
     /// </summary>
     public long TeeboxGroupId { get; set; }
 
+    /// <summary>
+    /// Makes a brand-new teebox the root of its own lineage (group id = its own id). Call it once the
+    /// insert has been saved and <see cref="TeeboxId"/> is known. Every path that creates a teebox from
+    /// scratch must do this — a group id left at 0 lumps the tee in with every other unassigned tee.
+    /// </summary>
+    public void StartOwnLineage() => TeeboxGroupId = TeeboxId;
+
     /// <summary>Null = active. Set when this teebox has been superseded by a newer version.</summary>
     public DateTime? ArchivedOn { get; set; }
 

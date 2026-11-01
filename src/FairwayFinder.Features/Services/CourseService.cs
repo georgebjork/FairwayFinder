@@ -335,7 +335,7 @@ public class CourseService : ICourseService
         await dbContext.SaveChangesAsync();
 
         // A brand-new tee is its own lineage; group id defaults to its own id.
-        teebox.TeeboxGroupId = teebox.TeeboxId;
+        teebox.StartOwnLineage();
 
         // Create holes
         var holes = request.Holes.Select(h => new Hole

@@ -267,9 +267,12 @@ public class GolfCourseApiImportService
         if (teeboxApiMap.Count > 0)
             await dbContext.SaveChangesAsync(ct); // All teeboxes now have their TeeboxIds
 
-        // Save 3: Insert ALL holes for ALL teeboxes + the mapping record
+        // Save 3: Insert ALL holes for ALL teeboxes + the mapping record. Each new tee also starts
+        // its own lineage now that it has an id, exactly as a tee created in the admin console does.
         foreach (var (teebox, apiHoles) in teeboxApiMap)
         {
+            teebox.StartOwnLineage();
+
             for (var i = 0; i < apiHoles.Count; i++)
             {
                 var apiHole = apiHoles[i];
@@ -392,6 +395,8 @@ public class GolfCourseApiImportService
 
             foreach (var (teebox, apiHoles) in newTeeboxHoles)
             {
+                teebox.StartOwnLineage();
+
                 for (var i = 0; i < apiHoles.Count; i++)
                 {
                     var apiHole = apiHoles[i];

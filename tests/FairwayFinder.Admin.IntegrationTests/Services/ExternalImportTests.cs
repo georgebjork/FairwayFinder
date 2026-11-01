@@ -95,6 +95,32 @@ public class ExternalImportTests(AdminFactory factory) : AdminTestBase(factory)
     }
 
     [Fact]
+    public async Task Golf_course_api_imported_teeboxes_each_start_their_own_lineage()
+    {
+        // A group id left at 0 lumps every imported tee into one "tee" for stats and game stroke
+        // indexes, so both the first import and a tee added on re-import must start a lineage.
+        var course = new GolfCourseApiCourse
+        {
+            Id = 404,
+            ClubName = "Lineage Club",
+            CourseName = "Lineage Course",
+            Tees = new GolfCourseApiTees { Male = [Tee("Blue")], Female = [Tee("Red")] },
+        };
+        StubCoursesPage(course);
+        var service = Service<GolfCourseApiImportService>();
+        await service.ImportAllCoursesAsync();
+
+        course.Tees!.Male.Add(Tee("Gold"));
+        StubCoursesPage(course);
+        await service.ImportAllCoursesAsync();
+
+        await using var db = Db();
+        var teeboxes = await db.Teeboxes.Where(t => !t.IsDeleted).ToListAsync();
+        Assert.Equal(3, teeboxes.Count);
+        Assert.All(teeboxes, t => Assert.Equal(t.TeeboxId, t.TeeboxGroupId));
+    }
+
+    [Fact]
     public async Task Golf_course_api_courses_without_tees_are_skipped()
     {
         StubCoursesPage(new GolfCourseApiCourse { Id = 303, CourseName = "No Tees", ClubName = "Empty" });

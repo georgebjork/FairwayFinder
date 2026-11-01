@@ -48,7 +48,8 @@ public static class AuthEndpoints
             activeGolfers.MarkActive(user.Id);
 
             return Results.Ok(BuildLoginResponse(accessToken, refreshToken, expiresAt, user));
-        });
+        })
+        .AddEndpointFilter<ValidationFilter<LoginRequest>>();
 
         group.MapPost("/refresh", async (
             RefreshRequest request,
@@ -94,7 +95,8 @@ public static class AuthEndpoints
 
         group.MapPost("/reset-password", async (
             ResetPasswordRequest request,
-            IPasswordResetService passwordResetService) =>
+            IPasswordResetService passwordResetService,
+            JwtTokenService tokenService) =>
         {
             var result = await passwordResetService.ResetPasswordAsync(
                 request.Email, request.Token, request.NewPassword);
@@ -103,6 +105,11 @@ public static class AuthEndpoints
                 return Results.Problem(
                     detail: result.Error,
                     statusCode: StatusCodes.Status400BadRequest);
+
+            // A reset is how a golfer locks out whoever has their old password, so every session
+            // signed in before it ends here. Refresh tokens belong to the API, so this happens here
+            // rather than in the Features service.
+            await tokenService.RevokeAllForUserAsync(result.UserId!);
 
             return Results.NoContent();
         })

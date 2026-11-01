@@ -25,7 +25,7 @@ Related: [users and social](users-and-social.md) (invites, password reset), [rou
 | `Apns:KeyId` | Key id of the `.p8` signing key. |
 | `Apns:TeamId` | Apple developer team id. |
 | `Apns:P8Contents` | Contents of the `.p8` key. |
-| `Apns:UseSandbox` | `true` sends to the APNs development server. Set in both hosts' `appsettings.Development.json`. |
+| `Apns:UseSandbox` | `true` sends to the APNs development server. `false` in both hosts' `appsettings.json`, `true` in both `appsettings.Development.json`. |
 
 Both `Program.cs` files throw at startup if `BundleId`, `KeyId`, `TeamId` or `P8Contents` is empty. The admin console never sends a push, but `RoundService` and `FriendService` inject `IPushNotificationService`, so the client must resolve there too; failing at startup is clearer than failing when an admin first opens a round. Tests set placeholder values in `TestSettings` and replace the client with `FakeApnsClient`.
 
@@ -36,7 +36,7 @@ Both `Program.cs` files throw at startup if `BundleId`, `KeyId`, `TeamId` or `P8
 | Call | Behaviour |
 |---|---|
 | `POST /api/devices` `{ deviceToken, deviceName? }` | `RegisterDeviceAsync`. Upsert by token. A new token is inserted active. An existing token is reassigned to the caller, reactivated, and `LastSeenAt` bumped. The app calls this on every launch. Only a brand-new token emits the `push_device_registered` analytics event. |
-| `DELETE /api/devices/{token}` | `UnregisterDeviceAsync`. Sets `IsActive = false`. It does not check that the token belongs to the caller. |
+| `DELETE /api/devices/{token}` | `UnregisterDeviceAsync(userId, token)`. Sets `IsActive = false` only when the token is registered to the caller. A token that is unknown or someone else's is left alone, and both answer 204, so the response reveals nothing about other golfers' tokens. |
 | `POST /api/devices/test` | Admin role only. Sends a push with the given title/body/badge to every active device of `targetUserId` and returns how many succeeded. |
 
 Because the token is unique and moves with the latest registration, a phone that signs into a different account stops receiving the previous account's pushes.
@@ -104,7 +104,7 @@ The round push fires once, when the round is completed, never at start or per ho
 | Environment | Implementation | Behaviour |
 |---|---|---|
 | Development | `DevEmailSender` (`Services/Email/DevEmailSender.cs`) | Logs the recipient and link at Information with a `[DEV EMAIL]` prefix. Nothing is sent. Copy the link from the console to test a flow. |
-| Anything else | `ResendEmailSender` (`Services/Email/ResendEmailSender.cs`) | Sends through the Resend SDK with the `Resend:ApiKey` setting, from `noreply@fairwayfinder.pro`. |
+| Anything else | `ResendEmailSender` (`Services/Email/ResendEmailSender.cs`) | Sends through the Resend SDK with the `Resend:ApiKey` setting, from `noreply@fairwayfinder.pro`. Both `Program.cs` files refuse to start outside Development when the key is blank, so a missing key shows up at deploy rather than on the first invite or reset. |
 
 Integration tests replace the sender with `RecordingEmailSender`, which keeps sent emails so a test can read the invite or reset link from `Email`.
 
@@ -118,6 +118,6 @@ Integration tests replace the sender with `RecordingEmailSender`, which keeps se
 
 | Test file | Covers |
 |---|---|
-| `tests/FairwayFinder.Api.IntegrationTests/Endpoints/DeviceEndpointsTests.cs` | Register upsert, token moving between accounts, unregister, validation, admin-only test push reaching the fake APNs client, analytics only for new devices. |
+| `tests/FairwayFinder.Api.IntegrationTests/Endpoints/DeviceEndpointsTests.cs` | Register upsert, token moving between accounts, unregister, unregistering another golfer's token is a no-op, validation, admin-only test push reaching the fake APNs client, analytics only for new devices. |
 | `tests/FairwayFinder.Api.IntegrationTests/Endpoints/FriendEndpointsTests.cs` | Request and accept notify each golfer. |
 | `tests/FairwayFinder.IntegrationTests.Common/Fakes/FakeApnsClient.cs`, `RecordingEmailSender.cs` | The fakes. The real `PushNotificationService` still runs over the fake client. |

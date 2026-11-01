@@ -52,6 +52,15 @@ if (string.IsNullOrWhiteSpace(apnsSettings.BundleId)
         "Apns configuration is incomplete. Set BundleId, KeyId, TeamId, and P8Contents via user-secrets (dev) or environment variables (prod).");
 }
 
+// Outside Development the console's invites and password resets go through Resend. Without a key
+// they would only fail when an admin sends one, so refuse to start instead.
+if (!builder.Environment.IsDevelopment()
+    && string.IsNullOrWhiteSpace(builder.Configuration.GetSection("Resend").Get<ResendSettings>()?.ApiKey))
+{
+    throw new InvalidOperationException(
+        "Resend:ApiKey is not configured. Set it via user-secrets or environment variable Resend__ApiKey; invite and password-reset emails cannot be sent without it.");
+}
+
 builder.Services.RegisterFeatureServices(builder.Configuration, builder.Environment.IsDevelopment());
 builder.Services.RegisterAdminServices(builder.Configuration);
 builder.Services.RegisterAdminWebServices();

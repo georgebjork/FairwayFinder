@@ -55,11 +55,12 @@ public class PushNotificationService(
         if (existing is null) analytics.Capture(userId, AnalyticsEvents.PushDeviceRegistered);
     }
 
-    public async Task UnregisterDeviceAsync(string deviceToken, CancellationToken ct = default)
+    public async Task UnregisterDeviceAsync(string userId, string deviceToken, CancellationToken ct = default)
     {
         await using var db = await dbContextFactory.CreateDbContextAsync(ct);
 
-        var device = await db.UserDevices.FirstOrDefaultAsync(d => d.DeviceToken == deviceToken, ct);
+        var device = await db.UserDevices
+            .FirstOrDefaultAsync(d => d.DeviceToken == deviceToken && d.UserId == userId, ct);
         if (device is null) return;
 
         device.IsActive = false;

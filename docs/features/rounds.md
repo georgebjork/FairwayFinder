@@ -197,7 +197,7 @@ All inputs are reduced to `HoleScoreLine(HoleNumber, Score, Par)`.
 | Method | Rule |
 |---|---|
 | `ComputeTotals` | Holes 1–9 sum into `ScoreOut`, 10–18 into `ScoreIn`; `Total = Out + In`. Also returns `ParEntered` and `HoleCount`. Only the holes supplied count, so it is correct mid-round. |
-| `ApplyScoringDistribution` | Buckets by `score - par`: ≤ −3 is a hole-in-one if the score is 1, else a double eagle; −2 eagle; −1 birdie; 0 par; +1 bogey; +2 double; anything worse triple-or-worse. Assigns rather than increments, so it is safe to call repeatedly on the same `RoundStat`. Note an ace on a par 3 is −2 and lands in `Eagles`. |
+| `ApplyScoringDistribution` | A score of 1 is a hole-in-one on any par (so a par-3 ace is not also an eagle), matching `StatsCalculator.CalculateHoleScoringDistribution`. Everything else buckets by `score - par`: ≤ −3 double eagle; −2 eagle; −1 birdie; 0 par; +1 bogey; +2 double; anything worse triple-or-worse. Assigns rather than increments, so it is safe to call repeatedly on the same `RoundStat`. Rows written before this rule filed par-3 aces under `eagles`; migration `20261031120000_BackfillParThreeAces` moved them to `hole_in_one`. |
 | `ClassifyShape` | `FrontNine` = all of 1–9 present; `BackNine` = all of 10–18; `FullRound` = both. On a nine-hole teebox, covering 1–9 sets `FullRound` and `FrontNine`. A finished 18 sets all three, matching the TGTR importer. |
 | `MissingHoles` | Infers the target from what is entered: nine-hole teebox → 1–9; holes on both sides of the turn → 1–18; only back-nine holes → 10–18; otherwise 1–9. Returns target holes not yet entered. Empty input returns empty (the caller handles that case). |
 | `BuildShots` | Numbers shots 1..n by list position. The client's `ShotNumber` is ignored; the server owns ordering. |
@@ -285,12 +285,12 @@ The service then:
   request shot *i*, extra new shots are inserted, surplus old shots are soft-deleted. Hole stats are
   matched by score id. This follows the project rule of updating in place rather than deleting
   and re-inserting.
-- If tracking is switched off entirely, soft-deletes the round's hole stats.
-
-Things the update does not do: it does not soft-delete scores for holes left out of the request
-(totals then disagree with the stored scores), and switching from shot tracking to hole stats
-leaves the old shots in place. `UpdateRoundAsync` duplicates the stat-copy logic inline rather than
-calling `ApplyClientHoleStat`/`ApplyDerivedHoleStat`; keep them in step if either changes.
+- Soft-deletes only what is genuinely gone: the score of a hole the request leaves out (so stored
+  scores always agree with the recomputed totals), along with that hole's shots and hole stats;
+  every shot on the round when shot tracking is switched off (for example, shot tracking to hole
+  stats); and the round's hole stats when tracking is switched off entirely.
+- Writes hole stats through the shared helpers, `ApplyDerivedHoleStat` for shot-tracked holes and
+  `ApplyClientHoleStat` for hole-stats rounds, the same as both other write paths.
 
 The `round_edited` analytics event is captured in the endpoint, not the service, because the admin
 console calls the same method. Admins edit through `AdminRoundService.UpdateRoundAsAdminAsync`,
@@ -350,4 +350,4 @@ apart by `entry`), `round_edited`, `round_deleted`. See
 
 Put any new scoring rule in `RoundScoringHelper` and call it from both services. If a new rule
 depends on shots, put the derivation in `StrokesGainedCalculator.DeriveHoleStatFromShots` and the
-copy in `ApplyDerivedHoleStat`, and remember the inline copy in `UpdateRoundAsync`.
+copy in `ApplyDerivedHoleStat`.

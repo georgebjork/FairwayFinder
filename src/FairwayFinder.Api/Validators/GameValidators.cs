@@ -56,6 +56,30 @@ public class AddParticipantRequestValidator : AbstractValidator<AddParticipantRe
     }
 }
 
+public class UpdateParticipantRequestValidator : AbstractValidator<UpdateParticipantRequest>
+{
+    public UpdateParticipantRequestValidator()
+    {
+        // Every field is optional (null leaves it unchanged), but one that is sent obeys the same
+        // rules as when the participant was added.
+        RuleFor(x => x.TeeboxId).GreaterThan(0).When(x => x.TeeboxId is not null);
+        RuleFor(x => x.CourseHandicap!.Value)
+            .SetValidator(new CourseHandicapValidator())
+            .OverridePropertyName(nameof(UpdateParticipantRequest.CourseHandicap))
+            .When(x => x.CourseHandicap is not null);
+        RuleFor(x => x.DisplayName).MaximumLength(128);
+    }
+}
+
+public class LinkRoundRequestValidator : AbstractValidator<LinkRoundRequest>
+{
+    public LinkRoundRequestValidator()
+    {
+        // Null unlinks; anything else has to be a real round id.
+        RuleFor(x => x.RoundId).GreaterThan(0).When(x => x.RoundId is not null);
+    }
+}
+
 public class UpsertGameHoleRequestValidator : AbstractValidator<UpsertGameHoleRequest>
 {
     public UpsertGameHoleRequestValidator()

@@ -49,6 +49,23 @@ public class DeviceEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
     }
 
     [Fact]
+    public async Task Unregistering_someone_elses_token_leaves_it_active_and_looks_like_an_unknown_token()
+    {
+        var owner = await SignInNewUserAsync();
+        var other = await SignInNewUserAsync();
+        await RegisterDeviceAsync(owner, "owners-phone");
+
+        // Same answer as for a token that does not exist, so the endpoint reveals nothing.
+        await AssertStatusAsync(HttpStatusCode.NoContent, await other.Client.DeleteAsync("/api/devices/owners-phone"));
+        await AssertStatusAsync(HttpStatusCode.NoContent, await other.Client.DeleteAsync("/api/devices/no-such-token"));
+
+        await using var db = Db();
+        var device = await db.UserDevices.SingleAsync(d => d.DeviceToken == "owners-phone");
+        Assert.Equal(owner.Id, device.UserId);
+        Assert.True(device.IsActive);
+    }
+
+    [Fact]
     public async Task Empty_device_token_is_a_validation_error()
     {
         var golfer = await SignInNewUserAsync();

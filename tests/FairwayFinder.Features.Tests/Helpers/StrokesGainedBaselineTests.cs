@@ -76,6 +76,37 @@ public class StrokesGainedBaselineTests
         Assert.Equal(4.82, result, precision: 2);
     }
 
+    // The fairway/rough/sand tables stop at 598 yards; 599 and 600 used to index past the end.
+    [Theory]
+    [InlineData(LieType.Tee, 4.82)]
+    [InlineData(LieType.Fairway, 4.90)]
+    [InlineData(LieType.Rough, 5.13)]
+    [InlineData(LieType.Sand, 5.52)]
+    public void Yards_599_and_600_clamp_to_the_last_table_value(LieType lie, double last)
+    {
+        foreach (var yards in new[] { 599, 600, 601 })
+        {
+            var result = StrokesGainedBaseline.GetExpectedStrokes(yards, DistanceUnit.Yards, lie);
+
+            Assert.Equal(last, result, precision: 2);
+        }
+    }
+
+    [Theory]
+    [InlineData(LieType.Tee)]
+    [InlineData(LieType.Fairway)]
+    [InlineData(LieType.Rough)]
+    [InlineData(LieType.Sand)]
+    public void Every_yard_up_to_600_has_data(LieType lie)
+    {
+        for (var yards = 1; yards <= 600; yards++)
+        {
+            var result = StrokesGainedBaseline.GetExpectedStrokes(yards, DistanceUnit.Yards, lie);
+
+            Assert.True(result > 0, $"{lie} at {yards}y should be positive");
+        }
+    }
+
     [Fact]
     public void Green_every_foot_has_data()
     {

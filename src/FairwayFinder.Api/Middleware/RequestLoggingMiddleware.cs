@@ -10,10 +10,16 @@ namespace FairwayFinder.Api.Middleware;
 
 /// <summary>
 /// Records metadata for every API request into a bounded channel drained by
-/// <see cref="BackgroundServices.RequestLogWriter"/>. Runs as the outermost app middleware so it
-/// observes the final status code and the authenticated principal on the way back out. Logging
-/// never affects the response — failures are swallowed and channel overflow drops the entry.
+/// <see cref="BackgroundServices.RequestLogWriter"/>. Logging never affects the response —
+/// failures are swallowed and channel overflow drops the entry.
 /// </summary>
+/// <remarks>
+/// Runs inside <c>UseExceptionHandler</c>, so when an endpoint throws, the status is still the
+/// default 200 when <c>next</c> returns here; <c>GlobalExceptionHandler</c> writes the real one
+/// afterwards. The entry is therefore written from <c>Response.OnCompleted</c>, once the final
+/// status is on the response. The matched endpoint is captured on the way out instead, because the
+/// exception handler clears it before it writes the error.
+/// </remarks>
 public class RequestLoggingMiddleware(
     Channel<ApiRequestLog> channel,
     IOptions<RequestLoggingSettings> options,
@@ -30,13 +36,21 @@ public class RequestLoggingMiddleware(
         }
 
         var start = Stopwatch.GetTimestamp();
+        string? routeTemplate = null;
+
+        context.Response.OnCompleted(() =>
+        {
+            TryLog(context, routeTemplate, Stopwatch.GetElapsedTime(start));
+            return Task.CompletedTask;
+        });
+
         try
         {
             await next(context);
         }
         finally
         {
-            TryLog(context, Stopwatch.GetElapsedTime(start));
+            routeTemplate = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText;
         }
     }
 
@@ -50,7 +64,7 @@ public class RequestLoggingMiddleware(
         return false;
     }
 
-    private void TryLog(HttpContext context, TimeSpan elapsed)
+    private void TryLog(HttpContext context, string? routeTemplate, TimeSpan elapsed)
     {
         try
         {
@@ -60,7 +74,7 @@ public class RequestLoggingMiddleware(
                 Timestamp = DateTime.UtcNow,
                 Method = context.Request.Method,
                 Path = Truncate(context.Request.Path.Value, 2048) ?? string.Empty,
-                RouteTemplate = (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText,
+                RouteTemplate = routeTemplate,
                 QueryString = context.Request.QueryString.HasValue
                     ? Truncate(context.Request.QueryString.Value, 2048)
                     : null,

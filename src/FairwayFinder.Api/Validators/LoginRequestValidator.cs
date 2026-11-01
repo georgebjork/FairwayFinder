@@ -11,8 +11,9 @@ public class LoginRequestValidator : AbstractValidator<LoginRequest>
             .NotEmpty()
             .EmailAddress();
 
+        // Only presence: login checks a password, it does not enforce the policy. A length rule here
+        // would answer a short wrong guess with 400 instead of 401, skipping the lockout counter.
         RuleFor(x => x.Password)
-            .NotEmpty()
-            .MinimumLength(8);
+            .NotEmpty();
     }
 }

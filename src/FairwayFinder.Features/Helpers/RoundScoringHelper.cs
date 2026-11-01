@@ -40,7 +40,8 @@ public static class RoundScoringHelper
     }
 
     /// <summary>
-    /// Overwrites <paramref name="target"/>'s scoring distribution from the entered holes.
+    /// Overwrites <paramref name="target"/>'s scoring distribution from the entered holes. A score
+    /// of 1 is a hole-in-one on any par; everything else is bucketed by <c>score - par</c>.
     /// Counters are assigned, not incremented, so calling this repeatedly on the same row is safe.
     /// </summary>
     public static void ApplyScoringDistribution(RoundStat target, IEnumerable<HoleScoreLine> holes)
@@ -49,12 +50,17 @@ public static class RoundScoringHelper
 
         foreach (var hole in holes)
         {
+            // An ace is an ace whatever the par, so a 1 on a par 3 (-2) counts here and not as an
+            // eagle. Matches StatsCalculator.CalculateHoleScoringDistribution.
+            if (hole.Score == 1)
+            {
+                holeInOne++;
+                continue;
+            }
+
             switch (hole.Score - hole.Par)
             {
-                case <= -3:
-                    if (hole.Score == 1) holeInOne++;
-                    else doubleEagles++;
-                    break;
+                case <= -3: doubleEagles++; break;
                 case -2: eagles++; break;
                 case -1: birdies++; break;
                 case 0: pars++; break;

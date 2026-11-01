@@ -682,15 +682,55 @@ public class RoundService : IRoundService
                 scoreForHole[hole.HoleId] = newScore;
             }
         }
-        
+
+        // A hole the edit leaves out is no longer part of the round. Its score has to go too, or
+        // the stored scores disagree with the totals just recomputed from the request. Everything
+        // the request still covers was updated in place above; only the leftovers are removed.
+        var keptScores = scoreForHole.Values.ToHashSet();
+        var droppedScores = existingScores.Where(s => !keptScores.Contains(s)).ToList();
+        foreach (var dropped in droppedScores)
+        {
+            dropped.IsDeleted = true;
+            dropped.UpdatedBy = userId;
+        }
+
         await dbContext.SaveChangesAsync(); // Generates ScoreIds for any new scores
-        
+
+        var keptScoreIds = keptScores.Select(s => s.ScoreId).ToHashSet();
+
         var existingHoleStats = await dbContext.HoleStats
             .Where(hs => hs.RoundId == request.RoundId && !hs.IsDeleted)
             .ToListAsync();
-        
-        var holeStatsByScoreId = existingHoleStats.ToDictionary(hs => hs.ScoreId);
-        
+
+        // Stats hanging off a dropped hole go with it.
+        foreach (var hs in existingHoleStats.Where(hs => !keptScoreIds.Contains(hs.ScoreId)))
+        {
+            hs.IsDeleted = true;
+            hs.UpdatedBy = userId;
+        }
+
+        // Shots go with a dropped hole too, and all of them go when the round stops tracking
+        // shots — otherwise strokes gained keeps reading a shot chain the golfer switched off.
+        var staleShotScoreIds = existingScores
+            .Where(s => !request.UsingShotTracking || !keptScoreIds.Contains(s.ScoreId))
+            .Select(s => s.ScoreId)
+            .ToList();
+        if (staleShotScoreIds.Count > 0)
+        {
+            var staleShots = await dbContext.Shots
+                .Where(s => staleShotScoreIds.Contains(s.ScoreId) && !s.IsDeleted)
+                .ToListAsync();
+            foreach (var shot in staleShots)
+            {
+                shot.IsDeleted = true;
+                shot.UpdatedBy = userId;
+            }
+        }
+
+        var holeStatsByScoreId = existingHoleStats
+            .Where(hs => keptScoreIds.Contains(hs.ScoreId))
+            .ToDictionary(hs => hs.ScoreId);
+
         if (request.UsingShotTracking)
         {
             // Load existing shots keyed by ScoreId
@@ -762,48 +802,8 @@ public class RoundService : IRoundService
                 }
 
                 // Auto-derive HoleStat from shots
-                var (numberOfPutts, hitFairway, hitGreen, approachYardage, teeShotPenalty, approachShotPenalty) =
-                    StrokesGainedCalculator.DeriveHoleStatFromShots(hole.Shots, hole.Par);
-
-                if (holeStatsByScoreId.TryGetValue(score.ScoreId, out var existingStat))
-                {
-                    existingStat.HoleId = hole.HoleId;
-                    existingStat.HitFairway = hitFairway;
-                    existingStat.HitGreen = hitGreen;
-                    existingStat.NumberOfPutts = numberOfPutts;
-                    existingStat.ApproachYardage = approachYardage;
-                    existingStat.TeeShotPenalty = teeShotPenalty;
-                    existingStat.ApproachShotPenalty = approachShotPenalty;
-                    // Fields shots can't derive — accept them from the client if supplied
-                    existingStat.MissFairwayType = hole.MissFairwayType;
-                    existingStat.MissGreenType = hole.MissGreenType;
-                    existingStat.TeeShotOutOfPosition = hole.TeeShotOutOfPosition;
-                    existingStat.ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition;
-                    existingStat.UpdatedBy = userId;
-                }
-                else
-                {
-                    dbContext.HoleStats.Add(new HoleStat
-                    {
-                        ScoreId = score.ScoreId,
-                        RoundId = round.RoundId,
-                        HoleId = hole.HoleId,
-                        HitFairway = hitFairway,
-                        HitGreen = hitGreen,
-                        NumberOfPutts = numberOfPutts,
-                        ApproachYardage = approachYardage,
-                        TeeShotPenalty = teeShotPenalty,
-                        ApproachShotPenalty = approachShotPenalty,
-                        // Fields shots can't derive — accept them from the client if supplied
-                        MissFairwayType = hole.MissFairwayType,
-                        MissGreenType = hole.MissGreenType,
-                        TeeShotOutOfPosition = hole.TeeShotOutOfPosition,
-                        ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition,
-                        CreatedBy = userId,
-                        UpdatedBy = userId,
-                        IsDeleted = false
-                    });
-                }
+                var holeStat = EnsureHoleStat(dbContext, holeStatsByScoreId, score.ScoreId, round.RoundId, hole.HoleId, userId);
+                RoundScoringHelper.ApplyDerivedHoleStat(holeStat, hole.Shots, hole.Par, hole);
             }
 
             // Soft-delete any orphaned shots (holes that no longer have shot data)
@@ -819,43 +819,8 @@ public class RoundService : IRoundService
             {
                 var score = scoreForHole[hole.HoleId];
 
-                if (holeStatsByScoreId.TryGetValue(score.ScoreId, out var existingStat))
-                {
-                    existingStat.HoleId = hole.HoleId;
-                    existingStat.HitFairway = hole.HitFairway;
-                    existingStat.MissFairwayType = hole.MissFairwayType;
-                    existingStat.HitGreen = hole.HitGreen;
-                    existingStat.MissGreenType = hole.MissGreenType;
-                    existingStat.NumberOfPutts = hole.NumberOfPutts;
-                    existingStat.ApproachYardage = hole.ApproachYardage;
-                    existingStat.TeeShotOutOfPosition = hole.TeeShotOutOfPosition;
-                    existingStat.ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition;
-                    existingStat.TeeShotPenalty = hole.TeeShotPenalty;
-                    existingStat.ApproachShotPenalty = hole.ApproachShotPenalty;
-                    existingStat.UpdatedBy = userId;
-                }
-                else
-                {
-                    dbContext.HoleStats.Add(new HoleStat
-                    {
-                        ScoreId = score.ScoreId,
-                        RoundId = round.RoundId,
-                        HoleId = hole.HoleId,
-                        HitFairway = hole.HitFairway,
-                        MissFairwayType = hole.MissFairwayType,
-                        HitGreen = hole.HitGreen,
-                        MissGreenType = hole.MissGreenType,
-                        NumberOfPutts = hole.NumberOfPutts,
-                        ApproachYardage = hole.ApproachYardage,
-                        TeeShotOutOfPosition = hole.TeeShotOutOfPosition,
-                        ApproachShotOutOfPosition = hole.ApproachShotOutOfPosition,
-                        TeeShotPenalty = hole.TeeShotPenalty,
-                        ApproachShotPenalty = hole.ApproachShotPenalty,
-                        CreatedBy = userId,
-                        UpdatedBy = userId,
-                        IsDeleted = false
-                    });
-                }
+                var holeStat = EnsureHoleStat(dbContext, holeStatsByScoreId, score.ScoreId, round.RoundId, hole.HoleId, userId);
+                RoundScoringHelper.ApplyClientHoleStat(holeStat, hole);
             }
         }
         else
@@ -918,6 +883,35 @@ public class RoundService : IRoundService
                 { FairwayFinderDiagnostics.Tags.Operation, FairwayFinderDiagnostics.TagValues.OperationUpdate }
             });
         }
+    }
+
+    /// <summary>
+    /// The hole's live stat row, updated in place, or a new one when the hole has none yet.
+    /// HoleId is refreshed because an edit can move the round to another teebox.
+    /// </summary>
+    private static HoleStat EnsureHoleStat(
+        ApplicationDbContext dbContext, Dictionary<long, HoleStat> holeStatsByScoreId,
+        long scoreId, long roundId, long holeId, string userId)
+    {
+        if (holeStatsByScoreId.TryGetValue(scoreId, out var existing))
+        {
+            existing.HoleId = holeId;
+            existing.UpdatedBy = userId;
+            return existing;
+        }
+
+        var created = new HoleStat
+        {
+            ScoreId = scoreId,
+            RoundId = roundId,
+            HoleId = holeId,
+            CreatedBy = userId,
+            UpdatedBy = userId,
+            IsDeleted = false
+        };
+
+        dbContext.HoleStats.Add(created);
+        return created;
     }
 
     public async Task<bool> DeleteRoundAsync(long roundId, string userId)

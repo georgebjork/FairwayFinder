@@ -72,12 +72,19 @@ public sealed class TestData(IServiceProvider services)
     public Task<ApplicationUser> CreateAdminAsync(string? email = null) =>
         CreateUserAsync(email, roles: ApplicationRoles.Admin);
 
-    /// <summary>A course with one teebox and its holes (18 by default, or a nine-hole teebox).</summary>
+    /// <summary>
+    /// A course with one teebox and its holes (18 by default, or a nine-hole teebox). The teebox
+    /// starts its own lineage as every creation path does; pass <paramref name="teeboxGroupId"/> to
+    /// arrange anything else (0 for a legacy row with no lineage). <paramref name="withStrokeIndexes"/>
+    /// false leaves every hole's stroke index unset (0).
+    /// </summary>
     public async Task<SeededCourse> CreateCourseAsync(
         string? courseName = null,
         bool nineHole = false,
         string teeboxName = "Blue",
-        string createdBy = "integration-tests")
+        string createdBy = "integration-tests",
+        long? teeboxGroupId = null,
+        bool withStrokeIndexes = true)
     {
         courseName ??= $"Test Course {Interlocked.Increment(ref _sequence)}";
         var pars = StandardPars.Take(nineHole ? 9 : 18).ToArray();
@@ -102,6 +109,9 @@ public sealed class TestData(IServiceProvider services)
         db.Teeboxes.Add(teebox);
         await db.SaveChangesAsync();
 
+        if (teeboxGroupId is { } groupId) teebox.TeeboxGroupId = groupId;
+        else teebox.StartOwnLineage();
+
         db.Holes.AddRange(pars.Select((par, i) => new Hole
         {
             TeeboxId = teebox.TeeboxId,
@@ -109,7 +119,7 @@ public sealed class TestData(IServiceProvider services)
             HoleNumber = i + 1,
             Par = par,
             Yardage = 400,
-            Handicap = i + 1,
+            Handicap = withStrokeIndexes ? i + 1 : 0,
             CreatedBy = createdBy,
             UpdatedBy = createdBy,
         }));

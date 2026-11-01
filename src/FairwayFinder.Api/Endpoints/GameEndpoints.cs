@@ -93,7 +93,7 @@ public static class GameEndpoints
         {
             var result = await gameService.UpdateParticipantAsync(gameId, participantId, request, ctx.User.GetUserId());
             return MapGameResult(result, gameId, participantId);
-        });
+        }).AddEndpointFilter<ValidationFilter<UpdateParticipantRequest>>();
 
         group.MapDelete("/{gameId:long}/participants/{participantId:long}", async (
             long gameId,
@@ -114,7 +114,7 @@ public static class GameEndpoints
         {
             var result = await gameService.LinkRoundAsync(gameId, request.RoundId, ctx.User.GetUserId());
             return MapGameResult(result, gameId);
-        });
+        }).AddEndpointFilter<ValidationFilter<LinkRoundRequest>>();
 
         group.MapPut("/{gameId:long}/participants/{participantId:long}/holes/{holeNumber:int:range(1,18)}", async (
             long gameId,

@@ -47,10 +47,16 @@ GolfCourseAPI/TGTR.
   Prerendering is off, so page bodies are not rendered over HTTP. Test the service the page calls instead.
 - **New Features service behaviour that depends on Postgres** (constraints, concurrency, raw SQL, `ILike`):
   write an integration test, not an InMemory unit test.
-- **New entity or schema change**: `MigrationTests` fails if the model changed without a migration.
+- **New entity or schema change**: `MigrationTests` (in `Api.IntegrationTests/Conventions`) fails if the model changed without a migration.
 - **Arranging data**: add builders to `TestData` instead of constructing entities inline, so a schema change is
   fixed in one place. Prefer driving the real flow (e.g. `RoundFlows.PlayCompletedRoundAsync`) over inserting rows.
 - **New startup-required config key**: add it to `TestSettings`, or neither host will boot under test.
+
+## Documentation
+
+Developer docs live in `docs/` (index: `docs/README.md`): architecture, schema, every API endpoint, each
+feature, the admin console page by page, operations and testing. When you change behaviour a doc
+describes, update that doc in the same change.
 
 ## Architecture Overview
 
@@ -71,8 +77,8 @@ There is no public-facing web UI. Don't add end-user features to the admin conso
 | **FairwayFinder.Api** | JWT-secured REST API (Minimal APIs) consumed by the iOS app — the only end-user surface |
 | **FairwayFinder.Features** | Services, DTOs, and business logic shared by Admin and Api |
 | **FairwayFinder.Data** | EF Core DbContext, entity configurations, migrations |
-| **FairwayFinder.Identity** | ASP.NET Core Identity user/role types and password policy |
-| **FairwayFinder.Agents** | OpenAI agent integration (`ScorecardScoresReaderAgent` for scorecard OCR). **Currently unreferenced** — kept for a future API-side scorecard scan feature |
+| **FairwayFinder.Identity** | ASP.NET Core Identity user/role types. The password policy is configured in each host (`Api/Program.cs`, `Admin/Startup/AuthenticationConfiguration.cs`); keep the two identical |
+| **FairwayFinder.Agents** | LLM agent integration with OpenAI and Claude factories (`ScorecardScoresReaderAgent` for scorecard OCR). **Currently unreferenced** — kept for a future API-side scorecard scan feature |
 | **FairwayFinder.Shared** | Shared settings/models |
 | **FairwayFinder.ServiceDefaults** | Aspire service defaults (telemetry, health checks) shared by Admin and Api |
 | **FairwayFinder.AppHost** | .NET Aspire orchestration for local dev |
@@ -217,7 +223,7 @@ import/purge jobs have no user at all.
 ### Render Modes
 
 - **Interactive Server** — default for all pages.
-- **Static SSR** — only for the login page (`Components/Auth/`) and the error pages.
+- **Static SSR** — only for the login page (`Components/Auth/`, via `[ExcludeFromInteractiveRouting]`). The error pages use `AuthenticationLayout` and `[AllowAnonymous]` but are not excluded from interactive routing.
 
 ### Component Organization
 
@@ -237,7 +243,7 @@ src/FairwayFinder.Admin/Components/
 │   └── Diagnostics/Pages/          # Health checks, request logs
 ├── Shared/                         # Cross-domain shared components
 │   ├── Layout/                     # MainLayout (sidebar shell), AuthenticationLayout, Breadcrumb
-│   ├── Wrappers/                   # AppHeader, AppFooter
+│   ├── Wrappers/                   # AppHeader (hosts the breadcrumb)
 │   └── Dialogs/                    # Shared dialogs (e.g., DeleteConfirmDialog)
 ├── Auth/Pages/                     # Login (static SSR)
 └── Error/                          # Error, NotFound, AccessDenied
@@ -262,7 +268,8 @@ src/FairwayFinder.Admin/Components/
 ### Displaying scores and games
 
 - Show any hole score with `Shared/Scoring/ScoreMark` (circle/square birdie–bogey notation) and put
-  `ScoreMarkLegend` under the card, so every page marks scores the same way.
+  `ScoreMarkLegend` under the card, so every page marks scores the same way. (The round scorecard,
+  `FairwayFinderScorecard.razor`, still uses its own styling; move it to `ScoreMark` when touching it.)
 - The game scorecard (`Games/Components/GameScorecardGrid`) knows nothing about game types. It renders
   `GameCardModel`, which reduces each scoreboard to sides, per-hole winners (`Awards`, with an optional
   tag like `L`/`H`/`×3`), a result chip and a running standing. **A new game type adds one case to
@@ -307,7 +314,7 @@ var(--rz-warning)    var(--rz-info)
 | Buttons | `RadzenButton` (ButtonStyle, Variant, Size) |
 | Forms | `RadzenFormField`, `RadzenTextBox`, `RadzenDropDown` |
 | Dialogs | `DialogService.OpenAsync<TComponent>()` |
-| Notifications | `NotificationService.SendToastMessage()` |
+| Notifications | `NotificationService.Notify(new NotificationMessage { ... })` |
 | Data grids | `RadzenDataGrid` |
 | Loading | `RadzenProgressBarCircular` |
 | Alerts | `RadzenAlert` |
@@ -357,7 +364,12 @@ var result = await DialogService.OpenAsync<MyDialog>("Title",
 if (result == true)
 {
     await LoadData();
-    NotificationService.SendToastMessage("Success", NotificationType.Success);
+    NotificationService.Notify(new NotificationMessage
+    {
+        Severity = NotificationSeverity.Success,
+        Summary = "Saved",
+        Duration = 4000
+    });
 }
 ```
 

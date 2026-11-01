@@ -24,6 +24,9 @@ public class ResetPasswordResult
     public bool Success { get; set; }
     public string? Error { get; set; }
 
-    public static ResetPasswordResult Ok() => new() { Success = true };
+    /// <summary>The account whose password changed, set on success so the caller can end its sessions.</summary>
+    public string? UserId { get; set; }
+
+    public static ResetPasswordResult Ok(string userId) => new() { Success = true, UserId = userId };
     public static ResetPasswordResult Fail(string error) => new() { Success = false, Error = error };
 }

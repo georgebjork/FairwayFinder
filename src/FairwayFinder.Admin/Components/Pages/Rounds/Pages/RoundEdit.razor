@@ -352,11 +352,8 @@ else
         foreach (var e in _state.HoleEntries)
         {
             var diff = e.Score - e.Par;
-            if (diff <= -3)
-            {
-                if (e.Score == 1) stats.HolesInOne++;
-                else stats.DoubleEagles++;
-            }
+            if (e.Score == 1) stats.HolesInOne++;
+            else if (diff <= -3) stats.DoubleEagles++;
             else if (diff == -2) stats.Eagles++;
             else if (diff == -1) stats.Birdies++;
             else if (diff == 0) stats.Pars++;

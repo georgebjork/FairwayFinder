@@ -290,6 +290,15 @@ public class GameService : IGameService
             UpdatedBy = userId,
         };
 
+        // Link the round before anything is saved, so the participant and its round land in one
+        // SaveChanges. A link that fails (someone else's round, the wrong course) must not leave
+        // the golfer in the game without it.
+        if (request.RoundId is { } roundId)
+        {
+            var link = await ApplyRoundLinkAsync(dbContext, game, participant, roundId, userId);
+            if (link is not null) return link;
+        }
+
         dbContext.GameParticipants.Add(participant);
 
         try
@@ -301,14 +310,6 @@ public class GameService : IGameService
             // Two devices joined at once. The other one won; that is the same outcome.
             _logger.LogInformation(ex, "Concurrent join of game {GameId} by {UserId}", game.GameId, userId);
             return Fail(GameResultStatus.AlreadyJoined);
-        }
-
-        if (request.RoundId is { } roundId)
-        {
-            var link = await ApplyRoundLinkAsync(dbContext, game, participant, roundId, userId);
-            if (link is not null) return link;
-
-            await dbContext.SaveChangesAsync();
         }
 
         CaptureGameEvent(userId, AnalyticsEvents.GameJoined, game);

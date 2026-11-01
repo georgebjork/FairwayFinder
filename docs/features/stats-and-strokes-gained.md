@@ -87,7 +87,7 @@ show two levels side by side; see [../admin/console.md](../admin/console.md).
 | `BallStriking` | FIR %, GIR %, off-the-tee penalty %, each with a trend slope and per-round trend points | `CalculateBallStriking`, `BuildFirTrend`, `BuildGirTrend`, `BuildTeePenaltyTrend` | `UsingHoleStats` rounds |
 | `ShortGame` | Up-and-down %, average putts (18/9), average 3-putts (18/9), slopes and trend points | `CalculateShortGame`, `BuildPuttsTrend`, `BuildThreePuttsTrend`, `BuildUpAndDownTrend` | `UsingHoleStats` rounds |
 | `ParTypeScoring` | Average score and count on par 3s, 4s, 5s | `CalculateParTypeScoring` | All holes with a score |
-| `ScoringDistribution` | Sum of each round's `round_stats` counts | `AggregateScoringDistribution` | Rounds with a `round_stats` row |
+| `ScoringDistribution` | Sum of each round's `round_stats` counts (a score of 1 counts as an ace on any par, never also as an eagle) | `AggregateScoringDistribution` | Rounds with a `round_stats` row |
 | `MostPlayedCourses` | Top N courses by round count (default 5) with 18/9 averages | `CalculateCourseStats` | All |
 | `StrokesGained` | Average SG summary, trend slopes, and total/putting/tee-to-green trend points with a 3-round moving average | `AggregateStoredSg`, `BuildSgTrendFromStored` in `StatsService` | Rounds with a non-null `StrokesGained` (shot-tracked) |
 
@@ -161,13 +161,13 @@ arrays indexed by distance for O(1) lookup.
 |---|---|---|
 | Green | 1–90 feet | Lie is `Green`, or the distance unit is `feet` (whatever the lie) |
 | Tee | 100–600 yards | Lie is `Tee` |
-| Fairway | 3–600 yards | Lie is `Fairway` (and any unknown lie) |
-| Rough | 3–600 yards | Lie is `Rough` |
-| Sand | 3–600 yards | Lie is `Sand` |
+| Fairway | 3–598 yards | Lie is `Fairway` (and any unknown lie) |
+| Rough | 3–598 yards | Lie is `Rough` |
+| Sand | 3–598 yards | Lie is `Sand` |
 
-Distances below a table's minimum clamp to the first value, above the maximum to the last.
-Caveat: the fairway, rough and sand arrays hold 596 values (3–598 yards), not 598, so a 599 or 600
-yard lookup on those lies indexes past the end and throws. Tee and green arrays are complete. A distance
+Distances below a table's minimum clamp to the first value, above the maximum to the last. The
+upper bound is taken from each array's length rather than a constant, so the fairway, rough and sand
+tables (whose source data stops at 598 yards) return their 598-yard value for 599, 600 and beyond. A distance
 of 0 or less returns 0 ("in the hole"), which is why shot validation rejects zero start distances.
 
 ### Categories (`StrokesGainedCalculator.ClassifyShot`)
@@ -269,8 +269,7 @@ The spec is still the best explanation of SG concepts, penalty-shot examples and
 
 1. **Make sure the data exists on `RoundResponse`.** If it needs a new per-hole field, add it to the
    entity and `hole_stats`, to `IHoleStatSource` and both request DTOs, and to
-   `RoundScoringHelper.ApplyClientHoleStat`/`ApplyDerivedHoleStat` (and the inline copy in
-   `RoundService.UpdateRoundAsync`). See [rounds.md](rounds.md#changing-scoring).
+   `RoundScoringHelper.ApplyClientHoleStat`/`ApplyDerivedHoleStat`. See [rounds.md](rounds.md#changing-scoring).
 2. **Write the calculation as a pure static method in `StatsCalculator`** taking
    `IReadOnlyList<RoundResponse>`. Decide which rounds it uses (all, or `UsingHoleStats` only) and
    whether it splits 18/9. If it is a percentage across holes, count holes, do not average

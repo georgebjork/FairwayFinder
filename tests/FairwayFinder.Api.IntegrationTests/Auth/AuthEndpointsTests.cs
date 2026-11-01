@@ -82,6 +82,19 @@ public class AuthEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
     }
 
     [Fact]
+    public async Task Login_with_an_invalid_payload_returns_validation_problem_details()
+    {
+        using var client = AnonymousClient();
+        var response = await client.PostAsJsonAsync("/api/auth/login",
+            new LoginRequest { Email = "not-an-email", Password = "" });
+
+        var problem = await ReadAsync<JsonElement>(response, HttpStatusCode.BadRequest);
+        var errors = problem.GetProperty("errors");
+        Assert.True(errors.TryGetProperty("Email", out _));
+        Assert.True(errors.TryGetProperty("Password", out _));
+    }
+
+    [Fact]
     public async Task Repeated_failed_logins_lock_the_account_even_for_the_right_password()
     {
         var user = await Data.CreateUserAsync();
@@ -327,6 +340,28 @@ public class AuthEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
         await AssertStatusAsync(HttpStatusCode.NoContent, reset);
 
         await LoginAsync(user.Email!, "brand-new-password");
+    }
+
+    [Fact]
+    public async Task Resetting_the_password_signs_out_every_existing_session()
+    {
+        var user = await Data.CreateUserAsync(roles: ApplicationRoles.User);
+        var before = await LoginAsync(user.Email!, TestData.DefaultPassword);
+
+        using var client = AnonymousClient();
+        await AssertStatusAsync(HttpStatusCode.NoContent, await client.PostAsJsonAsync("/api/auth/forgot-password",
+            new ForgotPasswordRequest { Email = user.Email! }));
+        var query = QueryHelpers.ParseQuery(new Uri(Email.LastTo(user.Email!, SentEmailKind.PasswordReset).Link).Query);
+        await AssertStatusAsync(HttpStatusCode.NoContent, await client.PostAsJsonAsync("/api/auth/reset-password",
+            new ResetPasswordRequest { Email = query["email"]!, Token = query["token"]!, NewPassword = "brand-new-password" }));
+
+        var refresh = await client.PostAsJsonAsync("/api/auth/refresh", new RefreshRequest { RefreshToken = before.RefreshToken });
+        await AssertStatusAsync(HttpStatusCode.Unauthorized, refresh);
+
+        // Signing in with the new password starts a fresh session as normal.
+        var after = await LoginAsync(user.Email!, "brand-new-password");
+        await AssertStatusAsync(HttpStatusCode.OK, await client.PostAsJsonAsync("/api/auth/refresh",
+            new RefreshRequest { RefreshToken = after.RefreshToken }));
     }
 
     [Fact]

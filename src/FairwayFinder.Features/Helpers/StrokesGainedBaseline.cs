@@ -73,52 +73,30 @@ public static class StrokesGainedBaseline
     // ================================================================
 
     // Green: feet 1..90 → GreenData[feet - 1]
-    private static double LookupGreen(int feet)
-    {
-        if (feet < 1) return GreenData[0];
-        if (feet > GreenMaxFeet) return GreenData[^1];
-        return GreenData[feet - 1];
-    }
+    private static double LookupGreen(int feet) => Lookup(GreenData, GreenMinFeet, feet);
 
     // Tee: yards 100..600 → TeeData[yards - 100]
-    private static double LookupTee(int yards)
-    {
-        if (yards < TeeMinYards) return TeeData[0];
-        if (yards > TeeMaxYards) return TeeData[^1];
-        return TeeData[yards - TeeMinYards];
-    }
+    private static double LookupTee(int yards) => Lookup(TeeData, TeeMinYards, yards);
 
-    // Fairway/Rough/Sand: yards 3..600 → Data[yards - 3]
-    private static double LookupFairway(int yards)
-    {
-        if (yards < ShotMinYards) return FairwayData[0];
-        if (yards > ShotMaxYards) return FairwayData[^1];
-        return FairwayData[yards - ShotMinYards];
-    }
+    // Fairway/Rough/Sand: yards 3..598 → Data[yards - 3]. The source table stops at 598, so 599+
+    // takes the 598 value like any other distance past the end.
+    private static double LookupFairway(int yards) => Lookup(FairwayData, ShotMinYards, yards);
 
-    private static double LookupRough(int yards)
-    {
-        if (yards < ShotMinYards) return RoughData[0];
-        if (yards > ShotMaxYards) return RoughData[^1];
-        return RoughData[yards - ShotMinYards];
-    }
+    private static double LookupRough(int yards) => Lookup(RoughData, ShotMinYards, yards);
 
-    private static double LookupSand(int yards)
-    {
-        if (yards < ShotMinYards) return SandData[0];
-        if (yards > ShotMaxYards) return SandData[^1];
-        return SandData[yards - ShotMinYards];
-    }
+    private static double LookupSand(int yards) => Lookup(SandData, ShotMinYards, yards);
+
+    // The upper bound comes from the array itself, so a table that is shorter (or longer) than its
+    // nominal range clamps to its last value instead of indexing past the end.
+    private static double Lookup(double[] data, int minKey, int key) =>
+        data[Math.Clamp(key - minKey, 0, data.Length - 1)];
 
     // ================================================================
     // Constants
     // ================================================================
-    private const int GreenMaxFeet = 90;
+    private const int GreenMinFeet = 1;
     private const int TeeMinYards = 100;
-    private const int TeeMaxYards = 600;
     private const int ShotMinYards = 3;
-    private const int ShotMaxYards = 600;
-
     // ================================================================
     // Green data — feet 1..90 (from putt_baseline.csv)
     // ================================================================
@@ -194,7 +172,7 @@ public static class StrokesGainedBaseline
     ];
 
     // ================================================================
-    // Fairway data — yards 3..600 (from shot_baseline.csv)
+    // Fairway data — yards 3..598 (from shot_baseline.csv)
     // ================================================================
     private static readonly double[] FairwayData =
     [
@@ -257,11 +235,11 @@ public static class StrokesGainedBaseline
         4.83, 4.84, 4.84, 4.84, 4.84, 4.85, 4.85, 4.85, 4.85, 4.86, // 563-572
         4.86, 4.86, 4.86, 4.87, 4.87, 4.87, 4.87, 4.87, 4.87, 4.88, // 573-582
         4.88, 4.88, 4.88, 4.88, 4.88, 4.88, 4.89, 4.89, 4.89, 4.89, // 583-592
-        4.89, 4.89, 4.90, 4.90, 4.90, 4.90                            // 593-598 (through 600)
+        4.89, 4.89, 4.90, 4.90, 4.90, 4.90                            // 593-598
     ];
 
     // ================================================================
-    // Rough data — yards 3..600 (from shot_baseline.csv)
+    // Rough data — yards 3..598 (from shot_baseline.csv)
     // ================================================================
     private static readonly double[] RoughData =
     [
@@ -324,11 +302,11 @@ public static class StrokesGainedBaseline
         5.07, 5.07, 5.07, 5.07, 5.08, 5.08, 5.08, 5.08, 5.09, 5.09, // 563-572
         5.09, 5.09, 5.10, 5.10, 5.10, 5.10, 5.10, 5.10, 5.11, 5.11, // 573-582
         5.11, 5.11, 5.11, 5.11, 5.11, 5.12, 5.12, 5.12, 5.12, 5.12, // 583-592
-        5.12, 5.12, 5.12, 5.13, 5.13, 5.13                            // 593-598 (through 600)
+        5.12, 5.12, 5.12, 5.13, 5.13, 5.13                            // 593-598
     ];
 
     // ================================================================
-    // Sand data — yards 3..600 (from shot_baseline.csv)
+    // Sand data — yards 3..598 (from shot_baseline.csv)
     // ================================================================
     private static readonly double[] SandData =
     [
@@ -391,6 +369,6 @@ public static class StrokesGainedBaseline
         5.51, 5.51, 5.51, 5.51, 5.51, 5.52, 5.52, 5.52, 5.52, 5.52, // 563-572
         5.52, 5.52, 5.52, 5.52, 5.52, 5.52, 5.52, 5.52, 5.52, 5.52, // 573-582
         5.52, 5.52, 5.52, 5.52, 5.52, 5.52, 5.52, 5.52, 5.52, 5.52, // 583-592
-        5.52, 5.52, 5.52, 5.52, 5.52, 5.52                            // 593-598 (through 600)
+        5.52, 5.52, 5.52, 5.52, 5.52, 5.52                            // 593-598
     ];
 }
