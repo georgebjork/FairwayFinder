@@ -5,7 +5,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.FileProviders.Physical;
 
 // Static site generator: renders each page component to an HTML file and copies wwwroot next to
-// them. The output folder is what DigitalOcean App Platform serves (see Dockerfile).
+// them. The output folder is what DigitalOcean App Platform serves (docs/architecture/deployment.md).
 //
 //   dotnet run --project src/FairwayFinder.Landing -- [outputDir]           generate (default: ./dist)
 //   dotnet run --project src/FairwayFinder.Landing -- --serve [outputDir]   generate, then serve it locally
@@ -79,7 +79,13 @@ static async Task GenerateAsync(string outputDir)
     var assetsDir = Path.Combine(AppContext.BaseDirectory, "wwwroot");
     foreach (var source in Directory.EnumerateFiles(assetsDir, "*", SearchOption.AllDirectories))
     {
-        var target = Path.Combine(outputDir, Path.GetRelativePath(assetsDir, source));
+        // `dotnet publish` (App Platform's buildpack) adds the Blazor runtime scripts to wwwroot.
+        // The site is plain HTML and never loads them.
+        var relative = Path.GetRelativePath(assetsDir, source);
+        if (relative.StartsWith("_framework" + Path.DirectorySeparatorChar))
+            continue;
+
+        var target = Path.Combine(outputDir, relative);
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         File.Copy(source, target, overwrite: true);
         Console.WriteLine($"  {Path.GetRelativePath(outputDir, target)}");

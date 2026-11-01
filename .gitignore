@@ -488,3 +488,4 @@ $RECYCLE.BIN/
 
 # Landing site generator output
 src/FairwayFinder.Landing/dist/
+src/FairwayFinder.Landing/_static/

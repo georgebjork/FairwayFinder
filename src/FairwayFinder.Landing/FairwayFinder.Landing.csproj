@@ -6,6 +6,11 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <!-- The site is served by App Platform's CDN, which compresses on its own. -->
         <CompressionEnabled>false</CompressionEnabled>
+        <!-- App Platform's .NET buildpack publishes with a runtime identifier, then runs the build
+             command in a shell without `dotnet` on the PATH. Self-contained, the published launcher
+             (bin/publish/FairwayFinder.Landing) runs the generator without one. Only when a runtime
+             is given, so `dotnet run` locally is unaffected. -->
+        <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
     </PropertyGroup>
 
     <ItemGroup>
