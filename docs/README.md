@@ -10,7 +10,7 @@ Start with [Getting started](getting-started.md), then [Architecture overview](a
 |---|---|
 | [Overview](architecture/overview.md) | System context, the two hosts, projects, dependency flow, layering rules |
 | [Hosting and configuration](architecture/hosting-and-configuration.md) | Both `Program.cs` pipelines, Aspire AppHost, ServiceDefaults, DI registration, every config key |
-| [Deployment](architecture/deployment.md) | CI/CD workflows, containers, environments |
+| [Deployment](architecture/deployment.md) | CI/CD workflows, containers, environments, the static landing site |
 
 ## Data
 

@@ -1,0 +1,39 @@
+name: Deploy Landing Image to GHCR
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/FairwayFinder.Landing/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # No build-and-test.yml here: the landing site references no other project and has no tests.
+  # The image build itself compiles the project and runs the generator, so a broken page fails it.
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src/FairwayFinder.Landing
+          file: ./src/FairwayFinder.Landing/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/georgebjork/fairwayfinder-landing:latest
+            ghcr.io/georgebjork/fairwayfinder-landing:${{ github.sha }}

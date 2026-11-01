@@ -15,6 +15,7 @@
     <ItemGroup>
         <ProjectReference Include="..\FairwayFinder.Api\FairwayFinder.Api.csproj" />
         <ProjectReference Include="..\FairwayFinder.Admin\FairwayFinder.Admin.csproj" />
+        <ProjectReference Include="..\FairwayFinder.Landing\FairwayFinder.Landing.csproj" />
     </ItemGroup>
 
 </Project>

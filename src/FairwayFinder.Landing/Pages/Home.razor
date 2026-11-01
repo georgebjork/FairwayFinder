@@ -1,0 +1,103 @@
+<SiteLayout Title="@($"{Site.Name}: golf stats for iPhone")">
+    <header class="hero">
+        <div class="wrap hero-grid">
+            <div class="hero-copy">
+                <img class="wordmark" src="/img/wordmark-white.png" alt="@Site.Name" width="317" height="96">
+                <h1>Know where your strokes go.</h1>
+                <p class="lede">
+                    Log your round hole by hole as you play. FairwayFinder turns it into the stats that
+                    actually move your score, and keeps the side games with your group honest.
+                </p>
+                <a class="cta" href="@Site.AppInstallUrl">@Site.AppInstallLabel</a>
+                <p class="fine">iPhone only. Free while in beta.</p>
+            </div>
+
+            <figure class="card" aria-label="Example front nine scorecard">
+                <figcaption>
+                    <span>Front nine</span>
+                    <strong>+2</strong>
+                </figcaption>
+                <table>
+                    <tr><th>Hole</th>@foreach (var h in _card) { <td>@h.Hole</td> }<td class="tot">Out</td></tr>
+                    <tr><th>Par</th>@foreach (var h in _card) { <td>@h.Par</td> }<td class="tot">@_card.Sum(h => h.Par)</td></tr>
+                    <tr class="score">
+                        <th>Score</th>
+                        @foreach (var h in _card)
+                        {
+                            <td><span class="mark @Mark(h)">@h.Score</span></td>
+                        }
+                        <td class="tot">@_card.Sum(h => h.Score)</td>
+                    </tr>
+                </table>
+                <dl class="card-stats">
+                    <div><dt>Fairways</dt><dd>5/7</dd></div>
+                    <div><dt>Greens</dt><dd>4/9</dd></div>
+                    <div><dt>Putts</dt><dd>15</dd></div>
+                    <div><dt>SG: Putting</dt><dd class="up">+1.2</dd></div>
+                </dl>
+            </figure>
+        </div>
+    </header>
+
+    <main>
+        <section class="wrap" aria-label="Features">
+            <div class="features">
+            <article>
+                <h2>Hole by hole, as you play</h2>
+                <p>
+                    Enter each hole when you walk off the green. Close the app mid-round and pick up
+                    where you left off. Add fairway, green and putt details, or log every shot.
+                </p>
+            </article>
+            <article>
+                <h2>Strokes gained</h2>
+                <p>
+                    See what you gain or lose off the tee, on approach, around the green and putting,
+                    measured against a scratch golfer, a tour pro, or a handicap level closer to yours.
+                </p>
+            </article>
+            <article>
+                <h2>Stats that follow you</h2>
+                <p>
+                    Scoring averages, trends, fairways and greens, par-3/4/5 splits and a scoring
+                    breakdown for every course and every hole you play.
+                </p>
+            </article>
+            <article>
+                <h2>Games with your group</h2>
+                <p>
+                    Match play, skins and high-low, scored live from the round you're already logging.
+                    No more arguing over the napkin in the clubhouse.
+                </p>
+            </article>
+            </div>
+        </section>
+
+        <section class="closer">
+            <div class="wrap">
+                <h2>Your next round is the first data point.</h2>
+                <a class="cta" href="@Site.AppInstallUrl">@Site.AppInstallLabel</a>
+            </div>
+        </section>
+    </main>
+</SiteLayout>
+
+@code {
+    private record CardHole(int Hole, int Par, int Score);
+
+    private static readonly CardHole[] _card =
+    [
+        new(1, 4, 4), new(2, 5, 4), new(3, 3, 3), new(4, 4, 5), new(5, 4, 4),
+        new(6, 3, 4), new(7, 5, 5), new(8, 4, 6), new(9, 4, 3),
+    ];
+
+    // Circle for under par, square for over: the same notation as the app and admin scorecards.
+    private static string Mark(CardHole h) => (h.Score - h.Par) switch
+    {
+        <= -2 => "eagle",
+        -1 => "birdie",
+        0 => "par",
+        1 => "bogey",
+        _ => "double",
+    };
+}

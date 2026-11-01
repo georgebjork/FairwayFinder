@@ -54,6 +54,13 @@ builder.AddProject<Projects.FairwayFinder_Api>("fairwayfinder-api")
     .WithHttpHealthCheck("/health")
     .WithDashboardLinks("API", ("Scalar", "/scalar/"));
 
+// The static marketing site. Generates the HTML at startup and serves it; restart the resource to
+// pick up edits. Production is a DigitalOcean static site, not this process.
+builder.AddProject<Projects.FairwayFinder_Landing>("fairwayfinder-landing")
+    .WithArgs("--serve")
+    .WithHttpHealthCheck("/")
+    .WithDashboardLinks("Landing page");
+
 builder.Build().Run();
 
 static class ResourceBuilderExtensions

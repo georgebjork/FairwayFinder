@@ -78,6 +78,7 @@ There is no public-facing web UI. Don't add end-user features to the admin conso
 | **FairwayFinder.Data** | EF Core DbContext, entity configurations, migrations |
 | **FairwayFinder.Identity** | ASP.NET Core Identity user/role types. The password policy is configured in each host (`Api/Program.cs`, `Admin/Startup/AuthenticationConfiguration.cs`); keep the two identical |
 | **FairwayFinder.Agents** | LLM agent integration with OpenAI and Claude factories (`ScorecardScoresReaderAgent` for scorecard OCR). **Currently unreferenced** — kept for a future API-side scorecard scan feature |
+| **FairwayFinder.Landing** | Static marketing site for fairwayfinder.pro: Razor components rendered to HTML at build time, hosted as a DigitalOcean App Platform static site. References no other project |
 | **FairwayFinder.Shared** | Shared settings/models |
 | **FairwayFinder.ServiceDefaults** | Aspire service defaults (telemetry, health checks) shared by Admin and Api |
 | **FairwayFinder.AppHost** | .NET Aspire orchestration for local dev |
@@ -89,7 +90,7 @@ Admin → Features → Data → Shared
 Admin → Identity, ServiceDefaults
 Api   → Features → Data → Shared
 Api   → Identity, ServiceDefaults
-AppHost orchestrates PostgreSQL (+ PgWeb) + Admin + Api
+AppHost orchestrates PostgreSQL (+ PgWeb) + Admin + Api + Landing (local preview)
 ```
 
 Both hosts call `RegisterFeatureServices()` for the shared domain layer. The Admin app additionally calls `RegisterAdminServices()`, which registers the cross-user admin services, the TGTR transfer tool, and the GolfCourseAPI import pipeline (including its hosted background job) — none of which the API can reach, so it doesn't register them.

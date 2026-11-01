@@ -30,8 +30,9 @@ dotnet run --project src/FairwayFinder.AppHost/
 - **PgWeb** (`fairwayfinder-pgweb`), a browser SQL client. It has explicit start, so click Start on it in the dashboard when you want it.
 - **`fairwayfinder-admin`**: the admin console. It waits for both databases, then runs migrations and seeding on startup.
 - **`fairwayfinder-api`**: the API, with a dashboard link to the Scalar API reference at `/scalar/`.
+- **`fairwayfinder-landing`**: the static marketing site, generated at startup and served on `http://localhost:5310`. It doesn't watch files, so restart it in the dashboard after editing a page.
 
-The Aspire dashboard opens at `https://localhost:17065` (https launch profile) or `http://localhost:15238` (http). Each project's main link is labelled "Admin console" / "API".
+The Aspire dashboard opens at `https://localhost:17065` (https launch profile) or `http://localhost:15238` (http). Each project's main link is labelled "Admin console" / "API" / "Landing page".
 
 Do not bump the Postgres image tag casually. The comment in `AppHost.cs` explains why it is pinned: Aspire 13.6 defaults to Postgres 18, which cannot open the existing PG17 volume, and the plain `17.6` tag moved from Debian bookworm to trixie, whose glibc collation version breaks `CREATE DATABASE`. Either change needs a dump/restore or a reindex first.
 

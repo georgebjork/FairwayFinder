@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <!-- The site is served by App Platform's CDN, which compresses on its own. -->
+        <CompressionEnabled>false</CompressionEnabled>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Copied as-is into the generated site; the generator reads them from the build output. -->
+        <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+</Project>
