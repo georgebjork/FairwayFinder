@@ -234,6 +234,8 @@ When you add an admin action on someone else's data, pass the target id in, look
 - `IStatsService.GetAvailableYearsAsync(userId)`, `GetUserCoursesAsync(userId)` for the filter options
 - `IStatsService.GetUserStatsAsync(userId, filter, level)`, called once per level, or once when both levels match
 
+**Compare years** (the mode switch at the start of the filter bar): pick two or three years (defaults to the two most recent) and every table becomes one column per year plus a **Change** column (newest − oldest), coloured green for an improvement and red for a regression. Course, round type and baseline level still apply; the date range is hidden because it would override `Year` and make every column identical. Trends are dropped (they are within-period slopes), and the scoring distribution is shown as a share of holes played so a busier year doesn't look better. Calls `GetUserStatsAsync` once per year, sequentially (the calls share one `DbContext`). The rows and better/worse rules live in `Stats/Components/YearComparisonModel.cs`, rendered by `YearComparison.razor` and covered by `YearComparisonModelTests`.
+
 `IStatsService` takes the target user id and level as plain parameters with no ownership guard, which lets the console compute anyone's stats.
 
 **`/stats/{userId}/course/{courseId}`**: one golfer on one course, with teebox, full-round and level filters, a per-hole grid (`Courses/Components/CourseHoleStatsGrid.razor`), metric tables, and round history (`Courses/Components/CourseRoundHistoryGrid.razor`, linking to `/rounds/{id}` and showing exclusion state). Calls `IStatsService.GetCourseStatsAsync(userId, courseId, teeboxId, fullRoundOnly, level)` and `IRoundService.GetRoundsWithDetailsAsync(userId, StatsFilter, level)`.

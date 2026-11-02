@@ -1,0 +1,90 @@
+@using FairwayFinder.Features.Data
+
+@* Year-over-year diagnostics: one column per year (oldest → newest) and a change column. *@
+<RadzenStack Gap="1.5rem">
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" AlignItems="AlignItems.Center" Wrap="FlexWrap.Wrap">
+        @for (var i = 0; i < Years.Count; i++)
+        {
+            var stats = Stats[i];
+            <RadzenBadge BadgeStyle="BadgeStyle.Info" Shade="Shade.Lighter"
+                         Text="@($"{Years[i]}: {stats.TotalRounds} rounds · {stats.StrokesGained.RoundsIncluded} shot-tracked · {stats.BallStriking.RoundsIncluded} hole-tracked")" />
+        }
+    </RadzenStack>
+
+    <RadzenCard class="rz-p-4">
+        <RadzenStack Gap="0.1rem" class="rz-mb-3">
+            <RadzenText TextStyle="TextStyle.H5" class="rz-m-0">Strokes gained</RadzenText>
+            <RadzenText TextStyle="TextStyle.Caption" class="rz-m-0" style="color: var(--rz-text-secondary-color);">
+                Per-round averages; a year with no shot-tracked rounds shows —.
+            </RadzenText>
+        </RadzenStack>
+        @Grid(YearComparisonModel.StrokesGained(Stats))
+    </RadzenCard>
+
+    <RadzenRow Gap="1rem">
+        <RadzenColumn Size="12" SizeLG="6">
+            <RadzenCard class="rz-p-4" Style="height: 100%;">
+                <RadzenText TextStyle="TextStyle.H5" class="rz-mb-3">Scoring</RadzenText>
+                @Grid(YearComparisonModel.Scoring(Stats))
+            </RadzenCard>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeLG="6">
+            <RadzenCard class="rz-p-4" Style="height: 100%;">
+                <RadzenText TextStyle="TextStyle.H5" class="rz-mb-3">Ball striking</RadzenText>
+                @Grid(YearComparisonModel.BallStriking(Stats))
+            </RadzenCard>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeLG="6">
+            <RadzenCard class="rz-p-4" Style="height: 100%;">
+                <RadzenText TextStyle="TextStyle.H5" class="rz-mb-3">Short game</RadzenText>
+                @Grid(YearComparisonModel.ShortGame(Stats))
+            </RadzenCard>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeLG="6">
+            <RadzenCard class="rz-p-4" Style="height: 100%;">
+                <RadzenText TextStyle="TextStyle.H5" class="rz-mb-3">Par type &amp; distribution</RadzenText>
+                @Grid(YearComparisonModel.Distribution(Stats))
+            </RadzenCard>
+        </RadzenColumn>
+    </RadzenRow>
+
+    <RadzenText TextStyle="TextStyle.Caption" style="color: var(--rz-text-secondary-color);">
+        Change = @Years[^1] − @Years[0]. Green is an improvement, red a regression; distribution rows are a share of holes played.
+    </RadzenText>
+</RadzenStack>
+
+@code {
+    /// <summary>Years being compared, oldest first.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<int> Years { get; set; } = [];
+
+    /// <summary>One stats response per entry in <see cref="Years"/>, same order.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<UserStatsResponse> Stats { get; set; } = [];
+
+    private RenderFragment Grid(List<ComparisonRow> rows) =>
+        @<RadzenDataGrid Data="@rows" TItem="ComparisonRow" AllowSorting="false" GridLines="DataGridGridLines.Horizontal">
+            <Columns>
+                <RadzenDataGridColumn TItem="ComparisonRow" Property="Metric" Title="Metric" MinWidth="140px" />
+                @for (var i = 0; i < Years.Count; i++)
+                {
+                    var index = i;
+                    <RadzenDataGridColumn TItem="ComparisonRow" Title="@Years[index].ToString()" TextAlign="TextAlign.Right" Width="90px">
+                        <Template Context="row">@row.Values[index]</Template>
+                    </RadzenDataGridColumn>
+                }
+                <RadzenDataGridColumn TItem="ComparisonRow" Title="Change" TextAlign="TextAlign.Right" Width="110px">
+                    <Template Context="row">
+                        <span style="color: @ToneColor(row.Tone); font-weight: 600;">@row.ChangeText</span>
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>;
+
+    private static string ToneColor(ChangeTone tone) => tone switch
+    {
+        ChangeTone.Good => "var(--rz-success)",
+        ChangeTone.Bad => "var(--rz-danger)",
+        _ => "var(--rz-text-secondary-color)"
+    };
+}

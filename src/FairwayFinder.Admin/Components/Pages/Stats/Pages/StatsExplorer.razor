@@ -25,6 +25,13 @@
     <!-- Filters -->
     <RadzenCard class="rz-p-3">
         <RadzenStack Orientation="Orientation.Horizontal" Wrap="FlexWrap.Wrap" Gap="1rem" AlignItems="AlignItems.End">
+            <RadzenSelectBar TValue="bool" Value="@_compareMode" ValueChanged="OnModeChanged" Size="ButtonSize.Small">
+                <Items>
+                    <RadzenSelectBarItem Text="Single" Value="false" />
+                    <RadzenSelectBarItem Text="Compare years" Value="true" />
+                </Items>
+            </RadzenSelectBar>
+
             <RadzenFormField Text="Player" Variant="Variant.Outlined" Style="min-width: 280px;">
                 <RadzenDropDown TValue="string"
                                 Value="@_selectedUserId"
@@ -37,14 +44,29 @@
                                 Placeholder="Select a player" />
             </RadzenFormField>
 
-            <RadzenFormField Text="Year" Variant="Variant.Outlined" Style="width: 130px;">
-                <RadzenDropDown TValue="int?"
-                                Value="@_year"
-                                ValueChanged="OnYearChanged"
-                                Data="@_yearOptions"
-                                AllowClear="true"
-                                Placeholder="All" />
-            </RadzenFormField>
+            @if (_compareMode)
+            {
+                <RadzenFormField Text="Years (2–3)" Variant="Variant.Outlined" Style="min-width: 200px;">
+                    <RadzenDropDown TValue="IEnumerable<int>"
+                                    Multiple="true"
+                                    Chips="true"
+                                    Value="@_compareYears"
+                                    ValueChanged="OnCompareYearsChanged"
+                                    Data="@_yearOptions"
+                                    Placeholder="Pick 2–3 years" />
+                </RadzenFormField>
+            }
+            else
+            {
+                <RadzenFormField Text="Year" Variant="Variant.Outlined" Style="width: 130px;">
+                    <RadzenDropDown TValue="int?"
+                                    Value="@_year"
+                                    ValueChanged="OnYearChanged"
+                                    Data="@_yearOptions"
+                                    AllowClear="true"
+                                    Placeholder="All" />
+                </RadzenFormField>
+            }
 
             <RadzenFormField Text="Course" Variant="Variant.Outlined" Style="min-width: 220px;">
                 <RadzenDropDown TValue="long?"
@@ -67,15 +89,28 @@
                                 Placeholder="All" />
             </RadzenFormField>
 
-            <RadzenFormField Text="From" Variant="Variant.Outlined" Style="width: 150px;">
-                <RadzenDatePicker TValue="DateTime?" Value="@_startDate" ValueChanged="OnStartDateChanged"
-                                  DateFormat="MM/dd/yyyy" ShowTime="false" AllowClear="true" />
-            </RadzenFormField>
+            @if (_compareMode)
+            {
+                @* A date range would override Year and make every column identical, so compare mode drops it. *@
+                <RadzenFormField Text="Baseline" Variant="Variant.Outlined" Style="width: 150px;">
+                    <RadzenDropDown TValue="BaselineLevel" Value="@_primaryLevel" ValueChanged="OnPrimaryLevelChanged"
+                                    Data="@BaselineLevelExtensions.AllInDisplayOrder">
+                        <Template Context="level">@(((BaselineLevel)level).DisplayName())</Template>
+                    </RadzenDropDown>
+                </RadzenFormField>
+            }
+            else
+            {
+                <RadzenFormField Text="From" Variant="Variant.Outlined" Style="width: 150px;">
+                    <RadzenDatePicker TValue="DateTime?" Value="@_startDate" ValueChanged="OnStartDateChanged"
+                                      DateFormat="MM/dd/yyyy" ShowTime="false" AllowClear="true" />
+                </RadzenFormField>
 
-            <RadzenFormField Text="To" Variant="Variant.Outlined" Style="width: 150px;">
-                <RadzenDatePicker TValue="DateTime?" Value="@_endDate" ValueChanged="OnEndDateChanged"
-                                  DateFormat="MM/dd/yyyy" ShowTime="false" AllowClear="true" />
-            </RadzenFormField>
+                <RadzenFormField Text="To" Variant="Variant.Outlined" Style="width: 150px;">
+                    <RadzenDatePicker TValue="DateTime?" Value="@_endDate" ValueChanged="OnEndDateChanged"
+                                      DateFormat="MM/dd/yyyy" ShowTime="false" AllowClear="true" />
+                </RadzenFormField>
+            }
         </RadzenStack>
     </RadzenCard>
 
@@ -90,6 +125,19 @@
         <RadzenStack AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" class="rz-p-8">
             <RadzenProgressBarCircular ShowValue="false" Mode="ProgressBarMode.Indeterminate" />
         </RadzenStack>
+    }
+    else if (_compareMode)
+    {
+        @if (_comparedStats.Count < 2)
+        {
+            <RadzenAlert AlertStyle="AlertStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter" AllowClose="false">
+                @(_yearOptions.Count < 2 ? "This player has rounds in fewer than two years, so there is nothing to compare." : "Pick two or three years to compare.")
+            </RadzenAlert>
+        }
+        else
+        {
+            <YearComparison Years="@_comparedYears" Stats="@_comparedStats" />
+        }
     }
     else if (_primary is null)
     {
@@ -256,6 +304,11 @@
     private BaselineLevel _primaryLevel = BaselineLevel.Scratch;
     private BaselineLevel _compareLevel = BaselineLevel.Hcp10;
 
+    private bool _compareMode;
+    private IEnumerable<int> _compareYears = [];
+    private List<int> _comparedYears = new();
+    private List<UserStatsResponse> _comparedStats = new();
+
     private UserStatsResponse? _primary;
     private UserStatsResponse? _compare;
     private bool _loading;
@@ -287,6 +340,7 @@
         _year = null;
         _courseId = null;
         await LoadUserContextAsync();
+        _compareYears = DefaultCompareYears();
         await LoadAsync();
     }
 
@@ -302,6 +356,24 @@
         _yearOptions = await StatsService.GetAvailableYearsAsync(_selectedUserId);
         _courseOptions = await StatsService.GetUserCoursesAsync(_selectedUserId);
     }
+
+    private async Task OnModeChanged(bool compare)
+    {
+        _compareMode = compare;
+        if (compare && !_compareYears.Any())
+            _compareYears = DefaultCompareYears();
+        await LoadAsync();
+    }
+
+    private async Task OnCompareYearsChanged(IEnumerable<int> years)
+    {
+        // Cap at three; a fresh list instance makes the dropdown drop a fourth pick.
+        _compareYears = (years ?? []).Take(3).ToList();
+        await LoadAsync();
+    }
+
+    /// <summary>The two most recent years (GetAvailableYearsAsync returns newest first).</summary>
+    private List<int> DefaultCompareYears() => _yearOptions.Take(2).ToList();
 
     private async Task OnYearChanged(int? year) { _year = year; await LoadAsync(); }
     private async Task OnCourseChanged(long? courseId) { _courseId = courseId; await LoadAsync(); }
@@ -322,6 +394,13 @@
 
         _loading = true;
 
+        if (_compareMode)
+        {
+            await LoadComparisonAsync();
+            _loading = false;
+            return;
+        }
+
         var filter = new StatsFilter
         {
             FullRoundOnly = _fullRoundOnly,
@@ -341,10 +420,26 @@
         _loading = false;
     }
 
-    private static string Fmt(double value) => value.ToString("+0.00;-0.00;0.00");
+    /// <summary>
+    /// One stats call per year, oldest first. Sequential on purpose: every call shares the
+    /// circuit's scoped DbContext, which does not allow concurrent queries.
+    /// </summary>
+    private async Task LoadComparisonAsync()
+    {
+        _comparedYears = _compareYears.Order().ToList();
+        _comparedStats = new();
+        if (_comparedYears.Count < 2) return;
 
-    private static string Pct(double? value) => value.HasValue ? $"{value.Value:0.0}%" : "—";
-    private static string Num(double? value, string format = "0.00") => value.HasValue ? value.Value.ToString(format) : "—";
+        foreach (var year in _comparedYears)
+        {
+            var filter = new StatsFilter { FullRoundOnly = _fullRoundOnly, CourseId = _courseId, Year = year };
+            _comparedStats.Add(await StatsService.GetUserStatsAsync(_selectedUserId!, filter, level: _primaryLevel));
+        }
+    }
+
+    private static string Fmt(double value) => StatFormat.Signed(value);
+    private static string Pct(double? value) => StatFormat.Pct(value);
+    private static string Num(double? value, string format = "0.00") => StatFormat.Num(value, format);
 
     private List<SgRow> SgComparisonRows
     {
