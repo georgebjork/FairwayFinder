@@ -69,18 +69,35 @@ public class RateLimitingTests(ApiFactory factory) : ApiTestBase(factory)
     }
 
     [Fact]
-    public async Task Only_the_proxy_appended_forwarded_entry_counts()
+    public async Task A_golfer_served_by_different_cloudflare_edges_is_one_client()
     {
         using var host = LimitedHost();
 
-        // A client rotating a fake left-most entry is still one client: the proxy's entry is last.
+        // Production shape: the golfer (appended by Cloudflare), then the edge (appended by
+        // DigitalOcean's load balancer). The edge changes per request; the bucket must not.
+        foreach (var edge in new[] { "162.158.41.47", "108.162.246.250", "104.22.193.154" })
+        {
+            using var client = ClientFrom(host, $"203.0.113.10, {edge}");
+            await AssertStatusAsync(HttpStatusCode.Unauthorized, await AttemptLoginAsync(client));
+        }
+
+        using var again = ClientFrom(host, "203.0.113.10, 104.22.210.23");
+        await AssertStatusAsync(HttpStatusCode.TooManyRequests, await AttemptLoginAsync(again));
+    }
+
+    [Fact]
+    public async Task Only_the_proxy_appended_forwarded_entries_count()
+    {
+        using var host = LimitedHost();
+
+        // A client rotating a fake left-most entry is still one client: the proxies' entries are last.
         for (var i = 0; i < Limit; i++)
         {
-            using var client = ClientFrom(host, $"198.51.100.{i}, 203.0.113.10");
+            using var client = ClientFrom(host, $"198.51.100.{i}, 203.0.113.10, 162.158.41.47");
             await AttemptLoginAsync(client);
         }
 
-        using var spoofing = ClientFrom(host, "198.51.100.99, 203.0.113.10");
+        using var spoofing = ClientFrom(host, "198.51.100.99, 203.0.113.10, 162.158.41.47");
         await AssertStatusAsync(HttpStatusCode.TooManyRequests, await AttemptLoginAsync(spoofing));
     }
 

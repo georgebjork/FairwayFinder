@@ -16,15 +16,18 @@ public static class RateLimitingConfiguration
     /// the proxy's. Without it every client shares one rate-limit bucket.
     /// </summary>
     /// <remarks>
-    /// The proxy's address isn't known to the app, so any sender is trusted, but with the default
-    /// <c>ForwardLimit</c> of 1 only the last entry is used: the one the proxy appended. Entries a
-    /// client writes itself sit to its left and are ignored. That holds only while the container is
-    /// reachable solely through the proxy.
+    /// App Platform puts two proxies in front of the container, Cloudflare and then DigitalOcean's
+    /// load balancer, and each appends to the header: <c>[client-written...], client, cloudflare-edge</c>.
+    /// <c>ForwardLimit</c> 2 walks back past the edge to the address Cloudflare appended, which is the
+    /// golfer. Entries a client writes itself sit further left and are ignored. The proxies' addresses
+    /// aren't known to the app, so any sender is trusted; that holds only while the container is
+    /// reachable solely through App Platform. If the number of proxies changes, change the limit.
     /// </remarks>
     public static IServiceCollection AddFairwayFinderForwardedHeaders(this IServiceCollection services) =>
         services.Configure<ForwardedHeadersOptions>(options =>
         {
             options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            options.ForwardLimit = 2;
             options.KnownIPNetworks.Clear();
             options.KnownProxies.Clear();
         });

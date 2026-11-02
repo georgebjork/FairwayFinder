@@ -83,7 +83,7 @@ public class RequestLoggingMiddleware(
                 UserId = user.FindFirstValue(ClaimTypes.NameIdentifier),
                 UserEmail = user.FindFirstValue(ClaimTypes.Email),
                 // Already the client's address: UseForwardedHeaders runs first and takes it from the
-                // proxy's X-Forwarded-For entry (the left-most one is whatever the client claimed).
+                // X-Forwarded-For entry Cloudflare appended (anything further left is client-written).
                 IpAddress = context.Connection.RemoteIpAddress?.ToString(),
                 UserAgent = Truncate(context.Request.Headers.UserAgent.ToString(), 512),
                 TraceId = Activity.Current?.Id ?? context.TraceIdentifier
