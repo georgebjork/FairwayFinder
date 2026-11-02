@@ -1,4 +1,5 @@
 using FairwayFinder.Api.Exceptions;
+using FairwayFinder.Api.RateLimiting;
 using FairwayFinder.Api.Validators;
 using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Services.Interfaces;
@@ -13,7 +14,8 @@ public static class AuthEndpoints
     {
         var group = app.MapGroup("/api/auth")
             .WithTags("Auth")
-            .AllowAnonymous();
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitingConfiguration.AuthPolicy);
 
         group.MapPost("/login", async (
             LoginRequest request,

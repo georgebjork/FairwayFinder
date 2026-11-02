@@ -6,6 +6,7 @@ using FairwayFinder.Api.Endpoints;
 using FairwayFinder.Api.Exceptions;
 using FairwayFinder.Api.Middleware;
 using FairwayFinder.Api.OpenApi;
+using FairwayFinder.Api.RateLimiting;
 using FairwayFinder.Data;
 using FairwayFinder.Data.Entities;
 using FairwayFinder.Features;
@@ -122,6 +123,12 @@ builder.Services.AddScoped<RequestLoggingMiddleware>();
 builder.Services.AddHostedService<RequestLogWriter>();
 builder.Services.AddHostedService<RequestLogPurgeService>();
 
+// ── Rate Limiting ───────────────────────────────────────────
+var rateLimitingSettings = builder.Configuration.GetSection("RateLimiting").Get<RateLimitingSettings>()
+    ?? new RateLimitingSettings();
+builder.Services.AddFairwayFinderForwardedHeaders();
+builder.Services.AddFairwayFinderRateLimiting(rateLimitingSettings);
+
 // ── Exception Handling ──────────────────────────────────────
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -140,6 +147,8 @@ var app = builder.Build();
 app.MapDefaultEndpoints();
 
 // ── Middleware Pipeline ─────────────────────────────────────
+// First, so the logs and the rate limiter see the client's IP, not the proxy's.
+app.UseForwardedHeaders();
 app.UseFairwayFinderRequestLogging();
 app.UseExceptionHandler();
 
@@ -159,6 +168,10 @@ if (app.Environment.IsDevelopment())
             .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
     });
 }
+
+// After the request log, so a throttled request is still recorded (as a 429), and before
+// authentication, so a rejected one costs no token validation.
+app.UseRateLimiter();
 
 app.UseHttpsRedirection();
 app.UseAuthentication();

@@ -41,11 +41,12 @@ The order of the steps differs slightly between the two files (the Api reads the
 
 ```mermaid
 flowchart TD
-    a["MapDefaultEndpoints<br/>(/health, /alive in Development only)"] --> b["UseFairwayFinderRequestLogging<br/>(Serilog one-line summary)"]
+    a["MapDefaultEndpoints<br/>(/health, /alive in Development only)"] --> fh["UseForwardedHeaders<br/>(client IP from the proxy)"]
+    fh --> b["UseFairwayFinderRequestLogging<br/>(Serilog one-line summary)"]
     b --> c["UseExceptionHandler<br/>(GlobalExceptionHandler → ProblemDetails)"]
     c --> d["RequestLoggingMiddleware<br/>(api_request_log row via channel)"]
     d --> e["Development only:<br/>MapOpenApi, MapScalarApiReference"]
-    e --> f[UseHttpsRedirection] --> g[UseAuthentication] --> h["UseUserLogContext<br/>(UserId, UserEmail on log events)"]
+    e --> rl["UseRateLimiter<br/>(per-IP buckets)"] --> f[UseHttpsRedirection] --> g[UseAuthentication] --> h["UseUserLogContext<br/>(UserId, UserEmail on log events)"]
     h --> j[UseAuthorization]
     j --> k["Endpoint groups: auth, courses, rounds, stats, lookups,<br/>profile, friends, games, devices, admin invites"]
     j --> l["Public: /.well-known/apple-app-site-association,<br/>/register, /reset-password (anonymous)"]
@@ -191,6 +192,10 @@ Configuration comes from `appsettings.json`, `appsettings.{Environment}.json`, u
 | `RequestLogging:RetentionDays` | `RequestLogPurgeService` | No | 30 | |
 | `RequestLogging:ExcludedPathPrefixes` | `RequestLoggingMiddleware`; ServiceDefaults (both hosts) | No | health, docs, `/.well-known`, `/register`, `/reset-password` | Also excludes from traces and the request summary log |
 | `RequestLogging:ChannelCapacity` | Api `Program.cs` | No | 10000 | Overflow drops entries |
+| `RateLimiting:Enabled` | Api `RateLimitingConfiguration` | No | `true` | Off swaps every bucket for a no-op limiter. Tests set it `false` |
+| `RateLimiting:Auth:PermitLimit`, `:WindowSeconds` | Same | No | 10, 60 | Per IP, the `/api/auth` group |
+| `RateLimiting:Api:PermitLimit`, `:WindowSeconds` | Same | No | 300, 60 | Per IP, every matched endpoint |
+| `RateLimiting:Unmatched:PermitLimit`, `:WindowSeconds` | Same | No | 20, 600 | Per IP, paths no endpoint matches (scanners) |
 | `AppLogging:Enabled` | `RegisterFeatureServices` | No | `true` (class default; not in any appsettings) | Registers `DatabaseLogSink` |
 | `AppLogging:MinimumLevel` | `DatabaseLogSink` | No | `Warning` | Lowest level written to `app_log` |
 | `AppLogging:QueueLimit`, `AppLogging:FlushIntervalMs` | `DatabaseLogSink` | No | 10000, 2000 | |

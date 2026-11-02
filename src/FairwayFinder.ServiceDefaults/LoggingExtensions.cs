@@ -31,7 +31,10 @@ public static class LoggingExtensions
     public static TBuilder ConfigureSerilog<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
         // Deliberately no static Log.Logger / bootstrap logger: the integration tests build several
-        // hosts per process, and a frozen bootstrap logger can only be frozen once.
+        // hosts per process, and a frozen bootstrap logger can only be frozen once. For the same
+        // reason preserveStaticLogger is on: without it each host assigns its logger to Log.Logger
+        // and every host's ILoggers write through whichever was assigned last, so a second test
+        // host would capture (and on disposal, drop) the first host's events.
         builder.Services.AddSerilog((services, logger) =>
         {
             logger
@@ -63,7 +66,7 @@ public static class LoggingExtensions
                         };
                     }));
             }
-        });
+        }, preserveStaticLogger: true);
 
         return builder;
     }
