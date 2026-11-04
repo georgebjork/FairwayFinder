@@ -1,3 +1,4 @@
+using FairwayFinder.Features.Helpers;
 using FairwayFinder.Admin.IntegrationTests.Infrastructure;
 using FairwayFinder.Admin.Services;
 using FairwayFinder.Identity;
@@ -48,6 +49,7 @@ public class AdminStartupTests(AdminFactory factory) : AdminTestBase(factory)
         var seeded = await users.FindByEmailAsync(AdminFactory.SeedAdminEmail);
         Assert.NotNull(seeded);
         Assert.True(seeded.EmailConfirmed);
+        Assert.Null(UsernameRules.Validate(seeded.Handle));
         Assert.True(await users.IsInRoleAsync(seeded, ApplicationRoles.Admin));
         Assert.True(await users.CheckPasswordAsync(seeded, AdminFactory.SeedAdminPassword));
 

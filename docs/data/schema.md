@@ -163,6 +163,7 @@ erDiagram
         int preferred_tees
         int SgBaselineLevel
         bool IsSearchHidden
+        varchar Handle UK
         timestamptz CreatedOn
         timestamptz UpdatedOn
     }
@@ -394,6 +395,7 @@ Stock ASP.NET Core Identity schema (`AspNetUsers`, `AspNetRoles`, `AspNetUserRol
 | `preferred_tees` | `PreferredTees` as int: Mens 0, Womens 1. Default 0. The only snake_case column on the table. |
 | `SgBaselineLevel` | Default strokes-gained baseline, stored as the `BaselineLevel` enum's int (Scratch 0, Hcp5 5 … Hcp25 25, Tour -1). Kept as int to avoid an Identity → Features dependency. |
 | `IsSearchHidden` | Excludes the user from user/friend search. Default false. |
+| `Handle` | The golfer's username, `varchar(20)`, not null, always lowercase. Unique via `ix_aspnetusers_handle`, which is case-insensitive in effect because values are stored lowercase. Not Identity's `UserName` (that holds the email). Existing users were backfilled by the `AddUserHandle` migration. See [usernames](../features/users-and-social.md#usernames). |
 | `CreatedOn`, `UpdatedOn` | `timestamptz`, default `NOW()`. `ApplicationUser` is `IAuditable`, so the interceptor stamps them too. |
 
 `IsAdmin` is `[NotMapped]`.

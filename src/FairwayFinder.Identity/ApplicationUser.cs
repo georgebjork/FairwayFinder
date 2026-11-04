@@ -17,6 +17,11 @@ public class ApplicationUser : IdentityUser, IAuditable
     // When true, the user is excluded from user/friend search results.
     public bool IsSearchHidden { get; set; }
 
+    // The golfer's public username, used only to find friends — never to sign in. It is not
+    // Identity's UserName, which holds the email and is what the admin login signs in with.
+    // Always lowercase (see UsernameRules), unique, and changeable by the golfer at any time.
+    public string Handle { get; set; } = string.Empty;
+
     public DateTime CreatedOn { get; set; }
     public DateTime UpdatedOn { get; set; }
 

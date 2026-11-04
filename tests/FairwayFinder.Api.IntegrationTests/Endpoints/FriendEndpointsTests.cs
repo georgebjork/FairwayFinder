@@ -29,6 +29,46 @@ public class FriendEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
     }
 
     [Fact]
+    public async Task Search_tells_same_named_golfers_apart_by_username()
+    {
+        var me = await SignInNewUserAsync(firstName: "Searcher");
+        var first = await Data.CreateUserAsync(firstName: "Jordan", lastName: "Samename", username: "jordan_links");
+        var second = await Data.CreateUserAsync(firstName: "Jordan", lastName: "Samename", username: "jordan.par3");
+
+        var byName = await GetAsync<List<UserSearchResultResponse>>(me.Client, "/api/friends/search?query=jordan%20samename");
+        var byUsername = await GetAsync<List<UserSearchResultResponse>>(me.Client, "/api/friends/search?query=PAR3");
+
+        Assert.Equal("jordan_links", Assert.Single(byName, r => r.UserId == first.Id).Username);
+        Assert.Equal("jordan.par3", Assert.Single(byName, r => r.UserId == second.Id).Username);
+        Assert.Equal(second.Id, Assert.Single(byUsername).UserId);
+    }
+
+    [Fact]
+    public async Task At_prefix_searches_usernames_only_by_prefix()
+    {
+        var me = await SignInNewUserAsync(firstName: "Searcher");
+        var handle = await Data.CreateUserAsync(firstName: "Pat", lastName: "Handleowner", username: "birdieking");
+        await Data.CreateUserAsync(firstName: "Birdieking", lastName: "Byname", username: "someoneelse");
+        await Data.CreateUserAsync(firstName: "Kim", lastName: "Midmatch", username: "thebirdieking");
+
+        var results = await GetAsync<List<UserSearchResultResponse>>(me.Client, "/api/friends/search?query=%40BirdieK");
+
+        Assert.Equal(handle.Id, Assert.Single(results).UserId);
+    }
+
+    [Fact]
+    public async Task Underscore_in_a_query_is_matched_literally()
+    {
+        var me = await SignInNewUserAsync(firstName: "Searcher");
+        var underscored = await Data.CreateUserAsync(firstName: "Lee", lastName: "Underscore", username: "lee_wedge");
+        await Data.CreateUserAsync(firstName: "Lee", lastName: "Period", username: "lee.wedge");
+
+        var results = await GetAsync<List<UserSearchResultResponse>>(me.Client, "/api/friends/search?query=lee_wedge");
+
+        Assert.Equal(underscored.Id, Assert.Single(results).UserId);
+    }
+
+    [Fact]
     public async Task Search_needs_at_least_two_characters()
     {
         var me = await SignInNewUserAsync();

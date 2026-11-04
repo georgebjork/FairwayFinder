@@ -1,8 +1,10 @@
 @using FairwayFinder.Features.Services.Admin
 @using FairwayFinder.Features.Services.Interfaces
+@using FairwayFinder.Features.Helpers
 @using FairwayFinder.Admin.Components.Shared.Dialogs
 @inject DialogService DialogService
 @inject UserAdminService UserAdminService
+@inject IUsernameService UsernameService
 @inject IPasswordResetService PasswordResetService
 @inject NotificationService NotificationService
 @inject NavigationManager NavigationManager
@@ -32,6 +34,15 @@
                 <RadzenRequiredValidator Component="LastName" Text="Last name is required." />
             </RadzenFormField>
         </RadzenStack>
+
+        <RadzenFormField Text="Username">
+            <ChildContent>
+                <RadzenTextBox @bind-Value="_model.Username" Name="Username" />
+            </ChildContent>
+            <Helper>
+                <RadzenText TextStyle="TextStyle.Caption">Used by players to find friends, never to sign in.</RadzenText>
+            </Helper>
+        </RadzenFormField>
 
         @* ── Permissions & visibility ── *@
         <RadzenStack Gap="0.75rem">
@@ -97,6 +108,7 @@
         {
             FirstName = User.FirstName,
             LastName = User.LastName,
+            Username = User.Username,
             IsAdmin = User.IsAdmin,
             IsLockedOut = User.IsLockedOut,
             IsSearchHidden = User.IsSearchHidden
@@ -114,6 +126,13 @@
             LastName = _model.LastName
         });
         if (!nameResult.Succeeded) _errors.AddRange(nameResult.Errors.Select(e => e.Description));
+
+        // Keyed on the target user (User.Id), never the acting admin. Same rules as the app.
+        if (UsernameRules.Normalize(_model.Username) != User.Username)
+        {
+            var r = await UsernameService.ChangeUsernameAsync(User.Id, _model.Username);
+            if (!r.Success) _errors.Add(r.Error ?? "Could not change the username.");
+        }
 
         if (_model.IsAdmin != User.IsAdmin)
         {
@@ -226,6 +245,7 @@
     {
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
         public bool IsAdmin { get; set; }
         public bool IsLockedOut { get; set; }
         public bool IsSearchHidden { get; set; }

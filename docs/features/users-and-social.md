@@ -67,6 +67,7 @@ sequenceDiagram
     Api-->>iOS: { valid, email, reason }
     iOS->>Api: POST /api/auth/register { code, firstName, lastName, preferredTees, password, deviceName }
     Api->>Inv: ValidateInviteAsync(code) again
+    Api->>Api: UsernameService.GenerateDefaultAsync(first, last)
     Api->>Api: UserManager.CreateAsync (email from the invite, EmailConfirmed = true)
     Api->>Api: AddToRoleAsync(User)
     Api->>Inv: ClaimInviteAsync(code)
@@ -88,7 +89,7 @@ Admins can manage invites from the console (`/invites`) or through the API (`/ap
 
 ### Users created by an admin
 
-The admin console's `CreateUserDialog` (`src/FairwayFinder.Admin/Components/Pages/Users/Dialogs/CreateUserDialog.razor`) creates a confirmed account directly with `UserManager`, bypassing invites. It does not add the `User` role and does not create a profile (the profile appears on first `/api/profile` call; until then the user is not in friend search).
+The admin console's `CreateUserDialog` (`src/FairwayFinder.Admin/Components/Pages/Users/Dialogs/CreateUserDialog.razor`) creates a confirmed account directly with `UserManager`, bypassing invites. It assigns a default username, like registration. It does not add the `User` role and does not create a profile (the profile appears on first `/api/profile` call; until then the user is not in friend search).
 
 ## Profiles
 
@@ -113,6 +114,16 @@ The name, email, preferred tees and SG baseline level live on `ApplicationUser`,
 `DisplayNameHelper` (`src/FairwayFinder.Features/Helpers/DisplayNameHelper.cs`) is the one place a name is rendered. `Build(first, last, userName)` returns first + last, else the user name; `BuildForAdmin` falls back to email and then `"Unknown"`. It is not EF-translatable, so call it after `ToListAsync()`.
 
 `IsSearchHidden` on the user hides them from friend search. Only an admin can set it (`UserAdminService.SetSearchHiddenAsync`, from the Edit User dialog).
+
+## Usernames
+
+Many golfers share a name, so each one also has a unique **username** to find them by. It is only for finding friends. Nobody signs in with it.
+
+- **Storage.** `ApplicationUser.Handle`, a required column with a unique index (`ix_aspnetusers_handle`). It is called `Handle` in C# because Identity's own `UserName` already holds the email, and the admin login signs in with that. Every DTO and API field calls it `Username`.
+- **Rules** (`src/FairwayFinder.Features/Helpers/UsernameRules.cs`): 3 to 20 characters from `a-z 0-9 _ .`. It must start with a letter or digit, can't end with a period, and can't contain two periods in a row. Input is trimmed, a leading `@` is dropped, and it is lowercased before it is checked or stored. That's why uniqueness is case-insensitive. A short list of names is reserved (`admin`, `support`, `fairwayfinder`, …).
+- **Defaults.** Every account-creation path calls `IUsernameService.GenerateDefaultAsync(first, last)` before `UserManager.CreateAsync`: API registration, the admin Create User dialog, the seeded admin, and `TestData.CreateUserAsync`. It folds accents, keeps only `a-z0-9` from first + last name, and cuts that to 15 characters. Under 3 characters, it uses `golfer`. If that is taken or reserved, it adds a random 2-, then 3-, then 4-digit suffix. Registration retries once if a simultaneous sign-up wins the same name at the unique index.
+- **Existing accounts** were backfilled by the `AddUserHandle` migration. It runs the same algorithm in SQL, oldest account first, so the earliest John Smith got `johnsmith`. The SQL's reserved list must stay in step with `UsernameRules.Reserved`.
+- **Changing it.** `PUT /api/profile/username` works at any time, with no cooldown. Friendships and friend URLs use the user id and `PublicIdentifier`, so a rename breaks nothing. `GET /api/profile/username-available` lets the app check a name as it is typed. `UsernameService.ChangeUsernameAsync` returns a result status (`Ok`, `Invalid`, `Taken`, `NotFound`), and the endpoint maps it to 200/400/409. If a race loses at the unique index, the result is `Taken`. Admins change it from Edit User through the same method.
 
 ## Friendships
 
@@ -148,7 +159,7 @@ The service projects the stored status into a viewer-relative `FriendshipState` 
 
 ### User search
 
-`SearchUsersAsync(viewer, query, take = 20)` requires at least 2 characters (the endpoint returns 400 below that). It uses `EF.Functions.ILike` with `%query%` against first name, last name and `"First Last"`, excludes the viewer, `IsSearchHidden` users, and users without a profile. Results are ordered by first name, last name, then id, so `Take` is stable between calls. Each result carries the viewer's `FriendshipState` with that user.
+`SearchUsersAsync(viewer, query, take = 20)` requires at least 2 characters (the endpoint returns 400 below that). It uses `EF.Functions.ILike` with `%query%` against first name, last name, `"First Last"` and username. A query that starts with `@` matches usernames only, by prefix (`@birdie` finds `birdieking` but not `thebirdieking`). The query is LIKE-escaped, so `_` and `%` match literally; `_` is legal in usernames. It excludes the viewer, `IsSearchHidden` users, and users without a profile. Results put an exact username match first, then order by first name, last name and id, so `Take` is stable between calls. Each result carries the `Username`, which is how the app tells two golfers with the same name apart. Each result carries the viewer's `FriendshipState` with that user.
 
 ### Friend visibility
 
@@ -214,9 +225,11 @@ sequenceDiagram
 | Test file | Covers |
 |---|---|
 | `tests/FairwayFinder.Api.IntegrationTests/Auth/AuthEndpointsTests.cs` | Login, lockout, refresh rotation and reuse, invite lookup, register (role, profile, claim), forgot/reset password (including revoking earlier sessions), login validation. |
-| `tests/FairwayFinder.Api.IntegrationTests/Endpoints/FriendEndpointsTests.cs` | Search, request lifecycle, auto-accept/conflicts, removal, friend round/stats visibility, in-progress rounds hidden. |
+| `tests/FairwayFinder.Api.IntegrationTests/Endpoints/FriendEndpointsTests.cs` | Search (by name, by username, `@` prefix, literal `_`), request lifecycle, auto-accept/conflicts, removal, friend round/stats visibility, in-progress rounds hidden. |
 | `tests/FairwayFinder.Api.IntegrationTests/Endpoints/AdminInviteEndpointsTests.cs` | Admin invite endpoints. |
-| `tests/FairwayFinder.Api.IntegrationTests/Endpoints/ProfileAndLookupEndpointsTests.cs` | Profile endpoints. |
+| `tests/FairwayFinder.Api.IntegrationTests/Endpoints/ProfileAndLookupEndpointsTests.cs` | Profile endpoints, including username change, conflicts, validation and availability. |
+| `tests/FairwayFinder.Api.IntegrationTests/Conventions/UsernameBackfillTests.cs` | Runs the `AddUserHandle` migration's backfill SQL against real rows (inside a rolled-back transaction). |
+| `tests/FairwayFinder.Features.Tests/Helpers/UsernameRulesTests.cs` | Username normalization, validation and default-stem rules. |
 | `tests/FairwayFinder.Features.Tests/PasswordResetServiceTests.cs` | Cross-host token redemption, single use, enumeration-safe failures, admin path. |
 | `tests/FairwayFinder.Features.Tests/UserInvitationServiceResendTests.cs` | Resend rules. |
 | `tests/FairwayFinder.Admin.IntegrationTests/Services/UserAdminServiceTests.cs` | Admin user operations. |

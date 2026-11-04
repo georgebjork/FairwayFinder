@@ -30,7 +30,7 @@ Conventions used below:
 
 Request/response types for login, refresh and password reset live in `Auth/AuthDtos.cs`; `RegisterRequest` is in `Features/Data/InviteDtos.cs`. Token mechanics are in [overview.md](overview.md#authentication).
 
-`LoginResponse`: `AccessToken`, `RefreshToken`, `ExpiresAt` (UTC), `UserId`, `Email`, `FirstName?`, `LastName?`.
+`LoginResponse`: `AccessToken`, `RefreshToken`, `ExpiresAt` (UTC), `UserId`, `Email`, `FirstName?`, `LastName?`, `Username`.
 
 | Method + route | Request | Response | Status codes | Calls |
 |---|---|---|---|---|
@@ -119,15 +119,17 @@ All 200, `User` auth.
 
 | Method + route | Request | Response | Status codes | Calls |
 |---|---|---|---|---|
-| `GET /api/profile` | none | `UserProfileResponse`: `UserProfileId`, `UserId`, `PublicIdentifier`, `IsPublic`, `DisplayName?`, `Email?`, `PreferredTees`, `SgBaselineLevel` | 200 (creates the profile on first access) | `IProfileService.GetOrCreateProfileAsync` |
+| `GET /api/profile` | none | `UserProfileResponse`: `UserProfileId`, `UserId`, `PublicIdentifier`, `IsPublic`, `DisplayName?`, `Username`, `Email?`, `PreferredTees`, `SgBaselineLevel` | 200 (creates the profile on first access) | `IProfileService.GetOrCreateProfileAsync` |
 | `PUT /api/profile/sg-baseline-level` | `UpdateSgBaselineLevelRequest` (record in the same file): `{ "level": "Hcp10" }` | none | 204; 400 for an unknown level name (binding) | `IProfileService.UpdateSgBaselineLevelAsync` |
+| `PUT /api/profile/username` | `UpdateUsernameRequest` (record in the same file): `{ "username": "tee.time_42" }`. Validated (non-empty) | `UsernameResponse`: `{ "username" }`, normalized (lowercase, leading `@` dropped) | 200, including when unchanged; 400 ProblemDetails for an invalid or reserved name; 409 ProblemDetails when someone else has it | `IUsernameService.ChangeUsernameAsync` |
+| `GET /api/profile/username-available` | query `username` | `UsernameAvailability`: `Username` (normalized), `Available`, `Reason?` | 200. Your own current username counts as available | `IUsernameService.CheckAvailabilityAsync(username, userId)` |
 
 Profiles and visibility: [../features/users-and-social.md](../features/users-and-social.md).
 
 ## Friends (`Endpoints/FriendEndpoints.cs`)
 
-`FriendResponse`: `FriendshipId`, `UserId`, `PublicIdentifier`, `DisplayName`, `Email`, `IsPublic`, `FriendsSince`.
-`FriendRequestResponse`: `FriendshipId`, `OtherUserId`, `OtherPublicIdentifier`, `OtherDisplayName`, `OtherEmail`, `Direction`, `RequestedOn`.
+`FriendResponse`: `FriendshipId`, `UserId`, `PublicIdentifier`, `DisplayName`, `Username`, `Email`, `IsPublic`, `FriendsSince`.
+`FriendRequestResponse`: `FriendshipId`, `OtherUserId`, `OtherPublicIdentifier`, `OtherDisplayName`, `OtherUsername`, `OtherEmail`, `Direction`, `RequestedOn`.
 
 | Method + route | Request | Response | Status codes | Calls |
 |---|---|---|---|---|
@@ -135,7 +137,7 @@ Profiles and visibility: [../features/users-and-social.md](../features/users-and
 | `GET /api/friends/requests/incoming` | none | `FriendRequestResponse[]` | 200 | `GetIncomingRequestsAsync` |
 | `GET /api/friends/requests/incoming/count` | none | `int` | 200 | `GetIncomingRequestCountAsync` |
 | `GET /api/friends/requests/outgoing` | none | `FriendRequestResponse[]` | 200 | `GetOutgoingRequestsAsync` |
-| `GET /api/friends/search` | query `query` (≥ 2 chars after trim), `take?` (default 20) | `UserSearchResultResponse[]`: `UserId`, `PublicIdentifier`, `DisplayName`, `Email`, `FriendshipState`, `FriendshipId?` | 200; 400 `{ error }` for a short query | `SearchUsersAsync(userId, query, take)` |
+| `GET /api/friends/search` | query `query` (≥ 2 chars after trim; a leading `@` searches usernames only, by prefix), `take?` (default 20) | `UserSearchResultResponse[]`: `UserId`, `PublicIdentifier`, `DisplayName`, `Username`, `Email`, `FriendshipState`, `FriendshipId?` | 200; 400 `{ error }` for a short query | `SearchUsersAsync(userId, query, take)` |
 | `POST /api/friends/requests` | `SendFriendRequestRequest`: `AddresseeUserId`. Validated | new friendship id (`long`) | 201 (`Location: /api/friends/requests/{id}`); 409 `{ error }` for self, unknown user, already friends, already pending | `SendRequestAsync`. If the other golfer already sent a request, it is auto-accepted |
 | `PUT /api/friends/requests/{friendshipId}/accept` | none | none | 204; 404 `FriendRequest` | `AcceptRequestAsync(friendshipId, userId)` |
 | `PUT /api/friends/requests/{friendshipId}/reject` | none | none | 204; 404 | `RejectRequestAsync` |

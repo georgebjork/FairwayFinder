@@ -61,6 +61,15 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .Property(e => e.IsSearchHidden)
             .HasDefaultValue(false);
         modelBuilder.Entity<ApplicationUser>()
+            .Property(e => e.Handle)
+            .HasMaxLength(20)
+            .IsRequired();
+        // Handles are stored lowercase, so a plain unique index makes them case-insensitively unique.
+        modelBuilder.Entity<ApplicationUser>()
+            .HasIndex(e => e.Handle)
+            .IsUnique()
+            .HasDatabaseName("ix_aspnetusers_handle");
+        modelBuilder.Entity<ApplicationUser>()
             .Property(e => e.CreatedOn)
             .HasDefaultValueSql("NOW()");
         modelBuilder.Entity<ApplicationUser>()

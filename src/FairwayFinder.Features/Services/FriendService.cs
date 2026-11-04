@@ -36,40 +36,62 @@ public class FriendService : IFriendService
             return new List<UserSearchResultResponse>();
         }
 
-        var pattern = $"%{query.Trim()}%";
+        // A leading "@" means "this is a username": match usernames only, by prefix. Otherwise
+        // match name or username anywhere. Input is LIKE-escaped because "_" is legal in a
+        // username and would otherwise match any character.
+        var trimmed = query.Trim();
+        var handleOnly = trimmed.StartsWith('@');
+        var term = handleOnly ? UsernameRules.Normalize(trimmed) : trimmed;
+        if (term.Length == 0)
+        {
+            return new List<UserSearchResultResponse>();
+        }
+
+        var escaped = EscapeLike(term);
+        var pattern = $"%{escaped}%";
+        var handlePrefix = $"{escaped.ToLowerInvariant()}%";
+        var exactHandle = term.ToLowerInvariant();
 
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
 
-        // Match against FirstName, LastName, or "FirstName LastName" (case-insensitive ILIKE).
         // Inner-join UserProfile so users without a profile aren't returned. Exclude self.
-        var matchedUsers = await (
+        var candidates =
             from user in dbContext.Users.AsNoTracking()
             join profile in dbContext.UserProfiles.AsNoTracking()
                 on user.Id equals profile.UserId
             where profile.IsDeleted == false
                   && user.IsSearchHidden == false
                   && user.Id != viewerUserId
-                  && (
-                      EF.Functions.ILike(user.FirstName ?? string.Empty, pattern)
-                      || EF.Functions.ILike(user.LastName ?? string.Empty, pattern)
-                      || EF.Functions.ILike(((user.FirstName ?? string.Empty) + " " + (user.LastName ?? string.Empty)).Trim(), pattern)
-                  )
-            select new
-            {
-                user.Id,
-                user.FirstName,
-                user.LastName,
-                user.UserName,
-                user.Email,
-                profile.PublicIdentifier
-            }
-        )
-            // Without an order, Take picks whichever rows Postgres reaches first, so the same
+            select new { user, profile };
+
+        candidates = handleOnly
+            ? candidates.Where(c => EF.Functions.ILike(c.user.Handle, handlePrefix, @"\"))
+            // FirstName, LastName, "FirstName LastName", or username (case-insensitive ILIKE).
+            : candidates.Where(c =>
+                EF.Functions.ILike(c.user.FirstName ?? string.Empty, pattern, @"\")
+                || EF.Functions.ILike(c.user.LastName ?? string.Empty, pattern, @"\")
+                || EF.Functions.ILike(((c.user.FirstName ?? string.Empty) + " " + (c.user.LastName ?? string.Empty)).Trim(), pattern, @"\")
+                || EF.Functions.ILike(c.user.Handle, pattern, @"\"));
+
+        var matchedUsers = await candidates
+            // Someone who typed a username exactly is looking for that one person, so they come first.
+            // Without a full order, Take picks whichever rows Postgres reaches first, so the same
             // search could return a different set from one call to the next.
-            .OrderBy(u => u.FirstName)
-            .ThenBy(u => u.LastName)
-            .ThenBy(u => u.Id)
+            .OrderByDescending(c => c.user.Handle == exactHandle)
+            .ThenBy(c => c.user.FirstName)
+            .ThenBy(c => c.user.LastName)
+            .ThenBy(c => c.user.Id)
             .Take(take)
+            .Select(c => new
+            {
+                c.user.Id,
+                c.user.FirstName,
+                c.user.LastName,
+                c.user.UserName,
+                c.user.Handle,
+                c.user.Email,
+                c.profile.PublicIdentifier
+            })
             .ToListAsync();
 
         if (matchedUsers.Count == 0)
@@ -116,6 +138,7 @@ public class FriendService : IFriendService
                 UserId = u.Id,
                 PublicIdentifier = u.PublicIdentifier,
                 DisplayName = DisplayNameHelper.Build(u.FirstName, u.LastName, u.UserName),
+                Username = u.Handle,
                 Email = u.Email ?? string.Empty,
                 FriendshipState = state,
                 FriendshipId = friendshipId
@@ -148,6 +171,7 @@ public class FriendService : IFriendService
                 user.FirstName,
                 user.LastName,
                 user.UserName,
+                user.Handle,
                 user.Email
             }
         ).ToListAsync();
@@ -158,6 +182,7 @@ public class FriendService : IFriendService
             UserId = r.OtherUserId,
             PublicIdentifier = r.PublicIdentifier,
             DisplayName = DisplayNameHelper.Build(r.FirstName, r.LastName, r.UserName),
+            Username = r.Handle,
             Email = r.Email ?? string.Empty,
             IsPublic = r.IsPublic,
             FriendsSince = DateOnly.FromDateTime(r.FriendsSince)
@@ -423,6 +448,7 @@ public class FriendService : IFriendService
                 user.FirstName,
                 user.LastName,
                 user.UserName,
+                user.Handle,
                 user.Email,
                 f.CreatedOn
             }
@@ -434,6 +460,7 @@ public class FriendService : IFriendService
             OtherUserId = r.OtherUserId,
             OtherPublicIdentifier = r.PublicIdentifier,
             OtherDisplayName = DisplayNameHelper.Build(r.FirstName, r.LastName, r.UserName),
+            OtherUsername = r.Handle,
             OtherEmail = r.Email ?? string.Empty,
             Direction = direction,
             RequestedOn = DateOnly.FromDateTime(r.CreatedOn)
@@ -471,6 +498,9 @@ public class FriendService : IFriendService
             _logger.LogError(ex, "Failed to send friend-accept notification to {UserId}", requesterUserId);
         }
     }
+
+    private static string EscapeLike(string value) =>
+        value.Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_");
 
     private static async Task<string> GetDisplayNameAsync(ApplicationDbContext dbContext, string userId)
     {

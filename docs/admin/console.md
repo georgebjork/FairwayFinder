@@ -141,13 +141,14 @@ Calls `AdminDashboardService.GetDashboardMetricsAsync()`, `HealthCheckService.Ch
 |---|---|
 | `/users` | `Users/Pages/Users.razor` → `Users/Components/UsersTab.razor` |
 
-A searchable, filterable, paged grid of every user: name, email, role badge, email verified, locked, searchable, created. The page itself only sets breadcrumbs; `UsersTab` does the work.
+A searchable, filterable, paged grid of every user: name, username, email, role badge, email verified, locked, searchable, created. The page itself only sets breadcrumbs; `UsersTab` does the work.
 
-- **Load**: `UserAdminService.GetAllUsersAsync()`. Search filters client-side by name or email.
+- **Load**: `UserAdminService.GetAllUsersAsync()`. Search filters client-side by name, username (a leading `@` is ignored) or email.
 - **Row actions**: Edit (dialog), plus links to `/rounds?userId=...` and `/stats?userId=...`.
-- **Create User** (`Users/Dialogs/CreateUserDialog.razor`): creates an Identity user with `EmailConfirmed = true` through `UserManager`/`IUserStore` directly. Returns the new id.
+- **Create User** (`Users/Dialogs/CreateUserDialog.razor`): creates an Identity user with `EmailConfirmed = true` through `UserManager`/`IUserStore` directly, with a default username from `IUsernameService.GenerateDefaultAsync`. Returns the new id.
 - **Edit User** (`Users/Dialogs/EditUserDialog.razor`): receives the target `User` and, separately, `ActingAdminUserId`. On save it calls only the methods whose value changed:
   - `UserAdminService.UpdateUserAsync(id, UpdateUserDto)` for first and last name
+  - `IUsernameService.ChangeUsernameAsync(targetUserId, username)` for the username, with the same rules as the app. Use it to fix an offensive name
   - `ToggleAdminRoleAsync(id)`
   - `SetLockoutAsync(id, bool)`, which sets lockout end to `DateTimeOffset.MaxValue` or clears it
   - `SetSearchHiddenAsync(id, bool)`, which hides the user from friend search

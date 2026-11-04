@@ -22,6 +22,7 @@ public class ApplicationStartupService : IApplicationStartupService
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IProfileService _profileService;
+    private readonly IUsernameService _usernameService;
     private readonly SeedUserSettings _seedUserSettings;
     private readonly ILogger<ApplicationStartupService> _logger;
 
@@ -31,6 +32,7 @@ public class ApplicationStartupService : IApplicationStartupService
         RoleManager<IdentityRole> roleManager,
         UserManager<ApplicationUser> userManager,
         IProfileService profileService,
+        IUsernameService usernameService,
         IOptions<SeedUserSettings> seedUserSettings,
         ILogger<ApplicationStartupService> logger)
     {
@@ -39,6 +41,7 @@ public class ApplicationStartupService : IApplicationStartupService
         _roleManager = roleManager;
         _userManager = userManager;
         _profileService = profileService;
+        _usernameService = usernameService;
         _seedUserSettings = seedUserSettings.Value;
         _logger = logger;
     }
@@ -91,6 +94,7 @@ public class ApplicationStartupService : IApplicationStartupService
             FirstName = _seedUserSettings.FirstName,
             LastName = _seedUserSettings.LastName
         };
+        user.Handle = await _usernameService.GenerateDefaultAsync(user.FirstName, user.LastName);
 
         await _userManager.SetUserNameAsync(user, _seedUserSettings.Email);
         await _userManager.SetEmailAsync(user, _seedUserSettings.Email);

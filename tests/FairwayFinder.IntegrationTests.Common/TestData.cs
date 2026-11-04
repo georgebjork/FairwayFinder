@@ -30,12 +30,14 @@ public sealed class TestData(IServiceProvider services)
     /// <summary>
     /// Creates a confirmed user through <see cref="UserManager{TUser}"/> (so the password hash and
     /// security stamp are real), assigns roles, and creates the profile registration would.
+    /// The username is the default registration would pick, unless <paramref name="username"/> is given.
     /// </summary>
     public async Task<ApplicationUser> CreateUserAsync(
         string? email = null,
         string password = DefaultPassword,
         string firstName = "Test",
         string? lastName = null,
+        string? username = null,
         params string[] roles)
     {
         var n = Interlocked.Increment(ref _sequence);
@@ -52,6 +54,9 @@ public sealed class TestData(IServiceProvider services)
             FirstName = firstName,
             LastName = lastName ?? $"Golfer{n}",
         };
+        user.Handle = username
+                      ?? await scope.ServiceProvider.GetRequiredService<IUsernameService>()
+                          .GenerateDefaultAsync(user.FirstName, user.LastName);
 
         var created = await userManager.CreateAsync(user, password);
         if (!created.Succeeded)

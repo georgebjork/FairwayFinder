@@ -1,9 +1,11 @@
 @using System.ComponentModel.DataAnnotations
 @using FairwayFinder.Identity
 @using Microsoft.AspNetCore.Identity
+@using FairwayFinder.Features.Services.Interfaces
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
+@inject IUsernameService UsernameService
 
 <RadzenTemplateForm TItem="CreateUserModel" Data="_model" Submit="OnSubmit">
     <RadzenStack Gap="1rem">
@@ -103,6 +105,7 @@
                 LastName = _model.LastName,
                 EmailConfirmed = true
             };
+            user.Handle = await UsernameService.GenerateDefaultAsync(user.FirstName, user.LastName);
 
             await UserStore.SetUserNameAsync(user, _model.Email, CancellationToken.None);
 

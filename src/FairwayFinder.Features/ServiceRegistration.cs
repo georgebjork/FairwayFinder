@@ -52,6 +52,7 @@ public static class ServiceRegistration
         services.AddTransient<ICourseService, CourseService>();
         services.AddTransient<IProfileService, ProfileService>();
         services.AddTransient<IFriendService, FriendService>();
+        services.AddTransient<IUsernameService, UsernameService>();
         services.AddTransient<IGameService, GameService>();
 
         // The reader is the one place a game's two score sources converge. Transient like the

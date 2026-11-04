@@ -58,6 +58,7 @@ public class ProfileService : IProfileService
             PublicIdentifier = profile.PublicIdentifier,
             IsPublic = profile.IsPublic,
             DisplayName = DisplayNameHelper.Build(user),
+            Username = user?.Handle ?? string.Empty,
             Email = user?.Email,
             PreferredTees = user?.PreferredTees ?? PreferredTees.Mens,
             SgBaselineLevel = (BaselineLevel)(user?.SgBaselineLevel ?? 0)
@@ -85,6 +86,7 @@ public class ProfileService : IProfileService
             PublicIdentifier = profile.PublicIdentifier,
             IsPublic = profile.IsPublic,
             DisplayName = DisplayNameHelper.Build(user),
+            Username = user?.Handle ?? string.Empty,
             Email = user?.Email,
             PreferredTees = user?.PreferredTees ?? PreferredTees.Mens,
             SgBaselineLevel = (BaselineLevel)(user?.SgBaselineLevel ?? 0)
@@ -178,6 +180,7 @@ public class ProfileService : IProfileService
             PublicIdentifier = profile.PublicIdentifier,
             IsPublic = profile.IsPublic,
             DisplayName = DisplayNameHelper.Build(user),
+            Username = user?.Handle ?? string.Empty,
             Email = user?.Email,
             PreferredTees = user?.PreferredTees ?? PreferredTees.Mens,
             SgBaselineLevel = (BaselineLevel)(user?.SgBaselineLevel ?? 0)

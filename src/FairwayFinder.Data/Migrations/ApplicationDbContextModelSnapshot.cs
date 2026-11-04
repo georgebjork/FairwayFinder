@@ -1547,6 +1547,11 @@ namespace FairwayFinder.Data.Migrations
                         .HasMaxLength(250)
                         .HasColumnType("character varying(250)");
 
+                    b.Property<string>("Handle")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<bool>("IsSearchHidden")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
@@ -1604,6 +1609,10 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("character varying(256)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Handle")
+                        .IsUnique()
+                        .HasDatabaseName("ix_aspnetusers_handle");
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
