@@ -6,7 +6,7 @@ How to get FairwayFinder building, running and tested on a developer machine. Th
 
 | Tool | Why |
 |---|---|
-| .NET 11 SDK | Every project targets `net11.0`. CI uses `11.0.x`. |
+| .NET 11 SDK | Every project targets `net11.0` except `FairwayFinder.Landing`, which stays on `net10.0` (the .NET 11 SDK builds both). CI uses `11.0.x`. |
 | Docker (Desktop, OrbStack, Colima...) | Aspire runs Postgres in a container, and the integration tests start their own Postgres with Testcontainers. |
 | An IDE | Rider or Visual Studio both work. The repo carries a Rider `.DotSettings.user` and `.idea` folder. |
 
