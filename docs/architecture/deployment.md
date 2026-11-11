@@ -17,7 +17,7 @@ flowchart LR
 
 Runs on pull requests to `main`, on manual dispatch, and as a reusable workflow (`workflow_call`) from both image pipelines, so nothing reaches GHCR without passing tests.
 
-1. Checkout, set up .NET `10.0.x`.
+1. Checkout, set up .NET `11.0.x`.
 2. `dotnet restore FairwayFinder.sln`
 3. `dotnet build FairwayFinder.sln --configuration Release --no-restore`
 4. `dotnet test FairwayFinder.sln --configuration Release --no-build`, writing TRX files to `TestResults/`. The integration tests start Postgres with Testcontainers, which works because `ubuntu-latest` runners have Docker.
@@ -59,12 +59,12 @@ Both are the standard Visual Studio multi-stage layout:
 
 | Stage | Base | Does |
 |---|---|---|
-| `base` | `mcr.microsoft.com/dotnet/aspnet:10.0` | Runs as the non-root `$APP_UID`, exposes 8080 and 8081 |
-| `build` | `mcr.microsoft.com/dotnet/sdk:10.0` | Copies `.csproj` files, `dotnet restore`, copies the repo, `dotnet build -c Release` |
+| `base` | `mcr.microsoft.com/dotnet/aspnet:11.0` | Runs as the non-root `$APP_UID`, exposes 8080 and 8081 |
+| `build` | `mcr.microsoft.com/dotnet/sdk:11.0` | Copies `.csproj` files, `dotnet restore`, copies the repo, `dotnet build -c Release` |
 | `publish` | `build` | `dotnet publish -c Release /p:UseAppHost=false` |
 | `final` | `base` | Copies the publish output, `ENTRYPOINT ["dotnet", "<Host>.dll"]` |
 
-The .NET 10 ASP.NET images listen on port 8080 (HTTP) by default. Nothing configures HTTPS inside the container, so TLS is expected to terminate in front of it.
+The .NET 11 ASP.NET images listen on port 8080 (HTTP) by default. Nothing configures HTTPS inside the container, so TLS is expected to terminate in front of it.
 
 The Admin Dockerfile copies all six project files it depends on before restoring, so the restore layer is cached until a project file changes. The Api Dockerfile copies only `FairwayFinder.Api.csproj` before its restore; the real restore then happens implicitly in `dotnet build` after `COPY . .`, so for the Api that layer cache does little.
 
