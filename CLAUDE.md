@@ -59,7 +59,7 @@ describes, update that doc in the same change.
 
 ## Architecture Overview
 
-Golf stat tracker built on ASP.NET Core 10.0 and PostgreSQL. The architecture follows a straightforward **Service → EF Core** pattern. Services own all business logic and data access.
+Golf stat tracker built on ASP.NET Core 11.0 and PostgreSQL. The architecture follows a straightforward **Service → EF Core** pattern. Services own all business logic and data access.
 
 There are two hosts and they have very different jobs:
 

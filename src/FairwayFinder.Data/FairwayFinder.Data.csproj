@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net11.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
@@ -12,10 +12,11 @@
     </ItemGroup>
 
     <ItemGroup>
-      <!-- DataProtection is pinned ahead of the EntityFrameworkCore shim below it: the shim's own
-           10.0.7 release drags EF Core up to 10.0.7 with it, which the rest of the solution is not
-           on. Referencing the patched DataProtection directly clears CVE-2026-40372 without that. -->
-      <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="10.0.7" />
+      <!-- EF Core and everything built on it (Identity.EF, DataProtection.EF, Npgsql) stay on 10.x
+           while the solution targets net11.0: Npgsql.EntityFrameworkCore.PostgreSQL has no 11.0 GA
+           yet and the provider's major must match EF Core's. Move them to 11 together once it ships.
+           DataProtection itself is referenced directly so it rides the 11.0 runtime release. -->
+      <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="11.0.0" />
       <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="10.0.0" />
       <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.0" />
@@ -25,8 +26,8 @@
       </PackageReference>
       <!-- Pulled in transitively by DataProtection to serialize the key ring. Pinned to the first
            version clearing its outstanding advisories; it is a leaf, so this forces nothing else up. -->
-      <PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.13" />
-      <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+      <PackageReference Include="System.Security.Cryptography.Xml" Version="11.0.0" />
+      <PackageReference Include="System.Security.Cryptography.Pkcs" Version="11.0.0" />
       <PackageReference Include="Npgsql" Version="10.0.1" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     </ItemGroup>
