@@ -34,6 +34,69 @@ public class ProfileAndLookupEndpointsTests(ApiFactory factory) : ApiTestBase(fa
     }
 
     [Fact]
+    public async Task Username_can_be_changed_and_is_stored_lowercase()
+    {
+        var golfer = await SignInNewUserAsync();
+
+        var changed = await ReadAsync<UsernameResponse>(await golfer.Client.PutAsJsonAsync(
+            "/api/profile/username", new UpdateUsernameRequest("@Tee.Time_42"), Json));
+
+        Assert.Equal("tee.time_42", changed.Username);
+        Assert.Equal("tee.time_42", (await GetAsync<UserProfileResponse>(golfer.Client, "/api/profile")).Username);
+
+        // Setting it to what it already is is a no-op, not a conflict with yourself.
+        await AssertStatusAsync(HttpStatusCode.OK, await golfer.Client.PutAsJsonAsync(
+            "/api/profile/username", new UpdateUsernameRequest("TEE.TIME_42"), Json));
+    }
+
+    [Fact]
+    public async Task Username_taken_by_someone_else_in_any_case_conflicts()
+    {
+        await Data.CreateUserAsync(username: "fairwaysfirst");
+        var golfer = await SignInNewUserAsync();
+
+        await AssertStatusAsync(HttpStatusCode.Conflict, await golfer.Client.PutAsJsonAsync(
+            "/api/profile/username", new UpdateUsernameRequest("FairwaysFirst"), Json));
+    }
+
+    [Theory]
+    [InlineData("ab")]
+    [InlineData("tiger..woods")]
+    [InlineData("tiger woods")]
+    [InlineData("admin")]
+    [InlineData("")]
+    public async Task Invalid_or_reserved_usernames_are_rejected(string username)
+    {
+        var golfer = await SignInNewUserAsync();
+        var before = (await GetAsync<UserProfileResponse>(golfer.Client, "/api/profile")).Username;
+
+        await AssertStatusAsync(HttpStatusCode.BadRequest, await golfer.Client.PutAsJsonAsync(
+            "/api/profile/username", new UpdateUsernameRequest(username), Json));
+
+        Assert.Equal(before, (await GetAsync<UserProfileResponse>(golfer.Client, "/api/profile")).Username);
+    }
+
+    [Fact]
+    public async Task Username_availability_reports_free_taken_invalid_and_your_own()
+    {
+        await Data.CreateUserAsync(username: "takenname");
+        var golfer = await SignInNewUserAsync();
+        var mine = (await GetAsync<UserProfileResponse>(golfer.Client, "/api/profile")).Username;
+
+        var free = await GetAsync<UsernameAvailability>(golfer.Client, "/api/profile/username-available?username=FreeName");
+        var taken = await GetAsync<UsernameAvailability>(golfer.Client, "/api/profile/username-available?username=takenname");
+        var invalid = await GetAsync<UsernameAvailability>(golfer.Client, "/api/profile/username-available?username=a");
+        var own = await GetAsync<UsernameAvailability>(golfer.Client, $"/api/profile/username-available?username={mine}");
+
+        Assert.True(free.Available);
+        Assert.Equal("freename", free.Username);
+        Assert.False(taken.Available);
+        Assert.False(invalid.Available);
+        Assert.NotNull(invalid.Reason);
+        Assert.True(own.Available);
+    }
+
+    [Fact]
     public async Task Miss_types_come_from_the_migration_seeded_lookup_table()
     {
         var golfer = await SignInNewUserAsync();

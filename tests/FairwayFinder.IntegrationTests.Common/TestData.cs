@@ -30,12 +30,14 @@ public sealed class TestData(IServiceProvider services)
     /// <summary>
     /// Creates a confirmed user through <see cref="UserManager{TUser}"/> (so the password hash and
     /// security stamp are real), assigns roles, and creates the profile registration would.
+    /// The username is the default registration would pick, unless <paramref name="username"/> is given.
     /// </summary>
     public async Task<ApplicationUser> CreateUserAsync(
         string? email = null,
         string password = DefaultPassword,
         string firstName = "Test",
         string? lastName = null,
+        string? username = null,
         params string[] roles)
     {
         var n = Interlocked.Increment(ref _sequence);
@@ -52,6 +54,9 @@ public sealed class TestData(IServiceProvider services)
             FirstName = firstName,
             LastName = lastName ?? $"Golfer{n}",
         };
+        user.Handle = username
+                      ?? await scope.ServiceProvider.GetRequiredService<IUsernameService>()
+                          .GenerateDefaultAsync(user.FirstName, user.LastName);
 
         var created = await userManager.CreateAsync(user, password);
         if (!created.Succeeded)
@@ -71,6 +76,35 @@ public sealed class TestData(IServiceProvider services)
 
     public Task<ApplicationUser> CreateAdminAsync(string? email = null) =>
         CreateUserAsync(email, roles: ApplicationRoles.Admin);
+
+    /// <summary>
+    /// Opts <paramref name="userId"/> into a public stats page at <paramref name="slug"/>, through
+    /// <see cref="IProfileService"/> exactly as the app's settings screen would.
+    /// </summary>
+    public async Task MakeProfilePublicAsync(
+        string userId,
+        string slug,
+        bool isPublic = true,
+        bool showStrokesGained = true,
+        bool showRecentRounds = true,
+        bool showCourseNames = true)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var result = await scope.ServiceProvider.GetRequiredService<IProfileService>().UpdatePublicProfileAsync(
+            userId,
+            new PublicProfileSettingsRequest
+            {
+                IsPublic = isPublic,
+                Slug = slug,
+                ShowStrokesGained = showStrokesGained,
+                ShowRecentRounds = showRecentRounds,
+                ShowCourseNames = showCourseNames
+            },
+            actingUserId: userId);
+
+        if (result.Status != PublicProfileSettingsStatus.Ok)
+            throw new InvalidOperationException(result.Error);
+    }
 
     /// <summary>
     /// A course with one teebox and its holes (18 by default, or a nine-hole teebox). The teebox

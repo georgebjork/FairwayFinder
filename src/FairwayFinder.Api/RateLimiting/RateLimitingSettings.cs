@@ -16,6 +16,12 @@ public class RateLimitingSettings
     /// </summary>
     public RateLimitWindow Auth { get; set; } = new() { PermitLimit = 10, WindowSeconds = 60 };
 
+    /// <summary>
+    /// The anonymous <c>/api/public</c> group, on top of <see cref="Api"/>. Its only real caller is the
+    /// Landing site's build, a handful of requests a day; the limit caps anyone scraping or guessing slugs.
+    /// </summary>
+    public RateLimitWindow PublicProfile { get; set; } = new() { PermitLimit = 30, WindowSeconds = 60 };
+
     /// <summary>Every request that matches an endpoint.</summary>
     public RateLimitWindow Api { get; set; } = new() { PermitLimit = 300, WindowSeconds = 60 };
 

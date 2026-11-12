@@ -44,7 +44,7 @@ builder.AddProject<Projects.FairwayFinder_Admin>("fairwayfinder-admin")
     .WithHttpHealthCheck("/alive")
     .WithDashboardLinks("Admin console");
 
-builder.AddProject<Projects.FairwayFinder_Api>("fairwayfinder-api")
+var api = builder.AddProject<Projects.FairwayFinder_Api>("fairwayfinder-api")
     .WithReference(dbFairwayfinder)
     .WaitFor(dbFairwayfinder)
     .WithReference(dbLogs)
@@ -55,9 +55,13 @@ builder.AddProject<Projects.FairwayFinder_Api>("fairwayfinder-api")
     .WithDashboardLinks("API", ("Scalar", "/scalar/"));
 
 // The static marketing site. Generates the HTML at startup and serves it; restart the resource to
-// pick up edits. Production is a DigitalOcean static site, not this process.
+// pick up edits or fresh stats. Production is a DigitalOcean static site, not this process.
 builder.AddProject<Projects.FairwayFinder_Landing>("fairwayfinder-landing")
     .WithArgs("--serve")
+    // The slugs to render come from the landing project's appsettings.Development.json
+    // (PublicProfiles:Slugs, blank by default); the API URL comes from here so it tracks the real port.
+    .WithEnvironment("PUBLIC_PROFILE_API_URL", api.GetEndpoint("http"))
+    .WaitFor(api)
     .WithHttpHealthCheck("/")
     .WithDashboardLinks("Landing page");
 

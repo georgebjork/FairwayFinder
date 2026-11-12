@@ -283,6 +283,34 @@ public class AuthEndpointsTests(ApiFactory factory) : ApiTestBase(factory)
     }
 
     [Fact]
+    public async Task Register_gives_same_named_golfers_distinct_default_usernames()
+    {
+        var first = await Data.CreateInvitationAsync("john1@test.fairwayfinder.pro");
+        var second = await Data.CreateInvitationAsync("john2@test.fairwayfinder.pro");
+        using var client = AnonymousClient();
+
+        async Task<LoginResponse> RegisterJohnAsync(string code) =>
+            await ReadAsync<LoginResponse>(await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest
+            {
+                Code = code,
+                FirstName = "John",
+                LastName = "Smith",
+                Password = "a-long-password",
+            }));
+
+        var a = await RegisterJohnAsync(first.InvitationIdentifier);
+        var b = await RegisterJohnAsync(second.InvitationIdentifier);
+
+        Assert.Equal("johnsmith", a.Username);
+        Assert.StartsWith("johnsmith", b.Username);
+        Assert.NotEqual(a.Username, b.Username);
+
+        // Login hands it back too, so the app has it from the first screen.
+        var login = await LoginAsync("john2@test.fairwayfinder.pro", "a-long-password");
+        Assert.Equal(b.Username, login.Username);
+    }
+
+    [Fact]
     public async Task Register_without_a_valid_invite_is_rejected()
     {
         using var client = AnonymousClient();

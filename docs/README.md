@@ -35,6 +35,7 @@ Start with [Getting started](getting-started.md), then [Architecture overview](a
 | [Games](features/games.md) | Side games with friends: match play, skins, scoring engines, live scoreboards |
 | [Courses](features/courses.md) | Courses, teeboxes, holes, search |
 | [Users and social](features/users-and-social.md) | Identity, invitations, profiles, friends, password reset |
+| [Public profile](features/public-profile.md) | Opt-in public stats page at `fairwayfinder.pro/golf/{slug}`, badge, nightly rebuild |
 | [Notifications and email](features/notifications-and-email.md) | APNs push, device registration, email providers |
 | [Course imports](features/course-imports.md) | GolfCourseAPI import pipeline and the TGTR transfer tool |
 

@@ -5,6 +5,8 @@ using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Identity;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace FairwayFinder.Api.Auth;
 
@@ -124,6 +126,7 @@ public static class AuthEndpoints
             UserManager<ApplicationUser> userManager,
             IUserInvitationService inviteService,
             IProfileService profileService,
+            IUsernameService usernameService,
             JwtTokenService tokenService,
             ILoggerFactory loggerFactory) =>
         {
@@ -144,8 +147,24 @@ public static class AuthEndpoints
                 LastName = request.LastName.Trim(),
                 PreferredTees = (PreferredTees)request.PreferredTees,
             };
+            user.Handle = await usernameService.GenerateDefaultAsync(user.FirstName, user.LastName);
 
-            var result = await userManager.CreateAsync(user, request.Password);
+            IdentityResult result;
+            try
+            {
+                result = await userManager.CreateAsync(user, request.Password);
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException
+                                               {
+                                                   SqlState: PostgresErrorCodes.UniqueViolation,
+                                                   ConstraintName: "ix_aspnetusers_handle"
+                                               })
+            {
+                // Two sign-ups with the same name raced for the same default username and the
+                // unique index refused this one. Pick another and try once more.
+                user.Handle = await usernameService.GenerateDefaultAsync(user.FirstName, user.LastName);
+                result = await userManager.CreateAsync(user, request.Password);
+            }
             if (!result.Succeeded)
                 return Results.Problem(
                     detail: string.Join(" ", result.Errors.Select(e => e.Description)),
@@ -186,6 +205,7 @@ public static class AuthEndpoints
         UserId = user.Id,
         Email = user.Email!,
         FirstName = user.FirstName,
-        LastName = user.LastName
+        LastName = user.LastName,
+        Username = user.Handle
     };
 }

@@ -1,0 +1,74 @@
+@* One round's card, written to golf/{slug}/rounds/{key}/index.html by Program.cs. Linked from the
+   profile's recent rounds and best round. *@
+
+<SiteLayout Title="@($"{Profile.DisplayName} · {Heading} · {ProfileFormat.Date(Card.DatePlayed)}")"
+            Description="@Description"
+            Url="@($"{ProfileFormat.PageUrl(Profile.Slug)}rounds/{Card.Key}/")"
+            OgImage="@($"{ProfileFormat.PageUrl(Profile.Slug)}card.png")"
+            LargeImage="true">
+    <header class="profile-hero round-hero">
+        <div class="wrap">
+            <a class="back" href="@($"/golf/{Profile.Slug}/")">← @Profile.DisplayName's stats</a>
+            <p class="eyebrow">@ProfileFormat.Date(Card.DatePlayed) · @Card.TeeboxName tees</p>
+            <h1>@Heading</h1>
+            <dl class="stat-strip">
+                <div>
+                    <dt>Score</dt>
+                    <dd>@Card.Score <small>(@ProfileFormat.ToPar(Card.ToPar))</small></dd>
+                </div>
+                <div>
+                    <dt>Putts</dt>
+                    <dd>@(Card.Putts?.ToString() ?? "–")</dd>
+                </div>
+                <div>
+                    <dt>Fairways</dt>
+                    <dd>@Ratio(Card.FairwaysHit, Card.FairwaysTotal)</dd>
+                </div>
+                <div>
+                    <dt>Greens</dt>
+                    <dd>@Ratio(Card.GreensHit, Card.GreensTotal)</dd>
+                </div>
+            </dl>
+        </div>
+    </header>
+
+    <main class="wrap profile-grid">
+        <section class="panel wide">
+            <h2>Scorecard</h2>
+            @if (Front.Count > 0)
+            {
+                <ScorecardTable Holes="Front" TotalLabel="Out" />
+            }
+            @if (Back.Count > 0)
+            {
+                <ScorecardTable Holes="Back" TotalLabel="In" />
+            }
+            <ScoreMarkLegend />
+        </section>
+
+        @if (Card.StrokesGained is { } sg)
+        {
+            <section class="panel wide">
+                <h2>Strokes gained this round</h2>
+                <SgBars StrokesGained="sg" />
+            </section>
+        }
+    </main>
+</SiteLayout>
+
+@code {
+    [Parameter, EditorRequired] public PublicProfile Profile { get; set; } = default!;
+    [Parameter, EditorRequired] public PublicScorecard Card { get; set; } = default!;
+
+    private List<PublicScorecardHole> Front => Card.Holes.Where(h => h.HoleNumber <= 9).ToList();
+    private List<PublicScorecardHole> Back => Card.Holes.Where(h => h.HoleNumber > 9).ToList();
+
+    private string Heading => Card.CourseName ?? (Card.FullRound ? "18 holes" : "9 holes");
+
+    private string Description =>
+        $"{Profile.DisplayName} shot {Card.Score} ({ProfileFormat.ToPar(Card.ToPar)})" +
+        (Card.CourseName is null ? "" : $" at {Card.CourseName}") +
+        $" on {ProfileFormat.Date(Card.DatePlayed)}. Tracked hole by hole with {Site.Name}.";
+
+    private static string Ratio(int? hit, int? total) => hit is null || total is null ? "–" : $"{hit}/{total}";
+}

@@ -1,0 +1,46 @@
+@* The five most recent rounds, each linking to its scorecard. The course column only exists when
+   the golfer shows course names. *@
+
+<table class="rounds">
+    <thead>
+        <tr>
+            <th scope="col">Date</th>
+            @if (ShowCourse)
+            {
+                <th scope="col">Course</th>
+            }
+            <th scope="col" class="num">Score</th>
+            <th scope="col" class="num">To par</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var round in Rounds)
+        {
+            <tr class="@(round.Key is null ? "" : "linked")">
+                <td>
+                    @if (round.Key is { } key)
+                    {
+                        <a href="@ProfileFormat.RoundPath(Slug, key)">@ProfileFormat.Date(round.DatePlayed)</a>
+                    }
+                    else
+                    {
+                        @ProfileFormat.Date(round.DatePlayed)
+                    }
+                </td>
+                @if (ShowCourse)
+                {
+                    <td>@round.CourseName@(round.FullRound ? "" : " (9)")</td>
+                }
+                <td class="num">@round.Score</td>
+                <td class="num @(round.ToPar < 0 ? "gain" : round.ToPar > 0 ? "loss" : "")">@ProfileFormat.ToPar(round.ToPar)</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter, EditorRequired] public List<PublicRecentRound> Rounds { get; set; } = default!;
+    [Parameter, EditorRequired] public string Slug { get; set; } = default!;
+
+    private bool ShowCourse => Rounds.Any(r => r.CourseName is not null);
+}

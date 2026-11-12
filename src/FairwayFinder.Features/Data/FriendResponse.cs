@@ -6,6 +6,7 @@ public class FriendResponse
     public string UserId { get; set; } = string.Empty;
     public Guid PublicIdentifier { get; set; }
     public string DisplayName { get; set; } = string.Empty;
+    public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public bool IsPublic { get; set; }
     public DateOnly FriendsSince { get; set; }

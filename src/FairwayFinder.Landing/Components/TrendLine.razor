@@ -1,0 +1,62 @@
+@using System.Globalization
+@* The most recent 18-hole scores, oldest on the left, with the scoring average dashed across. *@
+
+<svg class="trend" viewBox="0 0 @W @H" role="img" aria-label="@AriaLabel">
+    @foreach (var tick in Ticks)
+    {
+        @* Wrapped in <g>: a bare <text> at the start of a code block is Razor's own pseudo-tag. *@
+        <g>
+            <line x1="@PadL" x2="@(W - PadR)" y1="@F(Y(tick))" y2="@F(Y(tick))" class="trend-grid" />
+            <text x="@(PadL - 8)" y="@F(Y(tick) + 4)" text-anchor="end" class="trend-axis">@tick</text>
+        </g>
+    }
+    @if (Average is { } avg)
+    {
+        <line x1="@PadL" x2="@(W - PadR)" y1="@F(Y(avg))" y2="@F(Y(avg))" class="trend-average" />
+    }
+    <polyline points="@Points" class="trend-line" />
+    @for (var i = 0; i < Trend.Count; i++)
+    {
+        var p = Trend[i];
+        <circle cx="@F(X(i))" cy="@F(Y(p.Score))" r="4" class="trend-dot">
+            <title>@ProfileFormat.Date(p.DatePlayed): @p.Score@(p.CourseName is null ? "" : $" at {p.CourseName}")</title>
+        </circle>
+    }
+    <text x="@PadL" y="@(H - 6)" class="trend-axis">@ProfileFormat.ShortDate(Trend[0].DatePlayed)</text>
+    <text x="@(W - PadR)" y="@(H - 6)" text-anchor="end" class="trend-axis">@ProfileFormat.ShortDate(Trend[^1].DatePlayed)</text>
+</svg>
+<p class="chart-note">
+    Last @Trend.Count 18-hole @(Trend.Count == 1 ? "round" : "rounds"), lower is better
+    @if (Average is not null)
+    {
+        <span> · dashed line is the @ProfileFormat.Average(Average) average</span>
+    }
+</p>
+
+@code {
+    [Parameter, EditorRequired] public List<PublicTrendPoint> Trend { get; set; } = default!;
+    [Parameter] public double? Average { get; set; }
+
+    private const int W = 720, H = 260, PadL = 44, PadR = 12, PadT = 12, PadB = 32;
+
+    private int Min => (int)Math.Floor((Math.Min(Trend.Min(t => t.Score), Average ?? int.MaxValue) - 2) / 5.0) * 5;
+    private int Max => (int)Math.Ceiling((Math.Max(Trend.Max(t => t.Score), Average ?? int.MinValue) + 2) / 5.0) * 5;
+
+    private IEnumerable<int> Ticks
+    {
+        get
+        {
+            var step = Max - Min > 30 ? 10 : 5;
+            for (var t = Min; t <= Max; t += step) yield return t;
+        }
+    }
+
+    private double X(int i) => Trend.Count == 1 ? (PadL + W - PadR) / 2.0 : PadL + (W - PadL - PadR) * i / (double)(Trend.Count - 1);
+    private double Y(double score) => PadT + (H - PadT - PadB) * (Max - score) / (Max - Min);
+
+    private string Points => string.Join(" ", Trend.Select((p, i) => $"{F(X(i))},{F(Y(p.Score))}"));
+
+    private string AriaLabel => $"Scores of the last {Trend.Count} 18-hole rounds: {string.Join(", ", Trend.Select(t => t.Score))}";
+
+    private static string F(double v) => v.ToString("0.#", CultureInfo.InvariantCulture);
+}

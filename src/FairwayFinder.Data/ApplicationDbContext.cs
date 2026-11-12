@@ -61,6 +61,15 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .Property(e => e.IsSearchHidden)
             .HasDefaultValue(false);
         modelBuilder.Entity<ApplicationUser>()
+            .Property(e => e.Handle)
+            .HasMaxLength(20)
+            .IsRequired();
+        // Handles are stored lowercase, so a plain unique index makes them case-insensitively unique.
+        modelBuilder.Entity<ApplicationUser>()
+            .HasIndex(e => e.Handle)
+            .IsUnique()
+            .HasDatabaseName("ix_aspnetusers_handle");
+        modelBuilder.Entity<ApplicationUser>()
             .Property(e => e.CreatedOn)
             .HasDefaultValueSql("NOW()");
         modelBuilder.Entity<ApplicationUser>()
@@ -396,6 +405,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.Property(e => e.UserId).HasColumnName("user_id");
             entity.Property(e => e.PublicIdentifier).HasColumnName("public_identifier");
             entity.Property(e => e.IsPublic).HasColumnName("is_public").HasDefaultValue(false);
+            entity.Property(e => e.PublicSlug).HasColumnName("public_slug").HasMaxLength(30);
+            // Default true in the database so existing rows get every section shown. The sentinel is
+            // true to match: with the CLR default (false) as sentinel, EF would omit an explicit false
+            // on insert and the database default would silently turn it back on.
+            entity.Property(e => e.ShowStrokesGained).HasColumnName("show_strokes_gained").HasDefaultValue(true).HasSentinel(true);
+            entity.Property(e => e.ShowRecentRounds).HasColumnName("show_recent_rounds").HasDefaultValue(true).HasSentinel(true);
+            entity.Property(e => e.ShowCourseNames).HasColumnName("show_course_names").HasDefaultValue(true).HasSentinel(true);
             entity.Property(e => e.CreatedBy).HasColumnName("created_by");
             entity.Property(e => e.CreatedOn).HasColumnName("created_on");
             entity.Property(e => e.UpdatedBy).HasColumnName("updated_by");
@@ -404,6 +420,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
             entity.HasIndex(e => e.UserId).IsUnique().HasDatabaseName("ix_user_profile_user_id");
             entity.HasIndex(e => e.PublicIdentifier).IsUnique().HasDatabaseName("ix_user_profile_public_identifier");
+            // Slugs are stored lowercase (PublicSlugRules.Normalize), so a plain unique index is
+            // case-insensitive in practice.
+            entity.HasIndex(e => e.PublicSlug).IsUnique()
+                .HasFilter("public_slug IS NOT NULL AND is_deleted = false")
+                .HasDatabaseName("ix_user_profile_public_slug");
         });
 
         // Friendship

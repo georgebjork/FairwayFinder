@@ -141,16 +141,18 @@ Calls `AdminDashboardService.GetDashboardMetricsAsync()`, `HealthCheckService.Ch
 |---|---|
 | `/users` | `Users/Pages/Users.razor` → `Users/Components/UsersTab.razor` |
 
-A searchable, filterable, paged grid of every user: name, email, role badge, email verified, locked, searchable, created. The page itself only sets breadcrumbs; `UsersTab` does the work.
+A searchable, filterable, paged grid of every user: name, username, email, role badge, email verified, locked, public page (`/golf/{slug}` badge when public), searchable, created. The page itself only sets breadcrumbs; `UsersTab` does the work.
 
-- **Load**: `UserAdminService.GetAllUsersAsync()`. Search filters client-side by name or email.
+- **Load**: `UserAdminService.GetAllUsersAsync()`. Search filters client-side by name, username (a leading `@` is ignored) or email.
 - **Row actions**: Edit (dialog), plus links to `/rounds?userId=...` and `/stats?userId=...`.
-- **Create User** (`Users/Dialogs/CreateUserDialog.razor`): creates an Identity user with `EmailConfirmed = true` through `UserManager`/`IUserStore` directly. Returns the new id.
+- **Create User** (`Users/Dialogs/CreateUserDialog.razor`): creates an Identity user with `EmailConfirmed = true` through `UserManager`/`IUserStore` directly, with a default username from `IUsernameService.GenerateDefaultAsync`. Returns the new id.
 - **Edit User** (`Users/Dialogs/EditUserDialog.razor`): receives the target `User` and, separately, `ActingAdminUserId`. On save it calls only the methods whose value changed:
   - `UserAdminService.UpdateUserAsync(id, UpdateUserDto)` for first and last name
+  - `IUsernameService.ChangeUsernameAsync(targetUserId, username)` for the username, with the same rules as the app. Use it to fix an offensive name
   - `ToggleAdminRoleAsync(id)`
   - `SetLockoutAsync(id, bool)`, which sets lockout end to `DateTimeOffset.MaxValue` or clears it
   - `SetSearchHiddenAsync(id, bool)`, which hides the user from friend search
+  - `SetPublicProfileAsync(targetUserId, settings, actingAdminUserId)` for the **Public stats page** section: the Public switch, the profile link (slug), and the strokes-gained, recent-rounds and course-names toggles. It delegates to `IProfileService.UpdatePublicProfileAsync`, the same rules as the app's `PUT /api/profile/public`, and stamps the admin as `UpdatedBy`. The page itself only changes on the next landing build. See [../features/public-profile.md](../features/public-profile.md)
   - **Delete**: `DeleteConfirmDialog`, then `UserAdminService.DeleteUserAsync(id)`, a hard `UserManager.DeleteAsync`.
   - **Send password reset**: `IPasswordResetService.SendResetLinkAsAdminAsync(targetUserId, actingAdminUserId)`. It emails the same link as the app's "forgot password" flow. The admin never sees or sets the password. See [../features/users-and-social.md](../features/users-and-social.md).
 
@@ -348,7 +350,7 @@ Under `src/FairwayFinder.Admin/Components/Shared/`:
 | `RoundTrackingBadge.razor` | Shot Tracked / Hole Stats / Basic badge from `RoundTrackingLevel`. |
 | `StatsFilterBar.razor` | Date-range filter bar. Currently unused; `StatsExplorer` builds its own filters. |
 
-CLAUDE.md says every hole score should be shown with `ScoreMark`. Today only the game scorecard (`GameScorecardGrid`) does. The round scorecard (`Rounds/Components/FairwayFinderScorecard.razor`) still uses its own styling. New score displays should use `ScoreMark` + `ScoreMarkLegend`.
+Every hole score is shown with `ScoreMark`: the game scorecard (`GameScorecardGrid`) and the round scorecard (`Rounds/Components/FairwayFinderScorecard.razor`, which puts `ScoreMarkLegend` under its table). New score displays should use `ScoreMark` + `ScoreMarkLegend`. The Landing site's public round pages copy the same shapes and colours in `site.css` (`.score-mark`), so change both together.
 
 ## Circuit services
 

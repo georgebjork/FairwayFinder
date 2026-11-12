@@ -16,6 +16,14 @@
     <ItemGroup>
         <!-- Copied as-is into the generated site; the generator reads them from the build output. -->
         <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
+        <!-- The OG card renderer loads this itself: SkiaSharp's Linux NoDependencies build has no
+             fontconfig, so App Platform's build machine has no default typeface to fall back on. -->
+        <None Include="Fonts\**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="SkiaSharp" Version="4.156.0" />
+      <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.156.0" />
     </ItemGroup>
 
 </Project>

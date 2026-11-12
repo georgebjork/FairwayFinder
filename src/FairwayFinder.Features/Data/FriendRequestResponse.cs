@@ -6,6 +6,7 @@ public class FriendRequestResponse
     public string OtherUserId { get; set; } = string.Empty;
     public Guid OtherPublicIdentifier { get; set; }
     public string OtherDisplayName { get; set; } = string.Empty;
+    public string OtherUsername { get; set; } = string.Empty;
     public string OtherEmail { get; set; } = string.Empty;
     public FriendRequestDirection Direction { get; set; }
     public DateOnly RequestedOn { get; set; }

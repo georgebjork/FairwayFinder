@@ -1,0 +1,35 @@
+@* Strokes gained by category as diverging bars around zero: green right of the axis is shots
+   gained on the baseline, red left of it is shots lost. Pure CSS, so it reflows on a phone. *@
+
+<ol class="sg-bars">
+    @foreach (var (label, value) in Rows)
+    {
+        var share = Math.Abs(value) / Scale * 50;
+        <li>
+            <span class="sg-label">@label</span>
+            <span class="sg-track">
+                <span class="sg-bar @(value >= 0 ? "gain" : "loss")"
+                      style="@($"{(value >= 0 ? "left" : "right")}: 50%; width: {Pct(share)}%;")"></span>
+            </span>
+            <span class="sg-value @(value >= 0 ? "gain" : "loss")">@ProfileFormat.Sg(value)</span>
+        </li>
+    }
+</ol>
+<p class="chart-note">Per round, against the baseline · total @ProfileFormat.Sg(StrokesGained.Total) · @StrokesGained.RoundsIncluded shot-tracked @(StrokesGained.RoundsIncluded == 1 ? "round" : "rounds")</p>
+
+@code {
+    [Parameter, EditorRequired] public PublicStrokesGained StrokesGained { get; set; } = default!;
+
+    private (string, double)[] Rows =>
+    [
+        ("Off the tee", StrokesGained.OffTheTee),
+        ("Approach", StrokesGained.Approach),
+        ("Around the green", StrokesGained.AroundTheGreen),
+        ("Putting", StrokesGained.Putting)
+    ];
+
+    // At least half a stroke either way, so a golfer close to the baseline doesn't get full-width bars.
+    private double Scale => Math.Max(0.5, Rows.Max(r => Math.Abs(r.Item2)));
+
+    private static string Pct(double v) => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+}

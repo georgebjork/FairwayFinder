@@ -247,8 +247,9 @@ src/FairwayFinder.Admin/Components/
 ### Displaying scores and games
 
 - Show any hole score with `Shared/Scoring/ScoreMark` (circle/square birdie–bogey notation) and put
-  `ScoreMarkLegend` under the card, so every page marks scores the same way. (The round scorecard,
-  `FairwayFinderScorecard.razor`, still uses its own styling; move it to `ScoreMark` when touching it.)
+  `ScoreMarkLegend` under the card, so every page marks scores the same way. The public profile's
+  round pages on the Landing site mirror the same shapes and colours in `site.css` (`.score-mark`);
+  change both together.
 - The game scorecard (`Games/Components/GameScorecardGrid`) knows nothing about game types. It renders
   `GameCardModel`, which reduces each scoreboard to sides, per-hole winners (`Awards`, with an optional
   tag like `L`/`H`/`×3`), a result chip and a running standing. **A new game type adds one case to

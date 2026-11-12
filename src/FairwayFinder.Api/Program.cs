@@ -185,6 +185,7 @@ app.MapRoundEndpoints();
 app.MapStatsEndpoints();
 app.MapLookupEndpoints();
 app.MapProfileEndpoints();
+app.MapPublicProfileEndpoints();
 app.MapFriendEndpoints();
 app.MapGameEndpoints();
 app.MapDeviceEndpoints();

@@ -177,7 +177,7 @@ These fail when something new is added without the matching protection. They are
 | `PageAuthorizationTests` | `tests/FairwayFinder.Admin.IntegrationTests/Pages/` | Discovers every routable admin component by reflection. Fails if one lacks `[Authorize(Policy = Policies.AdminOnly)]`, if anonymous visitors are not redirected to `/login`, if golfers are not redirected to `/access-denied`, or if an admin does not get a 200. |
 | `AuditStampTests` | `tests/FairwayFinder.Features.Tests/` | An entity with `created_on`/`updated_on` doesn't implement `IAuditable`, a `DateTime` maps to anything but `timestamptz`, or `DatePlayed` stops being a `date`. |
 
-Never add an endpoint to `AnonymousEndpoints` without a reason, and when you do, add a test for it in `PublicEndpointsTests` or `AuthEndpointsTests`. If a new admin route has a parameter, `PageAuthorizationTests.Resolve` fills `:long` constraints with `1` and anything else with `placeholder`; extend it if that is not enough.
+Never add an endpoint to `AnonymousEndpoints` without a reason. When you do, write the reason as a comment on the entry, and add a test for it in `PublicEndpointsTests`, `PublicProfileEndpointsTests` or `AuthEndpointsTests`. If a new admin route has a parameter, `PageAuthorizationTests.Resolve` fills `:long` constraints with `1` and anything else with `placeholder`; extend it if that is not enough.
 
 ## Writing each kind of test
 

@@ -12,4 +12,7 @@ public static class Site
     // listing at launch.
     public const string AppInstallUrl = "https://testflight.apple.com/join/rscJqcFW";
     public const string AppInstallLabel = "Join the beta on TestFlight";
+
+    /// <summary>Credited in the "Built with FairwayFinder" footer of every public profile page.</summary>
+    public const string Author = "George Bjork";
 }
