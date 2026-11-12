@@ -20,7 +20,10 @@
     --ff-fairway: #2f9e6b;
     --ff-sand: #d6a945;
     --ff-flag: #d64550;
-    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    /* The admin console's palette and face (Admin/wwwroot/css/fairway-theme.css, dark mode). */
+    --ff-line-strong: #4f4a66;
+    --ff-shade: #201a38; /* label and total cells, a step above the panel */
+    --font: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -151,19 +154,6 @@ h1 {
 .card tr + tr { border-top: 1px solid var(--line); }
 
 .card .tot { font-weight: 700; padding-left: 8px; }
-
-.mark {
-    display: inline-grid;
-    place-items: center;
-    width: 26px;
-    height: 26px;
-    font-weight: 600;
-}
-
-.mark.birdie { border: 1.5px solid var(--green); border-radius: 50%; }
-.mark.eagle  { border: 1.5px solid var(--green); border-radius: 50%; box-shadow: 0 0 0 2px var(--ink-raised), 0 0 0 3.5px var(--green); }
-.mark.bogey  { border: 1.5px solid var(--red); border-radius: 3px; }
-.mark.double { border: 1.5px solid var(--red); border-radius: 3px; box-shadow: 0 0 0 2px var(--ink-raised), 0 0 0 3.5px var(--red); }
 
 .card-stats {
     display: grid;
@@ -422,25 +412,56 @@ h1 {
 .stat-strip a:hover, .rounds a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .rounds tr.linked td:first-child a { color: var(--brand-light); font-weight: 600; }
 
-.scorecard-scroll { overflow-x: auto; margin-bottom: 20px; }
+/* Round scorecard, ported from the admin's FairwayFinderScorecard: hairline grid, shaded label and
+   total columns, larger score row. */
+.scorecard-scroll { overflow-x: auto; margin-bottom: 16px; }
 
 .scorecard {
     width: 100%;
-    min-width: 520px;
+    min-width: 900px;
     border-collapse: collapse;
+    border: 1px solid var(--ff-line-strong);
     text-align: center;
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     font-variant-numeric: tabular-nums;
 }
 
-.scorecard th, .scorecard td { padding: 6px 2px; border-bottom: 1px solid var(--line); }
-.scorecard thead th { font-weight: 600; color: var(--text-muted); }
-.scorecard tbody th, .scorecard thead th:first-child { text-align: left; font-weight: 500; color: var(--text-muted); padding-right: 10px; white-space: nowrap; }
-.scorecard .meta td { color: var(--text-muted); font-size: 0.8rem; }
-.scorecard .tot { font-weight: 700; color: var(--text); padding-left: 10px; }
-.scorecard .score td { padding: 4px 2px; }
-.scorecard .hit { color: var(--ff-fairway); }
-.scorecard .miss { color: var(--text-muted); }
+.scorecard th, .scorecard td {
+    padding: 0.5rem 0.25rem;
+    border-top: 1px solid var(--ff-line-strong);
+    border-bottom: 1px solid var(--ff-line-strong);
+}
+
+.scorecard thead th { font-weight: 600; }
+
+.scorecard td { min-width: 36px; width: 36px; }
+
+.scorecard tbody th,
+.scorecard thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    min-width: 80px;
+    padding-left: 0.5rem;
+    text-align: left;
+    font-weight: 600;
+    white-space: nowrap;
+    background: var(--ff-shade);
+}
+
+.scorecard thead th,
+.scorecard .tot {
+    background: var(--ff-shade);
+}
+
+.scorecard .tot { min-width: 45px; font-weight: 600; }
+
+.scorecard .score-row { font-size: 1rem; font-weight: 600; }
+.scorecard .score-row td { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+
+.sc-icon { width: 20px; height: 20px; vertical-align: middle; fill: currentColor; }
+.sc-icon.hit { color: var(--ff-fairway); }
+.sc-icon.miss { color: var(--ff-flag); }
 
 /* Score marks, mirroring the admin console's Shared/Scoring/ScoreMark.razor.css. */
 .score-mark {

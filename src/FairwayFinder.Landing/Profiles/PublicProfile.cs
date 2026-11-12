@@ -51,6 +51,8 @@ public record PublicScorecard(
     DateOnly DatePlayed,
     string? CourseName,
     string TeeboxName,
+    decimal Rating,
+    int Slope,
     int Score,
     int ToPar,
     int Par,
@@ -63,4 +65,15 @@ public record PublicScorecard(
     int? Putts,
     PublicStrokesGained? StrokesGained);
 
-public record PublicScorecardHole(int HoleNumber, int Par, int Yardage, int Score, int? Putts, bool? Fairway, bool? Green);
+/// <summary>FairwayMiss/GreenMiss: Left, Right, Short or Long; null when hit, untracked or unrecorded.</summary>
+public record PublicScorecardHole(
+    int HoleNumber,
+    int Par,
+    int Yardage,
+    int Handicap,
+    int Score,
+    int? Putts,
+    bool? Fairway,
+    bool? Green,
+    string? FairwayMiss,
+    string? GreenMiss);

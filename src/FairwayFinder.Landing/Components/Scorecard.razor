@@ -1,0 +1,190 @@
+@* A round's card, laid out like the admin console's Rounds/Components/FairwayFinderScorecard: one
+   table with Out, In and Total columns, the tee name on the yardage row, handicaps with the teebox's
+   slope/rating, then the tracked stat rows. Change the two together so a card reads the same everywhere.
+   The table scrolls sideways on a phone with the row labels pinned. *@
+
+<div class="scorecard-scroll">
+    <table class="scorecard">
+        <thead>
+            <tr>
+                <th scope="row">Hole</th>
+                @foreach (var nine in Nines)
+                {
+                    @foreach (var hole in nine.Holes)
+                    {
+                        <th scope="col">@hole.HoleNumber</th>
+                    }
+                    <th scope="col" class="tot">@nine.Label</th>
+                }
+                <th scope="col" class="tot">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <th scope="row">@Card.TeeboxName</th>
+                @foreach (var nine in Nines)
+                {
+                    @foreach (var hole in nine.Holes)
+                    {
+                        <td>@hole.Yardage</td>
+                    }
+                    <td class="tot">@nine.Holes.Sum(h => h.Yardage)</td>
+                }
+                <td class="tot">@Card.Holes.Sum(h => h.Yardage)</td>
+            </tr>
+            @* Stroke index 0 and slope 0 mean unset (or a card from an API that predates the fields). *@
+            @if (Card.Holes.Any(h => h.Handicap > 0) || Card.Slope > 0)
+            {
+                <tr>
+                    <th scope="row">Handicap</th>
+                    @foreach (var nine in Nines)
+                    {
+                        @foreach (var hole in nine.Holes)
+                        {
+                            <td>@(hole.Handicap > 0 ? hole.Handicap : null)</td>
+                        }
+                        <td class="tot"></td>
+                    }
+                    <td class="tot">@(Card.Slope > 0 ? $"{Card.Slope} / {Card.Rating:0.0#}" : null)</td>
+                </tr>
+            }
+            <tr>
+                <th scope="row">Par</th>
+                @foreach (var nine in Nines)
+                {
+                    @foreach (var hole in nine.Holes)
+                    {
+                        <td>@hole.Par</td>
+                    }
+                    <td class="tot">@nine.Holes.Sum(h => h.Par)</td>
+                }
+                <td class="tot">@Card.Par</td>
+            </tr>
+            <tr class="score-row">
+                <th scope="row">Score</th>
+                @foreach (var nine in Nines)
+                {
+                    @foreach (var hole in nine.Holes)
+                    {
+                        <td><ScoreMark Strokes="hole.Score" Par="hole.Par" /></td>
+                    }
+                    <td class="tot">@nine.Holes.Sum(h => h.Score)</td>
+                }
+                <td class="tot">@Card.Score</td>
+            </tr>
+
+            @if (Card.Holes.Any(h => h.Fairway is not null))
+            {
+                <tr>
+                    <th scope="row">Fairways</th>
+                    @foreach (var nine in Nines)
+                    {
+                        @foreach (var hole in nine.Holes)
+                        {
+                            <td>@HitOrMiss(hole.Fairway, hole.FairwayMiss)</td>
+                        }
+                        <td class="tot">@nine.Holes.Count(h => h.Fairway == true)</td>
+                    }
+                    <td class="tot">@Card.Holes.Count(h => h.Fairway == true) / @Card.Holes.Count(h => h.Fairway is not null)</td>
+                </tr>
+            }
+            @if (Card.Holes.Any(h => h.Green is not null))
+            {
+                <tr>
+                    <th scope="row">GIR</th>
+                    @foreach (var nine in Nines)
+                    {
+                        @foreach (var hole in nine.Holes)
+                        {
+                            <td>@HitOrMiss(hole.Green, hole.GreenMiss)</td>
+                        }
+                        <td class="tot">@nine.Holes.Count(h => h.Green == true)</td>
+                    }
+                    <td class="tot">@Card.Holes.Count(h => h.Green == true) / @Card.Holes.Count(h => h.Green is not null)</td>
+                </tr>
+            }
+            @if (Card.Holes.Any(h => h.Putts is not null))
+            {
+                <tr>
+                    <th scope="row">Putts</th>
+                    @foreach (var nine in Nines)
+                    {
+                        @foreach (var hole in nine.Holes)
+                        {
+                            <td>@hole.Putts</td>
+                        }
+                        <td class="tot">@nine.Holes.Sum(h => h.Putts ?? 0)</td>
+                    }
+                    <td class="tot">@Card.Holes.Sum(h => h.Putts ?? 0)</td>
+                </tr>
+            }
+            @if (Card.Holes.Any(IsUpAndDownAttempt))
+            {
+                <tr>
+                    <th scope="row">Up &amp; Down</th>
+                    @foreach (var nine in Nines)
+                    {
+                        @foreach (var hole in nine.Holes)
+                        {
+                            <td>
+                                @if (IsUpAndDown(hole))
+                                {
+                                    @Icon(CheckPath, "hit", "Up and down")
+                                }
+                                else if (IsUpAndDownAttempt(hole))
+                                {
+                                    @Icon(CancelPath, "miss", "Missed up and down")
+                                }
+                            </td>
+                        }
+                        <td class="tot">@nine.Holes.Count(IsUpAndDown)</td>
+                    }
+                    <td class="tot">@Card.Holes.Count(IsUpAndDown) / @Card.Holes.Count(IsUpAndDownAttempt)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PublicScorecard Card { get; set; } = default!;
+
+    private record Nine(string Label, List<PublicScorecardHole> Holes);
+
+    // Out and In, each only when the round played holes on that side.
+    private IEnumerable<Nine> Nines => new[]
+    {
+        new Nine("Out", Card.Holes.Where(h => h.HoleNumber <= 9).ToList()),
+        new Nine("In", Card.Holes.Where(h => h.HoleNumber > 9).ToList())
+    }.Where(n => n.Holes.Count > 0);
+
+    // The admin's RoundHole.IsUpAndDownAttempt / IsUpAndDown, over the public fields.
+    private static bool IsUpAndDownAttempt(PublicScorecardHole h) => h.Green == false && h.Putts is not null;
+    private static bool IsUpAndDown(PublicScorecardHole h) => IsUpAndDownAttempt(h) && h.Putts <= 1 && h.Score <= h.Par;
+
+    // Material icon paths, matching the RadzenIcons the admin card uses (check_circle, cancel,
+    // arrow_circle_up rotated to point the way the ball missed).
+    private const string CheckPath = "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z";
+    private const string CancelPath = "M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z";
+    private const string ArrowPath = "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 10v4h-2v-4H8l4-4 4 4h-3z";
+
+    private static RenderFragment HitOrMiss(bool? hit, string? miss) => hit switch
+    {
+        true => Icon(CheckPath, "hit", "Hit"),
+        false => miss switch
+        {
+            "Left" => Icon(ArrowPath, "miss", "Missed left", -90),
+            "Right" => Icon(ArrowPath, "miss", "Missed right", 90),
+            "Short" => Icon(ArrowPath, "miss", "Missed short", 180),
+            "Long" => Icon(ArrowPath, "miss", "Missed long"),
+            _ => Icon(CancelPath, "miss", "Missed")
+        },
+        null => _ => { }
+    };
+
+    private static RenderFragment Icon(string path, string tone, string title, int rotate = 0) =>
+        @<svg class="sc-icon @tone" viewBox="0 0 24 24" role="img" aria-label="@title">
+            <title>@title</title>
+            <path d="@path" transform="@(rotate == 0 ? null : $"rotate({rotate} 12 12)")" />
+        </svg>;
+}

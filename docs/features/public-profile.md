@@ -60,6 +60,20 @@ A card's **key** is its URL segment and is never the round id. It is the date pl
 `-2`, `-3`… for later rounds that day in creation order (`PublicProfileService.ScorecardKeys`). Keys are
 computed over every counted round, not just the published ones, so a round keeps its URL as the window moves.
 
+Each card carries the teebox's `TeeboxName`, `Rating` and `Slope`, and every hole its `Yardage`, `Handicap`
+(stroke index; 0 when unset), `Par` and `Score`. When hole stats were tracked it also has `Putts`, `Fairway`
+(null on par 3s) and `Green`, plus `FairwayMiss`/`GreenMiss`: `Left`, `Right`, `Short` or `Long` on a miss,
+and null when hit or when no direction was recorded.
+
+The round page lays the card out like the admin console's `FairwayFinderScorecard`
+(`Components/Scorecard.razor`):
+- **Layout:** one table with Out, In and Total columns.
+- **Rows:** the tee name on the yardage row, a handicap row totalling slope / rating, and a larger score row.
+- **Tracked rows:** Fairways, GIR, Putts and Up & Down, with the same check and miss-direction icons as the admin card.
+- **Small screens:** the card scrolls sideways with the row labels pinned.
+
+Change the two together. Landing also uses the admin's Archivo font.
+
 Score marks on the card copy the admin console's `ScoreMark` exactly: the same circles and squares in the
 fairway (`#2f9e6b`), sand (`#d6a945`) and flag (`#d64550`) theme colours (`site.css`, `.score-mark`, and
 `Components/ScoreMark.razor`). Change the two together.
@@ -100,7 +114,7 @@ For each slug it writes:
 | File | What |
 |---|---|
 | `golf/{slug}/index.html` | `Pages/ProfilePage.razor`: stat strip (handicap estimate, scoring average, rounds this year, best round), scoring trend over the last 20 18-hole rounds, strokes-gained diverging bars, scoring-distribution donut, recent rounds, and a "Built with FairwayFinder" footer. Every chart is inline SVG or CSS rendered at build time, with no JavaScript |
-| `golf/{slug}/rounds/{key}/index.html` | `Pages/RoundPage.razor`: one page per round the profile links to (the recent rounds and the best round). Header with score, putts, fairways and greens, then the card a nine at a time (`Components/ScorecardTable.razor`) with putts/fairway/green rows when tracked, the score-mark legend, and that round's strokes gained |
+| `golf/{slug}/rounds/{key}/index.html` | `Pages/RoundPage.razor`: one page per round the profile links to (the recent rounds and the best round). Header with score, putts, fairways and greens, then the card as one admin-style table (`Components/Scorecard.razor`) with fairway/GIR/putts/up-and-down rows when tracked, the score-mark legend, and that round's strokes gained |
 | `golf/{slug}/badge.svg` | `Profiles/BadgeSvg.cs`: a shields-style badge, "⛳ golf \| 8.4 HCP · 79.2 avg" |
 | `golf/{slug}/card.png` | `Profiles/OgCardRenderer.cs`: the 1200×630 `og:image` that LinkedIn, Slack and iMessage show. Rendered with SkiaSharp |
 

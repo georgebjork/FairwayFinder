@@ -24,7 +24,7 @@
                         <th>Score</th>
                         @foreach (var h in _card)
                         {
-                            <td><span class="mark @Mark(h)">@h.Score</span></td>
+                            <td><ScoreMark Strokes="h.Score" Par="h.Par" /></td>
                         }
                         <td class="tot">@_card.Sum(h => h.Score)</td>
                     </tr>
@@ -90,14 +90,4 @@
         new(1, 4, 4), new(2, 5, 4), new(3, 3, 3), new(4, 4, 5), new(5, 4, 4),
         new(6, 3, 4), new(7, 5, 5), new(8, 4, 6), new(9, 4, 3),
     ];
-
-    // Circle for under par, square for over: the same notation as the app and admin scorecards.
-    private static string Mark(CardHole h) => (h.Score - h.Par) switch
-    {
-        <= -2 => "eagle",
-        -1 => "birdie",
-        0 => "par",
-        1 => "bogey",
-        _ => "double",
-    };
 }

@@ -35,14 +35,7 @@
     <main class="wrap profile-grid">
         <section class="panel wide">
             <h2>Scorecard</h2>
-            @if (Front.Count > 0)
-            {
-                <ScorecardTable Holes="Front" TotalLabel="Out" />
-            }
-            @if (Back.Count > 0)
-            {
-                <ScorecardTable Holes="Back" TotalLabel="In" />
-            }
+            <Scorecard Card="Card" />
             <ScoreMarkLegend />
         </section>
 
@@ -59,9 +52,6 @@
 @code {
     [Parameter, EditorRequired] public PublicProfile Profile { get; set; } = default!;
     [Parameter, EditorRequired] public PublicScorecard Card { get; set; } = default!;
-
-    private List<PublicScorecardHole> Front => Card.Holes.Where(h => h.HoleNumber <= 9).ToList();
-    private List<PublicScorecardHole> Back => Card.Holes.Where(h => h.HoleNumber > 9).ToList();
 
     private string Heading => Card.CourseName ?? (Card.FullRound ? "18 holes" : "9 holes");
 

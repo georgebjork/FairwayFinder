@@ -185,9 +185,59 @@ public class PublicProfileEndpointsTests(ApiFactory factory) : ApiTestBase(facto
         Assert.All(card.Holes, h => Assert.Equal(h.Par + 1, h.Score));
         Assert.Null(card.Putts); // posted without hole stats
 
-        // The key is a date, never the database id.
-        Assert.DoesNotContain($":{first},", json);
+        // The teebox's numbers, for the card's yardage and handicap rows.
+        Assert.Equal("Blue", card.TeeboxName);
+        Assert.Equal(71.5m, card.Rating);
+        Assert.Equal(130, card.Slope);
+        Assert.All(card.Holes, h => Assert.Equal(h.HoleNumber, h.Handicap)); // TestData's stroke indexes run 1–18
+        Assert.All(card.Holes, h => Assert.Equal(400, h.Yardage));
+        Assert.All(card.Holes, h => { Assert.Null(h.FairwayMiss); Assert.Null(h.GreenMiss); });
+
+        // The key is a date, never the database id, and no card field carries an id. (Matching the
+        // id's digits in the raw JSON would trip over hole numbers and handicaps.)
+        Assert.DoesNotContain(first.ToString(), profile.Scorecards.Select(c => c.Key));
         Assert.DoesNotContain("roundId", json, StringComparison.OrdinalIgnoreCase);
+        var cards = JsonNode.Parse(json)!["scorecards"]!.AsArray();
+        var fields = cards.SelectMany(c => c!.AsObject().Select(p => p.Key)
+            .Concat(c["holes"]!.AsArray().SelectMany(h => h!.AsObject().Select(p => p.Key))));
+        Assert.DoesNotContain(fields, f => f.EndsWith("id", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Scorecards_carry_which_way_fairways_and_greens_were_missed()
+    {
+        var golfer = await SignInNewUserAsync();
+        var course = await Data.CreateCourseAsync(); // holes 1–3 are par 4, 5, 3
+        var request = StartRequest(course, Today);
+        request.UsingHoleStats = true;
+        var started = await StartRoundAsync(golfer.Client, request);
+
+        UpsertHoleRequest Hole(HoleInfo hole) => hole.HoleNumber switch
+        {
+            1 => new() { Score = 5, HitFairway = true, HitGreen = false, MissGreenType = 1, NumberOfPutts = 2 },
+            2 => new() { Score = 5, HitFairway = false, MissFairwayType = 2, HitGreen = true, NumberOfPutts = 2 },
+            // A par 3 has no fairway, whatever the client sends.
+            3 => new() { Score = 4, HitFairway = false, MissFairwayType = 1, HitGreen = false, MissGreenType = 3, NumberOfPutts = 2 },
+            // A miss with no direction recorded.
+            4 => new() { Score = 5, HitFairway = false, HitGreen = false, NumberOfPutts = 2 },
+            _ => new() { Score = (short)hole.Par, HitFairway = hole.Par > 3 ? true : null, HitGreen = true, NumberOfPutts = 2 }
+        };
+
+        foreach (var hole in started.Holes)
+            await AssertStatusAsync(HttpStatusCode.OK, await golfer.Client.PutAsJsonAsync(
+                $"/api/rounds/{started.RoundId}/holes/{hole.HoleNumber}", Hole(hole)));
+        await AssertStatusAsync(HttpStatusCode.OK, await golfer.Client.PostAsync($"/api/rounds/{started.RoundId}/complete", null));
+        await Data.MakeProfilePublicAsync(golfer.Id, "misses");
+
+        using var anonymous = AnonymousClient();
+        var card = (await GetAsync<PublicProfileResponse>(anonymous, "/api/public/profiles/misses")).Scorecards.Single();
+        var holes = card.Holes.ToDictionary(h => h.HoleNumber);
+
+        Assert.Equal((true, null, false, "Left"), (holes[1].Fairway, holes[1].FairwayMiss, holes[1].Green, holes[1].GreenMiss));
+        Assert.Equal((false, "Right", true, null), (holes[2].Fairway, holes[2].FairwayMiss, holes[2].Green, holes[2].GreenMiss));
+        Assert.Equal((null, null, false, "Short"), (holes[3].Fairway, holes[3].FairwayMiss, holes[3].Green, holes[3].GreenMiss));
+        Assert.Equal((false, null, false, null), (holes[4].Fairway, holes[4].FairwayMiss, holes[4].Green, holes[4].GreenMiss));
+        Assert.All(card.Holes.Where(h => h.HoleNumber > 4), h => { Assert.Null(h.FairwayMiss); Assert.Null(h.GreenMiss); });
     }
 
     [Fact]

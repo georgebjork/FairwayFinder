@@ -110,6 +110,11 @@ public class PublicScorecard
     public DateOnly DatePlayed { get; set; }
     public string? CourseName { get; set; }
     public string TeeboxName { get; set; } = string.Empty;
+
+    /// <summary>The teebox's course rating and slope, shown in the card's handicap row.</summary>
+    public decimal Rating { get; set; }
+    public int Slope { get; set; }
+
     public int Score { get; set; }
     public int ToPar { get; set; }
 
@@ -137,12 +142,23 @@ public class PublicScorecardHole
     public int HoleNumber { get; set; }
     public int Par { get; set; }
     public int Yardage { get; set; }
+
+    /// <summary>The hole's stroke index on this teebox (1 = hardest).</summary>
+    public int Handicap { get; set; }
+
     public int Score { get; set; }
 
     /// <summary>Null when not tracked; fairway is also null on par 3s.</summary>
     public int? Putts { get; set; }
     public bool? Fairway { get; set; }
     public bool? Green { get; set; }
+
+    /// <summary>
+    /// Which way a missed fairway or green went: <c>Left</c>, <c>Right</c>, <c>Short</c> or <c>Long</c>.
+    /// Null when hit, untracked, or the direction wasn't recorded.
+    /// </summary>
+    public string? FairwayMiss { get; set; }
+    public string? GreenMiss { get; set; }
 }
 
 /// <summary>A golfer's public-page settings, as sent by the iOS app or the admin console.</summary>

@@ -198,6 +198,8 @@ public class PublicProfileService : IPublicProfileService
             DatePlayed = round.DatePlayed,
             CourseName = showCourseNames ? round.CourseName.Trim() : null,
             TeeboxName = round.Teebox.TeeboxName,
+            Rating = round.Teebox.Rating,
+            Slope = round.Teebox.Slope,
             Score = round.Score,
             ToPar = holes.Sum(h => h.Score!.Value) - holes.Sum(h => h.Par),
             Par = holes.Sum(h => h.Par),
@@ -207,10 +209,13 @@ public class PublicProfileService : IPublicProfileService
                 HoleNumber = h.HoleNumber,
                 Par = h.Par,
                 Yardage = h.Yardage,
+                Handicap = h.Handicap,
                 Score = h.Score!.Value,
                 Putts = h.Stats?.NumberOfPutts,
                 Fairway = h.Par > 3 ? h.Stats?.HitFairway : null,
-                Green = h.Stats?.HitGreen
+                Green = h.Stats?.HitGreen,
+                FairwayMiss = h.Par > 3 && h.Stats?.HitFairway == false ? MissDirection(h.Stats.MissFairwayType) : null,
+                GreenMiss = h.Stats?.HitGreen == false ? MissDirection(h.Stats.MissGreenType) : null
             }).ToList(),
             FairwaysHit = tracked && fairwayHoles.Count > 0 ? fairwayHoles.Count(h => h.Stats!.HitFairway == true) : null,
             FairwaysTotal = tracked && fairwayHoles.Count > 0 ? fairwayHoles.Count : null,
@@ -228,4 +233,14 @@ public class PublicProfileService : IPublicProfileService
             }
         };
     }
+
+    /// <summary>A hole-stat miss type as the public card's word for it. "Other" and unrecorded are null.</summary>
+    private static string? MissDirection(long? missType) => (MissType.MissTypeEnum?)missType switch
+    {
+        MissType.MissTypeEnum.MissLeft => "Left",
+        MissType.MissTypeEnum.MissRight => "Right",
+        MissType.MissTypeEnum.MissShort => "Short",
+        MissType.MissTypeEnum.MissLong => "Long",
+        _ => null
+    };
 }
