@@ -107,10 +107,9 @@ else
                         @foreach (var hole in FrontNine)
                         {
                             <td class="hole-cell score-cell">
-                                @if (hole.Score.HasValue)
+                                @if (hole.Score is { } strokes)
                                 {
-                                    <span class="score-value">@hole.Score</span>
-                                    @GetScoreIndicatorSvg(hole.ScoreToPar)
+                                    <ScoreMark Strokes="strokes" Par="hole.Par" />
                                 }
                                 else
                                 {
@@ -125,10 +124,9 @@ else
                         @foreach (var hole in BackNine)
                         {
                             <td class="hole-cell score-cell">
-                                @if (hole.Score.HasValue)
+                                @if (hole.Score is { } strokes)
                                 {
-                                    <span class="score-value">@hole.Score</span>
-                                    @GetScoreIndicatorSvg(hole.ScoreToPar)
+                                    <ScoreMark Strokes="strokes" Par="hole.Par" />
                                 }
                                 else
                                 {
@@ -436,6 +434,9 @@ else
             </tbody>
         </table>
     </div>
+    <div class="rz-mt-3">
+        <ScoreMarkLegend />
+    </div>
 }
 
 <style>
@@ -505,22 +506,8 @@ else
     }
 
     .scorecard-table .score-cell {
-        position: relative;
-    }
-
-    .scorecard-table .score-value {
-        position: relative;
-        z-index: 1;
-    }
-
-    .scorecard-table .score-indicator {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 80%;
-        height: 80%;
-        pointer-events: none;
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
     }
 </style>
 
@@ -532,53 +519,6 @@ else
     private IEnumerable<RoundHole> BackNine => Round?.Holes.Where(h => h.HoleNumber > 9) ?? Enumerable.Empty<RoundHole>();
     private bool HasFrontNine => FrontNine.Any();
     private bool HasBackNine => BackNine.Any();
-
-    private MarkupString GetScoreIndicatorSvg(int? scoreToPar)
-    {
-        if (!scoreToPar.HasValue) return new MarkupString("");
-
-        var strokeColor = "var(--rz-text-color)";
-
-        if (scoreToPar.Value <= -2)
-        {
-            // Eagle or better - double circle
-            return new MarkupString($@"
-                <svg class=""score-indicator"" xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 100 100"">
-                    <circle cx=""50"" cy=""50"" r=""38"" stroke-width=""3"" fill=""none"" style=""stroke: {strokeColor};""/>
-                    <circle cx=""50"" cy=""50"" r=""28"" stroke-width=""2"" fill=""none"" style=""stroke: {strokeColor};""/>
-                </svg>");
-        }
-        else if (scoreToPar.Value == -1)
-        {
-            // Birdie - single circle
-            return new MarkupString($@"
-                <svg class=""score-indicator"" xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 100 100"">
-                    <circle cx=""50"" cy=""50"" r=""38"" stroke-width=""3"" fill=""none"" style=""stroke: {strokeColor};""/>
-                </svg>");
-        }
-        else if (scoreToPar.Value == 0)
-        {
-            // Par - no indicator
-            return new MarkupString("");
-        }
-        else if (scoreToPar.Value == 1)
-        {
-            // Bogey - single square
-            return new MarkupString($@"
-                <svg class=""score-indicator"" xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 100 100"">
-                    <rect x=""10"" y=""10"" width=""80"" height=""80"" stroke-width=""3"" fill=""none"" style=""stroke: {strokeColor};""/>
-                </svg>");
-        }
-        else
-        {
-            // Double bogey or worse - double square
-            return new MarkupString($@"
-                <svg class=""score-indicator"" xmlns=""http://www.w3.org/2000/svg"" viewBox=""0 0 100 100"">
-                    <rect x=""10"" y=""10"" width=""80"" height=""80"" stroke-width=""3"" fill=""none"" style=""stroke: {strokeColor};""/>
-                    <rect x=""20"" y=""20"" width=""60"" height=""60"" stroke-width=""2"" fill=""none"" style=""stroke: {strokeColor};""/>
-                </svg>");
-        }
-    }
 
     // SG computed values
     private double? SgOut => Round?.HoleByHoleSg?.Where(h => h.HoleNumber <= 9).Sum(h => h.SgTotal);

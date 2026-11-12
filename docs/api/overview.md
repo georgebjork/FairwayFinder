@@ -65,6 +65,7 @@ Every request is limited per client IP with fixed windows (`src/FairwayFinder.Ap
 | `Api` | Every request that matches an endpoint (global limiter) | 300 / 60 s | A ceiling no real app session reaches |
 | `Unmatched` | Every request that matches no endpoint (global limiter) | 20 / 600 s | The app never requests unknown paths. Scanners probing `/login`, `/.env`, `/wp-login.php` shut themselves out without using up that IP's `Api` budget |
 | `Auth` | The whole `/api/auth` group (`RequireRateLimiting(AuthPolicy)`), on top of `Api` | 10 / 60 s | Login lockout protects one account; this stops one IP guessing passwords across many, and slows anyone trying to lock out other golfers |
+| `PublicProfile` | The anonymous `/api/public` group (`RequireRateLimiting(PublicProfilePolicy)`), on top of `Api` | 30 / 60 s | Its only real caller is the Landing build, a few requests a day. The limit caps anyone scraping pages or guessing slugs |
 
 A rejected request gets `429` with a ProblemDetails body and a `Retry-After` header (seconds). Requests are not queued.
 

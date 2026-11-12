@@ -24,6 +24,7 @@ Conventions used below:
 | `Endpoints/GameEndpoints.cs` | `/api/games` | User |
 | `Endpoints/DeviceEndpoints.cs` | `/api/devices` | User (`/test` Admin) |
 | `Endpoints/AdminInviteEndpoints.cs` | `/api/admin/invites` | Admin |
+| `Endpoints/PublicProfileEndpoints.cs` | `/api/public` | Anon (own rate limit) |
 | `Program.cs` | `/.well-known/...`, `/register`, `/reset-password` | Anon |
 
 ## Auth (`Auth/AuthEndpoints.cs`)
@@ -119,12 +120,13 @@ All 200, `User` auth.
 
 | Method + route | Request | Response | Status codes | Calls |
 |---|---|---|---|---|
-| `GET /api/profile` | none | `UserProfileResponse`: `UserProfileId`, `UserId`, `PublicIdentifier`, `IsPublic`, `DisplayName?`, `Username`, `Email?`, `PreferredTees`, `SgBaselineLevel` | 200 (creates the profile on first access) | `IProfileService.GetOrCreateProfileAsync` |
+| `GET /api/profile` | none | `UserProfileResponse`: `UserProfileId`, `UserId`, `PublicIdentifier`, `IsPublic`, `PublicSlug?`, `ShowStrokesGained`, `ShowRecentRounds`, `ShowCourseNames`, `DisplayName?`, `Username`, `Email?`, `PreferredTees`, `SgBaselineLevel` | 200 (creates the profile on first access) | `IProfileService.GetOrCreateProfileAsync` |
 | `PUT /api/profile/sg-baseline-level` | `UpdateSgBaselineLevelRequest` (record in the same file): `{ "level": "Hcp10" }` | none | 204; 400 for an unknown level name (binding) | `IProfileService.UpdateSgBaselineLevelAsync` |
 | `PUT /api/profile/username` | `UpdateUsernameRequest` (record in the same file): `{ "username": "tee.time_42" }`. Validated (non-empty) | `UsernameResponse`: `{ "username" }`, normalized (lowercase, leading `@` dropped) | 200, including when unchanged; 400 ProblemDetails for an invalid or reserved name; 409 ProblemDetails when someone else has it | `IUsernameService.ChangeUsernameAsync` |
+| `PUT /api/profile/public` | `UpdatePublicProfileRequest` (record in the same file): `{ "isPublic": true, "slug": "george", "showStrokesGained": true, "showRecentRounds": true, "showCourseNames": true }`. The `show*` flags default to true; a blank `slug` keeps the current one, or derives one from the username the first time the profile goes public | `UserProfileResponse` | 200; 400 ProblemDetails for an invalid or reserved slug; 409 ProblemDetails when someone else has it (any case) | `IProfileService.UpdatePublicProfileAsync(userId, …, actingUserId: userId)` |
 | `GET /api/profile/username-available` | query `username` | `UsernameAvailability`: `Username` (normalized), `Available`, `Reason?` | 200. Your own current username counts as available | `IUsernameService.CheckAvailabilityAsync(username, userId)` |
 
-Profiles and visibility: [../features/users-and-social.md](../features/users-and-social.md).
+Profiles and visibility: [../features/users-and-social.md](../features/users-and-social.md). The public stats page: [../features/public-profile.md](../features/public-profile.md).
 
 ## Friends (`Endpoints/FriendEndpoints.cs`)
 
@@ -213,6 +215,14 @@ Requires the `Admin` role; a golfer gets 403. The admin console has its own invi
 | `GET /api/admin/invites` | none | `PendingInviteDto[]`: `Id`, `Email`, `CreatedOn`, `ExpiresOn`, `ClaimedOn?`, `IsExpired` | 200 | `IUserInvitationService.GetPendingInvitesAsync` |
 | `POST /api/admin/invites` | `SendInviteRequest`: `Email`. Validated | none | 204; 400 ProblemDetails with the service error | `CreateAndSendInviteAsync(email, adminUserId)` |
 | `DELETE /api/admin/invites/{id}` | `id` int | none | 204; 404 (empty body) | `RevokeInviteAsync(id, adminUserId)` |
+
+## Public profile (`Endpoints/PublicProfileEndpoints.cs`)
+
+The group is `AllowAnonymous()` and `RequireRateLimiting(PublicProfilePolicy)`. Its consumer is the Landing site's build, which bakes each page into `fairwayfinder.pro/golf/{slug}` ([../features/public-profile.md](../features/public-profile.md)).
+
+| Method + route | Request | Response | Status codes | Calls |
+|---|---|---|---|---|
+| `GET /api/public/profiles/{slug}` | `slug` (case-insensitive) | `PublicProfileResponse`: `DisplayName`, `Slug`, `GeneratedOn`, `Headline` (`HandicapIndex?` estimate, `ScoringAverage18?`, `RoundsThisYear`, `TotalRounds`, `BestRound?`), `StrokesGained?`, `ScoringDistribution`, `Trend` (last 20 18-hole rounds, oldest first), `RecentRounds?` (last 5, each with a scorecard `Key`), `Scorecards` (hole-by-hole cards for the recent rounds and the best round, keyed by date; empty when recent rounds are hidden). Hidden sections are null; with course names hidden every `CourseName` is null. No user id, email, username or public identifier | 200 with `Cache-Control: public, max-age=300`; 404 `PublicProfile` for an unknown slug **and** a private profile alike | `IPublicProfileService.GetBySlugAsync` |
 
 ## Public web surface (`Program.cs`)
 

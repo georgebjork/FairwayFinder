@@ -1,0 +1,42 @@
+@* The four headline numbers across the top of a profile. *@
+
+<dl class="stat-strip">
+    <div>
+        <dt>Handicap <abbr title="Estimated from the most recent 20 rounds, World Handicap System style. Not an official index.">(est.)</abbr></dt>
+        <dd>@ProfileFormat.Handicap(Headline.HandicapIndex)</dd>
+    </div>
+    <div>
+        <dt>Scoring average</dt>
+        <dd>@ProfileFormat.Average(Headline.ScoringAverage18)</dd>
+    </div>
+    <div>
+        <dt>Rounds in @Year</dt>
+        <dd>@Headline.RoundsThisYear</dd>
+    </div>
+    <div>
+        <dt>Best round</dt>
+        @if (Headline.BestRound is { } best)
+        {
+            @if (best.Key is { } key && Slug is not null)
+            {
+                <dd><a href="@ProfileFormat.RoundPath(Slug, key)">@best.Score <small>(@ProfileFormat.ToPar(best.ToPar))</small></a></dd>
+            }
+            else
+            {
+                <dd>@best.Score <small>(@ProfileFormat.ToPar(best.ToPar))</small></dd>
+            }
+        }
+        else
+        {
+            <dd>–</dd>
+        }
+    </div>
+</dl>
+
+@code {
+    [Parameter, EditorRequired] public PublicProfileHeadline Headline { get; set; } = default!;
+    [Parameter, EditorRequired] public int Year { get; set; }
+
+    /// <summary>When set, the best round links to its scorecard.</summary>
+    [Parameter] public string? Slug { get; set; }
+}

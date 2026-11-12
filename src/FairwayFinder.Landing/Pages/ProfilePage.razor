@@ -1,0 +1,74 @@
+@* A golfer's public stats page, written to golf/{slug}/index.html by Program.cs from the API's
+   GET /api/public/profiles/{slug}. Sections the golfer hid arrive null and aren't rendered. *@
+
+<SiteLayout Title="@($"{Profile.DisplayName} · Golf stats")"
+            Description="@ProfileFormat.Description(Profile)"
+            Url="@ProfileFormat.PageUrl(Profile.Slug)"
+            OgImage="@($"{ProfileFormat.PageUrl(Profile.Slug)}card.png")"
+            LargeImage="true">
+    <header class="profile-hero">
+        <div class="wrap">
+            <a href="/" aria-label="@Site.Name home">
+                <img class="wordmark" src="/img/wordmark-white.png" alt="@Site.Name" width="180">
+            </a>
+            <p class="eyebrow">Golf stats</p>
+            <h1>@Profile.DisplayName</h1>
+            <p class="lede">
+                @Profile.Headline.TotalRounds @(Profile.Headline.TotalRounds == 1 ? "round" : "rounds") tracked hole by hole
+                with @Site.Name. Stats as of @ProfileFormat.Date(DateOnly.FromDateTime(Profile.GeneratedOn)).
+            </p>
+            <StatStrip Headline="Profile.Headline" Year="Profile.GeneratedOn.Year" Slug="@Profile.Slug" />
+        </div>
+    </header>
+
+    <main class="wrap profile-grid">
+        @if (Profile.Trend.Count > 0)
+        {
+            <section class="panel wide">
+                <h2>Scoring trend</h2>
+                <TrendLine Trend="Profile.Trend" Average="Profile.Headline.ScoringAverage18" />
+            </section>
+        }
+
+        @if (Profile.StrokesGained is { } sg)
+        {
+            <section class="panel">
+                <h2>Strokes gained</h2>
+                <SgBars StrokesGained="sg" />
+            </section>
+        }
+
+        @if (Profile.ScoringDistribution.TotalHoles > 0)
+        {
+            <section class="panel">
+                <h2>Scoring distribution</h2>
+                <ScoringDonut Distribution="Profile.ScoringDistribution" />
+                <p class="chart-note">@Profile.ScoringDistribution.TotalHoles holes</p>
+            </section>
+        }
+
+        @if (Profile.RecentRounds is { Count: > 0 } rounds)
+        {
+            <section class="panel wide">
+                <h2>Recent rounds</h2>
+                <RecentRoundsTable Rounds="rounds" Slug="@Profile.Slug" />
+            </section>
+        }
+
+        <section class="panel wide built-with">
+            <div>
+                <h2>Built with @Site.Name</h2>
+                <p>
+                    These numbers come from @Site.Name, a golf stat tracker designed and built by @Site.Author:
+                    an iPhone app for hole-by-hole and shot-by-shot entry, an ASP.NET Core API on PostgreSQL,
+                    a strokes-gained engine, and this page, regenerated nightly from live data.
+                </p>
+            </div>
+            <a class="cta" href="/">See @Site.Name</a>
+        </section>
+    </main>
+</SiteLayout>
+
+@code {
+    [Parameter, EditorRequired] public PublicProfile Profile { get; set; } = default!;
+}

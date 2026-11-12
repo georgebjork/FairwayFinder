@@ -9,6 +9,17 @@
     --text-muted: #b3abc9;
     --green: #3ecf8e;
     --red: #f2685c;
+    /* Scoring distribution, best to worst. */
+    --s-eagle: #f5c451;
+    --s-birdie: var(--green);
+    --s-par: #8f86ad;
+    --s-bogey: #f29a6c;
+    --s-double: var(--red);
+    --s-triple: #b8433a;
+    /* Score marks: the admin console's fairway-theme colours, so a card reads the same everywhere. */
+    --ff-fairway: #2f9e6b;
+    --ff-sand: #d6a945;
+    --ff-flag: #d64550;
     --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
 }
 
@@ -237,6 +248,251 @@ h1 {
     align-items: flex-start;
 }
 
+/* ── Public profile (golf/{slug}/) ────────────────────── */
+
+.profile-hero {
+    padding: 56px 0 64px;
+    background:
+        radial-gradient(110% 90% at 85% 0%, rgba(106, 61, 231, 0.5), transparent 60%),
+        var(--ink);
+    border-bottom: 1px solid var(--line);
+}
+
+.profile-hero .wordmark { width: 150px; margin-bottom: 36px; }
+
+.eyebrow {
+    margin: 0 0 8px;
+    color: var(--brand-light);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.stat-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--line);
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-strip > div { background: var(--ink-raised); padding: 20px 22px; }
+.stat-strip dt { font-size: 0.8rem; color: var(--text-muted); }
+.stat-strip dt abbr { text-decoration: none; cursor: help; }
+.stat-strip dd { margin: 4px 0 0; font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
+.stat-strip dd small { font-size: 0.95rem; font-weight: 500; color: var(--text-muted); }
+
+.profile-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    padding-top: 40px;
+    padding-bottom: 72px;
+}
+
+.panel {
+    min-width: 0;
+    padding: 28px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: var(--ink-raised);
+}
+
+.panel.wide { grid-column: 1 / -1; }
+
+.panel h2 { font-size: 1.05rem; margin: 0 0 20px; }
+
+.chart-note { margin: 14px 0 0; font-size: 0.85rem; color: var(--text-muted); }
+
+.gain { color: var(--green); }
+.loss { color: var(--red); }
+
+/* Strokes gained: diverging bars around a centre axis. */
+.sg-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+
+.sg-bars li {
+    display: grid;
+    grid-template-columns: 9.5rem 1fr 3.5rem;
+    align-items: center;
+    gap: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.sg-label { font-size: 0.9rem; color: var(--text-muted); }
+
+.sg-track {
+    position: relative;
+    height: 14px;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.sg-track::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -4px;
+    bottom: -4px;
+    width: 1px;
+    background: var(--text-muted);
+    opacity: 0.6;
+}
+
+.sg-bar { position: absolute; top: 0; bottom: 0; }
+.sg-bar.gain { background: var(--green); border-radius: 0 7px 7px 0; }
+.sg-bar.loss { background: var(--red); border-radius: 7px 0 0 7px; }
+.sg-value { text-align: right; font-weight: 700; }
+
+/* Scoring distribution donut. */
+.donut { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+.donut svg { width: 170px; height: 170px; flex: none; }
+.donut-track { fill: none; stroke: rgba(255, 255, 255, 0.05); stroke-width: 22; }
+.donut-segment { fill: none; stroke-width: 22; transform: rotate(-90deg); transform-origin: 80px 80px; }
+.donut-value { fill: var(--text); font-size: 26px; font-weight: 700; }
+.donut-caption { fill: var(--text-muted); font-size: 11px; }
+
+.donut-segment.s-eagle { stroke: var(--s-eagle); }
+.donut-segment.s-birdie { stroke: var(--s-birdie); }
+.donut-segment.s-par { stroke: var(--s-par); }
+.donut-segment.s-bogey { stroke: var(--s-bogey); }
+.donut-segment.s-double { stroke: var(--s-double); }
+.donut-segment.s-triple { stroke: var(--s-triple); }
+
+.legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 0.9rem; color: var(--text-muted); }
+.legend strong { color: var(--text); margin-left: 6px; font-variant-numeric: tabular-nums; }
+
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; }
+.swatch.s-eagle { background: var(--s-eagle); }
+.swatch.s-birdie { background: var(--s-birdie); }
+.swatch.s-par { background: var(--s-par); }
+.swatch.s-bogey { background: var(--s-bogey); }
+.swatch.s-double { background: var(--s-double); }
+.swatch.s-triple { background: var(--s-triple); }
+
+/* Scoring trend. */
+.trend { display: block; width: 100%; height: auto; }
+.trend-grid { stroke: var(--line); stroke-width: 1; }
+.trend-axis { fill: var(--text-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.trend-average { stroke: var(--brand-light); stroke-width: 1.5; stroke-dasharray: 5 5; }
+.trend-line { fill: none; stroke: var(--green); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.trend-dot { fill: var(--ink-raised); stroke: var(--green); stroke-width: 2; }
+
+/* Recent rounds. */
+.rounds { width: 100%; border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.rounds th { text-align: left; font-weight: 500; font-size: 0.8rem; color: var(--text-muted); padding: 0 12px 10px 0; }
+.rounds td { padding: 12px 12px 12px 0; border-top: 1px solid var(--line); }
+.rounds .num { text-align: right; padding-right: 0; padding-left: 12px; }
+.rounds td.num { font-weight: 600; }
+
+/* Built with FairwayFinder. */
+.built-with {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+    background:
+        radial-gradient(80% 140% at 100% 0%, rgba(106, 61, 231, 0.35), transparent 70%),
+        var(--ink-raised);
+}
+
+.built-with h2 { margin-bottom: 8px; }
+.built-with p { margin: 0; color: var(--text-muted); max-width: 40rem; }
+.built-with .cta { flex: none; }
+
+/* ── Round pages (golf/{slug}/rounds/{key}/) ──────────── */
+
+.round-hero h1 { font-size: clamp(2rem, 4.5vw, 3rem); }
+
+.back {
+    display: inline-block;
+    margin-bottom: 28px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.95rem;
+}
+
+.back:hover { color: var(--text); }
+
+.stat-strip a, .rounds a { text-decoration: none; }
+.stat-strip a:hover, .rounds a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.rounds tr.linked td:first-child a { color: var(--brand-light); font-weight: 600; }
+
+.scorecard-scroll { overflow-x: auto; margin-bottom: 20px; }
+
+.scorecard {
+    width: 100%;
+    min-width: 520px;
+    border-collapse: collapse;
+    text-align: center;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.scorecard th, .scorecard td { padding: 6px 2px; border-bottom: 1px solid var(--line); }
+.scorecard thead th { font-weight: 600; color: var(--text-muted); }
+.scorecard tbody th, .scorecard thead th:first-child { text-align: left; font-weight: 500; color: var(--text-muted); padding-right: 10px; white-space: nowrap; }
+.scorecard .meta td { color: var(--text-muted); font-size: 0.8rem; }
+.scorecard .tot { font-weight: 700; color: var(--text); padding-left: 10px; }
+.scorecard .score td { padding: 4px 2px; }
+.scorecard .hit { color: var(--ff-fairway); }
+.scorecard .miss { color: var(--text-muted); }
+
+/* Score marks, mirroring the admin console's Shared/Scoring/ScoreMark.razor.css. */
+.score-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 1.6rem;
+    height: 1.6rem;
+    margin: 3px;
+    font-weight: 600;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+}
+
+.score-mark.birdie,
+.score-mark.eagle {
+    border-radius: 50%;
+    border: 2px solid var(--ff-fairway);
+    color: var(--ff-fairway);
+}
+
+.score-mark.eagle {
+    background-color: color-mix(in srgb, var(--ff-fairway) 20%, transparent);
+    outline: 2px solid var(--ff-fairway);
+    outline-offset: 1px;
+}
+
+.score-mark.bogey { border: 2px solid var(--ff-sand); }
+
+.score-mark.double {
+    border: 2px solid var(--ff-flag);
+    color: var(--ff-flag);
+    background-color: color-mix(in srgb, var(--ff-flag) 12%, transparent);
+    outline: 2px solid var(--ff-flag);
+    outline-offset: 1px;
+}
+
+.score-legend {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.score-legend li { display: flex; align-items: center; gap: 4px; }
+
 /* ── Small screens ────────────────────────────────────── */
 
 @media (max-width: 820px) {
@@ -245,6 +501,9 @@ h1 {
     .wordmark { margin-bottom: 28px; }
     .features { grid-template-columns: 1fr; margin-top: -32px; }
     .features article { padding: 28px 24px; }
+    .profile-grid { grid-template-columns: 1fr; }
+    .stat-strip { grid-template-columns: repeat(2, 1fr); }
+    .built-with { flex-direction: column; align-items: flex-start; }
 }
 
 @media (max-width: 480px) {
@@ -252,4 +511,9 @@ h1 {
     .card table { font-size: 0.8rem; }
     .mark { width: 22px; height: 22px; }
     .card-stats { grid-template-columns: repeat(2, 1fr); row-gap: 14px; }
+    .panel { padding: 20px 16px; }
+    .stat-strip dd { font-size: 1.6rem; }
+    .sg-bars li { grid-template-columns: 6.5rem 1fr 3.2rem; gap: 8px; }
+    .sg-label { font-size: 0.8rem; }
+    .trend-axis { font-size: 22px; }
 }

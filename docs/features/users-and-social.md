@@ -99,7 +99,8 @@ The admin console's `CreateUserDialog` (`src/FairwayFinder.Admin/Components/Page
 |---|---|
 | `UserId` | Unique (`ix_user_profile_user_id`). |
 | `PublicIdentifier` | Random `Guid`, unique. This is the id other golfers use to address you; the Identity user id is not used in friend URLs. |
-| `IsPublic` | Defaults to `false`. |
+| `IsPublic` | Defaults to `false`. Turns on the golfer's public stats page; see [public profile](public-profile.md). |
+| `PublicSlug`, `ShowStrokesGained`, `ShowRecentRounds`, `ShowCourseNames` | The public page's URL segment and per-section toggles. |
 
 The name, email, preferred tees and SG baseline level live on `ApplicationUser`, not the profile. `ProfileService` (`src/FairwayFinder.Features/Services/ProfileService.cs`) merges the two into `UserProfileResponse`.
 
@@ -107,7 +108,8 @@ The name, email, preferred tees and SG baseline level live on `ApplicationUser`,
 |---|---|
 | `GetOrCreateProfileAsync` | `GET /api/profile`. Creates the profile on first access. |
 | `UpdateSgBaselineLevelAsync` | `PUT /api/profile/sg-baseline-level`. See [stats and strokes gained](stats-and-strokes-gained.md). |
-| `UpdatePreferredTeesAsync`, `UpdateProfileVisibilityAsync` | Exist in the service but no API endpoint calls them at present. |
+| `UpdatePublicProfileAsync` | `PUT /api/profile/public`, and the admin console's Edit User dialog (via `UserAdminService.SetPublicProfileAsync`). Validates and claims the slug; `actingUserId` is only the audit stamp. |
+| `UpdatePreferredTeesAsync` | Exists in the service but no API endpoint calls it at present. |
 | `GetUserIdByPublicIdIgnoringVisibilityAsync` | Used by friend endpoints, which apply their own friendship check. |
 | `GetPublicProfileAsync`, `GetUserIdByPublicIdAsync`, `GetProfileForViewerAsync` | Visibility-gated lookups (public, or viewer is self or a friend). Not currently called by the API. |
 
@@ -171,7 +173,7 @@ Friend endpoints address the other golfer by `PublicIdentifier` (`src/FairwayFin
 | `GET /api/friends/{publicId}/rounds/{roundId}` | One round, 404 if it is not the friend's or is still in progress. |
 | `GET /api/friends/{publicId}/stats` | The friend's stats. |
 
-`EnsureFriendAccessAsync` resolves the public id ignoring `IsPublic`, then requires an accepted friendship (or that it is yourself). Strangers get **404**, not 403, so the endpoint does not confirm a profile exists. `IsPublic` currently has no effect on these endpoints.
+`EnsureFriendAccessAsync` resolves the public id ignoring `IsPublic`, then requires an accepted friendship (or that it is yourself). Strangers get **404**, not 403, so the endpoint does not confirm a profile exists. `IsPublic` has no effect on these endpoints: it only publishes the anonymous stats page ([public profile](public-profile.md)), addressed by slug, never by `PublicIdentifier`.
 
 ### Side effects
 
@@ -228,6 +230,7 @@ sequenceDiagram
 | `tests/FairwayFinder.Api.IntegrationTests/Endpoints/FriendEndpointsTests.cs` | Search (by name, by username, `@` prefix, literal `_`), request lifecycle, auto-accept/conflicts, removal, friend round/stats visibility, in-progress rounds hidden. |
 | `tests/FairwayFinder.Api.IntegrationTests/Endpoints/AdminInviteEndpointsTests.cs` | Admin invite endpoints. |
 | `tests/FairwayFinder.Api.IntegrationTests/Endpoints/ProfileAndLookupEndpointsTests.cs` | Profile endpoints, including username change, conflicts, validation and availability. |
+| `tests/FairwayFinder.Api.IntegrationTests/Endpoints/PublicProfileEndpointsTests.cs` | The public stats page and `PUT /api/profile/public`; see [public profile](public-profile.md#tests). |
 | `tests/FairwayFinder.Api.IntegrationTests/Conventions/UsernameBackfillTests.cs` | Runs the `AddUserHandle` migration's backfill SQL against real rows (inside a rolled-back transaction). |
 | `tests/FairwayFinder.Features.Tests/Helpers/UsernameRulesTests.cs` | Username normalization, validation and default-stem rules. |
 | `tests/FairwayFinder.Features.Tests/PasswordResetServiceTests.cs` | Cross-host token redemption, single use, enumeration-safe failures, admin path. |

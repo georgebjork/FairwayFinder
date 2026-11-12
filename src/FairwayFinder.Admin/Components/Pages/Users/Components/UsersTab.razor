@@ -87,6 +87,14 @@
                                 }
                             </Template>
                         </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="UserAdminDto" Title="Public page" Width="130px" Sortable="false" Filterable="false" TextAlign="TextAlign.Center">
+                            <Template Context="user">
+                                @if (user.PublicProfile.IsPublic)
+                                {
+                                    <RadzenBadge BadgeStyle="BadgeStyle.Success" Variant="Variant.Outlined" Text="@($"/golf/{user.PublicProfile.Slug}")" />
+                                }
+                            </Template>
+                        </RadzenDataGridColumn>
                         <RadzenDataGridColumn TItem="UserAdminDto" Title="Searchable" Width="120px" Sortable="false" Filterable="false" TextAlign="TextAlign.Center">
                             <Template Context="user">
                                 @if (user.IsSearchHidden)

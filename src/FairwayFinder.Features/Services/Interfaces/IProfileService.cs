@@ -19,9 +19,12 @@ public interface IProfileService
     Task<UserProfileResponse?> GetPublicProfileAsync(Guid publicIdentifier);
 
     /// <summary>
-    /// Toggles the user's profile between public and private.
+    /// Updates the public stats page settings for <paramref name="userId"/>. A blank slug keeps the
+    /// current one, or derives one from the username the first time the profile goes public.
+    /// <paramref name="actingUserId"/> is only the audit stamp: the golfer themselves, or an admin.
     /// </summary>
-    Task UpdateProfileVisibilityAsync(string userId, bool isPublic);
+    Task<PublicProfileSettingsResult> UpdatePublicProfileAsync(
+        string userId, PublicProfileSettingsRequest request, string actingUserId);
 
     /// <summary>
     /// Updates the user's preferred tee type used to filter teebox dropdowns.

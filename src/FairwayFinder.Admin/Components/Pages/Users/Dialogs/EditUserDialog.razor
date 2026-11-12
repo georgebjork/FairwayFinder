@@ -1,6 +1,7 @@
 @using FairwayFinder.Features.Services.Admin
 @using FairwayFinder.Features.Services.Interfaces
 @using FairwayFinder.Features.Helpers
+@using FairwayFinder.Features.Data
 @using FairwayFinder.Admin.Components.Shared.Dialogs
 @inject DialogService DialogService
 @inject UserAdminService UserAdminService
@@ -54,6 +55,38 @@
                 () => _model.IsLockedOut, v => _model.IsLockedOut = v)
             @SwitchRow("Hidden from search", "User won't appear in player search.",
                 () => _model.IsSearchHidden, v => _model.IsSearchHidden = v)
+        </RadzenStack>
+
+        @* ── Public stats page ── *@
+        <RadzenStack Gap="0.75rem">
+            <RadzenText TextStyle="TextStyle.Overline" style="color: var(--rz-text-secondary-color);" class="rz-m-0">Public stats page</RadzenText>
+
+            @SwitchRow("Public", "Publishes their stats at fairwayfinder.pro/golf/{link} on the next landing build.",
+                () => _model.IsPublic, v => _model.IsPublic = v)
+
+            <RadzenFormField Text="Profile link">
+                <ChildContent>
+                    <RadzenTextBox @bind-Value="_model.PublicSlug" Name="PublicSlug" Placeholder="Defaults to the username" />
+                </ChildContent>
+                <Helper>
+                    @if (!string.IsNullOrWhiteSpace(User.PublicProfile.Slug))
+                    {
+                        <RadzenLink Path="@($"https://fairwayfinder.pro/golf/{User.PublicProfile.Slug}/")" Target="_blank"
+                                    Text="@($"fairwayfinder.pro/golf/{User.PublicProfile.Slug}")" />
+                    }
+                    else
+                    {
+                        <RadzenText TextStyle="TextStyle.Caption">Letters, numbers and hyphens.</RadzenText>
+                    }
+                </Helper>
+            </RadzenFormField>
+
+            @SwitchRow("Strokes gained", "Show the strokes-gained chart.",
+                () => _model.ShowStrokesGained, v => _model.ShowStrokesGained = v)
+            @SwitchRow("Recent rounds", "Show the five most recent rounds.",
+                () => _model.ShowRecentRounds, v => _model.ShowRecentRounds = v)
+            @SwitchRow("Course names", "Name the courses. Off hides every course name.",
+                () => _model.ShowCourseNames, v => _model.ShowCourseNames = v)
         </RadzenStack>
 
         @if (_errors.Count > 0)
@@ -111,7 +144,12 @@
             Username = User.Username,
             IsAdmin = User.IsAdmin,
             IsLockedOut = User.IsLockedOut,
-            IsSearchHidden = User.IsSearchHidden
+            IsSearchHidden = User.IsSearchHidden,
+            IsPublic = User.PublicProfile.IsPublic,
+            PublicSlug = User.PublicProfile.Slug ?? string.Empty,
+            ShowStrokesGained = User.PublicProfile.ShowStrokesGained,
+            ShowRecentRounds = User.PublicProfile.ShowRecentRounds,
+            ShowCourseNames = User.PublicProfile.ShowCourseNames
         };
     }
 
@@ -150,6 +188,25 @@
         {
             var r = await UserAdminService.SetSearchHiddenAsync(User.Id, _model.IsSearchHidden);
             if (!r.Succeeded) _errors.AddRange(r.Errors.Select(e => e.Description));
+        }
+
+        // Keyed on the target user; the acting admin is only the audit stamp. Same rules as the app.
+        var current = User.PublicProfile;
+        if (_model.IsPublic != current.IsPublic
+            || PublicSlugRules.Normalize(_model.PublicSlug) != (current.Slug ?? string.Empty)
+            || _model.ShowStrokesGained != current.ShowStrokesGained
+            || _model.ShowRecentRounds != current.ShowRecentRounds
+            || _model.ShowCourseNames != current.ShowCourseNames)
+        {
+            var r = await UserAdminService.SetPublicProfileAsync(User.Id, new PublicProfileSettingsRequest
+            {
+                IsPublic = _model.IsPublic,
+                Slug = _model.PublicSlug,
+                ShowStrokesGained = _model.ShowStrokesGained,
+                ShowRecentRounds = _model.ShowRecentRounds,
+                ShowCourseNames = _model.ShowCourseNames
+            }, ActingAdminUserId);
+            if (r.Status != PublicProfileSettingsStatus.Ok) _errors.Add(r.Error ?? "Could not update the public page.");
         }
 
         _busy = false;
@@ -249,5 +306,10 @@
         public bool IsAdmin { get; set; }
         public bool IsLockedOut { get; set; }
         public bool IsSearchHidden { get; set; }
+        public bool IsPublic { get; set; }
+        public string PublicSlug { get; set; } = string.Empty;
+        public bool ShowStrokesGained { get; set; } = true;
+        public bool ShowRecentRounds { get; set; } = true;
+        public bool ShowCourseNames { get; set; } = true;
     }
 }

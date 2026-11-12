@@ -1,0 +1,33 @@
+name: Rebuild landing site
+
+# Redeploys only the fairwayfinder-landing App Platform app, so the public golf profile pages
+# (golf/{slug}/) pick up fresh stats from the API. Nothing else is built or deployed.
+#
+# Secrets:
+#   DIGITALOCEAN_ACCESS_TOKEN  a DigitalOcean API token scoped to Apps (read + update)
+#   LANDING_APP_ID             the landing app's id (`doctl apps list`, or the control panel URL)
+
+on:
+  schedule:
+    - cron: "0 10 * * *" # 10:00 UTC daily
+  workflow_dispatch: # "Run workflow" button, for a refresh right after a good round
+
+concurrency:
+  group: landing-rebuild
+  cancel-in-progress: false
+
+jobs:
+  redeploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      # --force-rebuild matters: with no new commit, App Platform would otherwise reuse the previous
+      # build, the generator would never run, and the stats would never change. --wait makes this
+      # job fail when the build does (e.g. the API is down), while App Platform keeps serving the
+      # previous deploy.
+      - name: Redeploy fairwayfinder-landing
+        run: doctl apps create-deployment "${{ secrets.LANDING_APP_ID }}" --force-rebuild --wait

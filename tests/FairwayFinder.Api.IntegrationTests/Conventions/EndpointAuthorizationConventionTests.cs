@@ -13,8 +13,8 @@ namespace FairwayFinder.Api.IntegrationTests.Conventions;
 /// </summary>
 /// <remarks>
 /// If this fails because you added a genuinely public endpoint, add it to
-/// <see cref="AnonymousEndpoints"/> and add a test for it in <c>PublicEndpointsTests</c> or
-/// <c>AuthEndpointsTests</c>.
+/// <see cref="AnonymousEndpoints"/> with a comment saying why it is public, and add a test for it in
+/// <c>PublicEndpointsTests</c>, <c>PublicProfileEndpointsTests</c> or <c>AuthEndpointsTests</c>.
 /// </remarks>
 public class EndpointAuthorizationConventionTests(ApiFactory factory) : ApiTestBase(factory)
 {
@@ -30,6 +30,9 @@ public class EndpointAuthorizationConventionTests(ApiFactory factory) : ApiTestB
         "GET /.well-known/apple-app-site-association",
         "GET /register",
         "GET /reset-password",
+        // Opt-in public golf stats page. The Landing site's build fetches it to bake
+        // fairwayfinder.pro/golf/{slug}; 404s alike for private and unknown slugs; own rate limit.
+        "GET /api/public/profiles/{slug}",
     ];
 
     /// <summary>Endpoints restricted to the Admin role. Anything here must not be reachable by a plain golfer.</summary>

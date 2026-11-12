@@ -1,18 +1,27 @@
 @* Document shell shared by every page. Pages wrap their content in this component; there is no
-   router, so Razor's @layout directive doesn't apply. *@
+   router, so Razor's @layout directive doesn't apply. The meta parameters drive the link preview
+   (og:*) that LinkedIn, Slack and iMessage show; crawlers read them without running any script. *@
 
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@Title</title>
-    <meta name="description" content="@Site.Description">
+    <meta name="description" content="@Description">
     <meta name="theme-color" content="#6a3de7">
+    <link rel="canonical" href="@Url">
     <meta property="og:type" content="website">
+    <meta property="og:site_name" content="@Site.Name">
     <meta property="og:title" content="@Title">
-    <meta property="og:description" content="@Site.Description">
-    <meta property="og:url" content="@Site.Url">
-    <meta property="og:image" content="@($"{Site.Url}/img/icon-512.png")">
+    <meta property="og:description" content="@Description">
+    <meta property="og:url" content="@Url">
+    <meta property="og:image" content="@OgImage">
+    @if (LargeImage)
+    {
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+        <meta name="twitter:card" content="summary_large_image">
+    }
     <link rel="icon" type="image/png" href="/favicon.png">
     <link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
     <link rel="stylesheet" href="/site.css">
@@ -30,5 +39,12 @@
 
 @code {
     [Parameter, EditorRequired] public string Title { get; set; } = Site.Name;
+    [Parameter] public string Description { get; set; } = Site.Description;
+    [Parameter] public string Url { get; set; } = Site.Url;
+    [Parameter] public string OgImage { get; set; } = $"{Site.Url}/img/icon-512.png";
+
+    /// <summary>True when <see cref="OgImage"/> is a 1200×630 card rather than the square icon.</summary>
+    [Parameter] public bool LargeImage { get; set; }
+
     [Parameter] public RenderFragment? ChildContent { get; set; }
 }

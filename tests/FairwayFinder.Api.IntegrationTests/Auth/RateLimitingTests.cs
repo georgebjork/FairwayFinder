@@ -21,7 +21,9 @@ public class RateLimitingTests(ApiFactory factory) : ApiTestBase(factory)
         .UseSetting("RateLimiting:Auth:PermitLimit", Limit.ToString())
         .UseSetting("RateLimiting:Auth:WindowSeconds", "60")
         .UseSetting("RateLimiting:Unmatched:PermitLimit", Limit.ToString())
-        .UseSetting("RateLimiting:Unmatched:WindowSeconds", "60"));
+        .UseSetting("RateLimiting:Unmatched:WindowSeconds", "60")
+        .UseSetting("RateLimiting:PublicProfile:PermitLimit", Limit.ToString())
+        .UseSetting("RateLimiting:PublicProfile:WindowSeconds", "60"));
 
     /// <summary>A client whose requests appear, through the trusted proxy header, to come from <paramref name="ip"/>.</summary>
     private static HttpClient ClientFrom(WebApplicationFactory<Program> host, string ip)
@@ -52,6 +54,21 @@ public class RateLimitingTests(ApiFactory factory) : ApiTestBase(factory)
         await AssertStatusAsync(HttpStatusCode.TooManyRequests, throttled);
         Assert.NotNull(throttled.Headers.RetryAfter);
         Assert.Equal("application/problem+json", throttled.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task Public_profile_requests_beyond_the_limit_get_429_per_client_ip()
+    {
+        using var host = LimitedHost();
+        using var first = ClientFrom(host, "203.0.113.10");
+        using var second = ClientFrom(host, "203.0.113.20");
+
+        // Unknown slugs: a scraper guessing names is exactly what this limit is for.
+        for (var i = 0; i < Limit; i++)
+            await AssertStatusAsync(HttpStatusCode.NotFound, await first.GetAsync($"/api/public/profiles/guess-{i}"));
+
+        await AssertStatusAsync(HttpStatusCode.TooManyRequests, await first.GetAsync("/api/public/profiles/guess-x"));
+        await AssertStatusAsync(HttpStatusCode.NotFound, await second.GetAsync("/api/public/profiles/guess-x"));
     }
 
     [Fact]

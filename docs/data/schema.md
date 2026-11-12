@@ -172,6 +172,10 @@ erDiagram
         text user_id UK
         uuid public_identifier UK
         bool is_public
+        varchar public_slug UK
+        bool show_strokes_gained
+        bool show_recent_rounds
+        bool show_course_names
     }
     friendship {
         bigint friendship_id PK
@@ -402,12 +406,18 @@ Stock ASP.NET Core Identity schema (`AspNetUsers`, `AspNetRoles`, `AspNetUserRol
 
 ### `user_profile` (`UserProfile`)
 
-Public-facing profile handle per user: `user_id`, `public_identifier uuid`, `is_public` (default false).
+Public-facing profile handle per user: `user_id`, `public_identifier uuid`, `is_public` (default false). `is_public` is also the master switch for the public stats page at `fairwayfinder.pro/golf/{public_slug}` ([public profile](../features/public-profile.md)):
+
+| Column | Meaning |
+|---|---|
+| `public_slug varchar(30)` | The page's URL segment, stored lowercase (`PublicSlugRules`). Null until first made public. Separate from the username so renaming yourself doesn't break a link already on a resume |
+| `show_strokes_gained`, `show_recent_rounds`, `show_course_names` | Per-section toggles, default true. The model sets `HasSentinel(true)` alongside the database default so EF still writes an explicit `false` on insert |
 
 | Index | Enforces |
 |---|---|
 | `ix_user_profile_user_id` | **Unique**: one profile per user (not filtered on `is_deleted`) |
 | `ix_user_profile_public_identifier` | **Unique** public id |
+| `ix_user_profile_public_slug` | **Unique** slug among live profiles (`public_slug IS NOT NULL AND is_deleted = false`) |
 
 ### `friendship` (`Friendship`)
 
@@ -536,6 +546,7 @@ Indexes: `ix_api_request_log_timestamp`, `ix_api_request_log_user_id`, `ix_api_r
 | `ck_friendship_no_self` (raw SQL) | `friendship` | No friending yourself |
 | `ix_user_profile_user_id` | `user_profile` | One profile per user |
 | `ix_user_profile_public_identifier` | `user_profile` | Unique public id |
+| `ix_user_profile_public_slug` | `user_profile` | Public stats page slug unique among live profiles |
 | `ix_refresh_token_token_hash` | `refresh_token` | Unique token hash |
 | `ix_user_device_device_token` | `user_device` | One row per device token |
 | `ix_golf_course_api_course_map_api_course_id` | `golf_course_api_course_map` | External course imported once |

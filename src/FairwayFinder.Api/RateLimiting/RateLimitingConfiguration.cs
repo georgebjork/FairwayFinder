@@ -10,6 +10,9 @@ public static class RateLimitingConfiguration
     /// <summary>Policy name for the <c>/api/auth</c> group.</summary>
     public const string AuthPolicy = "auth";
 
+    /// <summary>Policy name for the anonymous <c>/api/public</c> group (public stats pages).</summary>
+    public const string PublicProfilePolicy = "public-profile";
+
     /// <summary>
     /// Trusts <c>X-Forwarded-For</c> and <c>X-Forwarded-Proto</c> from the TLS-terminating proxy in
     /// front of the container, so <c>Connection.RemoteIpAddress</c> is the golfer's IP rather than
@@ -45,6 +48,7 @@ public static class RateLimitingConfiguration
                     : Partition(settings, settings.Api, $"api:{ClientIp(context)}"));
 
             options.AddPolicy(AuthPolicy, context => Partition(settings, settings.Auth, ClientIp(context)));
+            options.AddPolicy(PublicProfilePolicy, context => Partition(settings, settings.PublicProfile, ClientIp(context)));
 
             options.OnRejected = async (context, cancellationToken) =>
             {

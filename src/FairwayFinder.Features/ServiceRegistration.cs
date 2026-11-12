@@ -51,6 +51,7 @@ public static class ServiceRegistration
         services.AddTransient<IStatsService, StatsService>();
         services.AddTransient<ICourseService, CourseService>();
         services.AddTransient<IProfileService, ProfileService>();
+        services.AddTransient<IPublicProfileService, PublicProfileService>();
         services.AddTransient<IFriendService, FriendService>();
         services.AddTransient<IUsernameService, UsernameService>();
         services.AddTransient<IGameService, GameService>();

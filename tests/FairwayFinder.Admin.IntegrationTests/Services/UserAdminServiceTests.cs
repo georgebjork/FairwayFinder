@@ -1,4 +1,5 @@
 using FairwayFinder.Admin.IntegrationTests.Infrastructure;
+using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Services.Admin;
 using FairwayFinder.Features.Services.Interfaces;
 using FairwayFinder.Identity;
@@ -59,6 +60,49 @@ public class UserAdminServiceTests(AdminFactory factory) : AdminTestBase(factory
 
         var results = await Service<IFriendService>().SearchUsersAsync(searcher.Id, "Hideable");
         Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task Publishing_a_golfers_stats_page_acts_on_them_and_stamps_the_admin()
+    {
+        var admin = await Data.CreateAdminAsync();
+        var golfer = await Data.CreateUserAsync();
+        var service = Service<UserAdminService>();
+
+        var result = await service.SetPublicProfileAsync(golfer.Id, new PublicProfileSettingsRequest
+        {
+            IsPublic = true,
+            Slug = "Admin-Made",
+            ShowCourseNames = false
+        }, admin.Id);
+
+        Assert.Equal(PublicProfileSettingsStatus.Ok, result.Status);
+
+        var listed = (await service.GetUserByIdAsync(golfer.Id))!.PublicProfile;
+        Assert.True(listed.IsPublic);
+        Assert.Equal("admin-made", listed.Slug);
+        Assert.False(listed.ShowCourseNames);
+        Assert.True(listed.ShowStrokesGained);
+
+        await using var db = Data.CreateDbContext();
+        var golferProfile = db.UserProfiles.Single(p => p.UserId == golfer.Id);
+        Assert.Equal(admin.Id, golferProfile.UpdatedBy);
+        Assert.False(db.UserProfiles.Single(p => p.UserId == admin.Id).IsPublic);
+    }
+
+    [Fact]
+    public async Task Publishing_with_a_slug_another_golfer_holds_is_refused()
+    {
+        var admin = await Data.CreateAdminAsync();
+        var holder = await Data.CreateUserAsync();
+        var golfer = await Data.CreateUserAsync();
+        await Data.MakeProfilePublicAsync(holder.Id, "taken-slug");
+
+        var result = await Service<UserAdminService>().SetPublicProfileAsync(golfer.Id,
+            new PublicProfileSettingsRequest { IsPublic = true, Slug = "taken-slug" }, admin.Id);
+
+        Assert.Equal(PublicProfileSettingsStatus.Taken, result.Status);
+        Assert.False((await Service<UserAdminService>().GetUserByIdAsync(golfer.Id))!.PublicProfile.IsPublic);
     }
 
     [Fact]

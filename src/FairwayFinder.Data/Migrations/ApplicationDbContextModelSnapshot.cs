@@ -1491,6 +1491,29 @@ namespace FairwayFinder.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("public_identifier");
 
+                    b.Property<string>("PublicSlug")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("public_slug");
+
+                    b.Property<bool>("ShowCourseNames")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("show_course_names");
+
+                    b.Property<bool>("ShowRecentRounds")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("show_recent_rounds");
+
+                    b.Property<bool>("ShowStrokesGained")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("show_strokes_gained");
+
                     b.Property<string>("UpdatedBy")
                         .IsRequired()
                         .HasColumnType("text")
@@ -1511,6 +1534,11 @@ namespace FairwayFinder.Data.Migrations
                     b.HasIndex("PublicIdentifier")
                         .IsUnique()
                         .HasDatabaseName("ix_user_profile_public_identifier");
+
+                    b.HasIndex("PublicSlug")
+                        .IsUnique()
+                        .HasDatabaseName("ix_user_profile_public_slug")
+                        .HasFilter("public_slug IS NOT NULL AND is_deleted = false");
 
                     b.HasIndex("UserId")
                         .IsUnique()

@@ -78,6 +78,35 @@ public sealed class TestData(IServiceProvider services)
         CreateUserAsync(email, roles: ApplicationRoles.Admin);
 
     /// <summary>
+    /// Opts <paramref name="userId"/> into a public stats page at <paramref name="slug"/>, through
+    /// <see cref="IProfileService"/> exactly as the app's settings screen would.
+    /// </summary>
+    public async Task MakeProfilePublicAsync(
+        string userId,
+        string slug,
+        bool isPublic = true,
+        bool showStrokesGained = true,
+        bool showRecentRounds = true,
+        bool showCourseNames = true)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var result = await scope.ServiceProvider.GetRequiredService<IProfileService>().UpdatePublicProfileAsync(
+            userId,
+            new PublicProfileSettingsRequest
+            {
+                IsPublic = isPublic,
+                Slug = slug,
+                ShowStrokesGained = showStrokesGained,
+                ShowRecentRounds = showRecentRounds,
+                ShowCourseNames = showCourseNames
+            },
+            actingUserId: userId);
+
+        if (result.Status != PublicProfileSettingsStatus.Ok)
+            throw new InvalidOperationException(result.Error);
+    }
+
+    /// <summary>
     /// A course with one teebox and its holes (18 by default, or a nine-hole teebox). The teebox
     /// starts its own lineage as every creation path does; pass <paramref name="teeboxGroupId"/> to
     /// arrange anything else (0 for a legacy row with no lineage). <paramref name="withStrokeIndexes"/>

@@ -1,0 +1,71 @@
+@using System.Globalization
+@* Share of holes by score against par, as a donut drawn with stroke-dasharray segments. *@
+
+<div class="donut">
+    <svg viewBox="0 0 160 160" role="img" aria-label="@AriaLabel">
+        <circle cx="80" cy="80" r="@R" class="donut-track" />
+        @foreach (var segment in Segments)
+        {
+            <circle cx="80" cy="80" r="@R" class="donut-segment @segment.Css"
+                    stroke-dasharray="@($"{F(segment.Length)} {F(Circumference - segment.Length)}")"
+                    stroke-dashoffset="@F(-segment.Offset)" />
+        }
+        <text x="80" y="78" text-anchor="middle" class="donut-value">@ParOrBetter</text>
+        <text x="80" y="98" text-anchor="middle" class="donut-caption">par or better</text>
+    </svg>
+    <ul class="legend">
+        @foreach (var (label, css, count) in Categories)
+        {
+            <li><span class="swatch @css"></span>@label <strong>@Percent(count)</strong></li>
+        }
+    </ul>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PublicScoringDistribution Distribution { get; set; } = default!;
+
+    private const double R = 60;
+    private static readonly double Circumference = 2 * Math.PI * R;
+
+    private (string Label, string Css, int Count)[] Categories =>
+    [
+        ("Eagle or better", "s-eagle", Distribution.EaglesOrBetter),
+        ("Birdie", "s-birdie", Distribution.Birdies),
+        ("Par", "s-par", Distribution.Pars),
+        ("Bogey", "s-bogey", Distribution.Bogeys),
+        ("Double", "s-double", Distribution.DoubleBogeys),
+        ("Triple+", "s-triple", Distribution.TripleOrWorse)
+    ];
+
+    private IEnumerable<(string Css, double Length, double Offset)> Segments
+    {
+        get
+        {
+            if (Distribution.TotalHoles == 0) yield break;
+
+            var offset = 0.0;
+            foreach (var (_, css, count) in Categories)
+            {
+                if (count == 0) continue;
+                var length = Circumference * count / Distribution.TotalHoles;
+                yield return (css, length, offset);
+                offset += length;
+            }
+        }
+    }
+
+    private string ParOrBetter => Percent(Distribution.EaglesOrBetter + Distribution.Birdies + Distribution.Pars);
+
+    private string AriaLabel => string.Join(", ", Categories.Select(c => $"{c.Label} {Percent(c.Count)}"));
+
+    private string Percent(int count)
+    {
+        if (count == 0 || Distribution.TotalHoles == 0) return "0%";
+
+        var pct = 100.0 * count / Distribution.TotalHoles;
+        // One eagle in 700 holes is worth showing, not rounding away to "0%".
+        return pct < 0.5 ? "<1%" : pct.ToString("0", CultureInfo.InvariantCulture) + "%";
+    }
+
+    private static string F(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+}

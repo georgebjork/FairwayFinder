@@ -1,3 +1,4 @@
+using FairwayFinder.Features.Data;
 using FairwayFinder.Features.Helpers;
 
 namespace FairwayFinder.Features.Services.Admin;
@@ -15,6 +16,9 @@ public class UserAdminDto
     public bool IsLockedOut { get; set; }
     public bool IsEmailConfirmed { get; set; }
     public bool IsSearchHidden { get; set; }
+
+    /// <summary>Public stats page settings (fairwayfinder.pro/golf/{Slug}).</summary>
+    public PublicProfileSettingsRequest PublicProfile { get; set; } = new();
     public DateTime CreatedOn { get; set; }
 }
 

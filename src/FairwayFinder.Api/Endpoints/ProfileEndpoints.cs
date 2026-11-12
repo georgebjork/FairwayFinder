@@ -49,6 +49,32 @@ public static class ProfileEndpoints
         })
         .AddEndpointFilter<ValidationFilter<UpdateUsernameRequest>>();
 
+        // Public stats page settings (fairwayfinder.pro/golf/{slug}). A blank slug keeps the current
+        // one, or derives one from the username the first time the profile goes public.
+        group.MapPut("/public", async (
+            UpdatePublicProfileRequest request, HttpContext ctx, IProfileService profileService) =>
+        {
+            var userId = ctx.User.GetUserId();
+            var result = await profileService.UpdatePublicProfileAsync(userId, new PublicProfileSettingsRequest
+            {
+                IsPublic = request.IsPublic,
+                Slug = request.Slug,
+                ShowStrokesGained = request.ShowStrokesGained,
+                ShowRecentRounds = request.ShowRecentRounds,
+                ShowCourseNames = request.ShowCourseNames
+            }, actingUserId: userId);
+
+            return result.Status switch
+            {
+                PublicProfileSettingsStatus.Ok => Results.Ok(await profileService.GetOrCreateProfileAsync(userId)),
+                PublicProfileSettingsStatus.Taken => Results.Problem(
+                    detail: result.Error, statusCode: StatusCodes.Status409Conflict),
+                PublicProfileSettingsStatus.NotFound => throw new NotFoundException("User", userId),
+                _ => Results.Problem(detail: result.Error, statusCode: StatusCodes.Status400BadRequest)
+            };
+        })
+        .AddEndpointFilter<ValidationFilter<UpdatePublicProfileRequest>>();
+
         // Live check for the username editor: is this valid and free (your own counts as free)?
         group.MapGet("/username-available", async (
             string username, HttpContext ctx, IUsernameService usernameService) =>
@@ -68,3 +94,11 @@ public record UsernameResponse(string Username);
 
 /// <summary>Body for updating the user's default strokes-gained golfer level (e.g. { "level": "Hcp10" }).</summary>
 public record UpdateSgBaselineLevelRequest(BaselineLevel Level);
+
+/// <summary>Body for the public stats page settings.</summary>
+public record UpdatePublicProfileRequest(
+    bool IsPublic,
+    string? Slug,
+    bool ShowStrokesGained = true,
+    bool ShowRecentRounds = true,
+    bool ShowCourseNames = true);

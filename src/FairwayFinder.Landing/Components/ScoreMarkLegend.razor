@@ -1,0 +1,19 @@
+@* The key for ScoreMark, as under the admin console's scorecards. *@
+
+<ul class="score-legend">
+    @foreach (var (toPar, label) in Entries)
+    {
+        <li><ScoreMark Strokes="@(4 + toPar)" Par="4" /> @label</li>
+    }
+</ul>
+
+@code {
+    private static readonly (int ToPar, string Label)[] Entries =
+    [
+        (-2, "Eagle or better"),
+        (-1, "Birdie"),
+        (0, "Par"),
+        (1, "Bogey"),
+        (2, "Double or worse")
+    ];
+}
