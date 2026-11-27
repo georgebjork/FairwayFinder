@@ -83,15 +83,7 @@ There is no public-facing web UI. Don't add end-user features to the admin conso
 | **FairwayFinder.ServiceDefaults** | Aspire service defaults (telemetry, health checks) shared by Admin and Api |
 | **FairwayFinder.AppHost** | .NET Aspire orchestration for local dev |
 
-### Dependency Flow
-
-```
-Admin → Features → Data → Shared
-Admin → Identity, ServiceDefaults
-Api   → Features → Data → Shared
-Api   → Identity, ServiceDefaults
-AppHost orchestrates PostgreSQL (+ PgWeb) + Admin + Api + Landing (local preview)
-```
+### Host registration and auth
 
 Both hosts call `RegisterFeatureServices()` for the shared domain layer. The Admin app additionally calls `RegisterAdminServices()`, which registers the cross-user admin services, the TGTR transfer tool, and the GolfCourseAPI import pipeline (including its hosted background job) — none of which the API can reach, so it doesn't register them.
 
@@ -195,163 +187,14 @@ import/purge jobs have no user at all.
   succeeds via Postgres' implicit cast but resolves midnight in the *session* time zone — silently
   shifting every row. See `20260922230819_ConvertAuditStampsToTimestamptz`.
 
-## UI Framework
+## Admin UI
 
-**100% Radzen components** for all UI. No Bootstrap or other CSS frameworks.
+Admin console UI conventions (100% Radzen, render modes, domain folder rules, score and game display, style
+rules) live in `src/FairwayFinder.Admin/CLAUDE.md`, which loads when working in that project.
 
-### Render Modes
-
-- **Interactive Server** — default for all pages.
-- **Static SSR** — only for the login page (`Components/Auth/`, via `[ExcludeFromInteractiveRouting]`). The error pages use `AuthenticationLayout` and `[AllowAnonymous]` but are not excluded from interactive routing.
-
-### Component Organization
-
-Each domain folder under `Pages/` uses a consistent subfolder structure:
-
-```
-src/FairwayFinder.Admin/Components/
-├── Pages/                          # Domain folders
-│   ├── Dashboard/Pages/            # "/" overview
-│   ├── Users/                      # Pages, Components, Dialogs
-│   ├── Rounds/                     # Pages, Components, Dialogs
-│   ├── Stats/                      # Pages, Components
-│   ├── Courses/                    # Pages, Components, Dialogs
-│   ├── Devices/Pages/
-│   ├── Invites/                    # Pages, Dialogs
-│   ├── SystemOps/                  # Pages, Components (TGTR, imports, connections)
-│   └── Diagnostics/Pages/          # Health checks, request logs
-├── Shared/                         # Cross-domain shared components
-│   ├── Layout/                     # MainLayout (sidebar shell), AuthenticationLayout, Breadcrumb
-│   ├── Wrappers/                   # AppHeader (hosts the breadcrumb)
-│   └── Dialogs/                    # Shared dialogs (e.g., DeleteConfirmDialog)
-├── Auth/Pages/                     # Login (static SSR)
-└── Error/                          # Error, NotFound, AccessDenied
-```
-
-> Do not name a domain folder `System` — the resulting `...Components.Pages.System` namespace shadows the global `System` namespace for every sibling folder and breaks `using System.*` across the project. That's why it's `SystemOps`.
-
-#### Domain Folder Rules
-
-- **Pages/** — Routable pages with `@page` directive, each carrying `@attribute [Authorize(Policy = Policies.AdminOnly)]`. Every domain must have this.
-- **Components/** — Reusable child components (no `@page` directive, no `DialogService.Close()`). Only create when the domain has components.
-- **Dialogs/** — Dialog components opened via `DialogService.OpenAsync<T>()`. Only create when the domain has dialogs.
-- **Shared/Dialogs/** — Generic dialogs used across multiple domains.
-- Only create `Components/` and `Dialogs/` subfolders when there are actual files to put in them.
-
-### When Working from Screenshots
-
-- Use the Radzen MCP server to look up control best practices.
-- Match layout using Radzen components and layout controls (e.g., `RadzenStack`).
-- Use Radzen CSS classes only when no suitable Radzen layout component exists.
-
-### Displaying scores and games
-
-- Show any hole score with `Shared/Scoring/ScoreMark` (circle/square birdie–bogey notation) and put
-  `ScoreMarkLegend` under the card, so every page marks scores the same way. The public profile's
-  round pages on the Landing site mirror the same shapes and colours in `site.css` (`.score-mark`);
-  change both together.
-- The game scorecard (`Games/Components/GameScorecardGrid`) knows nothing about game types. It renders
-  `GameCardModel`, which reduces each scoreboard to sides, per-hole winners (`Awards`, with an optional
-  tag like `L`/`H`/`×3`), a result chip and a running standing. **A new game type adds one case to
-  `GameCardModel.From`** and a test in `GameCardModelTests`; don't add type checks to the grid.
-  Without that case the card still shows scores and sides, just no hole winners.
+- Hole-score marks (`Shared/Scoring/ScoreMark` in Admin) are mirrored on the Landing site's public round pages
+  in `site.css` (`.score-mark`); change both together.
 - Adding a whole new game type end to end: use the `new-game-type` skill.
-
-### Radzen CSS Variables (Use These — Never Hardcode Colors)
-
-```css
-/* Text */
-var(--rz-text-color)
-var(--rz-text-secondary-color)
-var(--rz-text-disabled-color)
-
-/* Backgrounds */
-var(--rz-base-background-color)
-var(--rz-panel-background-color)
-
-/* Borders */
-var(--rz-border-color)
-
-/* Semantic */
-var(--rz-primary)    var(--rz-secondary)
-var(--rz-success)    var(--rz-danger)
-var(--rz-warning)    var(--rz-info)
-```
-
-### Radzen Utility Classes
-
-```html
-<!-- Spacing: rz-m-{0-5}, rz-p-{0-5}, rz-mx-auto, rz-my-2, etc. -->
-<!-- Flexbox: rz-display-flex, rz-justify-content-between, rz-align-items-center, rz-gap-2 -->
-<!-- Text: Use RadzenText with TextStyle.H4, Body1, Body2, etc. -->
-```
-
-### Common Components
-
-| Use Case | Component |
-|---|---|
-| Page containers | `RadzenCard` |
-| Buttons | `RadzenButton` (ButtonStyle, Variant, Size) |
-| Forms | `RadzenFormField`, `RadzenTextBox`, `RadzenDropDown` |
-| Dialogs | `DialogService.OpenAsync<TComponent>()` |
-| Notifications | `NotificationService.Notify(new NotificationMessage { ... })` |
-| Data grids | `RadzenDataGrid` |
-| Loading | `RadzenProgressBarCircular` |
-| Alerts | `RadzenAlert` |
-
-### Style Rules
-
-- ✅ Radzen CSS variables: `style="color: var(--rz-text-color);"`
-- ✅ Radzen utility classes: `class="rz-p-4 rz-display-flex"`
-- ✅ Radzen component properties: `ButtonStyle="ButtonStyle.Primary"`
-- ❌ Hardcoded colors: `style="color: #333;"`
-- ❌ Raw CSS when Radzen classes exist: `style="display: flex;"`
-
-## Code Patterns
-
-### Blazor Page
-
-```razor
-@page "/path"
-@rendermode InteractiveServer
-@attribute [Authorize(Policy = Policies.AdminOnly)]
-@inject ISomeService SomeService
-@inject DialogService DialogService
-
-<PageTitle>Title</PageTitle>
-
-<RadzenCard class="rz-p-5 rz-mx-auto" style="max-width: 1000px;">
-    <!-- Radzen components only -->
-</RadzenCard>
-
-@code {
-    // Call injected services — never DbContext directly from pages
-}
-```
-
-### Dialog Pattern
-
-```csharp
-var result = await DialogService.OpenAsync<MyDialog>("Title",
-    new Dictionary<string, object> { { "Param", value } },
-    new DialogOptions
-    {
-        Width = "450px",
-        CloseDialogOnOverlayClick = false,
-        CloseDialogOnEsc = true
-    });
-
-if (result == true)
-{
-    await LoadData();
-    NotificationService.Notify(new NotificationMessage
-    {
-        Severity = NotificationSeverity.Success,
-        Summary = "Saved",
-        Duration = 4000
-    });
-}
-```
 
 ## Code Conventions
 
